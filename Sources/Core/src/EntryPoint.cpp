@@ -1,8 +1,8 @@
-#include "Application.hpp"
+#include "CApplication.hpp"
 
 using namespace BetterThanNothing;
 
-extern Application* CreateApplication();
+extern CApplication* CreateApplication();
 
 int main() {
 	auto pApplication = CreateApplication();

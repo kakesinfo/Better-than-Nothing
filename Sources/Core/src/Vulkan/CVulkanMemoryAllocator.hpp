@@ -1,0 +1,33 @@
+//
+// Created by acoezard on 11/19/24.
+//
+
+#pragma once
+
+#include <vk_mem_alloc.h>
+
+namespace BetterThanNothing
+{
+	class CApplicationContext;
+
+	class CVulkanMemoryAllocator
+	{
+	private:
+		VmaAllocator m_allocator = VK_NULL_HANDLE;
+
+	public:
+		explicit CVulkanMemoryAllocator(CApplicationContext* pContext);
+		~CVulkanMemoryAllocator();
+
+		VkResult CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, VkMemoryPropertyFlags properties, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		void DestroyBuffer(VkBuffer buffer, VmaAllocation allocation) const;
+
+		VkResult CreateImage(const VkImageCreateInfo* imageCreateInfo, VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		VkResult AllocateMemory(const VkMemoryRequirements* memoryRequirements, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		VkResult MapMemory(VmaAllocation allocation, void** data) const;
+		void UnmapMemory(VmaAllocation allocation) const;
+
+		[[nodiscard]]
+		VmaAllocator Handle() const;
+	};
+};
