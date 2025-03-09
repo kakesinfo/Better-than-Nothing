@@ -2,11 +2,11 @@
 // Created by acoezard on 11/19/24.
 //
 
-#include "../Utils/CShaderPool.hpp"
+#include "CShaderPool.hpp"
 
-#include "../CApplicationContext.hpp"
-#include "../Renderer/Vulkan/EVulkanShaderType.hpp"
-#include "../Renderer/Vulkan/CVulkanShaderModule.hpp"
+#include "CApplicationContext.hpp"
+#include "Renderer/Vulkan/EVulkanShaderType.hpp"
+#include "Renderer/Vulkan/CVulkanShaderModule.hpp"
 
 #include <utility>
 

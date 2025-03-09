@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../Renderer/Vulkan/EVulkanShaderType.hpp"
+#include "Renderer/Vulkan/EVulkanShaderType.hpp"
 
 namespace BetterThanNothing
 {
