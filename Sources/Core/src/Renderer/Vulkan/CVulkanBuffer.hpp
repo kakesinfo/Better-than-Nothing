@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "Vulkan/EVulkanBufferType.hpp"
+#include "EVulkanBufferType.hpp"
 
 namespace BetterThanNothing
 {

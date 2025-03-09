@@ -1,4 +1,4 @@
-#include "../BetterThanNothing.hpp"
+#include "BetterThanNothing.hpp"
 
 namespace BetterThanNothing
 {
@@ -13,7 +13,7 @@ namespace BetterThanNothing
 		0, 1, 2, 2, 3, 0
 	};
 
-	void CVulkanRenderer::Initialize()
+	void CRenderer::Initialize()
 	{
 		m_pVulkanSwapChain = std::make_unique<CVulkanSwapChain>(m_context);
 		m_pVulkanSwapChain->CreateImages();
@@ -49,7 +49,7 @@ namespace BetterThanNothing
 		LOG_SUCCESS("Renderer: ok");
 	}
 
-	void CVulkanRenderer::Render()
+	void CRenderer::Render()
 	{
 		m_frameInFlightFences[m_currentFrame]->Wait();
 
@@ -119,7 +119,7 @@ namespace BetterThanNothing
 		m_currentFrame = (m_currentFrame + 1) % m_context->GetMaxFrameInFlightCount();
 	}
 
-	void CVulkanRenderer::_recordCommandBuffer(uint32 imageIndex)
+	void CRenderer::_recordCommandBuffer(uint32 imageIndex)
 	{
 		m_commandBuffers[m_currentFrame]->BeginRecording();
 
@@ -163,7 +163,7 @@ namespace BetterThanNothing
 		m_commandBuffers[m_currentFrame]->EndRecording();
 	}
 
-	void CVulkanRenderer::AddPipeline(const std::function<void(VulkanPipelineBuilder&)>& callback)
+	void CRenderer::AddPipeline(const std::function<void(VulkanPipelineBuilder&)>& callback)
 	{
 		VulkanPipelineBuilder builder;
 		callback(builder);
@@ -171,7 +171,7 @@ namespace BetterThanNothing
 		m_pPipeline = std::make_unique<CVulkanPipeline>(builder.GetBuildParams(), m_context);
 	}
 
-	void CVulkanRenderer::_createCommandBuffers()
+	void CRenderer::_createCommandBuffers()
 	{
 		auto device = m_context->GetVulkanDevice()->LogicalHandle();
 
@@ -197,7 +197,7 @@ namespace BetterThanNothing
 		LOG_SUCCESS("Vulkan command buffers: ok (count: " << count << ")");
 	}
 
-	void CVulkanRenderer::_createSyncObjects()
+	void CRenderer::_createSyncObjects()
 	{
 		uint32 count = m_context->GetMaxFrameInFlightCount();
 
@@ -215,21 +215,21 @@ namespace BetterThanNothing
 		LOG_SUCCESS("Vulkan sync objects: ok (count: " << count << ")");
 	}
 
-	std::unique_ptr<CVulkanSwapChain>& CVulkanRenderer::GetVulkanSwapChain()
+	std::unique_ptr<CVulkanSwapChain>& CRenderer::GetVulkanSwapChain()
 	{
 		if (!m_pVulkanSwapChain)
 			throw ApplicationContextError("Vulkan swap chain is not set");
 		return m_pVulkanSwapChain;
 	}
 
-	std::unique_ptr<CVulkanRenderPass>& CVulkanRenderer::GetVulkanRenderPass()
+	std::unique_ptr<CVulkanRenderPass>& CRenderer::GetVulkanRenderPass()
 	{
 		if (!m_pVulkanRenderPass)
 			throw ApplicationContextError("Vulkan render pass is not set");
 		return m_pVulkanRenderPass;
 	}
 
-	std::unique_ptr<CVulkanCommandPool>& CVulkanRenderer::GetVulkanCommandPool()
+	std::unique_ptr<CVulkanCommandPool>& CRenderer::GetVulkanCommandPool()
 	{
 		if (!m_pVulkanCommandPool)
 			throw ApplicationContextError("Vulkan command pool is not set");

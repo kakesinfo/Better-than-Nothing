@@ -5,8 +5,8 @@
 #include "../Utils/CShaderPool.hpp"
 
 #include "../CApplicationContext.hpp"
-#include "../Vulkan/EVulkanShaderType.hpp"
-#include "../Vulkan/CVulkanShaderModule.hpp"
+#include "../Renderer/Vulkan/EVulkanShaderType.hpp"
+#include "../Renderer/Vulkan/CVulkanShaderModule.hpp"
 
 #include <utility>
 

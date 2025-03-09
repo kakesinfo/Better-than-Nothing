@@ -34,7 +34,7 @@ namespace BetterThanNothing
 		LOG_INFO("Buffering mode: " << GetMaxFrameInFlightCount());
 		LOG_INFO("VSync: " << (m_vulkanParams.enableVSync ? "enabled" : "disabled"));
 
-		m_pRenderer = std::make_unique<CVulkanRenderer>(this);
+		m_pRenderer = std::make_unique<CRenderer>(this);
 		m_pRenderer->Initialize();
 
 		m_pShaderPool = std::make_unique<CShaderPool>(m_vulkanParams.shadersFolderPath, this);
@@ -101,7 +101,7 @@ namespace BetterThanNothing
 		return m_pVulkanMemoryAllocator;
 	}
 
-	std::unique_ptr<CVulkanRenderer>& CApplicationContext::GetRenderer()
+	std::unique_ptr<CRenderer>& CApplicationContext::GetRenderer()
 	{
 		if (!m_pRenderer)
 			throw ApplicationContextError("Renderer is not set");
