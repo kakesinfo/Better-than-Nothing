@@ -18,6 +18,7 @@
 #include "Vulkan/CVulkanCommandBuffer.hpp"
 #include "Vulkan/CVulkanFramebuffer.hpp"
 #include "Vulkan/CVulkanRenderPass.hpp"
+#include "Vulkan/CVulkanRenderPassContext.hpp"
 #include "Vulkan/CVulkanMemoryAllocator.hpp"
 #include "Vulkan/CVulkanSemaphore.hpp"
 #include "Vulkan/CVulkanFence.hpp"

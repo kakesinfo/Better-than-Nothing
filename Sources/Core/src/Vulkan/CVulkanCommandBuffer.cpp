@@ -1,5 +1,6 @@
 #include "CApplicationContext.hpp"
 #include "CVulkanCommandBuffer.hpp"
+#include "CVulkanRenderPassContext.hpp"
 
 namespace BetterThanNothing
 {
@@ -37,58 +38,38 @@ namespace BetterThanNothing
 		if (!m_bRecording)
 			throw std::runtime_error("Command buffer is not recording");
 
+		if (m_bRenderPassActive)
+			throw std::runtime_error("Trying to end recording while render pass is active");
+
 		if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS)
 			throw std::runtime_error("failed to record command buffer!");
 
 		m_bRecording = false;
 	}
 
-	void CVulkanCommandBuffer::CmdBeginRenderPass(VkRenderPassBeginInfo* renderPassInfo, VkSubpassContents subpassContents) const
+	std::unique_ptr<CVulkanRenderPassContext> CVulkanCommandBuffer::BeginRenderPass(VkRenderPassBeginInfo* pRenderPassInfo, VkSubpassContents subpassContents)
 	{
-		vkCmdBeginRenderPass(m_commandBuffer, renderPassInfo, subpassContents);
+		if (m_bRenderPassActive)
+			throw std::runtime_error("Trying to begin render pass without ending the previous one");
+
+		m_bRenderPassActive = true;
+
+		vkCmdBeginRenderPass(m_commandBuffer, pRenderPassInfo, subpassContents);
+
+		return std::make_unique<CVulkanRenderPassContext>(m_commandBuffer);
 	}
 
-	void CVulkanCommandBuffer::CmdEndRenderPass() const
+	void CVulkanCommandBuffer::EndRenderPass()
 	{
+		if (!m_bRenderPassActive)
+			throw std::runtime_error("Trying to end render pass without having begun one");
+
+		m_bRenderPassActive = false;
+
 		vkCmdEndRenderPass(m_commandBuffer);
 	}
 
-	void CVulkanCommandBuffer::CmdSetViewport(const VkViewport* viewports, uint32 firstViewport, uint32 viewportCount) const
-	{
-		vkCmdSetViewport(m_commandBuffer, firstViewport, viewportCount, viewports);
-	}
-
-	void CVulkanCommandBuffer::CmdSetScissor(const VkRect2D* scissors, uint32 firstScissor, uint32 scissorCount) const
-	{
-		vkCmdSetScissor(m_commandBuffer, firstScissor, scissorCount, scissors);
-	}
-
-	void CVulkanCommandBuffer::CmdBindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint) const
-	{
-		vkCmdBindPipeline(m_commandBuffer, bindPoint, pipeline);
-	}
-
-	void CVulkanCommandBuffer::CmdBindVertexBuffers(uint32 firstBinding, uint32 bindingCount, const VkBuffer* buffers, const VkDeviceSize* offsets) const
-	{
-		vkCmdBindVertexBuffers(m_commandBuffer, firstBinding, bindingCount, buffers, offsets);
-	}
-
-	void CVulkanCommandBuffer::CmdBindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) const
-	{
-		vkCmdBindIndexBuffer(m_commandBuffer, buffer, offset, indexType);
-	}
-
-	void CVulkanCommandBuffer::CmdDraw(uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance) const
-	{
-		vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
-	}
-
-	void CVulkanCommandBuffer::CmdDrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, int32 vertexOffset, uint32 firstInstance) const
-	{
-		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
-	}
-
-	void CVulkanCommandBuffer::CmdCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, const uint32 bufferSize) const
+	void CVulkanCommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32 bufferSize) const
 	{
 		VkBufferCopy copyRegion{};
 		copyRegion.size = bufferSize;

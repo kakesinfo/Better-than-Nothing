@@ -17,7 +17,7 @@ namespace BetterThanNothing
 		stagingBuffer.UnmapMemory();
 
 		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
-			commandBuffer->CmdCopyBuffer(stagingBuffer.Handle(), vertexBuffer.Handle(), dataSize);
+			commandBuffer->CopyBuffer(stagingBuffer.Handle(), vertexBuffer.Handle(), dataSize);
 		}, m_context);
 
 		return vertexBuffer;
@@ -34,7 +34,7 @@ namespace BetterThanNothing
 		stagingBuffer.UnmapMemory();
 
 		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
-			commandBuffer->CmdCopyBuffer(stagingBuffer.Handle(), indexBuffer.Handle(), dataSize);
+			commandBuffer->CopyBuffer(stagingBuffer.Handle(), indexBuffer.Handle(), dataSize);
 		}, m_context);
 
 		return indexBuffer;
