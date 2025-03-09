@@ -1,5 +1,5 @@
 #include "BetterThanNothing.hpp"
-#include "Utils/CShaderPool.hpp"
+#include "Renderer/CShaderPool.hpp"
 
 namespace BetterThanNothing
 {

@@ -26,9 +26,8 @@
 #include "Renderer/Vulkan/CVulkanBuffer.hpp"
 #include "Renderer/Vulkan/CVulkanBufferFactory.hpp"
 #include "Renderer/CRenderer.hpp"
-
-#include "Utils/CVertex.hpp"
-#include "Utils/CShaderPool.hpp"
+#include "Renderer/CVertex.hpp"
+#include "Renderer/CShaderPool.hpp"
 
 // CApplication
 #include "CApplicationContext.hpp"
