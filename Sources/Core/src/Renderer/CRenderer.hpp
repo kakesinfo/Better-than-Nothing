@@ -14,7 +14,7 @@ namespace BetterThanNothing
 
 	struct CVertex;
 
-	class CVulkanRenderer
+	class CRenderer
 	{
 	private:
 		CApplicationContext* m_context = nullptr;
@@ -39,8 +39,8 @@ namespace BetterThanNothing
 		CVulkanBuffer m_indexBuffer;
 
 	public:
-		explicit CVulkanRenderer(CApplicationContext* context): m_context(context) {}
-		~CVulkanRenderer() = default;
+		explicit CRenderer(CApplicationContext* context): m_context(context) {}
+		~CRenderer() = default;
 
 		void Initialize();
 		void Render();
