@@ -134,7 +134,7 @@ namespace BetterThanNothing
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
 
-		m_commandBuffers[m_currentFrame]->CmdBeginRenderPass(&renderPassInfo);
+		auto passContext = m_commandBuffers[m_currentFrame]->BeginRenderPass(&renderPassInfo);
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -143,23 +143,23 @@ namespace BetterThanNothing
 		viewport.height = static_cast<float32>(m_pVulkanSwapChain->GetExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		m_commandBuffers[m_currentFrame]->CmdSetViewport(&viewport);
+		passContext->SetViewport(&viewport);
 
 		VkRect2D scissor{};
 		scissor.offset = {0, 0};
 		scissor.extent = m_pVulkanSwapChain->GetExtent();
-		m_commandBuffers[m_currentFrame]->CmdSetScissor(&scissor);
+		passContext->SetScissor(&scissor);
 
-		m_commandBuffers[m_currentFrame]->CmdBindPipeline(m_pPipeline->Handle());
+		passContext->BindPipeline(m_pPipeline->Handle());
 
 		VkBuffer vertexBuffers[] = { m_vertexBuffer.Handle() };
 		VkDeviceSize offsets[] = {0};
-		m_commandBuffers[m_currentFrame]->CmdBindVertexBuffers(0, 1, vertexBuffers, offsets);
-		m_commandBuffers[m_currentFrame]->CmdBindIndexBuffer(m_indexBuffer.Handle(), 0, VK_INDEX_TYPE_UINT16);
+		passContext->BindVertexBuffers(0, 1, vertexBuffers, offsets);
+		passContext->BindIndexBuffer(m_indexBuffer.Handle(), 0, VK_INDEX_TYPE_UINT16);
 
-		m_commandBuffers[m_currentFrame]->CmdDrawIndexed(static_cast<uint32>(m_indices.size()), 1, 0, 0, 0);
+		passContext->DrawIndexed(static_cast<uint32>(m_indices.size()), 1, 0, 0, 0);
 
-		m_commandBuffers[m_currentFrame]->CmdEndRenderPass();
+		m_commandBuffers[m_currentFrame]->EndRenderPass();
 		m_commandBuffers[m_currentFrame]->EndRecording();
 	}
 
