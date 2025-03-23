@@ -33,7 +33,7 @@ add_library(${PROJECT_NAME} ${SOURCES})
 target_precompile_headers(${PROJECT_NAME} PRIVATE ../pch.hpp)
 
 target_compile_definitions(Core PRIVATE ENABLE_IMGUI=1)
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 		glfw

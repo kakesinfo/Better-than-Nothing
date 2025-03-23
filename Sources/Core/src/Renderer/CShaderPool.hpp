@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Renderer/Vulkan/EVulkanShaderType.hpp"
+#include "Renderer/Vulkan/CVulkanShaderModule.hpp"
 
 namespace BetterThanNothing
 {
@@ -24,6 +25,7 @@ namespace BetterThanNothing
 		~CShaderPool();
 
 		CVulkanShaderModule LoadShader(const std::string& path, EVulkanShaderType type);
+
 	private:
 		static std::vector<char> _readFile(const std::string& filename);
 		static glslang_stage_t _getShaderStage(EVulkanShaderType type);
