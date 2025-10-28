@@ -1,14 +1,14 @@
 # Better than Nothing
 Everything is in the title, it is a better-than-nothing Game Engine
 
-## Features
+### 🚀 Features
 
  - Support for Linux.
  - Support for Vulkan.
  - Using C++20 features.
  - In-house JIT shader compilation.
 
-## Road map
+### 🧠 Road map
 
 I've created a Trello board to provide some insight on what I have planned for the future of the game engine.
 On this board, you'll find upcoming features, target time frames, and any emergent known issues.
@@ -16,11 +16,11 @@ Please note that at this time, the current Trello is in English only.
 
 You can find the board [here](https://trello.com/b/pKXNk3bb/road-map).
 
-## Contributing
+### 🧩 Contributing
 
 Contributions are welcome. Both new features and bug fixes. Just open a pull request.
 
-## Dependencies
+### 📦 Dependencies
 
 - [glfw](https://github.com/glfw/glfw) : A multi-platform library for OpenGL, OpenGL ES, Vulkan, window and input.
 - [vulkan](https://github.com/KhronosGroup/Vulkan-Headers) : A low-overhead, cross-platform API and open standard for 3D graphics and computing.
