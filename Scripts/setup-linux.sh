@@ -1,10 +1,13 @@
 #!/bin/bash
 
+# Update and upgrade the system
+sudo apt update -y
+sudo apt upgrade -y
+
 # Install all required tools using apt
 sudo apt install cmake -y
 sudo apt install vulkan-tools libvulkan-dev vulkan-validationlayers-dev spirv-tools -y
 sudo apt install libglfw3-dev libglm-dev -y
-sudo apt install doxygen doxygen-gui doxygen-doc -y
 sudo apt install wget -y
 
 # Insall all required packages for Github actions
@@ -20,3 +23,5 @@ sudo rm -rf install.tgz ./install/
 sudo apt install -y autoconf autogen automake build-essential libasound2-dev \
 	libflac-dev libogg-dev libtool libvorbis-dev libopus-dev libmp3lame-dev \
 	libmpg123-dev pkg-config python3
+
+sudo apt autoremove -y
