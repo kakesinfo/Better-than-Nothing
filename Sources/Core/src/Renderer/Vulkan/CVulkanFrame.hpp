@@ -1,0 +1,20 @@
+//
+// Created by COEZARAX on 27/11/2025.
+//
+
+#pragma once
+
+#include <memory>
+
+#include "BetterThanNothing.hpp"
+
+namespace BetterThanNothing
+{
+	struct CVulkanFrame
+	{
+		std::unique_ptr<CVulkanCommandBuffer>	commandBuffer;
+		std::unique_ptr<CVulkanSemaphore>		imageAvailableSemaphore;
+		std::unique_ptr<CVulkanSemaphore>		renderFinishedSemaphore;
+		std::unique_ptr<CVulkanFence>			inFlightFence;
+	};
+};

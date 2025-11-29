@@ -2,16 +2,16 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
-	class CVulkanFramebuffer
+	struct CVulkanFramebuffer
 	{
 	private:
-		CApplicationContext* m_context;
+		CVulkanContext* m_context;
 		VkFramebuffer m_framebuffer = VK_NULL_HANDLE;
 
 	public:
-		explicit CVulkanFramebuffer(VkFramebufferCreateInfo* createInfo, CApplicationContext* context);
+		explicit CVulkanFramebuffer(VkFramebufferCreateInfo* createInfo, CVulkanContext* context);
 		~CVulkanFramebuffer();
 
 		CVulkanFramebuffer(const CVulkanFramebuffer&) = delete;

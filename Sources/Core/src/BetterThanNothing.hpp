@@ -2,6 +2,7 @@
 
 // Graphics
 #include "CWindow.hpp"
+#include "Manager/CWIndowManager.hpp"
 
 // Vulkan
 #include "Renderer/Vulkan/EVulkanBufferingMode.hpp"
@@ -25,12 +26,20 @@
 #include "Renderer/Vulkan/EVulkanBufferType.hpp"
 #include "Renderer/Vulkan/CVulkanBuffer.hpp"
 #include "Renderer/Vulkan/CVulkanBufferFactory.hpp"
-#include "Renderer/CRenderer.hpp"
-#include "Renderer/CVertex.hpp"
+#include "Renderer/Vulkan/CVulkanContext.hpp"
+#include "Renderer/Vulkan/CVulkanFrame.hpp"
+
+#include "Renderer/Meshes/CVertex.hpp"
+#include "Renderer/Meshes/CMesh.hpp"
+
 #include "Renderer/CShaderPool.hpp"
+#include "Public/IRenderer.hpp"
+#include "Renderer/CRenderer.hpp"
+#include "Renderer/CRendererBuilder.hpp"
+
 
 // CApplication
-#include "CApplicationContext.hpp"
+#include "CWindowBuilder.hpp"
 #include "CApplication.hpp"
 
 // Utils

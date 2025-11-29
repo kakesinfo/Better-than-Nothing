@@ -8,16 +8,16 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
 	class CVulkanSurface
 	{
-		CApplicationContext* m_context = nullptr;
+		CVulkanContext* m_context = nullptr;
 
 		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
 	public:
-		explicit CVulkanSurface(CApplicationContext* context);
+		explicit CVulkanSurface(CVulkanContext* context);
 		~CVulkanSurface();
 
 		CVulkanSurface(const CVulkanSurface&) = delete;

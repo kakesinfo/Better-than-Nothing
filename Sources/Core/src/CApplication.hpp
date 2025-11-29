@@ -1,11 +1,9 @@
 #pragma once
 
-#include "CWindow.hpp"
+#include "BetterThanNothing.hpp"
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
-
 	class CApplication
 	{
 	protected:
@@ -18,9 +16,9 @@ namespace BetterThanNothing
 
 		void Run();
 
-		virtual void OnEnable(CApplicationContext* context) = 0;
-		virtual void OnUpdate(CApplicationContext* context) = 0;
-		virtual void OnRender(CApplicationContext* context) = 0;
-		virtual void OnDisable(CApplicationContext* context) = 0;
+		virtual void OnEnable(IRenderer* renderer) = 0;
+		virtual void OnUpdate() = 0;
+		virtual void OnRender(IRenderer* renderer) = 0;
+		virtual void OnDisable() = 0;
 	};
 };

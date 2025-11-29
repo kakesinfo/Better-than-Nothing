@@ -4,15 +4,16 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
-
 	class CRuntime: public CApplication {
 	public:
 		CRuntime() = default;
 
-		void OnEnable(CApplicationContext* context) override;
-		void OnUpdate(CApplicationContext* context) override;
-		void OnRender(CApplicationContext* context) override;
-		void OnDisable(CApplicationContext* context) override;
+		void OnEnable(IRenderer* renderer) override;
+		void OnUpdate() override;
+		void OnRender(IRenderer* renderer) override;
+		void OnDisable() override;
+
+	private:
+		CMesh mesh;
 	};
 };

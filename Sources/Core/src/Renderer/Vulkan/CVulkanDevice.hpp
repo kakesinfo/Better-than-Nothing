@@ -6,9 +6,11 @@
 
 #include <optional>
 
+#include "CVulkanContext.hpp"
+
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
 	struct QueueFamilyIndices
 	{
@@ -31,7 +33,7 @@ namespace BetterThanNothing
 	class CVulkanDevice
 	{
 	private:
-		CApplicationContext* m_context = nullptr;
+		CVulkanContext* m_context = nullptr;
 
 		VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
 		VkDevice m_logicalDevice = VK_NULL_HANDLE;
@@ -40,7 +42,7 @@ namespace BetterThanNothing
 		std::string m_deviceName;
 		std::string m_apiVersion;
 	public:
-		explicit CVulkanDevice(CApplicationContext* context);
+		explicit CVulkanDevice(CVulkanContext* context);
 		~CVulkanDevice();
 
 		CVulkanDevice(const CVulkanDevice&) = delete;
@@ -83,6 +85,6 @@ namespace BetterThanNothing
 
 		void _pickPhysicalDevice();
 		void _getPhysicalDeviceProperties();
-		void _createLogicalDevice(CApplicationContext* context);
+		void _createLogicalDevice();
 	};
 };

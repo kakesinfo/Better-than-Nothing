@@ -6,20 +6,18 @@
 
 namespace BetterThanNothing
 {
-	CVulkanPipeline::CVulkanPipeline(VulkanPipelineParams params, CApplicationContext* context)
+	CVulkanPipeline::CVulkanPipeline(VulkanPipelineParams params, std::vector<CVulkanShaderModule> shaderModules, CVulkanContext* context)
 		: m_context(context), m_params(std::move(params))
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		for (const auto& shaderInfos : m_params.shadersInfos)
+		for (const auto& shaderModule : shaderModules)
 		{
-			auto shader = m_context->LoadShader(shaderInfos.shaderPath, shaderInfos.shaderType);
-
-			VkShaderStageFlagBits shaderStageType = _getShaderStageTypeByShaderType(shader.shaderType);
+			VkShaderStageFlagBits shaderStageType = _getShaderStageTypeByShaderType(shaderModule.shaderType);
 
 			VkPipelineShaderStageCreateInfo shaderStageInfo{};
 			shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shaderStageInfo.stage = shaderStageType;
-			shaderStageInfo.module = shader.shaderModule;
+			shaderStageInfo.module = shaderModule.shaderModule;
 			shaderStageInfo.pName = params.name;
 			shaderStages.push_back(shaderStageInfo);
 		}
@@ -43,16 +41,16 @@ namespace BetterThanNothing
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = static_cast<float32>(m_context->GetRenderer()->GetVulkanSwapChain()->GetExtent().width);
-		viewport.height = static_cast<float32>(m_context->GetRenderer()->GetVulkanSwapChain()->GetExtent().height);
+		viewport.width = static_cast<float32>(m_context->vkSwapChain->GetExtent().width);
+		viewport.height = static_cast<float32>(m_context->vkSwapChain->GetExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
 		VkRect2D scissor{};
 		scissor.offset = { 0, 0 };
-		scissor.extent = m_context->GetRenderer()->GetVulkanSwapChain()->GetExtent();
+		scissor.extent = m_context->vkSwapChain->GetExtent();
 
-		std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		std::vector dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
 		VkPipelineDynamicStateCreateInfo dynamicState{};
 		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -116,7 +114,7 @@ namespace BetterThanNothing
 		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-		if (vkCreatePipelineLayout(m_context->GetVulkanDevice()->LogicalHandle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
+		if (vkCreatePipelineLayout(m_context->vkDevice->LogicalHandle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create pipeline layout");
 
 		LOG_SUCCESS("Vulkan pipeline layout: ok");
@@ -135,12 +133,12 @@ namespace BetterThanNothing
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
 		pipelineInfo.layout = m_pipelineLayout;
-		pipelineInfo.renderPass = m_context->GetRenderer()->GetVulkanRenderPass()->Handle();
+		pipelineInfo.renderPass = m_context->vkRenderPass->Handle();
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 		pipelineInfo.basePipelineIndex = -1; // Optional
 
-		if (vkCreateGraphicsPipelines(m_context->GetVulkanDevice()->LogicalHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
+		if (vkCreateGraphicsPipelines(m_context->vkDevice->LogicalHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create graphics pipeline");
 
 		LOG_SUCCESS("Vulkan graphics pipeline: ok");
@@ -149,10 +147,10 @@ namespace BetterThanNothing
 	CVulkanPipeline::~CVulkanPipeline()
 	{
 		if (m_pipelineLayout != VK_NULL_HANDLE)
-			vkDestroyPipelineLayout(m_context->GetVulkanDevice()->LogicalHandle(), m_pipelineLayout, nullptr);
+			vkDestroyPipelineLayout(m_context->vkDevice->LogicalHandle(), m_pipelineLayout, nullptr);
 
 		if (m_pipeline != VK_NULL_HANDLE)
-			vkDestroyPipeline(m_context->GetVulkanDevice()->LogicalHandle(), m_pipeline, nullptr);
+			vkDestroyPipeline(m_context->vkDevice->LogicalHandle(), m_pipeline, nullptr);
 	}
 
 	VkPipeline CVulkanPipeline::Handle() const
@@ -179,13 +177,13 @@ namespace BetterThanNothing
 		return *this;
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::AddShader(const std::string& shaderPath, EVulkanShaderType shaderType)
+	VulkanPipelineBuilder& VulkanPipelineBuilder::AddShader(const std::string& shaderPath, const EVulkanShaderType shaderType)
 	{
-		CVulkanShaderModule shaderModule;
-		shaderModule.shaderPath = shaderPath;
-		shaderModule.shaderType = shaderType;
+		VulkanPipelineShaderInfo shaderInfo;
+		shaderInfo.shaderPath = shaderPath;
+		shaderInfo.shaderType = shaderType;
 
-		m_params.shadersInfos.push_back(shaderModule);
+		m_params.shadersInfos.push_back(shaderInfo);
 
 		if (shaderType == EVulkanShaderType::Vertex)
 			m_hasVertexShader = true;

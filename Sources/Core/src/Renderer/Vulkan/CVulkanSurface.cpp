@@ -6,9 +6,11 @@
 
 namespace BetterThanNothing
 {
-	CVulkanSurface::CVulkanSurface(CApplicationContext* context): m_context(context)
+	CVulkanSurface::CVulkanSurface(CVulkanContext* context): m_context(context)
 	{
-		if (glfwCreateWindowSurface(m_context->GetVulkanInstance()->Handle(), m_context->GetWindow()->Handle(), nullptr, &m_surface) != VK_SUCCESS)
+		auto& pWindow = CWindowManager::GetWindow();
+
+		if (glfwCreateWindowSurface(m_context->vkInstance->Handle(), pWindow->Handle(), nullptr, &m_surface) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create window surface");
 
 		LOG_SUCCESS("Vulkan surface: ok");
@@ -16,7 +18,7 @@ namespace BetterThanNothing
 
 	CVulkanSurface::~CVulkanSurface()
 	{
-		vkDestroySurfaceKHR(m_context->GetVulkanInstance()->Handle(), m_surface, nullptr);
+		vkDestroySurfaceKHR(m_context->vkInstance->Handle(), m_surface, nullptr);
 	}
 
 	VkSurfaceKHR CVulkanSurface::Handle() const

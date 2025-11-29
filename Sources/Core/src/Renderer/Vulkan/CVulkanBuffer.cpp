@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanBuffer::CVulkanBuffer(const uint32 size, const EVulkanBufferType type, CApplicationContext* context): m_context(context), m_size(size)
+	CVulkanBuffer::CVulkanBuffer(const uint32 size, const EVulkanBufferType type, CVulkanContext* vkContext): m_context(vkContext), m_size(size)
 	{
 		const VkBufferUsageFlags usage = _getBufferUsageByBufferType(type);
 		const VkMemoryPropertyFlags properties = _getMemoryPropertiesByBufferType(type);
@@ -17,14 +17,14 @@ namespace BetterThanNothing
 		bufferCreateInfo.usage = usage;
 		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (m_context->GetVulkanMemoryAllocator()->CreateBuffer(&bufferCreateInfo, properties, &m_buffer, &m_allocation, &m_allocationInfo) != VK_SUCCESS)
+		if (m_context->vkMemoryAllocator->CreateBuffer(&bufferCreateInfo, properties, &m_buffer, &m_allocation, &m_allocationInfo) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create Vulkan buffer");
 	}
 
 	CVulkanBuffer::~CVulkanBuffer()
 	{
 		if (m_buffer != VK_NULL_HANDLE && m_allocation != VK_NULL_HANDLE)
-			m_context->GetVulkanMemoryAllocator()->DestroyBuffer(m_buffer, m_allocation);
+			m_context->vkMemoryAllocator->DestroyBuffer(m_buffer, m_allocation);
 	}
 
 	CVulkanBuffer::CVulkanBuffer(CVulkanBuffer&& other) noexcept
@@ -40,12 +40,12 @@ namespace BetterThanNothing
 
 	VkResult CVulkanBuffer::MapMemory(void** data) const
 	{
-		return m_context->GetVulkanMemoryAllocator()->MapMemory(m_allocation, data);
+		return m_context->vkMemoryAllocator->MapMemory(m_allocation, data);
 	}
 
 	void CVulkanBuffer::UnmapMemory() const
 	{
-		return m_context->GetVulkanMemoryAllocator()->UnmapMemory(m_allocation);
+		return m_context->vkMemoryAllocator->UnmapMemory(m_allocation);
 	}
 
 	uint32 CVulkanBuffer::Size() const

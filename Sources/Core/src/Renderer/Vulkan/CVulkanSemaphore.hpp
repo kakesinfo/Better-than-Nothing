@@ -2,16 +2,16 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
 	class CVulkanSemaphore
 	{
 	private:
-		CApplicationContext* m_context = nullptr;
+		CVulkanContext* m_context = nullptr;
 		VkSemaphore m_semaphore = VK_NULL_HANDLE;
 
 	public:
-		explicit CVulkanSemaphore(CApplicationContext* context);
+		explicit CVulkanSemaphore(CVulkanContext* context);
 		~CVulkanSemaphore();
 
 		[[nodiscard]]

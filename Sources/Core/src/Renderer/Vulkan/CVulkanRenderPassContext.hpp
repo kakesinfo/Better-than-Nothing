@@ -2,8 +2,6 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
-
 	class CVulkanRenderPassContext
 	{
 	private:

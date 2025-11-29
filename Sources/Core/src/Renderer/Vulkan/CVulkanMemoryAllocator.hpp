@@ -8,7 +8,7 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
 	class CVulkanMemoryAllocator
 	{
@@ -16,7 +16,7 @@ namespace BetterThanNothing
 		VmaAllocator m_allocator = VK_NULL_HANDLE;
 
 	public:
-		explicit CVulkanMemoryAllocator(CApplicationContext* pContext);
+		explicit CVulkanMemoryAllocator(CVulkanContext* pContext);
 		~CVulkanMemoryAllocator();
 
 		VkResult CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, VkMemoryPropertyFlags properties, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;

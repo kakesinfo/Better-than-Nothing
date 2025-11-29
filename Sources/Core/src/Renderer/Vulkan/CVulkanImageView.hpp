@@ -3,16 +3,16 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
 	class CVulkanImageView
 	{
 	private:
-		CApplicationContext* context = nullptr;
+		CVulkanContext* context = nullptr;
 		VkImageView m_imageView = VK_NULL_HANDLE;
 
 	public:
-		explicit CVulkanImageView(VkImageViewCreateInfo& createInfo, CApplicationContext* context);
+		explicit CVulkanImageView(VkImageViewCreateInfo& createInfo, CVulkanContext* context);
 		~CVulkanImageView();
 
 		CVulkanImageView(const CVulkanImageView&) = delete;

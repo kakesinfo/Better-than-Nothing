@@ -2,10 +2,10 @@
 
 namespace BetterThanNothing
 {
-	CVulkanRenderPass::CVulkanRenderPass(CApplicationContext* context): m_context(context)
+	CVulkanRenderPass::CVulkanRenderPass(CVulkanContext* context): m_context(context)
 	{
 		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = context->GetRenderer()->GetVulkanSwapChain()->GetImageFormat();
+		colorAttachment.format = context->vkSwapChain->GetImageFormat();
 		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -40,7 +40,7 @@ namespace BetterThanNothing
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies = &dependency;
 
-		if (vkCreateRenderPass(context->GetVulkanDevice()->LogicalHandle(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS)
+		if (vkCreateRenderPass(context->vkDevice->LogicalHandle(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create render pass");
 
 		LOG_SUCCESS("Vulkan render pass: ok");
@@ -48,7 +48,7 @@ namespace BetterThanNothing
 
 	CVulkanRenderPass::~CVulkanRenderPass()
 	{
-		vkDestroyRenderPass(m_context->GetVulkanDevice()->LogicalHandle(), m_renderPass, nullptr);
+		vkDestroyRenderPass(m_context->vkDevice->LogicalHandle(), m_renderPass, nullptr);
 	}
 
 	VkRenderPass CVulkanRenderPass::Handle() const

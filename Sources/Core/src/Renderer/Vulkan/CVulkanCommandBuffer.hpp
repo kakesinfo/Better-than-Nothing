@@ -1,8 +1,8 @@
 #pragma once
+#include "CVulkanContext.hpp"
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
 	class CVulkanRenderPassContext;
 
 	class CVulkanCommandBuffer
@@ -31,7 +31,7 @@ namespace BetterThanNothing
 
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32 bufferSize) const;
 
-		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, CApplicationContext* context);
+		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, CVulkanContext* context);
 
 		[[nodiscard]]
 		VkCommandBuffer Handle() const;
