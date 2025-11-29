@@ -4,7 +4,7 @@
 
 #include "CShaderPool.hpp"
 
-#include "CApplicationContext.hpp"
+#include "CWindowBuilder.hpp"
 #include "Renderer/Vulkan/EVulkanShaderType.hpp"
 #include "Renderer/Vulkan/CVulkanShaderModule.hpp"
 
@@ -12,32 +12,43 @@
 
 namespace BetterThanNothing
 {
-	CShaderPool::~CShaderPool()
+	CShaderPool::CShaderPool(std::string basePath, CVulkanContext* context)
+		: m_context(context), m_basePath(std::move(basePath))
 	{
-		auto device = m_context->GetVulkanDevice()->LogicalHandle();
-		for (const auto& shader : m_shaders)
-			vkDestroyShaderModule(device, shader.second.shaderModule, nullptr);
+		glslang_initialize_process();
 	}
 
-	CVulkanShaderModule CShaderPool::LoadShader(const std::string& path, const EVulkanShaderType type)
+	CShaderPool::~CShaderPool()
 	{
-		auto it = m_shaders.find(path);
+		if (m_context && m_context->vkDevice)
+		{
+			const auto device = m_context->vkDevice->LogicalHandle();
+			for (const auto &val: m_shaders | std::views::values)
+				vkDestroyShaderModule(device, val.shaderModule, nullptr);
+		}
+
+		glslang_finalize_process();
+	}
+
+	const CVulkanShaderModule& CShaderPool::LoadShader(const std::string& path, const EVulkanShaderType type)
+	{
+		const std::string fullPath = m_basePath + path;
+
+		const auto it = m_shaders.find(fullPath);
 		if (it != m_shaders.end())
 			return it->second;
 
-		std::vector<char> shaderSource = _readFile(m_basePath + path);
-		glslang_stage_t shaderStage = _getShaderStage(type);
+		const std::vector<char> shaderSource = _readFile(fullPath);
+		const glslang_stage_t shaderStage = _getShaderStage(type);
 		glslang_program_t* shaderProgram = _getShaderProgram(shaderSource, shaderStage);
 
-		m_shaders[path] = {
-			.shaderPath = path,
-			.shaderType = type,
-			.shaderModule = _getShaderModule(shaderProgram)
-		};
+		m_shaders[fullPath].shaderPath = path;
+		m_shaders[fullPath].shaderType = type;
+		m_shaders[fullPath].shaderModule = _getShaderModule(shaderProgram);
 
 		LOG_SUCCESS("Shader loaded: " << path);
 
-		return m_shaders[path];
+		return m_shaders[fullPath];
 	}
 
 	std::vector<char> CShaderPool::_readFile(const std::string& filename)
@@ -47,15 +58,22 @@ namespace BetterThanNothing
 		if (!file.is_open())
 			throw std::runtime_error("failed to open file!");
 
-		file.seekg(0, std::ios::end);
-		uint32 fileSize = (uint32) file.tellg();
+		std::streampos endPos = file.tellg();
+		if (endPos < 0)
+			throw std::runtime_error("failed to determine file size!");
 
-		std::vector<char> buffer;
-		buffer.resize(fileSize);
-		std::memset(buffer.data(), 0, fileSize);
+		const size_t fileSize = endPos;
 
-		file.seekg(0, std::ios::beg);
-		file.read(buffer.data(), fileSize - 1);
+		std::vector<char> buffer(fileSize + 1);
+		if (fileSize > 0)
+		{
+			file.seekg(0, std::ios::beg);
+			file.read(buffer.data(), fileSize);
+			if (!file)
+				throw std::runtime_error("failed to read file!");
+		}
+
+		buffer[fileSize] = '\0';
 		file.close();
 
 		return buffer;
@@ -93,8 +111,6 @@ namespace BetterThanNothing
 			.callbacks = {},
 			.callbacks_ctx = nullptr
 		};
-
-		glslang_initialize_process();
 
 		using shader_ptr_t = std::unique_ptr<glslang_shader_t, decltype(&glslang_shader_delete)>;
 		shader_ptr_t shader(glslang_shader_create(&input), glslang_shader_delete);
@@ -145,20 +161,21 @@ namespace BetterThanNothing
 				LOG_INFO("Sampled images: " << shaderResources.sampled_images.size());
 		}
 
-		glslang_finalize_process();
-
 		return program;
 	}
 
 	VkShaderModule CShaderPool::_getShaderModule(glslang_program_t* program) const
 	{
+		if (!m_context || !m_context->vkDevice)
+			throw std::runtime_error("Invalid Vulkan context when creating shader module");
+
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.codeSize = glslang_program_SPIRV_get_size(program) * sizeof(unsigned int);
 		createInfo.pCode = glslang_program_SPIRV_get_ptr(program);
 
 		VkShaderModule shaderModule;
-		if (vkCreateShaderModule(m_context->GetVulkanDevice()->LogicalHandle(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+		if (vkCreateShaderModule(m_context->vkDevice->LogicalHandle(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
 			throw std::runtime_error("failed to create shader module!");
 
 		glslang_program_delete(program);

@@ -4,16 +4,15 @@
 
 #pragma once
 
+#include "CVulkanContext.hpp"
 #include "EVulkanBufferType.hpp"
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
-
 	class CVulkanBuffer
 	{
 	private:
-		CApplicationContext* m_context = nullptr;
+		CVulkanContext* m_context = nullptr;
 
 		uint32 m_size = 0;
 
@@ -24,7 +23,7 @@ namespace BetterThanNothing
 
 	public:
 		CVulkanBuffer() = default;
-		CVulkanBuffer(uint32 size, EVulkanBufferType type, CApplicationContext* context);
+		CVulkanBuffer(uint32 size, EVulkanBufferType type, CVulkanContext* context);
 		~CVulkanBuffer();
 
 		CVulkanBuffer(const CVulkanInstance&) = delete;

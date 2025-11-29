@@ -6,20 +6,20 @@
 
 namespace BetterThanNothing
 {
-	CVulkanInstance::CVulkanInstance(CApplicationContext* context): m_context(context)
+	CVulkanInstance::CVulkanInstance(CVulkanContext* context): m_context(context)
 	{
-		bool validationLayersEnabled = context->IsValidationLayersEnabled();
-		bool validationLayersAvalaible = _checkValidationLayerSupport();
+		bool validationLayersEnabled = context->vkSettings.enableValidationLayers;
+		bool validationLayersAvailable = _checkValidationLayerSupport();
 
-		if (validationLayersEnabled && !validationLayersAvalaible)
+		if (validationLayersEnabled && !validationLayersAvailable)
 			LOG_WARNING("Validation layers are enabled but not available on this system");
 
-		validationLayersEnabled &= validationLayersAvalaible;
-		context->EnableValidationLayers(validationLayersEnabled);
+		validationLayersEnabled &= validationLayersAvailable;
+		context->vkSettings.enableValidationLayers = validationLayersEnabled;
 
 		VkApplicationInfo appInfo{};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.apiVersion = context->GetVulkanApiVersion();
+		appInfo.apiVersion = context->vkSettings.apiVersion;
 
 		VkInstanceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -36,7 +36,7 @@ namespace BetterThanNothing
 			VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 			_populateDebugMessengerCreateInfo(debugCreateInfo);
 
-			const auto validationLayers = m_context->GetValidationLayers();
+			const auto validationLayers = m_context->vkSettings.validationLayers;
 
 			createInfo.enabledLayerCount = static_cast<uint32>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -71,7 +71,7 @@ namespace BetterThanNothing
 
 		std::vector extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-		if (m_context->IsValidationLayersEnabled()) {
+		if (m_context->vkSettings.enableValidationLayers) {
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
 
@@ -86,7 +86,7 @@ namespace BetterThanNothing
 		std::vector<VkLayerProperties> availableLayers(layerCount);
 		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-		const auto validationLayers = m_context->GetValidationLayers();
+		const auto validationLayers = m_context->vkSettings.validationLayers;
 
 		return std::ranges::any_of(availableLayers, [validationLayers](const VkLayerProperties& layerProperties) {
 			return std::ranges::any_of(validationLayers, [&layerProperties](const char* layerName) {
@@ -126,7 +126,7 @@ namespace BetterThanNothing
 		if (m_instance == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan instance is not initialized");
 
-		if (!m_context->IsValidationLayersEnabled())
+		if (!m_context->vkSettings.enableValidationLayers)
 			return;
 
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
@@ -144,7 +144,7 @@ namespace BetterThanNothing
 		if (m_instance == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan instance is not initialized");
 
-		if (!m_context->IsValidationLayersEnabled())
+		if (!m_context->vkSettings.enableValidationLayers)
 			return;
 
 		if (m_debugMessenger != VK_NULL_HANDLE) {

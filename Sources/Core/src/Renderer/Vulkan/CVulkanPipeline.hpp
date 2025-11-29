@@ -9,25 +9,31 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
+
+	struct VulkanPipelineShaderInfo
+	{
+		std::string shaderPath;
+		EVulkanShaderType shaderType;
+	};
 
 	struct VulkanPipelineParams
 	{
 		const char* name;
-		std::vector<CVulkanShaderModule> shadersInfos;
+		std::vector<VulkanPipelineShaderInfo> shadersInfos;
 	};
 
 	class CVulkanPipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	private:
-		CApplicationContext* m_context = nullptr;
+		CVulkanContext* m_context = nullptr;
 		VulkanPipelineParams m_params;
 
 		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
 		VkPipeline m_pipeline = VK_NULL_HANDLE;
 
 	public:
-		explicit CVulkanPipeline(VulkanPipelineParams  params, CApplicationContext* context);
+		explicit CVulkanPipeline(VulkanPipelineParams params, std::vector<CVulkanShaderModule> shaderModules, CVulkanContext* context);
 		~CVulkanPipeline();
 
 		[[nodiscard]]

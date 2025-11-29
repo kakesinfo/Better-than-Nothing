@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
 	enum class EVulkanBufferType;
 	class CVulkanBuffer;
@@ -14,13 +14,13 @@ namespace BetterThanNothing
 	class CVulkanBufferFactory
 	{
 	private:
-		CApplicationContext* m_context;
+		static CVulkanContext* m_context;
 
 	public:
-		explicit CVulkanBufferFactory(CApplicationContext* context): m_context(context) {}
-		~CVulkanBufferFactory() = default;
+		static void Initialize(CVulkanContext* context);
+		static void Shutdown();
 
-		CVulkanBuffer CreateVertexBuffer(const void* data, uint32 dataSize) const;
-		CVulkanBuffer CreateIndexBuffer(const void* data, uint32 dataSize) const;
+		static CVulkanBuffer CreateVertexBuffer(const void* data, uint32 dataSize);
+		static CVulkanBuffer CreateIndexBuffer(const void* data, uint32 dataSize);
 	};
 }

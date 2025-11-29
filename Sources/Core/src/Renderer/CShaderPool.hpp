@@ -9,22 +9,22 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 	struct CVulkanShaderModule;
 
 	class CShaderPool
 	{
 	private:
-		CApplicationContext* m_context;
+		CVulkanContext* m_context;
 
 		std::string m_basePath;
 		std::unordered_map<std::string, CVulkanShaderModule> m_shaders;
 
 	public:
-		explicit CShaderPool(std::string  basePath, CApplicationContext* context): m_context(context), m_basePath(std::move(basePath)) {}
+		explicit CShaderPool(std::string basePath, CVulkanContext* context);
 		~CShaderPool();
 
-		CVulkanShaderModule LoadShader(const std::string& path, EVulkanShaderType type);
+		const CVulkanShaderModule& LoadShader(const std::string& path, EVulkanShaderType type);
 
 	private:
 		static std::vector<char> _readFile(const std::string& filename);

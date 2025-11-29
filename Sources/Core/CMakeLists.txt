@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.16)
 
 project("Core")
 
@@ -11,19 +11,17 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 file(GLOB SOURCES
 	"src/*.cpp"
 	"src/*.hpp"
-	"src/*.h"
-	"src/Jobs/*.cpp"
-	"src/Jobs/*.hpp"
 	"src/Utils/*.cpp"
 	"src/Utils/*.hpp"
-	"src/Events/*.hpp"
-	"src/Events/*.cpp"
-	"src/Graphics/*.hpp"
-	"src/Graphics/*.cpp"
 	"src/Renderer/*.hpp"
 	"src/Renderer/*.cpp"
+	"src/Manager/*.hpp"
+	"src/Manager/*.cpp"
+	"src/Renderer/Meshes/*.hpp"
+	"src/Renderer/Meshes/*.cpp"
 	"src/Renderer/Vulkan/*.hpp"
 	"src/Renderer/Vulkan/*.cpp"
+	"src/Public/*.hpp"
 )
 
 include_directories(src)
@@ -33,7 +31,7 @@ add_library(${PROJECT_NAME} ${SOURCES})
 target_precompile_headers(${PROJECT_NAME} PRIVATE ../pch.hpp)
 
 target_compile_definitions(Core PRIVATE ENABLE_IMGUI=1)
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
+#target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 		glfw

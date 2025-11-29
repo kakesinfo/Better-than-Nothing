@@ -6,9 +6,21 @@
 
 namespace BetterThanNothing
 {
-	CVulkanBuffer CVulkanBufferFactory::CreateVertexBuffer(const void* data, const uint32 dataSize) const
+	CVulkanContext* CVulkanBufferFactory::m_context = nullptr;
+
+	void CVulkanBufferFactory::Initialize(CVulkanContext* context)
 	{
-		CVulkanBuffer stagingBuffer = {dataSize, EVulkanBufferType::STAGING, m_context};
+		m_context = context;
+	}
+
+	void CVulkanBufferFactory::Shutdown()
+	{
+		m_context = nullptr;
+	}
+
+	CVulkanBuffer CVulkanBufferFactory::CreateVertexBuffer(const void* data, const uint32 dataSize)
+	{
+		const CVulkanBuffer stagingBuffer = {dataSize, EVulkanBufferType::STAGING, m_context};
 		CVulkanBuffer vertexBuffer = {dataSize, EVulkanBufferType::VERTEX, m_context};
 
 		void* stagingData;
@@ -23,9 +35,9 @@ namespace BetterThanNothing
 		return vertexBuffer;
 	}
 
-	CVulkanBuffer CVulkanBufferFactory::CreateIndexBuffer(const void* data, const uint32 dataSize) const
+	CVulkanBuffer CVulkanBufferFactory::CreateIndexBuffer(const void* data, const uint32 dataSize)
 	{
-		CVulkanBuffer stagingBuffer = {dataSize, EVulkanBufferType::STAGING, m_context};
+		const CVulkanBuffer stagingBuffer = {dataSize, EVulkanBufferType::STAGING, m_context};
 		CVulkanBuffer indexBuffer = {dataSize, EVulkanBufferType::INDEX, m_context};
 
 		void* stagingData;

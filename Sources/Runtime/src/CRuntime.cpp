@@ -4,28 +4,35 @@
 
 namespace BetterThanNothing
 {
-	void CRuntime::OnEnable(CApplicationContext* context)
+	void CRuntime::OnEnable(IRenderer* renderer)
 	{
-		context->GetRenderer()->AddPipeline([&](VulkanPipelineBuilder& builder) {
+		renderer->AddPipeline([&](VulkanPipelineBuilder& builder) {
 			builder.SetName("main");
 			builder.AddVertexShader("main/main.vert");
 			builder.AddFragmentShader("main/main.frag");
 		});
+
+		mesh.AddVertex({-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f});
+		mesh.AddVertex({0.5f, -0.5f}, {0.0f, 1.0f, 0.0f});
+		mesh.AddVertex({0.5f, 0.5f}, {0.0f, 0.0f, 1.0f});
+		mesh.AddVertex({-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f});
+		mesh.AddIndices({0, 1, 2, 2, 3, 0});
+		mesh.Build();
 	}
 
-	void CRuntime::OnUpdate(CApplicationContext* context)
+	void CRuntime::OnUpdate()
 	{
-		(void) context;
+
 	}
 
-	void CRuntime::OnRender(CApplicationContext* context)
+	void CRuntime::OnRender(IRenderer* renderer)
 	{
-		(void) context;
+		renderer->Render(&mesh);
 	}
 
-	void CRuntime::OnDisable(CApplicationContext* context)
+	void CRuntime::OnDisable()
 	{
-		(void) context;
+
 	}
 };
 

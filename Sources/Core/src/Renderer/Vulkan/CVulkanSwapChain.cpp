@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanSwapChain::CVulkanSwapChain(CApplicationContext* context): m_context(context)
+	CVulkanSwapChain::CVulkanSwapChain(CVulkanContext* context): m_context(context)
 	{
 		_createSwapchain();
 		LOG_SUCCESS("Vulkan swap chain: ok");
@@ -15,7 +15,7 @@ namespace BetterThanNothing
 
 	void CVulkanSwapChain::_createSwapchain()
 	{
-		auto swapChainSupport = m_context->GetVulkanDevice()->GetSwapChainSupport();
+		auto swapChainSupport = m_context->vkDevice->GetSwapChainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = _chooseSurfaceFormat(swapChainSupport.formats);
 		VkPresentModeKHR presentMode = _choosePresentMode(swapChainSupport.presentModes);
@@ -28,7 +28,7 @@ namespace BetterThanNothing
 
 		VkSwapchainCreateInfoKHR createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		createInfo.surface = m_context->GetVulkanSurface()->Handle();
+		createInfo.surface = m_context->vkSurface->Handle();
 		createInfo.minImageCount = imageCount;
 		createInfo.imageFormat = surfaceFormat.format;
 		createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -36,7 +36,7 @@ namespace BetterThanNothing
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		QueueFamilyIndices indices = m_context->GetVulkanDevice()->GetQueueFamilies();
+		QueueFamilyIndices indices = m_context->vkDevice->GetQueueFamilies();
 		uint32 queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
 		if (indices.graphicsFamily != indices.presentFamily) {
@@ -56,7 +56,7 @@ namespace BetterThanNothing
 
 		createInfo.oldSwapchain = VK_NULL_HANDLE; // For recreation
 
-		auto device = m_context->GetVulkanDevice()->LogicalHandle();
+		auto device = m_context->vkDevice->LogicalHandle();
 
 		if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create swap chain!");
@@ -67,7 +67,7 @@ namespace BetterThanNothing
 
 	void CVulkanSwapChain::CreateImages()
 	{
-		auto device = m_context->GetVulkanDevice()->LogicalHandle();
+		auto device = m_context->vkDevice->LogicalHandle();
 
 		uint32 finalImageCount = 0;
 		vkGetSwapchainImagesKHR(device, m_swapChain, &finalImageCount, nullptr);
@@ -112,7 +112,7 @@ namespace BetterThanNothing
 		for (size_t i = 0; i < m_imageViews.size(); i++)
 		{
 			auto imageView = m_imageViews.at(i)->Handle();
-			auto renderPass = m_context->GetRenderer()->GetVulkanRenderPass()->Handle();
+			auto renderPass = m_context->vkRenderPass->Handle();
 
 			std::array<VkImageView, 1> attachments = { imageView };
 
@@ -132,18 +132,19 @@ namespace BetterThanNothing
 
 	void CVulkanSwapChain::RecreateSwapchain()
 	{
-		auto [width, height] = m_context->GetWindow()->GetFramebufferSize();
+		auto& pWindow = CWindowManager::GetWindow();
+		auto [width, height] = pWindow->GetFramebufferSize();
 
 		while (width == 0 || height == 0)
 		{
-			auto framebufferSize = m_context->GetWindow()->GetFramebufferSize();
+			auto framebufferSize = pWindow->GetFramebufferSize();
 			width = framebufferSize.first;
 			height = framebufferSize.second;
 
 			glfwWaitEvents();
 		}
 
-		m_context->GetVulkanDevice()->WaitIdle();
+		m_context->vkDevice->WaitIdle();
 
 		_cleanupSwapchain();
 
@@ -158,7 +159,7 @@ namespace BetterThanNothing
 		m_framebuffers.clear();
 		m_imageViews.clear();
 
-		vkDestroySwapchainKHR(m_context->GetVulkanDevice()->LogicalHandle(), m_swapChain, nullptr);
+		vkDestroySwapchainKHR(m_context->vkDevice->LogicalHandle(), m_swapChain, nullptr);
 	}
 
 	VkSurfaceFormatKHR CVulkanSwapChain::_chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
@@ -189,7 +190,7 @@ namespace BetterThanNothing
 		if (capabilities.currentExtent.width != std::numeric_limits<uint32>::max())
 			return capabilities.currentExtent;
 
-		auto [width, height] = m_context->GetWindow()->GetFramebufferSize();
+		auto [width, height] = CWindowManager::GetWindow()->GetFramebufferSize();
 
 		VkExtent2D actualExtent;
 		actualExtent.width = std::clamp(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);

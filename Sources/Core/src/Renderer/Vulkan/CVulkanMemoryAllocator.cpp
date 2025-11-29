@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanMemoryAllocator::CVulkanMemoryAllocator(CApplicationContext* pContext)
+	CVulkanMemoryAllocator::CVulkanMemoryAllocator(CVulkanContext* pContext)
 	{
 		VmaVulkanFunctions vulkanFunctions = {};
 		vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
@@ -14,10 +14,10 @@ namespace BetterThanNothing
 
 		VmaAllocatorCreateInfo allocatorCreateInfo = {};
 		allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
-		allocatorCreateInfo.vulkanApiVersion = pContext->GetVulkanApiVersion();
-		allocatorCreateInfo.physicalDevice = pContext->GetVulkanDevice()->PhysicalHandle();
-		allocatorCreateInfo.device = pContext->GetVulkanDevice()->LogicalHandle();
-		allocatorCreateInfo.instance = pContext->GetVulkanInstance()->Handle();
+		allocatorCreateInfo.vulkanApiVersion = pContext->vkSettings.apiVersion;
+		allocatorCreateInfo.physicalDevice = pContext->vkDevice->PhysicalHandle();
+		allocatorCreateInfo.device = pContext->vkDevice->LogicalHandle();
+		allocatorCreateInfo.instance = pContext->vkInstance->Handle();
 		allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
 		if (vmaCreateAllocator(&allocatorCreateInfo, &m_allocator) != VK_SUCCESS)

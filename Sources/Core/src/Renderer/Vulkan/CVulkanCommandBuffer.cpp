@@ -1,4 +1,4 @@
-#include "CApplicationContext.hpp"
+#include "CWindowBuilder.hpp"
 #include "CVulkanCommandBuffer.hpp"
 #include "CVulkanRenderPassContext.hpp"
 
@@ -77,11 +77,11 @@ namespace BetterThanNothing
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 	}
 
-	void CVulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, CApplicationContext* context)
+	void CVulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, CVulkanContext* context)
 	{
-		const auto device = context->GetVulkanDevice()->LogicalHandle();
-		const auto commandPool = context->GetRenderer()->GetVulkanCommandPool()->Handle();
-		const auto graphicsQueue = context->GetGraphicsQueue()->Handle();
+		const auto device = context->vkDevice->LogicalHandle();
+		const auto commandPool = context->vkCommandPool->Handle();
+		const auto graphicsQueue = context->vkGraphicsQueue->Handle();
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

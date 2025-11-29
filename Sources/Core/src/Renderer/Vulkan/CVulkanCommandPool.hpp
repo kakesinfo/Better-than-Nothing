@@ -1,17 +1,19 @@
 #pragma once
 
+#include "CVulkanContext.hpp"
+
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
 	class CVulkanCommandPool
 	{
 	private:
-		CApplicationContext* m_context = nullptr;
+		CVulkanContext* m_context = nullptr;
 		VkCommandPool m_commandPool = VK_NULL_HANDLE;
 
 	public:
-		explicit CVulkanCommandPool(CApplicationContext* context);
+		explicit CVulkanCommandPool(CVulkanContext* context);
 		~CVulkanCommandPool();
 
 		CVulkanCommandPool(const CVulkanCommandPool&) = delete;

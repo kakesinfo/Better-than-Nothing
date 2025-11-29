@@ -8,17 +8,17 @@
 
 namespace BetterThanNothing
 {
-	class CApplicationContext;
+	struct CVulkanContext;
 
 	class CVulkanInstance
 	{
-		CApplicationContext* m_context = nullptr;
+		CVulkanContext* m_context = nullptr;
 
 		VkInstance m_instance = VK_NULL_HANDLE;
 		VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
 
 	public:
-		explicit CVulkanInstance(CApplicationContext* context);
+		explicit CVulkanInstance(CVulkanContext* context);
 		~CVulkanInstance();
 
 		CVulkanInstance(const CVulkanInstance&) = delete;
