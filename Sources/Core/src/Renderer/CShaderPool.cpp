@@ -22,7 +22,7 @@ namespace BetterThanNothing
 	{
 		if (m_context && m_context->vkDevice)
 		{
-			const auto device = m_context->vkDevice->LogicalHandle();
+			const auto device = m_context->vkDevice->Handle();
 			for (const auto &val: m_shaders | std::views::values)
 				vkDestroyShaderModule(device, val.shaderModule, nullptr);
 		}
@@ -175,7 +175,7 @@ namespace BetterThanNothing
 		createInfo.pCode = glslang_program_SPIRV_get_ptr(program);
 
 		VkShaderModule shaderModule;
-		if (vkCreateShaderModule(m_context->vkDevice->LogicalHandle(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+		if (vkCreateShaderModule(m_context->vkDevice->Handle(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
 			throw std::runtime_error("failed to create shader module!");
 
 		glslang_program_delete(program);

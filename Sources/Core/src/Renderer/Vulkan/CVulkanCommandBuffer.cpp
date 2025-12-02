@@ -79,7 +79,7 @@ namespace BetterThanNothing
 
 	void CVulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, CVulkanContext* context)
 	{
-		const auto device = context->vkDevice->LogicalHandle();
+		const auto device = context->vkDevice->Handle();
 		const auto commandPool = context->vkCommandPool->Handle();
 		const auto graphicsQueue = context->vkGraphicsQueue->Handle();
 

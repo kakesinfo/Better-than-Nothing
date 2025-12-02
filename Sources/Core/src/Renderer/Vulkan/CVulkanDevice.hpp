@@ -54,7 +54,7 @@ namespace BetterThanNothing
 		VkPhysicalDevice PhysicalHandle() const;
 
 		[[nodiscard]]
-		VkDevice LogicalHandle() const;
+		VkDevice Handle() const;
 
 		[[nodiscard]]
 		std::string GetVendorName() const;

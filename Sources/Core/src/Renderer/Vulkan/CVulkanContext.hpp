@@ -1,10 +1,12 @@
 //
-// Created by COEZARAX on 27/11/2025.
+// Created by kakesinfo on 27/11/2025.
 //
 
 #pragma once
 
 #include <vector>
+
+#include "CVulkanDescriptorPool.hpp"
 
 namespace BetterThanNothing
 {
@@ -16,6 +18,9 @@ namespace BetterThanNothing
 	class CVulkanSwapChain;
 	class CVulkanRenderPass;
 	class CVulkanCommandPool;
+	class CVulkanDescriptorSetLayout;
+	class CVulkanDescriptorPool;
+	class CVulkanDescriptorSet;
 	class CVulkanPipeline;
 	struct CVulkanFrame;
 
@@ -37,17 +42,25 @@ namespace BetterThanNothing
 			bool enableVSync = true;
 		} vkSettings;
 
-		std::unique_ptr<CVulkanInstance>		vkInstance = nullptr;
-		std::unique_ptr<CVulkanSurface>			vkSurface = nullptr;
-		std::unique_ptr<CVulkanDevice>			vkDevice = nullptr;
-		std::unique_ptr<CVulkanQueue>			vkGraphicsQueue = nullptr;
-		std::unique_ptr<CVulkanQueue>			vkPresentQueue = nullptr;
-		std::unique_ptr<CVulkanMemoryAllocator>	vkMemoryAllocator = nullptr;
-		std::unique_ptr<CVulkanSwapChain>		vkSwapChain = nullptr;
-		std::unique_ptr<CVulkanRenderPass>		vkRenderPass = nullptr;
-		std::unique_ptr<CVulkanCommandPool>		vkCommandPool = nullptr;
-		std::unique_ptr<CVulkanPipeline>		vkPipeline = nullptr;
+		std::unique_ptr<CVulkanInstance>					vkInstance = nullptr;
+		std::unique_ptr<CVulkanSurface>						vkSurface = nullptr;
+		std::unique_ptr<CVulkanDevice>						vkDevice = nullptr;
+		std::unique_ptr<CVulkanQueue>						vkGraphicsQueue = nullptr;
+		std::unique_ptr<CVulkanQueue>						vkPresentQueue = nullptr;
+		std::unique_ptr<CVulkanMemoryAllocator>				vkMemoryAllocator = nullptr;
+		std::unique_ptr<CVulkanSwapChain>					vkSwapChain = nullptr;
+		std::unique_ptr<CVulkanRenderPass>					vkRenderPass = nullptr;
+		std::unique_ptr<CVulkanCommandPool>					vkCommandPool = nullptr;
+		std::unique_ptr<CVulkanPipeline>					vkPipeline = nullptr;
 
-		std::vector<CVulkanFrame>				vkFrames;
+		std::vector<CVulkanFrame>							vkFrames;
+
+		std::unique_ptr<CVulkanDescriptorSetLayout>			vkDescriptorSetLayout = nullptr;
+		std::unique_ptr<CVulkanDescriptorPool>				vkDescriptorPool = nullptr;
+		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkDescriptorSets;
+
+		// VkDescriptorSetLayout descriptorSetLayout = nullptr;
+		// VkDescriptorPool descriptorPool = nullptr;
+		// std::vector<VkDescriptorSet> descriptorSets;
 	};
 };

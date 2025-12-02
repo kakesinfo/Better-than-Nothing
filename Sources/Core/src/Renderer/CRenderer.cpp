@@ -1,10 +1,13 @@
 #include "BetterThanNothing.hpp"
+#include "UniformBufferObject.hpp"
 
 namespace BetterThanNothing
 {
 	CRenderer::CRenderer(CVulkanContext& vkContext)
 		: m_vkContext(std::move(vkContext))
 	{
+		CBufferManager::Initialize(&m_vkContext);
+
 		LOG_INFO("Buffering mode: " << m_vkContext.vkSettings.maxFramesInFlight);
 		LOG_INFO("VSync: " << (m_vkContext.vkSettings.enableVSync ? "enabled" : "disabled"));
 
@@ -19,16 +22,22 @@ namespace BetterThanNothing
 
 		m_vkContext.vkRenderPass = std::make_unique<CVulkanRenderPass>(&m_vkContext);
 
+		_createDescriptorSetLayout();
+
 		m_vkContext.vkSwapChain->CreateFramebuffers();
 
 		m_vkContext.vkCommandPool = std::make_unique<CVulkanCommandPool>(&m_vkContext);
 
 		m_vkContext.vkFrames.resize(m_vkContext.vkSettings.maxFramesInFlight);
 
+
+		_createUniformBuffers();
+		_createDescriptorPool();
+		_createDescriptorSets();
+
 		_createCommandBuffers();
 		_createSyncObjects();
 
-		CVulkanBufferFactory::Initialize(&m_vkContext);
 		LOG_SUCCESS("Buffer factory: ok")
 
 		m_pShaderPool = std::make_unique<CShaderPool>(m_vkContext.vkSettings.shadersFolderPath, &m_vkContext);
@@ -39,20 +48,24 @@ namespace BetterThanNothing
 
 	CRenderer::~CRenderer()
 	{
-		CVulkanBufferFactory::Shutdown();
-
 		m_vkContext.vkDevice->WaitIdle();
+		CBufferManager::Shutdown();
 	}
 
 	void CRenderer::RenderFrame()
 	{
+		if (!m_vkContext.vkPipeline)
+			throw std::runtime_error("No pipeline set for rendering!");
+
 		m_vkContext.vkFrames[m_currentFrame].inFlightFence->Wait();
 
-		auto device = m_vkContext.vkDevice->LogicalHandle();
-		auto swapchain = m_vkContext.vkSwapChain->Handle();
+		_updateUniformBuffer();
+
+		const auto device = m_vkContext.vkDevice->Handle();
+		const auto swapchain = m_vkContext.vkSwapChain->Handle();
 
 		uint32 imageIndex;
-		VkResult acquireResult = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
+		const VkResult acquireResult = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
 			m_vkContext.vkFrames[m_currentFrame].imageAvailableSemaphore->Handle(), VK_NULL_HANDLE, &imageIndex);
 
 		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
@@ -65,14 +78,14 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to acquire swap chain image!");
 
 		m_vkContext.vkFrames[m_currentFrame].inFlightFence->Reset();
-
 		m_vkContext.vkFrames[m_currentFrame].commandBuffer->Reset();
+
 		_recordCommandBuffer(imageIndex);
 
-		VkSemaphore waitSemaphores[] = { m_vkContext.vkFrames[m_currentFrame].imageAvailableSemaphore->Handle() };
+		const VkSemaphore waitSemaphores[] = { m_vkContext.vkFrames[m_currentFrame].imageAvailableSemaphore->Handle() };
 
 		// We wait for the fragment shader to output the color before we can start writing to the image
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		constexpr VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -81,10 +94,10 @@ namespace BetterThanNothing
 		submitInfo.pWaitDstStageMask = waitStages;
 		submitInfo.commandBufferCount = 1;
 
-		auto commandBuffer = m_vkContext.vkFrames[m_currentFrame].commandBuffer->Handle();
+		const auto commandBuffer = m_vkContext.vkFrames[m_currentFrame].commandBuffer->Handle();
 		submitInfo.pCommandBuffers = &commandBuffer;
 
-		VkSemaphore signalSemaphores[] = { m_vkContext.vkFrames[m_currentFrame].renderFinishedSemaphore->Handle() };
+		const VkSemaphore signalSemaphores[] = { m_vkContext.vkFrames[m_currentFrame].renderFinishedSemaphore->Handle() };
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -97,12 +110,12 @@ namespace BetterThanNothing
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pWaitSemaphores = signalSemaphores;
 
-		VkSwapchainKHR swapChains[] = { swapchain };
+		const VkSwapchainKHR swapChains[] = { swapchain };
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;
 		presentInfo.pImageIndices = &imageIndex;
 
-		VkResult presentResult = vkQueuePresentKHR(m_vkContext.vkPresentQueue->Handle(), &presentInfo);
+		const VkResult presentResult = vkQueuePresentKHR(m_vkContext.vkPresentQueue->Handle(), &presentInfo);
 
 		auto& pWindow = CWindowManager::GetWindow();
 		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || pWindow->IsResized())
@@ -114,6 +127,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to present swap chain image!");
 
 		m_currentFrame = (m_currentFrame + 1) % m_vkContext.vkFrames.size();
+		m_renderQueue.clear();
 	}
 
 	void CRenderer::Render(CMesh* pMesh)
@@ -121,9 +135,11 @@ namespace BetterThanNothing
 		m_renderQueue.push_back(pMesh);
 	}
 
-	void CRenderer::_recordCommandBuffer(uint32 imageIndex)
+	void CRenderer::_recordCommandBuffer(const uint32 imageIndex)
 	{
-		m_vkContext.vkFrames[m_currentFrame].commandBuffer->BeginRecording();
+		const auto& currentFrame = m_vkContext.vkFrames[m_currentFrame];
+
+		currentFrame.commandBuffer->BeginRecording();
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -132,11 +148,11 @@ namespace BetterThanNothing
 		renderPassInfo.renderArea.offset = {0, 0};
 		renderPassInfo.renderArea.extent = m_vkContext.vkSwapChain->GetExtent();
 
-		VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+		constexpr VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
 
-		auto passContext = m_vkContext.vkFrames[m_currentFrame].commandBuffer->BeginRenderPass(&renderPassInfo);
+		const auto passContext = currentFrame.commandBuffer->BeginRenderPass(&renderPassInfo);
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -156,24 +172,30 @@ namespace BetterThanNothing
 
 		for (const auto mesh : m_renderQueue)
 		{
-			const VkBuffer vertexBuffers[] = { mesh->GetVertexBuffer().Handle() };
+			const VkBuffer vertexBuffers[] = { mesh->GetVertexBuffer()->Handle() };
 			constexpr VkDeviceSize offsets[] = {0};
 			passContext->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-			passContext->BindIndexBuffer(mesh->GetIndexBuffer().Handle(), 0, VK_INDEX_TYPE_UINT16);
+			passContext->BindIndexBuffer(mesh->GetIndexBuffer()->Handle(), 0, VK_INDEX_TYPE_UINT16);
+
+			VkDescriptorSet descriptorSet = m_vkContext.vkDescriptorSets[m_currentFrame]->Handle();
+
+			passContext->BindDescriptorSets(
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				m_vkContext.vkPipeline->GetLayout(), 0, 1,
+				&descriptorSet
+			);
 
 			auto indices = mesh->GetIndices();
 			passContext->DrawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
 		}
 
-		m_renderQueue.clear();
-
-		m_vkContext.vkFrames[m_currentFrame].commandBuffer->EndRenderPass();
-		m_vkContext.vkFrames[m_currentFrame].commandBuffer->EndRecording();
+		currentFrame.commandBuffer->EndRenderPass();
+		currentFrame.commandBuffer->EndRecording();
 	}
 
 	void CRenderer::_createCommandBuffers()
 	{
-		auto device = m_vkContext.vkDevice->LogicalHandle();
+		const auto device = m_vkContext.vkDevice->Handle();
 
 		const uint32 count = m_vkContext.vkSettings.maxFramesInFlight;
 
@@ -210,10 +232,92 @@ namespace BetterThanNothing
 		LOG_SUCCESS("Vulkan sync objects: ok (count: " << count << ")");
 	}
 
-	void CRenderer::AddPipeline(const std::function<void(VulkanPipelineBuilder&)>& callback)
+	void CRenderer::_createUniformBuffers()
+	{
+		const uint32 count = m_vkContext.vkSettings.maxFramesInFlight;
+		for (uint32 i = 0; i < count; i++) {
+			m_vkContext.vkFrames[i].uniformBuffer = CBufferManager::CreateUniformBuffer<UniformBufferObject>();
+		}
+
+		LOG_SUCCESS("Vulkan uniforms: ok (count: " << count << ")");
+	}
+
+	void CRenderer::_createDescriptorSetLayout()
+	{
+		VkDescriptorSetLayoutBinding uboLayoutBinding{};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.pImmutableSamplers = nullptr;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		auto bindings = std::vector<VkDescriptorSetLayoutBinding>{uboLayoutBinding};
+		m_vkContext.vkDescriptorSetLayout = std::make_unique<CVulkanDescriptorSetLayout>(bindings, &m_vkContext);
+
+		LOG_SUCCESS("Vulkan descriptor set layout: ok");
+	}
+
+	void CRenderer::_createDescriptorPool()
+	{
+		VkDescriptorPoolSize poolSize{};
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = m_vkContext.vkSettings.maxFramesInFlight;
+
+		m_vkContext.vkDescriptorPool = std::make_unique<CVulkanDescriptorPool>(std::vector{poolSize}, &m_vkContext);
+
+		LOG_SUCCESS("Vulkan descriptor pool: ok");
+	}
+
+	void CRenderer::_createDescriptorSets()
+	{
+		m_vkContext.vkDescriptorSets.resize(m_vkContext.vkSettings.maxFramesInFlight);
+
+		for (size_t i = 0; i < m_vkContext.vkSettings.maxFramesInFlight; i++) {
+			m_vkContext.vkDescriptorSets[i] = std::make_unique<CVulkanDescriptorSet>(m_vkContext.vkDescriptorSetLayout, &m_vkContext);
+
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = m_vkContext.vkFrames[i].uniformBuffer->Handle();
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(UniformBufferObject);
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = m_vkContext.vkDescriptorSets[i]->Handle();
+			descriptorWrite.dstBinding = 0;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+
+			vkUpdateDescriptorSets(m_vkContext.vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
+		}
+
+		LOG_SUCCESS("Vulkan descriptor sets: ok (count: " << m_vkContext.vkDescriptorSets.size() << ")");
+	}
+
+	void CRenderer::_updateUniformBuffer() const
+	{
+		static auto startTime = std::chrono::high_resolution_clock::now();
+
+		const auto currentTime = std::chrono::high_resolution_clock::now();
+		const float time = std::chrono::duration<float>(currentTime - startTime).count();
+
+		const auto [width, height] = m_vkContext.vkSwapChain->GetExtent();
+		const float ratio = static_cast<float>(width) / static_cast<float>(height);
+
+		UniformBufferObject ubo{};
+		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.projection = glm::perspective(glm::radians(45.0f), ratio, 0.1f, 10.0f);
+		ubo.projection[1][1] *= -1;
+
+		m_vkContext.vkFrames[m_currentFrame].uniformBuffer->Update(ubo);
+	}
+
+	void CRenderer::AddPipeline(const std::function<void(IPipelineBuilder*)>& callback)
 	{
 		VulkanPipelineBuilder builder;
-		callback(builder);
+		callback(&builder);
 
 		VulkanPipelineParams params = builder.GetBuildParams();
 

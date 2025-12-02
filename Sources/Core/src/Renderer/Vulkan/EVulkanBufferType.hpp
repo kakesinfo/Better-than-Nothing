@@ -11,5 +11,6 @@ namespace BetterThanNothing
 		STAGING = 0,
 		VERTEX = 1,
 		INDEX = 2,
+		UNIFORM = 3
 	};
 }

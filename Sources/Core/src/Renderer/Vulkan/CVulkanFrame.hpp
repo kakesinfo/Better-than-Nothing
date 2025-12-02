@@ -1,5 +1,5 @@
 //
-// Created by COEZARAX on 27/11/2025.
+// Created by kakesinfo on 27/11/2025.
 //
 
 #pragma once
@@ -13,6 +13,7 @@ namespace BetterThanNothing
 	struct CVulkanFrame
 	{
 		std::unique_ptr<CVulkanCommandBuffer>	commandBuffer;
+		std::unique_ptr<CVulkanUniformBuffer>	uniformBuffer;
 		std::unique_ptr<CVulkanSemaphore>		imageAvailableSemaphore;
 		std::unique_ptr<CVulkanSemaphore>		renderFinishedSemaphore;
 		std::unique_ptr<CVulkanFence>			inFlightFence;

@@ -33,6 +33,9 @@
 better-than-nothing
 
 # Folders
+build/
+cmake-build-debug/
+cmake-build-release/
 .build/
 .idea/
 .cache/

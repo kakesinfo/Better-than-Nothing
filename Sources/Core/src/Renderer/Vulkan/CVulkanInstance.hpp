@@ -39,7 +39,7 @@ namespace BetterThanNothing
 			VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 			void* pUserData) noexcept;
 
-		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) noexcept;
+		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept;
 		void _createDebugMessenger();
 		void _destroyDebugMessenger();
 

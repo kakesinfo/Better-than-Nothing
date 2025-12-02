@@ -31,16 +31,16 @@ namespace BetterThanNothing
 		createInfo.ppEnabledExtensionNames = extensions.data();
 
 		// Prepare validation layers
+		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 		if (validationLayersEnabled)
 		{
-			VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-			_populateDebugMessengerCreateInfo(debugCreateInfo);
+			_populateDebugMessengerCreateInfo(&debugCreateInfo);
 
-			const auto validationLayers = m_context->vkSettings.validationLayers;
-
+			const auto& validationLayers = m_context->vkSettings.validationLayers;
 			createInfo.enabledLayerCount = static_cast<uint32>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
-			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
+
+			createInfo.pNext = &debugCreateInfo;
 		}
 		else
 		{
@@ -107,18 +107,21 @@ namespace BetterThanNothing
 		}
 		else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 			LOG_WARNING("validation layer: " << pCallbackData->pMessage);
+		} else {
+			LOG_INFO("validation layer: " << pCallbackData->pMessage);
 		}
 		return VK_FALSE;
 	}
 
-	void CVulkanInstance::_populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) noexcept
+	void CVulkanInstance::_populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept
 	{
-		createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		createInfo.pfnUserCallback = s_debugCallback;
-		createInfo.pUserData = m_context;
+		createInfo->sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		createInfo->pNext = nullptr;
+		createInfo->flags = 0;
+		createInfo->messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		createInfo->messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		createInfo->pfnUserCallback = s_debugCallback;
+		createInfo->pUserData = m_context;
 	}
 
 	void CVulkanInstance::_createDebugMessenger()
@@ -130,7 +133,7 @@ namespace BetterThanNothing
 			return;
 
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
-		_populateDebugMessengerCreateInfo(createInfo);
+		_populateDebugMessengerCreateInfo(&createInfo);
 
 		if (_createDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
 			throw std::runtime_error("failed to set up debug messenger!");

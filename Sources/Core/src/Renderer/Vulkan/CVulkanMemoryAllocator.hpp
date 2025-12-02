@@ -19,11 +19,15 @@ namespace BetterThanNothing
 		explicit CVulkanMemoryAllocator(CVulkanContext* pContext);
 		~CVulkanMemoryAllocator();
 
+		VkResult CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+
 		VkResult CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, VkMemoryPropertyFlags properties, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		VkResult CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, VkMemoryPropertyFlags properties, VmaAllocationCreateFlags flags, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+
 		void DestroyBuffer(VkBuffer buffer, VmaAllocation allocation) const;
 
-		VkResult CreateImage(const VkImageCreateInfo* imageCreateInfo, VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
-		VkResult AllocateMemory(const VkMemoryRequirements* memoryRequirements, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		// VkResult CreateImage(const VkImageCreateInfo* imageCreateInfo, VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		// VkResult AllocateMemory(const VkMemoryRequirements* memoryRequirements, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
 		VkResult MapMemory(VmaAllocation allocation, void** data) const;
 		void UnmapMemory(VmaAllocation allocation) const;
 

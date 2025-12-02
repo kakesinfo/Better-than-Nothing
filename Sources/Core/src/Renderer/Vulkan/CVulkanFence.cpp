@@ -8,7 +8,7 @@ namespace BetterThanNothing
 		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		auto device = m_context->vkDevice->LogicalHandle();
+		auto device = m_context->vkDevice->Handle();
 		if (vkCreateFence(device, &fenceInfo, nullptr, &m_fence) != VK_SUCCESS)
 			throw std::runtime_error("failed to create fence!");
 	}
@@ -17,20 +17,20 @@ namespace BetterThanNothing
 	{
 		if (m_fence != VK_NULL_HANDLE)
 		{
-			auto device = m_context->vkDevice->LogicalHandle();
+			auto device = m_context->vkDevice->Handle();
 			vkDestroyFence(device, m_fence, nullptr);
 		}
 	}
 
 	void CVulkanFence::Wait()
 	{
-		auto device = m_context->vkDevice->LogicalHandle();
+		auto device = m_context->vkDevice->Handle();
 		vkWaitForFences(device, 1, &m_fence, VK_TRUE, UINT64_MAX);
 	}
 
 	void CVulkanFence::Reset()
 	{
-		auto device = m_context->vkDevice->LogicalHandle();
+		auto device = m_context->vkDevice->Handle();
 		vkResetFences(device, 1, &m_fence);
 	}
 

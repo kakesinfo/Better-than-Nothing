@@ -1,7 +1,6 @@
 #include "BetterThanNothing.hpp"
 #include "Manager/CWIndowManager.hpp"
 #include "Renderer/CRendererBuilder.hpp"
-#include "Renderer/CShaderPool.hpp"
 
 namespace BetterThanNothing
 {
@@ -18,8 +17,7 @@ namespace BetterThanNothing
 			.EnableVSync(true)
 			.Build();
 
-		const auto pRenderer = renderer.get();
-		OnEnable(pRenderer);
+		OnEnable(renderer.get());
 
 		CWindowManager::GetWindow()->Show();
 
@@ -28,11 +26,11 @@ namespace BetterThanNothing
 			CWindow::PollEvents();
 
 			OnUpdate();
-			OnRender(pRenderer);
+			OnRender(renderer.get());
 
 			renderer->RenderFrame();
 
-			std::this_thread::sleep_for(std::chrono::milliseconds (1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		OnDisable();

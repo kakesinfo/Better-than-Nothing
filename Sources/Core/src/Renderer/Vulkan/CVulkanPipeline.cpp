@@ -71,7 +71,7 @@ namespace BetterThanNothing
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL; // use VK_POLYGON_MODE_LINE for wireframe
 		rasterizer.lineWidth = 1.0f;
 		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
 		rasterizer.depthBiasClamp = 0.0f; // Optional
@@ -107,14 +107,16 @@ namespace BetterThanNothing
 		colorBlending.blendConstants[2] = 0.0f; // Optional
 		colorBlending.blendConstants[3] = 0.0f; // Optional
 
+		VkDescriptorSetLayout layout = m_context->vkDescriptorSetLayout->Handle();
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0; // Optional
-		pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = &layout;
 		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-		if (vkCreatePipelineLayout(m_context->vkDevice->LogicalHandle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
+		if (vkCreatePipelineLayout(m_context->vkDevice->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create pipeline layout");
 
 		LOG_SUCCESS("Vulkan pipeline layout: ok");
@@ -138,7 +140,7 @@ namespace BetterThanNothing
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 		pipelineInfo.basePipelineIndex = -1; // Optional
 
-		if (vkCreateGraphicsPipelines(m_context->vkDevice->LogicalHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
+		if (vkCreateGraphicsPipelines(m_context->vkDevice->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create graphics pipeline");
 
 		LOG_SUCCESS("Vulkan graphics pipeline: ok");
@@ -147,15 +149,20 @@ namespace BetterThanNothing
 	CVulkanPipeline::~CVulkanPipeline()
 	{
 		if (m_pipelineLayout != VK_NULL_HANDLE)
-			vkDestroyPipelineLayout(m_context->vkDevice->LogicalHandle(), m_pipelineLayout, nullptr);
+			vkDestroyPipelineLayout(m_context->vkDevice->Handle(), m_pipelineLayout, nullptr);
 
 		if (m_pipeline != VK_NULL_HANDLE)
-			vkDestroyPipeline(m_context->vkDevice->LogicalHandle(), m_pipeline, nullptr);
+			vkDestroyPipeline(m_context->vkDevice->Handle(), m_pipeline, nullptr);
 	}
 
 	VkPipeline CVulkanPipeline::Handle() const
 	{
 		return m_pipeline;
+	}
+
+	VkPipelineLayout CVulkanPipeline::GetLayout() const
+	{
+		return m_pipelineLayout;
 	}
 
 	VkShaderStageFlagBits CVulkanPipeline::_getShaderStageTypeByShaderType(const EVulkanShaderType type)
