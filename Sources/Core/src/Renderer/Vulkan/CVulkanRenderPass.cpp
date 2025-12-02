@@ -40,7 +40,7 @@ namespace BetterThanNothing
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies = &dependency;
 
-		if (vkCreateRenderPass(context->vkDevice->LogicalHandle(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS)
+		if (vkCreateRenderPass(context->vkDevice->Handle(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create render pass");
 
 		LOG_SUCCESS("Vulkan render pass: ok");
@@ -48,7 +48,7 @@ namespace BetterThanNothing
 
 	CVulkanRenderPass::~CVulkanRenderPass()
 	{
-		vkDestroyRenderPass(m_context->vkDevice->LogicalHandle(), m_renderPass, nullptr);
+		vkDestroyRenderPass(m_context->vkDevice->Handle(), m_renderPass, nullptr);
 	}
 
 	VkRenderPass CVulkanRenderPass::Handle() const

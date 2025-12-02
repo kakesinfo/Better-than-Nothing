@@ -8,7 +8,7 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanBuffer;
+	class CVulkanBuffer_Old;
 
 	class CMesh
 	{
@@ -16,8 +16,8 @@ namespace BetterThanNothing
 		std::vector<CVertex> m_vertices;
 		std::vector<uint16> m_indices;
 
-		CVulkanBuffer m_vertexBuffer;
-		CVulkanBuffer m_indexBuffer;
+		std::unique_ptr<CVulkanVertexBuffer> m_pVertexBuffer;
+		std::unique_ptr<CVulkanIndexBuffer> m_pIndexBuffer;
 
 		bool m_bIsBuffered = false;
 	public:
@@ -54,31 +54,29 @@ namespace BetterThanNothing
 			if (m_bIsBuffered)
 				throw std::runtime_error("Mesh is already built and buffered.");
 
-			m_bIsBuffered = true;
-
 			const uint32 vertexBufferSize = sizeof(m_vertices[0]) * m_vertices.size();
 			const void* vertexBufferData = m_vertices.data();
-
-			m_vertexBuffer = CVulkanBufferFactory::CreateVertexBuffer(vertexBufferData, vertexBufferSize);
+			m_pVertexBuffer = CBufferManager::CreateVertexBuffer(vertexBufferData, vertexBufferSize);
 
 			const uint32 indexBufferSize = sizeof(m_indices[0]) * m_indices.size();
 			const void* indexBufferData = m_indices.data();
+			m_pIndexBuffer = CBufferManager::CreateIndexBuffer(indexBufferData, indexBufferSize);
 
-			m_indexBuffer = CVulkanBufferFactory::CreateIndexBuffer(indexBufferData, indexBufferSize);
+			m_bIsBuffered = true;
 		}
 
-		CVulkanBuffer& GetVertexBuffer()
+		std::unique_ptr<CVulkanVertexBuffer>& GetVertexBuffer()
 		{
 			if (!m_bIsBuffered)
 				throw std::runtime_error("Mesh is not yet built and buffered.");
-			return m_vertexBuffer;
+			return m_pVertexBuffer;
 		}
 
-		CVulkanBuffer& GetIndexBuffer()
+		std::unique_ptr<CVulkanIndexBuffer>& GetIndexBuffer()
 		{
 			if (!m_bIsBuffered)
 				throw std::runtime_error("Mesh is not yet built and buffered.");
-			return m_indexBuffer;
+			return m_pIndexBuffer;
 		}
 
 		std::vector<CVertex>& GetVertices()

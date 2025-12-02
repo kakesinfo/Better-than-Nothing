@@ -6,10 +6,10 @@ namespace BetterThanNothing
 {
 	void CRuntime::OnEnable(IRenderer* renderer)
 	{
-		renderer->AddPipeline([&](VulkanPipelineBuilder& builder) {
-			builder.SetName("main");
-			builder.AddVertexShader("main/main.vert");
-			builder.AddFragmentShader("main/main.frag");
+		renderer->AddPipeline([&](IPipelineBuilder* builder) {
+			builder->SetName("main");
+			builder->AddVertexShader("main/main.vert");
+			builder->AddFragmentShader("main/main.frag");
 		});
 
 		mesh.AddVertex({-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f});

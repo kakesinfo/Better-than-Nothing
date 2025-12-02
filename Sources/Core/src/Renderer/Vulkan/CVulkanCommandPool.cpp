@@ -4,7 +4,7 @@ namespace BetterThanNothing
 {
 	CVulkanCommandPool::CVulkanCommandPool(CVulkanContext* context): m_context(context)
 	{
-		auto device = m_context->vkDevice->LogicalHandle();
+		auto device = m_context->vkDevice->Handle();
 		auto queueFamilyIndices = m_context->vkDevice->GetQueueFamilies();
 
 		VkCommandPoolCreateInfo poolInfo{};
@@ -20,7 +20,7 @@ namespace BetterThanNothing
 
 	CVulkanCommandPool::~CVulkanCommandPool()
 	{
-		vkDestroyCommandPool(m_context->vkDevice->LogicalHandle(), m_commandPool, nullptr);
+		vkDestroyCommandPool(m_context->vkDevice->Handle(), m_commandPool, nullptr);
 	}
 
 	VkCommandPool CVulkanCommandPool::Handle() const

@@ -83,12 +83,12 @@ namespace BetterThanNothing
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
 		createInfo.pEnabledFeatures = &deviceFeatures;
 
-		const auto deviceExtensions = m_context->vkSettings.deviceExtensions;
+		const auto& deviceExtensions = m_context->vkSettings.deviceExtensions;
 		createInfo.enabledExtensionCount = static_cast<uint32>(deviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 		if (m_context->vkSettings.enableValidationLayers) {
-			const auto validationLayers = m_context->vkSettings.validationLayers;
+			const auto& validationLayers = m_context->vkSettings.validationLayers;
 			createInfo.enabledLayerCount = static_cast<uint32>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
 		} else {
@@ -108,7 +108,7 @@ namespace BetterThanNothing
 
 		VkQueue presentQueue;
 		vkGetDeviceQueue(m_logicalDevice, indices.presentFamily.value(), 0, &presentQueue);
-		m_context->vkPresentQueue = std::make_unique<CVulkanQueue>(graphicsQueue);
+		m_context->vkPresentQueue = std::make_unique<CVulkanQueue>(presentQueue);
 
 		LOG_SUCCESS("Vulkan presentation queue: ok");
 	}
@@ -254,7 +254,7 @@ namespace BetterThanNothing
 		return m_physicalDevice;
 	}
 
-	VkDevice CVulkanDevice::LogicalHandle() const
+	VkDevice CVulkanDevice::Handle() const
 	{
 		if (m_logicalDevice == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan logical device is not initialized");

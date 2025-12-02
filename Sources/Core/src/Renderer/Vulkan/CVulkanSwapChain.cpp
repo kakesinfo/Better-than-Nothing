@@ -56,7 +56,7 @@ namespace BetterThanNothing
 
 		createInfo.oldSwapchain = VK_NULL_HANDLE; // For recreation
 
-		auto device = m_context->vkDevice->LogicalHandle();
+		auto device = m_context->vkDevice->Handle();
 
 		if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create swap chain!");
@@ -67,7 +67,7 @@ namespace BetterThanNothing
 
 	void CVulkanSwapChain::CreateImages()
 	{
-		auto device = m_context->vkDevice->LogicalHandle();
+		auto device = m_context->vkDevice->Handle();
 
 		uint32 finalImageCount = 0;
 		vkGetSwapchainImagesKHR(device, m_swapChain, &finalImageCount, nullptr);
@@ -159,7 +159,7 @@ namespace BetterThanNothing
 		m_framebuffers.clear();
 		m_imageViews.clear();
 
-		vkDestroySwapchainKHR(m_context->vkDevice->LogicalHandle(), m_swapChain, nullptr);
+		vkDestroySwapchainKHR(m_context->vkDevice->Handle(), m_swapChain, nullptr);
 	}
 
 	VkSurfaceFormatKHR CVulkanSwapChain::_chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)

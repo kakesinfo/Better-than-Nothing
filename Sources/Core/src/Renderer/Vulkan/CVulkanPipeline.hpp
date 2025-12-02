@@ -6,6 +6,7 @@
 
 #include "EVulkanShaderType.hpp"
 #include "CVulkanShaderModule.hpp"
+#include "Public/IPipelineBuilder.hpp"
 
 namespace BetterThanNothing
 {
@@ -38,12 +39,13 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkPipeline Handle() const;
+		VkPipelineLayout GetLayout() const;
 
 	private:
 		static VkShaderStageFlagBits _getShaderStageTypeByShaderType(EVulkanShaderType type);
 	};
 
-	class VulkanPipelineBuilder
+	class VulkanPipelineBuilder: public IPipelineBuilder
 	{
 	private:
 		VulkanPipelineParams m_params{};
@@ -53,12 +55,12 @@ namespace BetterThanNothing
 
 	public:
 		explicit VulkanPipelineBuilder() = default;
-		~VulkanPipelineBuilder() = default;
+		~VulkanPipelineBuilder() override = default;
 
-		VulkanPipelineBuilder& SetName(const char* name);
+		VulkanPipelineBuilder& SetName(const char* name) override;
 		VulkanPipelineBuilder& AddShader(const std::string& shaderPath, EVulkanShaderType shaderType);
-		VulkanPipelineBuilder& AddVertexShader(const std::string& shaderPath);
-		VulkanPipelineBuilder& AddFragmentShader(const std::string& shaderPath);
+		VulkanPipelineBuilder& AddVertexShader(const std::string& shaderPath) override;
+		VulkanPipelineBuilder& AddFragmentShader(const std::string& shaderPath) override;
 
 		[[nodiscard]]
 		VulkanPipelineParams& GetBuildParams();
