@@ -21,14 +21,18 @@ namespace BetterThanNothing
 
 		CWindowManager::GetWindow()->Show();
 
+		const auto renderQueue = std::make_unique<CRenderQueue>();
+
 		while (!CWindowManager::GetWindow()->ShouldClose())
 		{
 			CWindow::PollEvents();
 
 			OnUpdate();
-			OnRender(renderer.get());
 
-			renderer->RenderFrame();
+			OnRender(renderQueue.get()); // TODO: pass renderQueue instead of renderer
+			renderer->RenderFrame(renderQueue.get()); // TODO: pass renderQueue
+
+			renderQueue->Clear();
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}

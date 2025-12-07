@@ -43,6 +43,8 @@ namespace BetterThanNothing
 		m_pShaderPool = std::make_unique<CShaderPool>(m_vkContext.vkSettings.shadersFolderPath, &m_vkContext);
 		LOG_SUCCESS("Shader pool: ok")
 
+		m_pRenderCache = std::make_unique<CRenderCache>();
+
 		LOG_SUCCESS("Renderer: ok");
 	}
 
@@ -52,7 +54,7 @@ namespace BetterThanNothing
 		CBufferManager::Shutdown();
 	}
 
-	void CRenderer::RenderFrame()
+	void CRenderer::RenderFrame(CRenderQueue* renderQueue)
 	{
 		if (!m_vkContext.vkPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
@@ -80,7 +82,7 @@ namespace BetterThanNothing
 		m_vkContext.vkFrames[m_currentFrame].inFlightFence->Reset();
 		m_vkContext.vkFrames[m_currentFrame].commandBuffer->Reset();
 
-		_recordCommandBuffer(imageIndex);
+		_recordCommandBuffer(renderQueue, imageIndex);
 
 		const VkSemaphore waitSemaphores[] = { m_vkContext.vkFrames[m_currentFrame].imageAvailableSemaphore->Handle() };
 
@@ -127,15 +129,9 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to present swap chain image!");
 
 		m_currentFrame = (m_currentFrame + 1) % m_vkContext.vkFrames.size();
-		m_renderQueue.clear();
 	}
 
-	void CRenderer::Render(CMesh* pMesh)
-	{
-		m_renderQueue.push_back(pMesh);
-	}
-
-	void CRenderer::_recordCommandBuffer(const uint32 imageIndex)
+	void CRenderer::_recordCommandBuffer(CRenderQueue* renderQueue, const uint32 imageIndex) const
 	{
 		const auto& currentFrame = m_vkContext.vkFrames[m_currentFrame];
 
@@ -168,24 +164,31 @@ namespace BetterThanNothing
 		scissor.extent = m_vkContext.vkSwapChain->GetExtent();
 		passContext->SetScissor(&scissor);
 
+		// Bind shader pipeline
 		passContext->BindPipeline(m_vkContext.vkPipeline->Handle());
 
-		for (const auto mesh : m_renderQueue)
+		// Bind global uniforms
+		VkDescriptorSet descriptorSet = m_vkContext.vkDescriptorSets[m_currentFrame]->Handle();
+		passContext->BindDescriptorSets(
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			m_vkContext.vkPipeline->GetLayout(), 0, 1,
+			&descriptorSet
+		);
+
+		while (!renderQueue->IsEmpty())
 		{
-			const VkBuffer vertexBuffers[] = { mesh->GetVertexBuffer()->Handle() };
+			const auto pMesh = renderQueue->Pop().pMesh;
+
+			const MeshGpuData* meshGpuData = m_pRenderCache->GetOrCreateMeshGpuData(pMesh);
+
+			// Bind mesh vertex and index buffers
+			const VkBuffer vertexBuffers[] = { meshGpuData->pVertexBuffer->Handle() };
 			constexpr VkDeviceSize offsets[] = {0};
 			passContext->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-			passContext->BindIndexBuffer(mesh->GetIndexBuffer()->Handle(), 0, VK_INDEX_TYPE_UINT16);
+			passContext->BindIndexBuffer(meshGpuData->pIndexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT16);
 
-			VkDescriptorSet descriptorSet = m_vkContext.vkDescriptorSets[m_currentFrame]->Handle();
-
-			passContext->BindDescriptorSets(
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				m_vkContext.vkPipeline->GetLayout(), 0, 1,
-				&descriptorSet
-			);
-
-			auto indices = mesh->GetIndices();
+			// Draw mesh
+			auto indices = pMesh->GetIndices();
 			passContext->DrawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
 		}
 

@@ -15,6 +15,5 @@ namespace BetterThanNothing
         virtual ~IRenderer() = default;
 
 		virtual void AddPipeline(const std::function<void(IPipelineBuilder*)>& callback) = 0;
-    	virtual void Render(CMesh* pMesh) = 0;
     };
 };
