@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanSurface::CVulkanSurface(CVulkanContext* context): m_context(context)
+	CVulkanSurface::CVulkanSurface(VulkanContext* context): m_context(context)
 	{
 		auto& pWindow = CWindowManager::GetWindow();
 

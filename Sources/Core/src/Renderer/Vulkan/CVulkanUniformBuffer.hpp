@@ -11,7 +11,7 @@ namespace BetterThanNothing
 	class CVulkanUniformBuffer: public CVulkanBuffer
 	{
 	public:
-		CVulkanUniformBuffer(CVulkanContext* context, VkDeviceSize size);
+		CVulkanUniformBuffer(VulkanContext* context, VkDeviceSize size);
 
 		template <typename T>
 		void Update(const T& uboData) {

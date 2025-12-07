@@ -17,14 +17,14 @@ namespace BetterThanNothing
 	class CRenderQueue;
 	class CRenderCache;
 
-	struct CVertex;
+	struct VertexData;
 
 	class CRenderer : public IRenderer
 	{
 	private:
-		CVulkanContext m_vkContext{};
+		VulkanContext m_vkContext{};
 
-		std::vector<CVulkanFrame> m_frames;
+		std::vector<VulkanFrame> m_frames;
 		uint32 m_currentFrame = 0;
 
 		std::unique_ptr<CBufferManager> m_pBufferFactory = nullptr;
@@ -33,7 +33,7 @@ namespace BetterThanNothing
 		std::unique_ptr<CRenderCache> m_pRenderCache = nullptr;
 
 	public:
-		explicit CRenderer(CVulkanContext& vkContext);
+		explicit CRenderer(VulkanContext& vkContext);
 		~CRenderer() override;
 
 		void RenderFrame(CRenderQueue* renderQueue);

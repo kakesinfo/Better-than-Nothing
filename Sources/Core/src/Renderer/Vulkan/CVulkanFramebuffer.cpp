@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanFramebuffer::CVulkanFramebuffer(VkFramebufferCreateInfo* createInfo, CVulkanContext* context)
+	CVulkanFramebuffer::CVulkanFramebuffer(VkFramebufferCreateInfo* createInfo, VulkanContext* context)
 		: m_context(context)
 	{
 		auto device = context->vkDevice->Handle();

@@ -4,33 +4,31 @@
 
 namespace BetterThanNothing
 {
-	MeshGpuData* CRenderCache::GetOrCreateMeshGpuData(CMesh* pMesh)
+	MeshGpuData* CRenderCache::GetOrCreateMeshGpuData(MeshData* pMesh)
 	{
-		auto it = m_meshCache.find(pMesh->GetId());
+		auto it = m_meshCache.find(pMesh->id);
 		if (it != m_meshCache.end())
 			return it->second.get();
 
 		auto meshGpuData = std::make_unique<MeshGpuData>();
 
-		const std::vector<CVertex> vertices = pMesh->GetVertices();
-		const std::vector<uint16> indices = pMesh->GetIndices();
 
-		if (vertices.empty() || indices.empty())
+		if (pMesh->vertices.empty() || pMesh->indices.empty())
 			throw std::runtime_error("Mesh has no vertices or indices!");
 
-		const uint32 vertexBufferSize = sizeof(vertices[0]) * vertices.size();
-		const void* vertexBufferData = vertices.data();
+		const uint32 vertexBufferSize = sizeof(pMesh->vertices[0]) * pMesh->vertices.size();
+		const void* vertexBufferData = pMesh->vertices.data();
 		meshGpuData->pVertexBuffer = CBufferManager::CreateVertexBuffer(vertexBufferData, vertexBufferSize);
 
-		const uint32 indexBufferSize = sizeof(indices[0]) * indices.size();
-		const void* indexBufferData = indices.data();
+		const uint32 indexBufferSize = sizeof(pMesh->indices[0]) * pMesh->indices.size();
+		const void* indexBufferData = pMesh->indices.data();
 		meshGpuData->pIndexBuffer = CBufferManager::CreateIndexBuffer(indexBufferData, indexBufferSize);
-		meshGpuData->indexCount = static_cast<uint32>(pMesh->GetIndices().size());
+		meshGpuData->indexCount = static_cast<uint32>(pMesh->indices.size());
 
-		m_meshCache[pMesh->GetId()] = std::move(meshGpuData);
+		m_meshCache[pMesh->id] = std::move(meshGpuData);
 
-		LOG_INFO("MeshGpuData created and cached for Mesh ID: " << pMesh->GetId());
+		LOG_INFO("MeshGpuData created and cached for Mesh ID: " << pMesh->id);
 
-		return m_meshCache[pMesh->GetId()].get();
+		return m_meshCache[pMesh->id].get();
 	}
 } // BetterThanNothing

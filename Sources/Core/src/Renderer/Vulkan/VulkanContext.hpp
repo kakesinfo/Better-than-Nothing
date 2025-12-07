@@ -22,9 +22,9 @@ namespace BetterThanNothing
 	class CVulkanDescriptorPool;
 	class CVulkanDescriptorSet;
 	class CVulkanPipeline;
-	struct CVulkanFrame;
+	struct VulkanFrame;
 
-	struct CVulkanContext
+	struct VulkanContext
 	{
 		struct
 		{
@@ -53,14 +53,10 @@ namespace BetterThanNothing
 		std::unique_ptr<CVulkanCommandPool>					vkCommandPool = nullptr;
 		std::unique_ptr<CVulkanPipeline>					vkPipeline = nullptr;
 
-		std::vector<CVulkanFrame>							vkFrames;
+		std::vector<VulkanFrame>							vkFrames;
 
 		std::unique_ptr<CVulkanDescriptorSetLayout>			vkDescriptorSetLayout = nullptr;
 		std::unique_ptr<CVulkanDescriptorPool>				vkDescriptorPool = nullptr;
 		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkDescriptorSets;
-
-		// VkDescriptorSetLayout descriptorSetLayout = nullptr;
-		// VkDescriptorPool descriptorPool = nullptr;
-		// std::vector<VkDescriptorSet> descriptorSets;
 	};
 };

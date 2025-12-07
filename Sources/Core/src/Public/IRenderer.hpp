@@ -7,7 +7,7 @@
 namespace BetterThanNothing
 {
 	class VulkanPipelineBuilder;
-	class CMesh;
+	struct MeshData;
 
     class IRenderer
     {

@@ -4,9 +4,6 @@ namespace BetterThanNothing
 {
 	class CVulkanRenderPassContext
 	{
-	private:
-		VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
-
 	public:
 		explicit CVulkanRenderPassContext(VkCommandBuffer commandBuffer);
 		~CVulkanRenderPassContext() = default;
@@ -34,5 +31,8 @@ namespace BetterThanNothing
 
 		void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance) const;
 		void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, int32 vertexOffset, uint32 firstInstance) const;
+
+	private:
+		VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
 	};
 }

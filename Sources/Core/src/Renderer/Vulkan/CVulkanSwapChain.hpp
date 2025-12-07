@@ -2,24 +2,13 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 	class CVulkanImageView;
-	struct CVulkanFramebuffer;
+	class CVulkanFramebuffer;
 
 	class CVulkanSwapChain {
-	private:
-		CVulkanContext* m_context = nullptr;
-
-		VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
-		VkFormat m_imageFormat;
-		VkExtent2D m_extent;
-
-		std::vector<VkImage> m_images;
-		std::vector<std::unique_ptr<CVulkanImageView>> m_imageViews;
-		std::vector<std::unique_ptr<CVulkanFramebuffer>> m_framebuffers;
-
 	public:
-		explicit CVulkanSwapChain(CVulkanContext* context);
+		explicit CVulkanSwapChain(VulkanContext* context);
 		~CVulkanSwapChain();
 
 		CVulkanSwapChain(const CVulkanSwapChain&) = delete;
@@ -63,5 +52,16 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkSwapchainKHR Handle() const;
+
+	private:
+		VulkanContext* m_context = nullptr;
+
+		VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
+		VkFormat m_imageFormat;
+		VkExtent2D m_extent;
+
+		std::vector<VkImage> m_images;
+		std::vector<std::unique_ptr<CVulkanImageView>> m_imageViews;
+		std::vector<std::unique_ptr<CVulkanFramebuffer>> m_framebuffers;
 	};
 };

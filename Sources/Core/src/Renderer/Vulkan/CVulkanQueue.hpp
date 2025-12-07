@@ -8,9 +8,6 @@ namespace BetterThanNothing
 {
 	class CVulkanQueue
 	{
-	private:
-		VkQueue m_queue = VK_NULL_HANDLE;
-
 	public:
 		explicit CVulkanQueue(VkQueue queue);
 		~CVulkanQueue() = default;
@@ -22,5 +19,8 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkQueue Handle() const;
+
+	private:
+		VkQueue m_queue = VK_NULL_HANDLE;
 	};
 } // BetterThanNothing

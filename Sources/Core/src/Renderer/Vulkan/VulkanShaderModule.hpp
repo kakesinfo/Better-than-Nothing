@@ -4,7 +4,7 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanShaderModule
+	struct VulkanShaderModule
 	{
 		std::string shaderPath;
 		EVulkanShaderType shaderType;

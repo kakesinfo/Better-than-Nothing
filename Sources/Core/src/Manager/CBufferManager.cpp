@@ -6,9 +6,9 @@
 
 namespace BetterThanNothing
 {
-	CVulkanContext* CBufferManager::m_context = nullptr;
+	VulkanContext* CBufferManager::m_context = nullptr;
 
-	void CBufferManager::Initialize(CVulkanContext* context)
+	void CBufferManager::Initialize(VulkanContext* context)
 	{
 		m_context = context;
 	}

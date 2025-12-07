@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanSemaphore::CVulkanSemaphore(CVulkanContext* context): m_context(context)
+	CVulkanSemaphore::CVulkanSemaphore(VulkanContext* context): m_context(context)
 	{
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;

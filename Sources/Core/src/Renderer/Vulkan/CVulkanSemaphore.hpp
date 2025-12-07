@@ -2,19 +2,19 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 
 	class CVulkanSemaphore
 	{
-	private:
-		CVulkanContext* m_context = nullptr;
-		VkSemaphore m_semaphore = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanSemaphore(CVulkanContext* context);
+		explicit CVulkanSemaphore(VulkanContext* context);
 		~CVulkanSemaphore();
 
 		[[nodiscard]]
 		VkSemaphore Handle() const;
+
+	private:
+		VulkanContext* m_context = nullptr;
+		VkSemaphore m_semaphore = VK_NULL_HANDLE;
 	};
 }

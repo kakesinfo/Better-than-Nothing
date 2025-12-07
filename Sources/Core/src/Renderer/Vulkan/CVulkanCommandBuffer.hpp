@@ -1,5 +1,5 @@
 #pragma once
-#include "CVulkanContext.hpp"
+#include "VulkanContext.hpp"
 
 namespace BetterThanNothing
 {
@@ -7,12 +7,6 @@ namespace BetterThanNothing
 
 	class CVulkanCommandBuffer
 	{
-	private:
-		VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
-
-		bool m_bRecording = false;
-		bool m_bRenderPassActive = false;
-
 	public:
 		explicit CVulkanCommandBuffer(VkCommandBuffer commandBuffer);
 		~CVulkanCommandBuffer() = default;
@@ -31,10 +25,16 @@ namespace BetterThanNothing
 
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32 bufferSize) const;
 
-		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, CVulkanContext* context);
+		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, VulkanContext* context);
 
 		[[nodiscard]]
 		VkCommandBuffer Handle() const;
+
+	private:
+		VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
+
+		bool m_bRecording = false;
+		bool m_bRenderPassActive = false;
 	};
 
 }

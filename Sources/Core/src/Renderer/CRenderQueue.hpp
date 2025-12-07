@@ -8,7 +8,7 @@ namespace BetterThanNothing
 {
 	struct RenderQueueItem
 	{
-		CMesh* pMesh;
+		MeshData* pMesh;
 		glm::mat4 worldTransform;
 	};
 
@@ -18,7 +18,7 @@ namespace BetterThanNothing
 		CRenderQueue();
 		~CRenderQueue();
 
-		void Render(CMesh* pMesh, const glm::mat4& worldTransform);
+		void Render(MeshData* pMesh, const glm::mat4& worldTransform);
 		void Render(const RenderQueueItem& item);
 
 		RenderQueueItem Pop();

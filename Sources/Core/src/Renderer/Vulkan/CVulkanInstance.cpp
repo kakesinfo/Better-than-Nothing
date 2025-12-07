@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanInstance::CVulkanInstance(CVulkanContext* context): m_context(context)
+	CVulkanInstance::CVulkanInstance(VulkanContext* context): m_context(context)
 	{
 		bool validationLayersEnabled = context->vkSettings.enableValidationLayers;
 		bool validationLayersAvailable = _checkValidationLayerSupport();
@@ -107,9 +107,8 @@ namespace BetterThanNothing
 		}
 		else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 			LOG_WARNING("validation layer: " << pCallbackData->pMessage);
-		} else {
-			LOG_INFO("validation layer: " << pCallbackData->pMessage);
 		}
+
 		return VK_FALSE;
 	}
 

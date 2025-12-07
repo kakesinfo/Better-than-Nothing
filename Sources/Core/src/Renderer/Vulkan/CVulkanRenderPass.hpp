@@ -2,16 +2,12 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 
 	class CVulkanRenderPass
 	{
-	private:
-		CVulkanContext* m_context = nullptr;
-		VkRenderPass m_renderPass = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanRenderPass(CVulkanContext* context);
+		explicit CVulkanRenderPass(VulkanContext* context);
 		~CVulkanRenderPass();
 
 		CVulkanRenderPass(const CVulkanRenderPass&) = delete;
@@ -21,5 +17,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkRenderPass Handle() const;
+
+	private:
+		VulkanContext* m_context = nullptr;
+		VkRenderPass m_renderPass = VK_NULL_HANDLE;
 	};
 }

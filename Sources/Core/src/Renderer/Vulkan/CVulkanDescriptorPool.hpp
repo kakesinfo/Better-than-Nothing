@@ -6,14 +6,14 @@ namespace BetterThanNothing
 {
 	class CVulkanDescriptorPool
 	{
-	private:
-		CVulkanContext* m_context = nullptr;
-		VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, CVulkanContext* context);
+		explicit CVulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, VulkanContext* context);
 		~CVulkanDescriptorPool();
 
 		VkDescriptorPool Handle() const;
+
+	private:
+		VulkanContext* m_context = nullptr;
+		VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
 	};
 } // BetterThanNothing

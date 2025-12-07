@@ -10,7 +10,7 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanFrame
+	struct VulkanFrame
 	{
 		std::unique_ptr<CVulkanCommandBuffer>	commandBuffer;
 		std::unique_ptr<CVulkanUniformBuffer>	uniformBuffer;

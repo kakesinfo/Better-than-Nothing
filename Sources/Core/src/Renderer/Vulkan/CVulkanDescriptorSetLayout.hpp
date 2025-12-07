@@ -17,12 +17,8 @@ namespace BetterThanNothing
 
 	class CVulkanDescriptorSetLayout
 	{
-	private:
-		CVulkanContext* m_context;
-		VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& layoutBindings, CVulkanContext* context);
+		explicit CVulkanDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& layoutBindings, VulkanContext* context);
 		~CVulkanDescriptorSetLayout();
 
 		CVulkanDescriptorSetLayout(const CVulkanDescriptorSetLayout&) = delete;
@@ -32,5 +28,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkDescriptorSetLayout Handle() const;
+
+	private:
+		VulkanContext* m_context;
+		VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
 	};
 }

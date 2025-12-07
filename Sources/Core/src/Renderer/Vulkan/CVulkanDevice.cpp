@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanDevice::CVulkanDevice(CVulkanContext* context): m_context(context)
+	CVulkanDevice::CVulkanDevice(VulkanContext* context): m_context(context)
 	{
 		_pickPhysicalDevice();
 		_getPhysicalDeviceProperties();

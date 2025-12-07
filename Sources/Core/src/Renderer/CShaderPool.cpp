@@ -6,13 +6,13 @@
 
 #include "CWindowBuilder.hpp"
 #include "Renderer/Vulkan/EVulkanShaderType.hpp"
-#include "Renderer/Vulkan/CVulkanShaderModule.hpp"
+#include "Renderer/Vulkan/VulkanShaderModule.hpp"
 
 #include <utility>
 
 namespace BetterThanNothing
 {
-	CShaderPool::CShaderPool(std::string basePath, CVulkanContext* context)
+	CShaderPool::CShaderPool(std::string basePath, VulkanContext* context)
 		: m_context(context), m_basePath(std::move(basePath))
 	{
 		glslang_initialize_process();
@@ -30,7 +30,7 @@ namespace BetterThanNothing
 		glslang_finalize_process();
 	}
 
-	const CVulkanShaderModule& CShaderPool::LoadShader(const std::string& path, const EVulkanShaderType type)
+	const VulkanShaderModule& CShaderPool::LoadShader(const std::string& path, const EVulkanShaderType type)
 	{
 		const std::string fullPath = m_basePath + path;
 

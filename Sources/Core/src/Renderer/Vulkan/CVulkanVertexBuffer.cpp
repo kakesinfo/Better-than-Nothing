@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanVertexBuffer::CVulkanVertexBuffer(CVulkanContext* context, VkDeviceSize size, const void* data)
+	CVulkanVertexBuffer::CVulkanVertexBuffer(VulkanContext* context, VkDeviceSize size, const void* data)
 		: CVulkanBuffer(context, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, 0)
 	{
 		if (data)

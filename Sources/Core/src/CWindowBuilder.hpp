@@ -8,7 +8,7 @@
 
 namespace BetterThanNothing
 {
-	class CWindowBuilderError : public std::runtime_error
+	class CWindowBuilderError final : public std::runtime_error
 	{
 	public:
 		explicit CWindowBuilderError(const std::string& message)

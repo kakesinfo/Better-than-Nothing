@@ -18,7 +18,7 @@ namespace BetterThanNothing
 	class CVulkanBuffer
 	{
 	public:
-		CVulkanBuffer(CVulkanContext* context, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags vmaFlags);
+		CVulkanBuffer(VulkanContext* context, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags vmaFlags);
 		virtual ~CVulkanBuffer();
 
 		CVulkanBuffer(const CVulkanBuffer&) = delete;
@@ -30,7 +30,7 @@ namespace BetterThanNothing
 		void Write(const void* data, VkDeviceSize size, VkDeviceSize offset = 0) const;
 
 	protected:
-		CVulkanContext*		m_context;
+		VulkanContext*		m_context;
 		VkBuffer			m_buffer = VK_NULL_HANDLE;
 		VmaAllocation		m_allocation = VK_NULL_HANDLE;
 		VmaAllocationInfo	m_allocInfo = {};

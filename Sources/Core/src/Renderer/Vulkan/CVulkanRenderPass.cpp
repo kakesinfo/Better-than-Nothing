@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanRenderPass::CVulkanRenderPass(CVulkanContext* context): m_context(context)
+	CVulkanRenderPass::CVulkanRenderPass(VulkanContext* context): m_context(context)
 	{
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = context->vkSwapChain->GetImageFormat();
