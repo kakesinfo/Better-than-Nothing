@@ -18,7 +18,7 @@ namespace BetterThanNothing
 
 		virtual void OnEnable(IRenderer* renderer) = 0;
 		virtual void OnUpdate() = 0;
-		virtual void OnRender(CRenderQueue* renderQueue) = 0;
+		virtual void OnRender(CRenderList* renderQueue) = 0;
 		virtual void OnDisable() = 0;
 	};
 };

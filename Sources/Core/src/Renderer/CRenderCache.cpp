@@ -6,12 +6,11 @@ namespace BetterThanNothing
 {
 	MeshGpuData* CRenderCache::GetOrCreateMeshGpuData(MeshData* pMesh)
 	{
-		auto it = m_meshCache.find(pMesh->id);
+		const auto it = m_meshCache.find(pMesh->id);
 		if (it != m_meshCache.end())
 			return it->second.get();
 
 		auto meshGpuData = std::make_unique<MeshGpuData>();
-
 
 		if (pMesh->vertices.empty() || pMesh->indices.empty())
 			throw std::runtime_error("Mesh has no vertices or indices!");

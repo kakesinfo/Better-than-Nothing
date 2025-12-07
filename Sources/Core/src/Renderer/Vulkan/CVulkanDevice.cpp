@@ -49,6 +49,7 @@ namespace BetterThanNothing
 		m_vendorName = _getVendorById(deviceProperties.vendorID);
 		m_deviceName = deviceProperties.deviceName;
 		m_apiVersion = std::to_string(deviceProperties.apiVersion);
+		m_minUniformBufferOffsetAlignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
 	}
 
 	void CVulkanDevice::_createLogicalDevice()
@@ -274,5 +275,10 @@ namespace BetterThanNothing
 	std::string CVulkanDevice::GetApiVersion() const
 	{
 		return m_apiVersion;
+	}
+
+	uint32 CVulkanDevice::GetMinUniformBufferOffsetAlignment() const
+	{
+		return m_minUniformBufferOffsetAlignment;
 	}
 }

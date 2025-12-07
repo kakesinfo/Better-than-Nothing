@@ -36,17 +36,23 @@
 
 #include "Manager/CBufferManager.hpp"
 
-#include "Renderer/VertexData.hpp"
-#include "Renderer/MeshData.hpp"
+#include "Renderer/Data/VertexData.hpp"
+#include "Renderer/Data/MeshData.hpp"
 
 #include "Public/IRenderer.hpp"
 #include "Public/IPipelineBuilder.hpp"
 
-#include "Renderer/MaterialGpuData.hpp"
-#include "Renderer/MeshGpuData.hpp"
+#include "Renderer/Data/GlobalUniformData.hpp"
+#include "Renderer/Data/DynamicUniformData.hpp"
+
+#include "Renderer/CGlobalUniformProvider.hpp"
+#include "Renderer/CDynamicUniformProvider.hpp"
+
+#include "Renderer/Data/MaterialGpuData.hpp"
+#include "Renderer/Data/MeshGpuData.hpp"
 #include "Renderer/CRenderCache.hpp"
 #include "Renderer/CShaderPool.hpp"
-#include "Renderer/CRenderQueue.hpp"
+#include "Renderer/CRenderList.hpp"
 #include "Renderer/CRenderer.hpp"
 #include "Renderer/CRendererBuilder.hpp"
 

@@ -9,19 +9,20 @@ namespace BetterThanNothing
 	struct RenderQueueItem
 	{
 		MeshData* pMesh;
-		glm::mat4 worldTransform;
+		glm::mat4 modelTransform;
 	};
 
-	class CRenderQueue
+	class CRenderList
 	{
 	public:
-		CRenderQueue();
-		~CRenderQueue();
+		CRenderList();
+		~CRenderList();
 
-		void Render(MeshData* pMesh, const glm::mat4& worldTransform);
+		void Render(MeshData* pMesh, const glm::mat4& modelTransform);
 		void Render(const RenderQueueItem& item);
 
-		RenderQueueItem Pop();
+		[[nodiscard]]
+		RenderQueueItem Get(size_t index) const;
 
 		void Clear();
 
@@ -29,6 +30,6 @@ namespace BetterThanNothing
 		[[nodiscard]] bool IsEmpty() const;
 
 	private:
-		std::pmr::deque<RenderQueueItem> m_queue;
+		std::vector<RenderQueueItem> m_list;
 	};
 }

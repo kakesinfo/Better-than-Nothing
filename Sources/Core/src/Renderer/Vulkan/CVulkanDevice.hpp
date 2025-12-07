@@ -57,6 +57,9 @@ namespace BetterThanNothing
 		std::string GetApiVersion() const;
 
 		[[nodiscard]]
+		uint32 GetMinUniformBufferOffsetAlignment() const;
+
+		[[nodiscard]]
 		SwapChainSupportDetails GetSwapChainSupport() const;
 
 		[[nodiscard]]
@@ -87,5 +90,6 @@ namespace BetterThanNothing
 		std::string m_vendorName;
 		std::string m_deviceName;
 		std::string m_apiVersion;
+		uint32 m_minUniformBufferOffsetAlignment = 0;
 	};
 };

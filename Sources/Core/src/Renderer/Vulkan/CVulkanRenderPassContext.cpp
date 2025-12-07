@@ -33,16 +33,20 @@ namespace BetterThanNothing
 		vkCmdBindIndexBuffer(m_commandBuffer, buffer, offset, indexType);
 	}
 
-	void CVulkanRenderPassContext::BindDescriptorSets(VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets) const {
+	void CVulkanRenderPassContext::BindDescriptorSets(const VkPipelineLayout layout, const uint32_t firstSet, const uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets, const uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets) const {
+		BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet, descriptorSetCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+	}
+
+	void CVulkanRenderPassContext::BindDescriptorSets(const VkPipelineBindPoint pipelineBindPoint, const VkPipelineLayout layout, const uint32_t firstSet, const uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets) const {
 		vkCmdBindDescriptorSets(m_commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 	}
 
-	void CVulkanRenderPassContext::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance) const
+	void CVulkanRenderPassContext::Draw(const uint32 vertexCount, const uint32 instanceCount, const uint32 firstVertex, const uint32 firstInstance) const
 	{
 		vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 
-	void CVulkanRenderPassContext::DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, int32 vertexOffset, uint32 firstInstance) const
+	void CVulkanRenderPassContext::DrawIndexed(const uint32 indexCount, const uint32 instanceCount, const uint32 firstIndex, const int32 vertexOffset, const uint32 firstInstance) const
 	{
 		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}

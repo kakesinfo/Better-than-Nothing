@@ -27,7 +27,7 @@ namespace BetterThanNothing
 		[[nodiscard]] VkBuffer Handle() const;
 		[[nodiscard]] VkDeviceSize Size() const;
 
-		void Write(const void* data, VkDeviceSize size, VkDeviceSize offset = 0) const;
+		void Write(const void* data, VkDeviceSize size, VkDeviceSize offset = 0, VkDeviceSize alignment = 1) const;
 
 	protected:
 		VulkanContext*		m_context;

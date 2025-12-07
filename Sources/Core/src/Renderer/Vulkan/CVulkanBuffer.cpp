@@ -34,7 +34,7 @@ namespace BetterThanNothing
 			m_context->vkMemoryAllocator->DestroyBuffer(m_buffer, m_allocation);
 	}
 
-	void CVulkanBuffer::Write(const void* data, const VkDeviceSize size, const VkDeviceSize offset) const
+	void CVulkanBuffer::Write(const void* data, const VkDeviceSize size, const VkDeviceSize offset, const VkDeviceSize alignment) const
 	{
 		if (!m_allocInfo.pMappedData)
 			throw CVulkanBufferError("Cannot write to unmapped buffer");
@@ -42,7 +42,8 @@ namespace BetterThanNothing
 		if (size + offset > m_size)
 			throw CVulkanBufferError("Buffer overflow: Update size exceeds buffer size");
 
-		char* destAddress = static_cast<char*>(m_allocInfo.pMappedData) + offset;
+		char* base = static_cast<char*>(m_allocInfo.pMappedData);
+		char* destAddress = base + offset * alignment;
 
 		std::memcpy(destAddress, data, size);
 	}

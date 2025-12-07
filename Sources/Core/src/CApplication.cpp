@@ -21,7 +21,7 @@ namespace BetterThanNothing
 
 		CWindowManager::GetWindow()->Show();
 
-		const auto renderQueue = std::make_unique<CRenderQueue>();
+		const auto renderList = std::make_unique<CRenderList>();
 
 		while (!CWindowManager::GetWindow()->ShouldClose())
 		{
@@ -29,10 +29,10 @@ namespace BetterThanNothing
 
 			OnUpdate();
 
-			OnRender(renderQueue.get());
-			renderer->RenderFrame(renderQueue.get());
+			OnRender(renderList.get()); // TODO: use a "Pencil" class to record rendering commands
+			renderer->RenderFrame(renderList.get());
 
-			renderQueue->Clear();
+			renderList->Clear();
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
