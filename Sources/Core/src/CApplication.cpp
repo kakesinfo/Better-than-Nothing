@@ -1,5 +1,5 @@
 #include "BetterThanNothing.hpp"
-#include "Manager/CWIndowManager.hpp"
+#include "Manager/CWindowManager.hpp"
 #include "Renderer/CRendererBuilder.hpp"
 
 namespace BetterThanNothing

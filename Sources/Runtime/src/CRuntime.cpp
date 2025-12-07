@@ -20,16 +20,30 @@ namespace BetterThanNothing
 		mesh.AddVertex({0.5f, 0.5f}, {0.0f, 0.0f, 1.0f});
 		mesh.AddVertex({-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f});
 		mesh.AddIndices({0, 1, 2, 2, 3, 0});
+
+		modelTransform = glm::mat4(1.0f);
 	}
 
 	void CRuntime::OnUpdate()
 	{
-		static auto startTime = std::chrono::high_resolution_clock::now();
+		static glm::vec2 lastMousePos = CInputManager::GetMousePosition();
+		const glm::vec2 currentMousePos = CInputManager::GetMousePosition();
 
-		const auto currentTime = std::chrono::high_resolution_clock::now();
-		const float time = std::chrono::duration<float>(currentTime - startTime).count();
+		static float accumulatedAngle = 0.0f; // radians
 
-		modelTransform = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		if (CInputManager::IsMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT))
+		{
+			constexpr float sensibility = 0.01f;  // radians per frame
+
+			const glm::vec2 delta = currentMousePos - lastMousePos;
+			const float deltaAngle = delta.x * sensibility; // radians
+
+			accumulatedAngle += deltaAngle;
+		}
+
+		modelTransform = glm::rotate(glm::mat4(1.0f), accumulatedAngle, glm::vec3(0.0f, 0.0f, 1.0f));
+
+		lastMousePos = currentMousePos;
 	}
 
 	void CRuntime::OnRender(CRenderList* renderList)

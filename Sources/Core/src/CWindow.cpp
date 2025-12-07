@@ -108,31 +108,29 @@ namespace BetterThanNothing
 			glfwSetWindowShouldClose(window, GLFW_TRUE);
 		}
 
-		// TODO: CInput::UpdateKey(key, action);
+		CInputManager::UpdateKey(key, action);
 	}
 
 	void CWindow::MouseCursorCallback(GLFWwindow* window, const float64 xpos, const float64 ypos)
 	{
 		(void) window;
-		(void) xpos;
-		(void) ypos;
-		// TODO:  CInput::UpdateMousePosition(xpos, ypos);
+
+		CInputManager::UpdateMousePosition(xpos, ypos);
 	}
 
 	void CWindow::MouseScrollCallback(GLFWwindow* window, const float64 xoffset, const float64 yoffset)
 	{
 		(void) window;
 		(void) xoffset;
-		(void) yoffset;
-		// TODO: CInput::UpdateMouseScroll(yoffset);
+
+		CInputManager::UpdateMouseScroll(yoffset);
 	}
 
 	void CWindow::MouseButtonCallback(GLFWwindow* window, const int32 button, const int32 action, const int32 mods)
 	{
 		(void) window;
 		(void) mods;
-		(void) button;
-		(void) action;
-		// TODO: CInput::UpdateMouseButton(button, action);
+
+		CInputManager::UpdateMouseButton(button, action);
 	}
 };

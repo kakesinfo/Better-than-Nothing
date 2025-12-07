@@ -4,7 +4,7 @@
 
 namespace BetterThanNothing
 {
-	struct CInput {
+	struct CInputManager {
 	protected:
 		static constexpr int32 KEYBOARD_KEY_COUNT = 1024;
 		static constexpr int32 MOUSE_BUTTON_COUNT = 32;
@@ -20,8 +20,10 @@ namespace BetterThanNothing
 		static int m_buttons[MOUSE_BUTTON_COUNT];
 
 	public:
-		explicit CInput();
-		~CInput() = default;
+		explicit CInputManager() = default;
+		~CInputManager() = default;
+
+		static void Initialize();
 
 		static void UpdateKey(int key, int action);
 		static void PressKey(int key);

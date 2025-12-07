@@ -1,8 +1,10 @@
 #pragma once
 
+#include "Manager/CInputManager.hpp"
+
 // Graphics
 #include "CWindow.hpp"
-#include "Manager/CWIndowManager.hpp"
+#include "Manager/CWindowManager.hpp"
 
 // Vulkan
 #include "Renderer/Vulkan/EVulkanBufferingMode.hpp"
