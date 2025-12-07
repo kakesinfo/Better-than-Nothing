@@ -14,13 +14,35 @@ namespace BetterThanNothing
 	class CVulkanSemaphore;
 	class CVulkanFence;
 
-	class CRenderQueue;
+	class CRenderList;
 	class CRenderCache;
+
+	class CGlobalUniformProvider;
+	class CDynamicUniformProvider;
 
 	struct VertexData;
 
-	class CRenderer : public IRenderer
+	class CRenderer final : public IRenderer
 	{
+	public:
+		explicit CRenderer(VulkanContext& vkContext);
+		~CRenderer() override;
+
+		void RenderFrame(CRenderList* renderList);
+
+	private:
+		void _createCommandBuffers();
+		void _createSyncObjects();
+		void _createDescriptorSetLayout();
+		void _createDescriptorPool();
+		void _createGlobalDescriptorSets();
+		void _createDynamicDescriptorSets();
+
+		void _recordCommandBuffer(CRenderList* renderList, uint32 imageIndex) const;
+
+	public:
+		void AddPipeline(const std::function<void(IPipelineBuilder *)> &callback) override;
+
 	private:
 		VulkanContext m_vkContext{};
 
@@ -29,28 +51,9 @@ namespace BetterThanNothing
 
 		std::unique_ptr<CBufferManager> m_pBufferFactory = nullptr;
 		std::unique_ptr<CShaderPool> m_pShaderPool = nullptr;
-
 		std::unique_ptr<CRenderCache> m_pRenderCache = nullptr;
 
-	public:
-		explicit CRenderer(VulkanContext& vkContext);
-		~CRenderer() override;
-
-		void RenderFrame(CRenderQueue* renderQueue);
-
-	private:
-		void _createCommandBuffers();
-		void _createSyncObjects();
-		void _createDescriptorSetLayout();
-		void _createDescriptorPool();
-		void _createDescriptorSets();
-		void _createUniformBuffers();
-
-		void _updateUniformBuffer() const;
-
-		void _recordCommandBuffer(CRenderQueue* renderQueue, uint32 imageIndex) const;
-
-	public:
-		void AddPipeline(const std::function<void(IPipelineBuilder *)> &callback) override;
+		std::unique_ptr<CGlobalUniformProvider> m_pGlobalUniformProvider = nullptr;
+		std::unique_ptr<CDynamicUniformProvider> m_pDynamicUniformProvider = nullptr;
 	};
 }

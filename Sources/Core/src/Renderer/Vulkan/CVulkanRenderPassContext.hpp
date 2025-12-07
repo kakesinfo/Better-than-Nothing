@@ -20,6 +20,15 @@ namespace BetterThanNothing
 		void BindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) const;
 
 		void BindDescriptorSets(
+			VkPipelineLayout layout,
+			uint32_t firstSet,
+			uint32_t descriptorSetCount,
+			const VkDescriptorSet* pDescriptorSets,
+			uint32_t dynamicOffsetCount = 0,
+			const uint32_t* pDynamicOffsets = nullptr
+		) const;
+
+		void BindDescriptorSets(
 			VkPipelineBindPoint pipelineBindPoint,
 			VkPipelineLayout layout,
 			uint32_t firstSet,
@@ -28,6 +37,7 @@ namespace BetterThanNothing
 			uint32_t dynamicOffsetCount = 0,
 			const uint32_t* pDynamicOffsets = nullptr
 		) const;
+
 
 		void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance) const;
 		void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, int32 vertexOffset, uint32 firstInstance) const;

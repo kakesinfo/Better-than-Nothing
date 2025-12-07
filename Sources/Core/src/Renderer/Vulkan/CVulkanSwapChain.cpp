@@ -214,6 +214,21 @@ namespace BetterThanNothing
 		return m_extent;
 	}
 
+	uint32 CVulkanSwapChain::GetWidth() const
+	{
+		return m_extent.width;
+	}
+
+	uint32 CVulkanSwapChain::GetHeight() const
+	{
+		return m_extent.height;
+	}
+
+	float CVulkanSwapChain::GetAspectRatio() const
+	{
+		return static_cast<float>(m_extent.width) / static_cast<float>(m_extent.height);
+	}
+
 	VkFramebuffer CVulkanSwapChain::GetFramebuffer(uint32 imageIndex)
 	{
 		if (imageIndex >= m_framebuffers.size())

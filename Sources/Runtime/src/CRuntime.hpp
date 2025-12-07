@@ -10,7 +10,7 @@ namespace BetterThanNothing
 
 		void OnEnable(IRenderer* renderer) override;
 		void OnUpdate() override;
-		void OnRender(CRenderQueue* renderQueue) override;
+		void OnRender(CRenderList* renderList) override;
 		void OnDisable() override;
 	};
 };

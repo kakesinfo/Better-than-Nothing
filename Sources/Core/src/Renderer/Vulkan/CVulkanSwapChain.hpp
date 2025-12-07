@@ -48,6 +48,15 @@ namespace BetterThanNothing
 		VkExtent2D GetExtent() const;
 
 		[[nodiscard]]
+		uint32 GetWidth() const;
+
+		[[nodiscard]]
+		uint32 GetHeight() const;
+
+		[[nodiscard]]
+		float GetAspectRatio() const;
+
+		[[nodiscard]]
 		VkFramebuffer GetFramebuffer(uint32 index);
 
 		[[nodiscard]]

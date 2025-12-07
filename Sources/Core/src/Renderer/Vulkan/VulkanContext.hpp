@@ -55,8 +55,12 @@ namespace BetterThanNothing
 
 		std::vector<VulkanFrame>							vkFrames;
 
-		std::unique_ptr<CVulkanDescriptorSetLayout>			vkDescriptorSetLayout = nullptr;
 		std::unique_ptr<CVulkanDescriptorPool>				vkDescriptorPool = nullptr;
-		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkDescriptorSets;
+
+		std::unique_ptr<CVulkanDescriptorSetLayout>			vkGlobalDescriptorSetLayout = nullptr;
+		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkGlobalDescriptorSets;
+
+		std::unique_ptr<CVulkanDescriptorSetLayout>			vkDynamicDescriptorSetLayout = nullptr;
+		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkDynamicDescriptorSets;
 	};
 };

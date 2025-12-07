@@ -1,5 +1,5 @@
 #include "BetterThanNothing.hpp"
-#include "UniformBufferObjectData.hpp"
+#include "Data/GlobalUniformData.hpp"
 
 namespace BetterThanNothing
 {
@@ -30,19 +30,19 @@ namespace BetterThanNothing
 
 		m_vkContext.vkFrames.resize(m_vkContext.vkSettings.maxFramesInFlight);
 
+		m_pGlobalUniformProvider = std::make_unique<CGlobalUniformProvider>(&m_vkContext);
+		m_pDynamicUniformProvider = std::make_unique<CDynamicUniformProvider>(&m_vkContext, 1000);
 
-		_createUniformBuffers();
+		// _createDynamicUniformBuffers();
+
 		_createDescriptorPool();
-		_createDescriptorSets();
+		_createGlobalDescriptorSets();
+		_createDynamicDescriptorSets();
 
 		_createCommandBuffers();
 		_createSyncObjects();
 
-		LOG_SUCCESS("Buffer factory: ok")
-
 		m_pShaderPool = std::make_unique<CShaderPool>(m_vkContext.vkSettings.shadersFolderPath, &m_vkContext);
-		LOG_SUCCESS("Shader pool: ok")
-
 		m_pRenderCache = std::make_unique<CRenderCache>();
 
 		LOG_SUCCESS("Renderer: ok");
@@ -54,14 +54,12 @@ namespace BetterThanNothing
 		CBufferManager::Shutdown();
 	}
 
-	void CRenderer::RenderFrame(CRenderQueue* renderQueue)
+	void CRenderer::RenderFrame(CRenderList* renderList)
 	{
 		if (!m_vkContext.vkPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
 
 		m_vkContext.vkFrames[m_currentFrame].inFlightFence->Wait();
-
-		_updateUniformBuffer();
 
 		const auto device = m_vkContext.vkDevice->Handle();
 		const auto swapchain = m_vkContext.vkSwapChain->Handle();
@@ -82,7 +80,7 @@ namespace BetterThanNothing
 		m_vkContext.vkFrames[m_currentFrame].inFlightFence->Reset();
 		m_vkContext.vkFrames[m_currentFrame].commandBuffer->Reset();
 
-		_recordCommandBuffer(renderQueue, imageIndex);
+		_recordCommandBuffer(renderList, imageIndex);
 
 		const VkSemaphore waitSemaphores[] = { m_vkContext.vkFrames[m_currentFrame].imageAvailableSemaphore->Handle() };
 
@@ -131,7 +129,7 @@ namespace BetterThanNothing
 		m_currentFrame = (m_currentFrame + 1) % m_vkContext.vkFrames.size();
 	}
 
-	void CRenderer::_recordCommandBuffer(CRenderQueue* renderQueue, const uint32 imageIndex) const
+	void CRenderer::_recordCommandBuffer(CRenderList* renderList, const uint32 imageIndex) const
 	{
 		const auto& currentFrame = m_vkContext.vkFrames[m_currentFrame];
 
@@ -165,29 +163,46 @@ namespace BetterThanNothing
 		passContext->SetScissor(&scissor);
 
 		// Bind shader pipeline
+		const VkPipelineLayout pipelineLayout = m_vkContext.vkPipeline->GetLayout();
 		passContext->BindPipeline(m_vkContext.vkPipeline->Handle());
 
 		// Bind global uniforms
-		VkDescriptorSet descriptorSet = m_vkContext.vkDescriptorSets[m_currentFrame]->Handle();
-		passContext->BindDescriptorSets(
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			m_vkContext.vkPipeline->GetLayout(), 0, 1,
-			&descriptorSet
-		);
-
-		while (!renderQueue->IsEmpty())
 		{
-			const auto pMesh = renderQueue->Pop().pMesh;
+			const auto globalUniform = m_pGlobalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
+			globalUniform->view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			globalUniform->projection = glm::perspective(glm::radians(45.0f), m_vkContext.vkSwapChain->GetAspectRatio(), 0.1f, 10.0f);
+			globalUniform->projection[1][1] *= -1;
 
-			const MeshGpuData* meshGpuData = m_pRenderCache->GetOrCreateMeshGpuData(pMesh);
+			const VkDescriptorSet& globalDescriptorSet = m_vkContext.vkGlobalDescriptorSets[m_currentFrame]->Handle();
+			passContext->BindDescriptorSets(pipelineLayout, 0, 1, &globalDescriptorSet);
+		}
 
-			// Bind mesh vertex and index buffers
-			const VkBuffer vertexBuffers[] = { meshGpuData->pVertexBuffer->Handle() };
-			constexpr VkDeviceSize offsets[] = {0};
-			passContext->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-			passContext->BindIndexBuffer(meshGpuData->pIndexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT16);
+		for (uint32 i = 0; i < renderList->Size(); i++)
+			{
+			const auto& [pMesh, modelTransform] = renderList->Get(i);
 
-			// Draw mesh
+			// Bind dynamic uniforms
+			{
+				const auto dynamicUniform = m_pDynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
+				dynamicUniform->model = modelTransform;
+
+				const VkDescriptorSet dynamicDescriptorSet = m_vkContext.vkDynamicDescriptorSets[m_currentFrame]->Handle();
+				const uint32 offset = m_pDynamicUniformProvider->GetOffset(i);
+				passContext->BindDescriptorSets(pipelineLayout, 1, 1, &dynamicDescriptorSet, 1, &offset);
+			}
+
+			// Draw vertices and indices
+			{
+				const MeshGpuData* meshGpuData = m_pRenderCache->GetOrCreateMeshGpuData(pMesh);
+
+				// Bind mesh vertex and index buffers
+				const VkBuffer vertexBuffers[] = { meshGpuData->pVertexBuffer->Handle() };
+				constexpr VkDeviceSize offsets[] = {0};
+				passContext->BindVertexBuffers(0, 1, vertexBuffers, offsets);
+				passContext->BindIndexBuffer(meshGpuData->pIndexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT16);
+			}
+
+			// Draw call
 			passContext->DrawIndexed(static_cast<uint32>(pMesh->indices.size()), 1, 0, 0, 0);
 		}
 
@@ -234,86 +249,106 @@ namespace BetterThanNothing
 		LOG_SUCCESS("Vulkan sync objects: ok (count: " << count << ")");
 	}
 
-	void CRenderer::_createUniformBuffers()
-	{
-		const uint32 count = m_vkContext.vkSettings.maxFramesInFlight;
-		for (uint32 i = 0; i < count; i++) {
-			m_vkContext.vkFrames[i].uniformBuffer = CBufferManager::CreateUniformBuffer<UniformBufferObjectData>();
-		}
-
-		LOG_SUCCESS("Vulkan uniforms: ok (count: " << count << ")");
-	}
-
 	void CRenderer::_createDescriptorSetLayout()
 	{
-		VkDescriptorSetLayoutBinding uboLayoutBinding{};
-		uboLayoutBinding.binding = 0;
-		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uboLayoutBinding.pImmutableSamplers = nullptr;
-		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		VkDescriptorSetLayoutBinding globalUniformLayoutBinding{};
+		globalUniformLayoutBinding.binding = 0;
+		globalUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		globalUniformLayoutBinding.descriptorCount = 1;
+		globalUniformLayoutBinding.pImmutableSamplers = nullptr;
+		globalUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		auto bindings = std::vector<VkDescriptorSetLayoutBinding>{uboLayoutBinding};
-		m_vkContext.vkDescriptorSetLayout = std::make_unique<CVulkanDescriptorSetLayout>(bindings, &m_vkContext);
+		VkDescriptorSetLayoutBinding dynamicUniformLayoutBinding{};
+		dynamicUniformLayoutBinding.binding = 0;
+		dynamicUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		dynamicUniformLayoutBinding.descriptorCount = 1;
+		dynamicUniformLayoutBinding.pImmutableSamplers = nullptr;
+		dynamicUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		auto globalBindings = { globalUniformLayoutBinding };
+		auto dynamicBindings = { dynamicUniformLayoutBinding };
+
+		m_vkContext.vkGlobalDescriptorSetLayout = std::make_unique<CVulkanDescriptorSetLayout>(globalBindings, &m_vkContext);
+		m_vkContext.vkDynamicDescriptorSetLayout = std::make_unique<CVulkanDescriptorSetLayout>(dynamicBindings, &m_vkContext);
 
 		LOG_SUCCESS("Vulkan descriptor set layout: ok");
 	}
 
 	void CRenderer::_createDescriptorPool()
 	{
-		VkDescriptorPoolSize poolSize{};
-		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSize.descriptorCount = m_vkContext.vkSettings.maxFramesInFlight;
+		const uint32 frames = m_vkContext.vkSettings.maxFramesInFlight;
 
-		m_vkContext.vkDescriptorPool = std::make_unique<CVulkanDescriptorPool>(std::vector{poolSize}, &m_vkContext);
+		VkDescriptorPoolSize globalPoolSize{};
+		globalPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		globalPoolSize.descriptorCount = frames; // 1 global UBO par frame
+
+		VkDescriptorPoolSize dynamicPoolSize{};
+		dynamicPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		dynamicPoolSize.descriptorCount = frames; // 1 dynamic UBO par frame
+
+		std::vector poolSizes = { globalPoolSize, dynamicPoolSize };
+
+		m_vkContext.vkDescriptorPool = std::make_unique<CVulkanDescriptorPool>(poolSizes, &m_vkContext);
 
 		LOG_SUCCESS("Vulkan descriptor pool: ok");
 	}
 
-	void CRenderer::_createDescriptorSets()
+	void CRenderer::_createGlobalDescriptorSets()
 	{
-		m_vkContext.vkDescriptorSets.resize(m_vkContext.vkSettings.maxFramesInFlight);
+		m_vkContext.vkGlobalDescriptorSets.resize(m_vkContext.vkSettings.maxFramesInFlight);
 
 		for (size_t i = 0; i < m_vkContext.vkSettings.maxFramesInFlight; i++) {
-			m_vkContext.vkDescriptorSets[i] = std::make_unique<CVulkanDescriptorSet>(m_vkContext.vkDescriptorSetLayout, &m_vkContext);
+			m_vkContext.vkGlobalDescriptorSets[i] = std::make_unique<CVulkanDescriptorSet>(m_vkContext.vkGlobalDescriptorSetLayout, &m_vkContext);
 
-			VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = m_vkContext.vkFrames[i].uniformBuffer->Handle();
-			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(UniformBufferObjectData);
+			VkDescriptorBufferInfo globalInfo{};
+			globalInfo.buffer = m_vkContext.vkFrames[i].globalUniformBuffer->Handle();
+			globalInfo.offset = 0;
+			globalInfo.range = sizeof(GlobalUniformData);
+
+			const auto& descriptorSet = m_vkContext.vkGlobalDescriptorSets[i]->Handle();
 
 			VkWriteDescriptorSet descriptorWrite{};
+
 			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = m_vkContext.vkDescriptorSets[i]->Handle();
+			descriptorWrite.dstSet = descriptorSet;
 			descriptorWrite.dstBinding = 0;
-			descriptorWrite.dstArrayElement = 0;
 			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = &bufferInfo;
+			descriptorWrite.pBufferInfo = &globalInfo;
 
 			vkUpdateDescriptorSets(m_vkContext.vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
 		}
 
-		LOG_SUCCESS("Vulkan descriptor sets: ok (count: " << m_vkContext.vkDescriptorSets.size() << ")");
+		LOG_SUCCESS("Vulkan global descriptor sets: ok (count: " << m_vkContext.vkGlobalDescriptorSets.size() << ")");
 	}
 
-	void CRenderer::_updateUniformBuffer() const
+
+	void CRenderer::_createDynamicDescriptorSets()
 	{
-		static auto startTime = std::chrono::high_resolution_clock::now();
+		m_vkContext.vkDynamicDescriptorSets.resize(m_vkContext.vkSettings.maxFramesInFlight);
 
-		const auto currentTime = std::chrono::high_resolution_clock::now();
-		const float time = std::chrono::duration<float>(currentTime - startTime).count();
+		for (size_t i = 0; i < m_vkContext.vkSettings.maxFramesInFlight; i++) {
+			m_vkContext.vkDynamicDescriptorSets[i] = std::make_unique<CVulkanDescriptorSet>(m_vkContext.vkDynamicDescriptorSetLayout, &m_vkContext);
 
-		const auto [width, height] = m_vkContext.vkSwapChain->GetExtent();
-		const float ratio = static_cast<float>(width) / static_cast<float>(height);
+			VkDescriptorBufferInfo dynamicInfo{};
+			dynamicInfo.buffer = m_vkContext.vkFrames[i].dynamicUniformBuffer->Handle();
+			dynamicInfo.offset = 0;
+			dynamicInfo.range = sizeof(DynamicUniformData);
 
-		UniformBufferObjectData ubo{};
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		ubo.projection = glm::perspective(glm::radians(45.0f), ratio, 0.1f, 10.0f);
-		ubo.projection[1][1] *= -1;
+			const auto& descriptorSet = m_vkContext.vkDynamicDescriptorSets[i]->Handle();
 
-		m_vkContext.vkFrames[m_currentFrame].uniformBuffer->Update(ubo);
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSet;
+			descriptorWrite.dstBinding = 0;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &dynamicInfo;
+
+			vkUpdateDescriptorSets(m_vkContext.vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
+		}
+
+		LOG_SUCCESS("Vulkan dynamic descriptor sets: ok (count: " << m_vkContext.vkDynamicDescriptorSets.size() << ")");
 	}
 
 	void CRenderer::AddPipeline(const std::function<void(IPipelineBuilder*)>& callback)
