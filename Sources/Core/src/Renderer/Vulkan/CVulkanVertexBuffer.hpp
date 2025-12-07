@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "CVulkanBuffer_New.hpp"
+#include "CVulkanBuffer.hpp"
 
 namespace BetterThanNothing
 {
-	class CVulkanVertexBuffer: public CVulkanBuffer_New
+	class CVulkanVertexBuffer: public CVulkanBuffer
 	{
 	public:
 		CVulkanVertexBuffer(CVulkanContext* context, VkDeviceSize size, const void* data = nullptr);

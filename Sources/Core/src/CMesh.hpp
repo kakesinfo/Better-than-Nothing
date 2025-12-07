@@ -8,8 +8,6 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanBuffer_Old;
-
 	class CMesh
 	{
 	public:

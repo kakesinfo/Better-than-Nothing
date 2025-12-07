@@ -3,11 +3,11 @@
 //
 
 #include "BetterThanNothing.hpp"
-#include "CVulkanBuffer_New.hpp"
+#include "CVulkanBuffer.hpp"
 
 namespace BetterThanNothing
 {
-	CVulkanBuffer_New::CVulkanBuffer_New(
+	CVulkanBuffer::CVulkanBuffer(
 		CVulkanContext*					context,
 		const VkDeviceSize				size,
 		const VkBufferUsageFlags		usage,
@@ -28,13 +28,13 @@ namespace BetterThanNothing
 			throw std::runtime_error("Failed to create Vulkan buffer.");
 	}
 
-	CVulkanBuffer_New::~CVulkanBuffer_New()
+	CVulkanBuffer::~CVulkanBuffer()
 	{
 		if (m_buffer && m_allocation)
 			m_context->vkMemoryAllocator->DestroyBuffer(m_buffer, m_allocation);
 	}
 
-	void CVulkanBuffer_New::Write(const void* data, const VkDeviceSize size, const VkDeviceSize offset) const
+	void CVulkanBuffer::Write(const void* data, const VkDeviceSize size, const VkDeviceSize offset) const
 	{
 		if (!m_allocInfo.pMappedData)
 			throw CVulkanBufferError("Cannot write to unmapped buffer");
@@ -47,12 +47,12 @@ namespace BetterThanNothing
 		std::memcpy(destAddress, data, size);
 	}
 
-	VkBuffer CVulkanBuffer_New::Handle() const
+	VkBuffer CVulkanBuffer::Handle() const
 	{
 		return m_buffer;
 	}
 
-	VkDeviceSize CVulkanBuffer_New::Size() const
+	VkDeviceSize CVulkanBuffer::Size() const
 	{
 		return m_size;
 	}

@@ -26,43 +26,6 @@ namespace BetterThanNothing
 		LOG_SUCCESS("Vulkan memory allocator (Vma): ok");
 	}
 
-	/**
-	 * @deprecated Old implementation for CVulkanBuffer_Old
-	 */
-	VkResult CVulkanMemoryAllocator::CreateBuffer(
-		const VkBufferCreateInfo* bufferCreateInfo,
-		const VkMemoryPropertyFlags properties,
-		VkBuffer* buffer,
-		VmaAllocation* allocation,
-		VmaAllocationInfo* allocationInfo
-	) const {
-		return CreateBuffer(bufferCreateInfo, properties, 0, buffer, allocation, allocationInfo);
-	}
-
-	/**
-	 * @deprecated Old implementation for CVulkanBuffer_Old
-	 */
-	VkResult CVulkanMemoryAllocator::CreateBuffer(
-		const VkBufferCreateInfo* bufferCreateInfo,
-		const VkMemoryPropertyFlags properties,
-		const VmaAllocationCreateFlags flags, // Use: VMA_ALLOCATION_CREATE_MAPPED_BIT; to map the memory automatically
-		VkBuffer* buffer,
-		VmaAllocation* allocation,
-		VmaAllocationInfo* allocationInfo
-	) const {
-		VmaAllocationCreateInfo allocInfo = {};
-
-		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-		allocInfo.requiredFlags = properties;
-		allocInfo.flags = flags;
-
-		if (flags & VMA_ALLOCATION_CREATE_MAPPED_BIT) {
-			allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-		}
-
-		return vmaCreateBuffer(m_allocator, bufferCreateInfo, &allocInfo, buffer, allocation, allocationInfo);
-	}
-
 	VkResult CVulkanMemoryAllocator::CreateBuffer(
 		const VkBufferCreateInfo* bufferCreateInfo,
 		const VmaAllocationCreateInfo* allocCreateInfo,

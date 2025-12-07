@@ -25,11 +25,11 @@ namespace BetterThanNothing
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-		auto bindingDescription = CVertex::GetBindingDescription();
+		auto bindingDescription = _getVertexBindingDescription();
 		vertexInputInfo.vertexBindingDescriptionCount = 1;
 		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
 
-		auto attributeDescriptions = CVertex::GetAttributeDescriptions();
+		auto attributeDescriptions = _getVertexAttributeDescriptions();
 		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32>(attributeDescriptions.size());
 		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
@@ -176,6 +176,32 @@ namespace BetterThanNothing
 		default:
 			throw std::runtime_error("Invalid shader type");
 		}
+	}
+
+	VkVertexInputBindingDescription CVulkanPipeline::_getVertexBindingDescription()
+	{
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(CVertex);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		return bindingDescription;
+	}
+
+	std::array<VkVertexInputAttributeDescription, 2> CVulkanPipeline::_getVertexAttributeDescriptions()
+	{
+		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(CVertex, position);
+
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(CVertex, color);
+
+		return attributeDescriptions;
 	}
 
 	VulkanPipelineBuilder& VulkanPipelineBuilder::SetName(const char* name)

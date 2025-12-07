@@ -26,26 +26,29 @@ namespace BetterThanNothing
 
 	class CVulkanPipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
-	private:
-		CVulkanContext* m_context = nullptr;
-		VulkanPipelineParams m_params;
-
-		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
-		VkPipeline m_pipeline = VK_NULL_HANDLE;
-
 	public:
 		explicit CVulkanPipeline(VulkanPipelineParams params, std::vector<CVulkanShaderModule> shaderModules, CVulkanContext* context);
 		~CVulkanPipeline();
 
 		[[nodiscard]]
 		VkPipeline Handle() const;
+
+		[[nodiscard]]
 		VkPipelineLayout GetLayout() const;
 
 	private:
 		static VkShaderStageFlagBits _getShaderStageTypeByShaderType(EVulkanShaderType type);
+		static VkVertexInputBindingDescription _getVertexBindingDescription();
+		static std::array<VkVertexInputAttributeDescription, 2> _getVertexAttributeDescriptions();
+
+		CVulkanContext* m_context = nullptr;
+		VulkanPipelineParams m_params;
+
+		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+		VkPipeline m_pipeline = VK_NULL_HANDLE;
 	};
 
-	class VulkanPipelineBuilder: public IPipelineBuilder
+	class VulkanPipelineBuilder final : public IPipelineBuilder
 	{
 	private:
 		VulkanPipelineParams m_params{};
