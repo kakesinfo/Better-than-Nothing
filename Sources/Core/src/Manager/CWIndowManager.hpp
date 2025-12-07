@@ -8,7 +8,7 @@
 
 namespace BetterThanNothing
 {
-	class CWindowManagerError : public std::runtime_error
+	class CWindowManagerError final : public std::runtime_error
 	{
 	public:
 		explicit CWindowManagerError(const std::string& message)
@@ -26,9 +26,6 @@ namespace BetterThanNothing
 
 	class CWindowManager
 	{
-	private:
-		static std::unique_ptr<CWindow> m_window;
-
 	public:
 		CWindowManager() = default;
 		~CWindowManager() = default;
@@ -58,5 +55,8 @@ namespace BetterThanNothing
 		{
 			m_window.reset();
 		}
+
+	private:
+		static std::unique_ptr<CWindow> m_window;
 	};
 };

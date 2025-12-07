@@ -16,18 +16,6 @@ namespace BetterThanNothing
 
     class CRendererBuilder
     {
-    private:
-        uint32 apiVersion = VK_API_VERSION_1_3;
-
-        bool enableValidationLayers = false;
-        std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
-        std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME };
-
-        std::string shadersFolderPath;
-
-        EVulkanBufferingMode bufferingMode = EVulkanBufferingMode::None;
-        bool enableVSync = true;
-
     public:
         CRendererBuilder() = default;
         ~CRendererBuilder() = default;
@@ -88,7 +76,7 @@ namespace BetterThanNothing
             if (bufferingMode == EVulkanBufferingMode::None)
                 throw CRendererBuilderError("Buffering mode is not set");
 
-            CVulkanContext vulkanContext;
+            VulkanContext vulkanContext;
             vulkanContext.vkSettings.apiVersion = apiVersion;
             vulkanContext.vkSettings.enableValidationLayers = enableValidationLayers;
             vulkanContext.vkSettings.validationLayers = validationLayers;
@@ -100,5 +88,17 @@ namespace BetterThanNothing
 
             return std::make_unique<CRenderer>(vulkanContext);
         }
+
+    private:
+        uint32 apiVersion = VK_API_VERSION_1_3;
+
+        bool enableValidationLayers = false;
+        std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+        std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME };
+
+        std::string shadersFolderPath;
+
+        EVulkanBufferingMode bufferingMode = EVulkanBufferingMode::None;
+        bool enableVSync = true;
     };
 } // BetterThanNothing

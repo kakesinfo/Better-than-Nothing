@@ -8,16 +8,12 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 
 	class CVulkanSurface
 	{
-		CVulkanContext* m_context = nullptr;
-
-		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanSurface(CVulkanContext* context);
+		explicit CVulkanSurface(VulkanContext* context);
 		~CVulkanSurface();
 
 		CVulkanSurface(const CVulkanSurface&) = delete;
@@ -27,5 +23,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkSurfaceKHR Handle() const;
+
+	private:
+		VulkanContext* m_context = nullptr;
+		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 	};
 };

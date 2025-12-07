@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanSwapChain::CVulkanSwapChain(CVulkanContext* context): m_context(context)
+	CVulkanSwapChain::CVulkanSwapChain(VulkanContext* context): m_context(context)
 	{
 		_createSwapchain();
 		LOG_SUCCESS("Vulkan swap chain: ok");

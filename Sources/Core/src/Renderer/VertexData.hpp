@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "BetterThanNothing.hpp"
+#include "../BetterThanNothing.hpp"
 
 namespace BetterThanNothing
 {
-	struct CVertex
+	struct VertexData
 	{
 		glm::vec2 position;
 		glm::vec3 color;

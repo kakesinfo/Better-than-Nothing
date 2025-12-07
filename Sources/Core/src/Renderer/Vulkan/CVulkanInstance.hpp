@@ -8,17 +8,12 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 
 	class CVulkanInstance
 	{
-		CVulkanContext* m_context = nullptr;
-
-		VkInstance m_instance = VK_NULL_HANDLE;
-		VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanInstance(CVulkanContext* context);
+		explicit CVulkanInstance(VulkanContext* context);
 		~CVulkanInstance();
 
 		CVulkanInstance(const CVulkanInstance&) = delete;
@@ -55,6 +50,10 @@ namespace BetterThanNothing
 			VkDebugUtilsMessengerEXT debugMessenger,
 			const VkAllocationCallbacks* pAllocator
 		) noexcept;
+
+		VulkanContext* m_context = nullptr;
+		VkInstance m_instance = VK_NULL_HANDLE;
+		VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
 	};
 };
 

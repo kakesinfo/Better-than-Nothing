@@ -8,7 +8,7 @@
 namespace BetterThanNothing
 {
 	CVulkanBuffer::CVulkanBuffer(
-		CVulkanContext*					context,
+		VulkanContext*					context,
 		const VkDeviceSize				size,
 		const VkBufferUsageFlags		usage,
 		const VmaMemoryUsage			memoryUsage,

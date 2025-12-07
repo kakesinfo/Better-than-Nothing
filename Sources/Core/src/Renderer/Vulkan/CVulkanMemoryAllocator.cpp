@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanMemoryAllocator::CVulkanMemoryAllocator(CVulkanContext* pContext)
+	CVulkanMemoryAllocator::CVulkanMemoryAllocator(VulkanContext* pContext)
 	{
 		VmaVulkanFunctions vulkanFunctions = {};
 		vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;

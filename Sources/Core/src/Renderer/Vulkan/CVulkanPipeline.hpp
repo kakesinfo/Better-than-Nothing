@@ -5,12 +5,12 @@
 #pragma once
 
 #include "EVulkanShaderType.hpp"
-#include "CVulkanShaderModule.hpp"
+#include "VulkanShaderModule.hpp"
 #include "Public/IPipelineBuilder.hpp"
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 
 	struct VulkanPipelineShaderInfo
 	{
@@ -27,7 +27,7 @@ namespace BetterThanNothing
 	class CVulkanPipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit CVulkanPipeline(VulkanPipelineParams params, std::vector<CVulkanShaderModule> shaderModules, CVulkanContext* context);
+		explicit CVulkanPipeline(VulkanPipelineParams params, std::vector<VulkanShaderModule> shaderModules, VulkanContext* context);
 		~CVulkanPipeline();
 
 		[[nodiscard]]
@@ -41,7 +41,7 @@ namespace BetterThanNothing
 		static VkVertexInputBindingDescription _getVertexBindingDescription();
 		static std::array<VkVertexInputAttributeDescription, 2> _getVertexAttributeDescriptions();
 
-		CVulkanContext* m_context = nullptr;
+		VulkanContext* m_context = nullptr;
 		VulkanPipelineParams m_params;
 
 		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;

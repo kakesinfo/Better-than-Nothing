@@ -8,14 +8,14 @@ namespace BetterThanNothing
 
 	class CVulkanDescriptorSet
 	{
-	private:
-		CVulkanContext* m_context = nullptr;
-		VkDescriptorSet m_descriptorSet = VK_NULL_HANDLE;
-
 	public:
-		CVulkanDescriptorSet(const std::unique_ptr<CVulkanDescriptorSetLayout>& layout, CVulkanContext* context);
+		CVulkanDescriptorSet(const std::unique_ptr<CVulkanDescriptorSetLayout>& layout, VulkanContext* context);
 		~CVulkanDescriptorSet();
 
 		VkDescriptorSet Handle() const;
+
+	private:
+		VulkanContext* m_context = nullptr;
+		VkDescriptorSet m_descriptorSet = VK_NULL_HANDLE;
 	};
 }

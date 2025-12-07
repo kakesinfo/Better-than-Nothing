@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanPipeline::CVulkanPipeline(VulkanPipelineParams params, std::vector<CVulkanShaderModule> shaderModules, CVulkanContext* context)
+	CVulkanPipeline::CVulkanPipeline(VulkanPipelineParams params, std::vector<VulkanShaderModule> shaderModules, VulkanContext* context)
 		: m_context(context), m_params(std::move(params))
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
@@ -182,7 +182,7 @@ namespace BetterThanNothing
 	{
 		VkVertexInputBindingDescription bindingDescription{};
 		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(CVertex);
+		bindingDescription.stride = sizeof(VertexData);
 		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 		return bindingDescription;
 	}
@@ -194,12 +194,12 @@ namespace BetterThanNothing
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
 		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(CVertex, position);
+		attributeDescriptions[0].offset = offsetof(VertexData, position);
 
 		attributeDescriptions[1].binding = 0;
 		attributeDescriptions[1].location = 1;
 		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(CVertex, color);
+		attributeDescriptions[1].offset = offsetof(VertexData, color);
 
 		return attributeDescriptions;
 	}

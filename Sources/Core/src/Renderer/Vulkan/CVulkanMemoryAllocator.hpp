@@ -8,15 +8,12 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 
 	class CVulkanMemoryAllocator
 	{
-	private:
-		VmaAllocator m_allocator = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanMemoryAllocator(CVulkanContext* pContext);
+		explicit CVulkanMemoryAllocator(VulkanContext* pContext);
 		~CVulkanMemoryAllocator();
 
 		VkResult CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
@@ -33,5 +30,8 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VmaAllocator Handle() const;
+
+	private:
+		VmaAllocator m_allocator = VK_NULL_HANDLE;
 	};
 };

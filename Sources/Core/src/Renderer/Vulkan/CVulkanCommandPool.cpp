@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanCommandPool::CVulkanCommandPool(CVulkanContext* context): m_context(context)
+	CVulkanCommandPool::CVulkanCommandPool(VulkanContext* context): m_context(context)
 	{
 		auto device = m_context->vkDevice->Handle();
 		auto queueFamilyIndices = m_context->vkDevice->GetQueueFamilies();

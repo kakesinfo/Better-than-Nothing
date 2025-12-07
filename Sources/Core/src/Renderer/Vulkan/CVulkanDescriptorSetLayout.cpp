@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanDescriptorSetLayout::CVulkanDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& layoutBindings, CVulkanContext* context): m_context(context)
+	CVulkanDescriptorSetLayout::CVulkanDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& layoutBindings, VulkanContext* context): m_context(context)
 	{
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

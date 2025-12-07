@@ -11,6 +11,6 @@ namespace BetterThanNothing
 	class CVulkanIndexBuffer: public CVulkanBuffer
 	{
 	public:
-		CVulkanIndexBuffer(CVulkanContext* context, VkDeviceSize size, const void* data = nullptr);
+		CVulkanIndexBuffer(VulkanContext* context, VkDeviceSize size, const void* data = nullptr);
 	};
 }

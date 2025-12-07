@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanFence::CVulkanFence(CVulkanContext* context): m_context(context)
+	CVulkanFence::CVulkanFence(VulkanContext* context): m_context(context)
 	{
 		VkFenceCreateInfo fenceInfo{};
 		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;

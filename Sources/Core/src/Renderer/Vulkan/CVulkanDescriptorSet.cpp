@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanDescriptorSet::CVulkanDescriptorSet(const std::unique_ptr<CVulkanDescriptorSetLayout>& layout, CVulkanContext* context)
+	CVulkanDescriptorSet::CVulkanDescriptorSet(const std::unique_ptr<CVulkanDescriptorSetLayout>& layout, VulkanContext* context)
 		: m_context(context)
 	{
 		auto handle = layout->Handle();

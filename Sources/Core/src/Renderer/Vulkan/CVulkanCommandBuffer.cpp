@@ -77,7 +77,7 @@ namespace BetterThanNothing
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 	}
 
-	void CVulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, CVulkanContext* context)
+	void CVulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, VulkanContext* context)
 	{
 		const auto device = context->vkDevice->Handle();
 		const auto commandPool = context->vkCommandPool->Handle();

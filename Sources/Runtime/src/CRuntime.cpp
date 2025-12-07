@@ -4,6 +4,8 @@
 
 namespace BetterThanNothing
 {
+	MeshData mesh;
+
 	void CRuntime::OnEnable(IRenderer* renderer)
 	{
 		renderer->AddPipeline([&](IPipelineBuilder* builder) {

@@ -8,7 +8,7 @@
 
 namespace BetterThanNothing
 {
-	struct UniformBufferObject
+	struct UniformBufferObjectData
 	{
 		alignas(16) glm::mat4 model;
 		alignas(16) glm::mat4 view;

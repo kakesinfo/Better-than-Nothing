@@ -3,7 +3,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanDescriptorPool::CVulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, CVulkanContext* context): m_context(context)
+	CVulkanDescriptorPool::CVulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, VulkanContext* context): m_context(context)
 	{
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

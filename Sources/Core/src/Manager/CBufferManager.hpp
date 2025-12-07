@@ -8,17 +8,12 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
-
-	enum class EVulkanBufferType;
+	struct VulkanContext;
 
 	class CBufferManager
 	{
-	private:
-		static CVulkanContext* m_context;
-
 	public:
-		static void Initialize(CVulkanContext* context);
+		static void Initialize(VulkanContext* context);
 		static void Shutdown();
 
 		static std::unique_ptr<CVulkanVertexBuffer> CreateVertexBuffer(const void* data, uint32 dataSize);
@@ -31,5 +26,9 @@ namespace BetterThanNothing
 		}
 
 		static std::unique_ptr<CVulkanUniformBuffer> CreateUniformBuffer(uint32 dataSize);
+
+
+	private:
+		static VulkanContext* m_context;
 	};
 }

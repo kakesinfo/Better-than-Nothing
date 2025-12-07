@@ -2,16 +2,12 @@
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 
 	class CVulkanFence
 	{
-	private:
-		CVulkanContext* m_context = nullptr;
-		VkFence m_fence = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanFence(CVulkanContext* context);
+		explicit CVulkanFence(VulkanContext* context);
 		~CVulkanFence();
 
 		void Wait();
@@ -19,5 +15,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkFence Handle() const;
+
+	private:
+		VulkanContext* m_context = nullptr;
+		VkFence m_fence = VK_NULL_HANDLE;
 	};
 }

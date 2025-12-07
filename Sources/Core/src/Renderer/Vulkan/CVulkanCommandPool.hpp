@@ -1,19 +1,15 @@
 #pragma once
 
-#include "CVulkanContext.hpp"
+#include "VulkanContext.hpp"
 
 namespace BetterThanNothing
 {
-	struct CVulkanContext;
+	struct VulkanContext;
 
 	class CVulkanCommandPool
 	{
-	private:
-		CVulkanContext* m_context = nullptr;
-		VkCommandPool m_commandPool = VK_NULL_HANDLE;
-
 	public:
-		explicit CVulkanCommandPool(CVulkanContext* context);
+		explicit CVulkanCommandPool(VulkanContext* context);
 		~CVulkanCommandPool();
 
 		CVulkanCommandPool(const CVulkanCommandPool&) = delete;
@@ -23,5 +19,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkCommandPool Handle() const;
+
+	private:
+		VulkanContext* m_context = nullptr;
+		VkCommandPool m_commandPool = VK_NULL_HANDLE;
 	};
 }

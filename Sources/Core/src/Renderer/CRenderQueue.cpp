@@ -5,7 +5,7 @@ namespace BetterThanNothing
 	CRenderQueue::CRenderQueue() = default;
 	CRenderQueue::~CRenderQueue() = default;
 
-	void CRenderQueue::Render(CMesh *pMesh, const glm::mat4 &worldTransform)
+	void CRenderQueue::Render(MeshData *pMesh, const glm::mat4 &worldTransform)
 	{
 		Render({pMesh, worldTransform});
 	}

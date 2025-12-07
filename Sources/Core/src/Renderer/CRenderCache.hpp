@@ -10,7 +10,7 @@ namespace BetterThanNothing
 		CRenderCache() = default;
 		~CRenderCache() = default;
 
-		MeshGpuData* GetOrCreateMeshGpuData(CMesh* pMesh);
+		MeshGpuData* GetOrCreateMeshGpuData(MeshData* pMesh);
 
 	private:
 		std::unordered_map<uint64, std::unique_ptr<MeshGpuData>> m_meshCache;

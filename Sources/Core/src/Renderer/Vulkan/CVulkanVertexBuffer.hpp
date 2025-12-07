@@ -11,7 +11,7 @@ namespace BetterThanNothing
 	class CVulkanVertexBuffer: public CVulkanBuffer
 	{
 	public:
-		CVulkanVertexBuffer(CVulkanContext* context, VkDeviceSize size, const void* data = nullptr);
+		CVulkanVertexBuffer(VulkanContext* context, VkDeviceSize size, const void* data = nullptr);
 	};
 }
 

@@ -1,9 +1,9 @@
 #include "BetterThanNothing.hpp"
-#include "UniformBufferObject.hpp"
+#include "UniformBufferObjectData.hpp"
 
 namespace BetterThanNothing
 {
-	CRenderer::CRenderer(CVulkanContext& vkContext)
+	CRenderer::CRenderer(VulkanContext& vkContext)
 		: m_vkContext(std::move(vkContext))
 	{
 		CBufferManager::Initialize(&m_vkContext);
@@ -188,8 +188,7 @@ namespace BetterThanNothing
 			passContext->BindIndexBuffer(meshGpuData->pIndexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT16);
 
 			// Draw mesh
-			auto indices = pMesh->GetIndices();
-			passContext->DrawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
+			passContext->DrawIndexed(static_cast<uint32>(pMesh->indices.size()), 1, 0, 0, 0);
 		}
 
 		currentFrame.commandBuffer->EndRenderPass();
@@ -239,7 +238,7 @@ namespace BetterThanNothing
 	{
 		const uint32 count = m_vkContext.vkSettings.maxFramesInFlight;
 		for (uint32 i = 0; i < count; i++) {
-			m_vkContext.vkFrames[i].uniformBuffer = CBufferManager::CreateUniformBuffer<UniformBufferObject>();
+			m_vkContext.vkFrames[i].uniformBuffer = CBufferManager::CreateUniformBuffer<UniformBufferObjectData>();
 		}
 
 		LOG_SUCCESS("Vulkan uniforms: ok (count: " << count << ")");
@@ -281,7 +280,7 @@ namespace BetterThanNothing
 			VkDescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = m_vkContext.vkFrames[i].uniformBuffer->Handle();
 			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(UniformBufferObject);
+			bufferInfo.range = sizeof(UniformBufferObjectData);
 
 			VkWriteDescriptorSet descriptorWrite{};
 			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -308,7 +307,7 @@ namespace BetterThanNothing
 		const auto [width, height] = m_vkContext.vkSwapChain->GetExtent();
 		const float ratio = static_cast<float>(width) / static_cast<float>(height);
 
-		UniformBufferObject ubo{};
+		UniformBufferObjectData ubo{};
 		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.projection = glm::perspective(glm::radians(45.0f), ratio, 0.1f, 10.0f);
@@ -324,7 +323,7 @@ namespace BetterThanNothing
 
 		VulkanPipelineParams params = builder.GetBuildParams();
 
-		std::vector<CVulkanShaderModule> shaderModules;
+		std::vector<VulkanShaderModule> shaderModules;
 		for (auto&[shaderPath, shaderType] : params.shadersInfos)
 			shaderModules.push_back(m_pShaderPool->LoadShader(shaderPath, shaderType));
 
