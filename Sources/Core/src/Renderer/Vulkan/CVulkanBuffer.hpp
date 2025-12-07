@@ -8,14 +8,21 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanBuffer_New
+	class CVulkanBufferError final : public std::runtime_error
 	{
 	public:
-		CVulkanBuffer_New(CVulkanContext* context, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags vmaFlags);
-		virtual ~CVulkanBuffer_New();
+		explicit CVulkanBufferError(const std::string& message)
+			: std::runtime_error(message) {}
+	};
 
-		CVulkanBuffer_New(const CVulkanBuffer_New&) = delete;
-		CVulkanBuffer_New& operator=(const CVulkanBuffer_New&) = delete;
+	class CVulkanBuffer
+	{
+	public:
+		CVulkanBuffer(CVulkanContext* context, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags vmaFlags);
+		virtual ~CVulkanBuffer();
+
+		CVulkanBuffer(const CVulkanBuffer&) = delete;
+		CVulkanBuffer& operator=(const CVulkanBuffer&) = delete;
 
 		[[nodiscard]] VkBuffer Handle() const;
 		[[nodiscard]] VkDeviceSize Size() const;

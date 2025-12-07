@@ -11,7 +11,6 @@ namespace BetterThanNothing
 	struct CVulkanContext;
 
 	enum class EVulkanBufferType;
-	class CVulkanBuffer_Old;
 
 	class CBufferManager
 	{

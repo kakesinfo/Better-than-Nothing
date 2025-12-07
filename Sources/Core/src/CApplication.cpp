@@ -29,8 +29,8 @@ namespace BetterThanNothing
 
 			OnUpdate();
 
-			OnRender(renderQueue.get()); // TODO: pass renderQueue instead of renderer
-			renderer->RenderFrame(renderQueue.get()); // TODO: pass renderQueue
+			OnRender(renderQueue.get());
+			renderer->RenderFrame(renderQueue.get());
 
 			renderQueue->Clear();
 
