@@ -30,29 +30,28 @@
 #include "Renderer/Vulkan/CVulkanVertexBuffer.hpp"
 #include "Renderer/Vulkan/CVulkanIndexBuffer.hpp"
 #include "Renderer/Vulkan/CVulkanStagingBuffer.hpp"
-#include "Manager/CBufferManager.hpp"
 #include "Renderer/Vulkan/CVulkanContext.hpp"
 #include "Renderer/Vulkan/CVulkanFrame.hpp"
 #include "Renderer/Vulkan/CVulkanDescriptorSetLayout.hpp"
 #include "Renderer/Vulkan/CVulkanDescriptorPool.hpp"
 #include "Renderer/Vulkan/CVulkanDescriptorSet.hpp"
 
-#include "Renderer/Meshes/CVertex.hpp"
-#include "Renderer/Meshes/CMesh.hpp"
+#include "Manager/CBufferManager.hpp"
+
+#include "CVertex.hpp"
+#include "CMesh.hpp"
 
 #include "Public/IRenderer.hpp"
 #include "Public/IPipelineBuilder.hpp"
 
+#include "Renderer/MaterialGpuData.hpp"
+#include "Renderer/MeshGpuData.hpp"
+#include "Renderer/CRenderCache.hpp"
 #include "Renderer/CShaderPool.hpp"
+#include "Renderer/CRenderQueue.hpp"
 #include "Renderer/CRenderer.hpp"
 #include "Renderer/CRendererBuilder.hpp"
-
 
 // CApplication
 #include "CWindowBuilder.hpp"
 #include "CApplication.hpp"
-
-// Utils
-#include "Utils/CInput.hpp"
-#include "Utils/CDependencyGraph.hpp"
-#include "Utils/CJobManager.hpp"
