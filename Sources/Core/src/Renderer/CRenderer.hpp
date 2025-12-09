@@ -50,7 +50,6 @@ namespace BetterThanNothing
 		uint32 m_currentFrame = 0;
 
 		std::unique_ptr<CBufferManager> m_pBufferFactory = nullptr;
-		std::unique_ptr<CShaderPool> m_pShaderPool = nullptr;
 		std::unique_ptr<CRenderCache> m_pRenderCache = nullptr;
 
 		std::unique_ptr<CGlobalUniformProvider> m_pGlobalUniformProvider = nullptr;

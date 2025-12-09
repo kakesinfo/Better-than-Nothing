@@ -4,7 +4,8 @@ namespace BetterThanNothing
 {
 	CRenderCache::CRenderCache(VulkanContext *pContext): m_pContext(pContext)
 	{
-		m_textureLoader = std::make_unique<CTextureLoader>(pContext);
+		m_pTextureLoader = std::make_unique<CTextureLoader>(pContext);
+		m_pShaderLoader = std::make_unique<CShaderLoader>(pContext);
 	}
 
 	MeshGpuData* CRenderCache::GetOrCreateMeshGpuData(const MeshData* pMesh)
@@ -34,16 +35,29 @@ namespace BetterThanNothing
 		return m_meshCache[pMesh->id].get();
 	}
 
-	TextureGpuData* CRenderCache::GetOrCreateTextureGpuData(const TextureData* pTexture)
+	TextureGpuData* CRenderCache::GetOrCreateTextureGpuData(const TextureData& textureData)
 	{
-		const auto it = m_textureCache.find(pTexture->filePath);
+		const auto it = m_textureCache.find(textureData.filePath);
 		if (it != m_textureCache.end())
 			return it->second.get();
 
-		m_textureCache[pTexture->filePath] = m_textureLoader->Load(pTexture->filePath);
+		m_textureCache[textureData.filePath] = m_pTextureLoader->Load(textureData.filePath);
 
-		LOG_INFO("TextureGpuData created and cached for Texture: " << pTexture->filePath);
+		LOG_INFO("TextureGpuData created and cached for Texture: " << textureData.filePath);
 
-		return m_textureCache[pTexture->filePath].get();
+		return m_textureCache[textureData.filePath].get();
+	}
+
+	ShaderGpuData* CRenderCache::GetOrCreateShaderGpuData(const ShaderData& shaderData)
+	{
+		const auto it = m_shaderCache.find(shaderData.filePath);
+		if (it != m_shaderCache.end())
+			return it->second.get();
+
+		m_shaderCache[shaderData.filePath] = m_pShaderLoader->Load(shaderData);
+
+		LOG_INFO("ShaderGpuData created and cached for Shader: " << shaderData.filePath);
+
+		return m_shaderCache[shaderData.filePath].get();
 	}
 }
