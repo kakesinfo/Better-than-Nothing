@@ -74,8 +74,6 @@ namespace BetterThanNothing
 
 		m_images.resize(finalImageCount);
 		vkGetSwapchainImagesKHR(device, m_swapChain, &finalImageCount, m_images.data());
-
-		LOG_SUCCESS("Vulkan swap chain images: ok (count: " << finalImageCount << ")");
 	}
 
 	void CVulkanSwapChain::CreateImageViews()
@@ -86,8 +84,6 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < imageCount; i++)
 			m_imageViews.at(i) = std::make_unique<CVulkanImageView>(m_context, m_images.at(i), m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
-
-		LOG_SUCCESS("Vulkan swap chain image views: ok (count: " << imageCount << ")");
 	}
 
 	void CVulkanSwapChain::CreateFramebuffers()
@@ -114,8 +110,6 @@ namespace BetterThanNothing
 			auto framebuffer = std::make_unique<CVulkanFramebuffer>(&createInfo, m_context);
 			m_framebuffers.at(i) = std::move(framebuffer);
 		}
-
-		LOG_SUCCESS("Vulkan swap chain framebuffers: ok (count: " << m_framebuffers.size() << ")");
 	}
 
 	void CVulkanSwapChain::CreateDepthResources()
@@ -143,8 +137,6 @@ namespace BetterThanNothing
 		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
 			commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		}, m_context);
-
-		LOG_SUCCESS("Vulkan depth buffer: ok");
 	}
 
 	void CVulkanSwapChain::RecreateSwapchain()
@@ -168,6 +160,7 @@ namespace BetterThanNothing
 		_createSwapchain();
 		CreateImages();
 		CreateImageViews();
+		CreateDepthResources();
 		CreateFramebuffers();
 	}
 
@@ -175,6 +168,8 @@ namespace BetterThanNothing
 	{
 		m_framebuffers.clear();
 		m_imageViews.clear();
+		m_depthImageView.reset();
+		m_depthImage.reset();
 
 		vkDestroySwapchainKHR(m_context->vkDevice->Handle(), m_swapChain, nullptr);
 	}
