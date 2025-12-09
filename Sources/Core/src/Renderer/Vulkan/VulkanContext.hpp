@@ -62,5 +62,8 @@ namespace BetterThanNothing
 
 		std::unique_ptr<CVulkanDescriptorSetLayout>			vkDynamicDescriptorSetLayout = nullptr;
 		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkDynamicDescriptorSets;
+
+		std::unique_ptr<CVulkanDescriptorSetLayout>			vkSamplerDescriptorSetLayout = nullptr;
+		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkSamplerDescriptorSets;
 	};
 };

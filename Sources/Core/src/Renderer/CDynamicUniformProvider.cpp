@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CDynamicUniformProvider::CDynamicUniformProvider(VulkanContext* pContext, uint32 maxObjects) : m_pContext(pContext),
+	CDynamicUniformProvider::CDynamicUniformProvider(VulkanContext* pContext, const uint32 maxObjects) : m_pContext(pContext),
 		m_maxObjects(maxObjects)
 	{
 		m_uniformAlignment = _calculateUniformAlignment();

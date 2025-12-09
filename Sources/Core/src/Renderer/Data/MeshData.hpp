@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../../BetterThanNothing.hpp"
+#include "BetterThanNothing.hpp"
 
 namespace BetterThanNothing
 {
@@ -18,14 +18,14 @@ namespace BetterThanNothing
 
 		// TODO: put all these next lines in a builder
 
-		void AddVertex(const float x, const float y, const float r, const float g, const float b)
+		void AddVertex(const float x, const float y, const float z, const float r, const float g, const float b, const float u, const float v)
 		{
-			AddVertex(glm::vec2(x, y), glm::vec3(r, g, b));
+			AddVertex(glm::vec3(x, y, z), glm::vec3(r, g, b), glm::vec2(u, v));
 		}
 
-		void AddVertex(const glm::vec2 position, const glm::vec3 color)
+		void AddVertex(const glm::vec3 position, const glm::vec3 color, const glm::vec2 uv)
 		{
-			AddVertex(VertexData{position, color});
+			AddVertex(VertexData{position, color, uv});
 		}
 
 		void AddVertex(const VertexData &vertex)

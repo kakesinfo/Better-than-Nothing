@@ -5,9 +5,9 @@ namespace BetterThanNothing
 	CRenderList::CRenderList() = default;
 	CRenderList::~CRenderList() = default;
 
-	void CRenderList::Render(MeshData *pMesh, const glm::mat4& modelTransform)
+	void CRenderList::Render(MeshData *pMesh, const glm::mat4& modelTransform, const std::string& texturePath)
 	{
-		Render({pMesh, modelTransform});
+		Render({pMesh, modelTransform, texturePath});
 	}
 
 	void CRenderList::Render(const RenderQueueItem &item)

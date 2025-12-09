@@ -9,6 +9,7 @@ sudo apt install cmake -y
 sudo apt install vulkan-tools libvulkan-dev vulkan-validationlayers-dev spirv-tools -y
 sudo apt install libglfw3-dev libglm-dev -y
 sudo apt install wget -y
+sudo apt install ninja-build -y
 
 # Insall all required packages for Github actions
 sudo apt install libxinerama-dev libxcursor-dev libxi-dev -y

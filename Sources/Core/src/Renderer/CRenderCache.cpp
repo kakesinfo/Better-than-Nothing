@@ -1,10 +1,13 @@
-#include "CRenderCache.hpp"
-
 #include "BetterThanNothing.hpp"
 
 namespace BetterThanNothing
 {
-	MeshGpuData* CRenderCache::GetOrCreateMeshGpuData(MeshData* pMesh)
+	CRenderCache::CRenderCache(VulkanContext *pContext): m_pContext(pContext)
+	{
+		m_textureLoader = std::make_unique<CTextureLoader>(pContext);
+	}
+
+	MeshGpuData* CRenderCache::GetOrCreateMeshGpuData(const MeshData* pMesh)
 	{
 		const auto it = m_meshCache.find(pMesh->id);
 		if (it != m_meshCache.end())
@@ -30,4 +33,17 @@ namespace BetterThanNothing
 
 		return m_meshCache[pMesh->id].get();
 	}
-} // BetterThanNothing
+
+	TextureGpuData* CRenderCache::GetOrCreateTextureGpuData(const TextureData* pTexture)
+	{
+		const auto it = m_textureCache.find(pTexture->filePath);
+		if (it != m_textureCache.end())
+			return it->second.get();
+
+		m_textureCache[pTexture->filePath] = m_textureLoader->Load(pTexture->filePath);
+
+		LOG_INFO("TextureGpuData created and cached for Texture: " << pTexture->filePath);
+
+		return m_textureCache[pTexture->filePath].get();
+	}
+}

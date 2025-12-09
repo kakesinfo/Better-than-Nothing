@@ -50,6 +50,7 @@ namespace BetterThanNothing
 		m_deviceName = deviceProperties.deviceName;
 		m_apiVersion = std::to_string(deviceProperties.apiVersion);
 		m_minUniformBufferOffsetAlignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
+		m_maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 	}
 
 	void CVulkanDevice::_createLogicalDevice()
@@ -77,6 +78,7 @@ namespace BetterThanNothing
 		}
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
+		deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -114,6 +116,23 @@ namespace BetterThanNothing
 		LOG_SUCCESS("Vulkan presentation queue: ok");
 	}
 
+	VkFormat CVulkanDevice::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
+	{
+		for (VkFormat format : candidates)
+		{
+			VkFormatProperties props;
+			vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &props);
+
+			if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
+				return format;
+
+			if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
+				return format;
+		}
+
+		throw std::runtime_error("Failed to find supported format");
+	}
+
 	VkPhysicalDevice CVulkanDevice::_findSuitableDevice(const std::vector<VkPhysicalDevice>& devices)
 	{
 		for (const auto& device : devices)
@@ -126,10 +145,10 @@ namespace BetterThanNothing
 
 	bool CVulkanDevice::_isDeviceSuitable(VkPhysicalDevice device) noexcept
 	{
-		QueueFamilyIndices queueFamilyIndices = _findQueueFamilies(device);
+		const QueueFamilyIndices queueFamilyIndices = _findQueueFamilies(device);
 
-		bool queueFamiliesSupported = queueFamilyIndices.IsComplete();
-		bool extensionsSupported = _checkDeviceExtensionSupport(device);
+		const bool queueFamiliesSupported = queueFamilyIndices.IsComplete();
+		const bool extensionsSupported = _checkDeviceExtensionSupport(device);
 		bool swapchainSupported = false;
 
 		if (extensionsSupported)
@@ -138,7 +157,10 @@ namespace BetterThanNothing
 			swapchainSupported = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 		}
 
-		return queueFamiliesSupported && extensionsSupported && swapchainSupported;
+		VkPhysicalDeviceFeatures supportedFeatures;
+		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+		return queueFamiliesSupported && extensionsSupported && swapchainSupported && supportedFeatures.samplerAnisotropy;
 	}
 
 	bool CVulkanDevice::_checkDeviceExtensionSupport(VkPhysicalDevice device) noexcept
@@ -280,5 +302,10 @@ namespace BetterThanNothing
 	uint32 CVulkanDevice::GetMinUniformBufferOffsetAlignment() const
 	{
 		return m_minUniformBufferOffsetAlignment;
+	}
+
+	float CVulkanDevice::GetMaxAnisotropy() const
+	{
+		return m_maxAnisotropy;
 	}
 }

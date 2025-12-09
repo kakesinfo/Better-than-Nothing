@@ -39,7 +39,7 @@ namespace BetterThanNothing
 	private:
 		static VkShaderStageFlagBits _getShaderStageTypeByShaderType(EVulkanShaderType type);
 		static VkVertexInputBindingDescription _getVertexBindingDescription();
-		static std::array<VkVertexInputAttributeDescription, 2> _getVertexAttributeDescriptions();
+		static std::array<VkVertexInputAttributeDescription, 3> _getVertexAttributeDescriptions();
 
 		VulkanContext* m_context = nullptr;
 		VulkanPipelineParams m_params;

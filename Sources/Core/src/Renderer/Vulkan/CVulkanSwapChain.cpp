@@ -74,6 +74,8 @@ namespace BetterThanNothing
 
 		m_images.resize(finalImageCount);
 		vkGetSwapchainImagesKHR(device, m_swapChain, &finalImageCount, m_images.data());
+
+		LOG_SUCCESS("Vulkan swap chain images: ok (count: " << finalImageCount << ")");
 	}
 
 	void CVulkanSwapChain::CreateImageViews()
@@ -83,26 +85,9 @@ namespace BetterThanNothing
 		m_imageViews.resize(imageCount);
 
 		for (size_t i = 0; i < imageCount; i++)
-		{
-			VkImageViewCreateInfo createInfo{};
-			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image = m_images.at(i);
-			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = m_imageFormat;
+			m_imageViews.at(i) = std::make_unique<CVulkanImageView>(m_context, m_images.at(i), m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
-			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			createInfo.subresourceRange.baseMipLevel = 0;
-			createInfo.subresourceRange.levelCount = 1;
-			createInfo.subresourceRange.baseArrayLayer = 0;
-			createInfo.subresourceRange.layerCount = 1;
-
-			m_imageViews.at(i) = std::make_unique<CVulkanImageView>(createInfo, m_context);
-		}
+		LOG_SUCCESS("Vulkan swap chain image views: ok (count: " << imageCount << ")");
 	}
 
 	void CVulkanSwapChain::CreateFramebuffers()
@@ -111,10 +96,11 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < m_imageViews.size(); i++)
 		{
-			auto imageView = m_imageViews.at(i)->Handle();
-			auto renderPass = m_context->vkRenderPass->Handle();
+			const auto imageView = m_imageViews.at(i)->Handle();
+			const auto dephImageView = m_depthImageView->Handle();
+			const auto renderPass = m_context->vkRenderPass->Handle();
 
-			std::array<VkImageView, 1> attachments = { imageView };
+			const std::array attachments = { imageView, dephImageView };
 
 			VkFramebufferCreateInfo createInfo{};
 			createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -128,6 +114,37 @@ namespace BetterThanNothing
 			auto framebuffer = std::make_unique<CVulkanFramebuffer>(&createInfo, m_context);
 			m_framebuffers.at(i) = std::move(framebuffer);
 		}
+
+		LOG_SUCCESS("Vulkan swap chain framebuffers: ok (count: " << m_framebuffers.size() << ")");
+	}
+
+	void CVulkanSwapChain::CreateDepthResources()
+	{
+		m_depthFormat = _chooseDepthFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT});
+
+		VkImageCreateInfo imageInfo{};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.extent.width = m_extent.width;
+		imageInfo.extent.height = m_extent.height;
+		imageInfo.extent.depth = 1;
+		imageInfo.mipLevels = 1;
+		imageInfo.arrayLayers = 1;
+		imageInfo.format = m_depthFormat;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		m_depthImage = std::make_unique<CVulkanImage>(m_context, &imageInfo);
+		m_depthImageView = std::make_unique<CVulkanImageView>(m_context, m_depthImage->Handle(), m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
+			commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		}, m_context);
+
+		LOG_SUCCESS("Vulkan depth buffer: ok");
 	}
 
 	void CVulkanSwapChain::RecreateSwapchain()
@@ -199,6 +216,11 @@ namespace BetterThanNothing
 		return actualExtent;
 	}
 
+	VkFormat CVulkanSwapChain::_chooseDepthFormat(const std::vector<VkFormat>& candidates)
+	{
+		return  m_context->vkDevice->FindSupportedFormat(candidates, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	}
+
 	VkFormat CVulkanSwapChain::GetImageFormat() const
 	{
 		return m_imageFormat;
@@ -239,5 +261,10 @@ namespace BetterThanNothing
 	VkSwapchainKHR CVulkanSwapChain::Handle() const
 	{
 		return m_swapChain;
+	}
+
+	VkFormat CVulkanSwapChain::GetDepthFormat() const
+	{
+		return m_depthFormat;
 	}
 };

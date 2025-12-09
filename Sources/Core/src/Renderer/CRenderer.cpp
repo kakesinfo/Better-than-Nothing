@@ -16,25 +16,23 @@ namespace BetterThanNothing
 		m_vkContext.vkDevice = std::make_unique<CVulkanDevice>(&m_vkContext);
 		m_vkContext.vkMemoryAllocator = std::make_unique<CVulkanMemoryAllocator>(&m_vkContext);
 
+		m_vkContext.vkCommandPool = std::make_unique<CVulkanCommandPool>(&m_vkContext);
+
 		m_vkContext.vkSwapChain = std::make_unique<CVulkanSwapChain>(&m_vkContext);
 		m_vkContext.vkSwapChain->CreateImages();
 		m_vkContext.vkSwapChain->CreateImageViews();
+		m_vkContext.vkSwapChain->CreateDepthResources();
 
 		m_vkContext.vkRenderPass = std::make_unique<CVulkanRenderPass>(&m_vkContext);
 
-		_createDescriptorSetLayout();
-
 		m_vkContext.vkSwapChain->CreateFramebuffers();
-
-		m_vkContext.vkCommandPool = std::make_unique<CVulkanCommandPool>(&m_vkContext);
 
 		m_vkContext.vkFrames.resize(m_vkContext.vkSettings.maxFramesInFlight);
 
 		m_pGlobalUniformProvider = std::make_unique<CGlobalUniformProvider>(&m_vkContext);
 		m_pDynamicUniformProvider = std::make_unique<CDynamicUniformProvider>(&m_vkContext, 1000);
 
-		// _createDynamicUniformBuffers();
-
+		_createDescriptorSetLayout();
 		_createDescriptorPool();
 		_createGlobalDescriptorSets();
 		_createDynamicDescriptorSets();
@@ -43,7 +41,7 @@ namespace BetterThanNothing
 		_createSyncObjects();
 
 		m_pShaderPool = std::make_unique<CShaderPool>(m_vkContext.vkSettings.shadersFolderPath, &m_vkContext);
-		m_pRenderCache = std::make_unique<CRenderCache>();
+		m_pRenderCache = std::make_unique<CRenderCache>(&m_vkContext);
 
 		LOG_SUCCESS("Renderer: ok");
 	}
@@ -142,9 +140,12 @@ namespace BetterThanNothing
 		renderPassInfo.renderArea.offset = {0, 0};
 		renderPassInfo.renderArea.extent = m_vkContext.vkSwapChain->GetExtent();
 
-		constexpr VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor;
+		std::array<VkClearValue, 2> clearValues{};
+		clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+		clearValues[1].depthStencil = {1.0f, 0};
+
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
 
 		const auto passContext = currentFrame.commandBuffer->BeginRenderPass(&renderPassInfo);
 
@@ -163,7 +164,7 @@ namespace BetterThanNothing
 		passContext->SetScissor(&scissor);
 
 		// Bind shader pipeline
-		const VkPipelineLayout pipelineLayout = m_vkContext.vkPipeline->GetLayout();
+		VkPipelineLayout pipelineLayout = m_vkContext.vkPipeline->GetLayout();
 		passContext->BindPipeline(m_vkContext.vkPipeline->Handle());
 
 		// Bind global uniforms
@@ -177,23 +178,37 @@ namespace BetterThanNothing
 			passContext->BindDescriptorSets(pipelineLayout, 0, 1, &globalDescriptorSet);
 		}
 
+		TextureGpuData* lastTexture = nullptr;
 		for (uint32 i = 0; i < renderList->Size(); i++)
 			{
-			const auto& [pMesh, modelTransform] = renderList->Get(i);
+			const auto& [pMesh, modelTransform, texturePath] = renderList->Get(i);
 
 			// Bind dynamic uniforms
 			{
 				const auto dynamicUniform = m_pDynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
 				dynamicUniform->model = modelTransform;
 
-				const VkDescriptorSet dynamicDescriptorSet = m_vkContext.vkDynamicDescriptorSets[m_currentFrame]->Handle();
+				VkDescriptorSet dynamicDescriptorSet = m_vkContext.vkDynamicDescriptorSets[m_currentFrame]->Handle();
 				const uint32 offset = m_pDynamicUniformProvider->GetOffset(i);
 				passContext->BindDescriptorSets(pipelineLayout, 1, 1, &dynamicDescriptorSet, 1, &offset);
 			}
 
+			// Bind texture sampler
+			{
+				const TextureData textureData = { .filePath = texturePath };
+				const auto textureGpuData = m_pRenderCache->GetOrCreateTextureGpuData(&textureData);
+
+				if (textureGpuData != lastTexture)
+				{
+					const VkDescriptorSet& samplerDescriptorSet = textureGpuData->pVkDescriptorSet->Handle();
+					passContext->BindDescriptorSets(pipelineLayout, 2, 1, &samplerDescriptorSet);
+					lastTexture = textureGpuData;
+				}
+			}
+
 			// Draw vertices and indices
 			{
-				const MeshGpuData* meshGpuData = m_pRenderCache->GetOrCreateMeshGpuData(pMesh);
+				const auto meshGpuData = m_pRenderCache->GetOrCreateMeshGpuData(pMesh);
 
 				// Bind mesh vertex and index buffers
 				const VkBuffer vertexBuffers[] = { meshGpuData->pVertexBuffer->Handle() };
@@ -265,11 +280,20 @@ namespace BetterThanNothing
 		dynamicUniformLayoutBinding.pImmutableSamplers = nullptr;
 		dynamicUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+		VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+		samplerLayoutBinding.binding = 0;
+		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerLayoutBinding.descriptorCount = 1;
+		samplerLayoutBinding.pImmutableSamplers = nullptr;
+		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		auto globalBindings = { globalUniformLayoutBinding };
 		auto dynamicBindings = { dynamicUniformLayoutBinding };
+		auto samplerBindings = { samplerLayoutBinding };
 
 		m_vkContext.vkGlobalDescriptorSetLayout = std::make_unique<CVulkanDescriptorSetLayout>(globalBindings, &m_vkContext);
 		m_vkContext.vkDynamicDescriptorSetLayout = std::make_unique<CVulkanDescriptorSetLayout>(dynamicBindings, &m_vkContext);
+		m_vkContext.vkSamplerDescriptorSetLayout = std::make_unique<CVulkanDescriptorSetLayout>(samplerBindings, &m_vkContext);
 
 		LOG_SUCCESS("Vulkan descriptor set layout: ok");
 	}
@@ -286,7 +310,11 @@ namespace BetterThanNothing
 		dynamicPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 		dynamicPoolSize.descriptorCount = frames; // 1 dynamic UBO par frame
 
-		std::vector poolSizes = { globalPoolSize, dynamicPoolSize };
+		VkDescriptorPoolSize samplerPoolSize{};
+		samplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerPoolSize.descriptorCount = 1000; // TODO: adjust based on expected number of textures
+
+		std::vector poolSizes = { globalPoolSize, dynamicPoolSize, samplerPoolSize };
 
 		m_vkContext.vkDescriptorPool = std::make_unique<CVulkanDescriptorPool>(poolSizes, &m_vkContext);
 
@@ -359,6 +387,7 @@ namespace BetterThanNothing
 		VulkanPipelineParams params = builder.GetBuildParams();
 
 		std::vector<VulkanShaderModule> shaderModules;
+		shaderModules.reserve(params.shadersInfos.size());
 		for (auto&[shaderPath, shaderType] : params.shadersInfos)
 			shaderModules.push_back(m_pShaderPool->LoadShader(shaderPath, shaderType));
 

@@ -9,7 +9,7 @@ namespace BetterThanNothing
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = context->vkSettings.maxFramesInFlight * 2; // 2 sets per frame (global + dynamic)
+		poolInfo.maxSets = context->vkSettings.maxFramesInFlight * 3; // 3 sets per frame (global + dynamic + sampler)
 
 		if (vkCreateDescriptorPool(context->vkDevice->Handle(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create descriptor pool");

@@ -41,6 +41,8 @@ namespace BetterThanNothing
 		CVulkanDevice(CVulkanDevice&& other) = delete;
 		CVulkanDevice& operator=(CVulkanDevice&& other) = delete;
 
+		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
+
 		[[nodiscard]]
 		VkPhysicalDevice PhysicalHandle() const;
 
@@ -58,6 +60,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		uint32 GetMinUniformBufferOffsetAlignment() const;
+
+		[[nodiscard]]
+		float GetMaxAnisotropy() const;
 
 		[[nodiscard]]
 		SwapChainSupportDetails GetSwapChainSupport() const;
@@ -81,7 +86,6 @@ namespace BetterThanNothing
 		void _getPhysicalDeviceProperties();
 		void _createLogicalDevice();
 
-
 		VulkanContext* m_context = nullptr;
 
 		VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
@@ -91,5 +95,6 @@ namespace BetterThanNothing
 		std::string m_deviceName;
 		std::string m_apiVersion;
 		uint32 m_minUniformBufferOffsetAlignment = 0;
+		float m_maxAnisotropy = 1;
 	};
 };

@@ -3,8 +3,9 @@
 namespace BetterThanNothing
 {
 	struct VulkanContext;
-	class CVulkanImageView;
 	class CVulkanFramebuffer;
+	class CVulkanImage;
+	class CVulkanImageView;
 
 	class CVulkanSwapChain {
 	public:
@@ -19,6 +20,7 @@ namespace BetterThanNothing
 		void CreateImages();
 		void CreateImageViews();
 		void CreateFramebuffers();
+		void CreateDepthResources();
 
 	private:
 		void _createSwapchain();
@@ -36,6 +38,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VkExtent2D _chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+
+		[[nodiscard]]
+		VkFormat _chooseDepthFormat(const std::vector<VkFormat>& candidates);
 
 	public:
 		[[nodiscard]]
@@ -62,6 +67,9 @@ namespace BetterThanNothing
 		[[nodiscard]]
 		VkSwapchainKHR Handle() const;
 
+		[[nodiscard]]
+		VkFormat GetDepthFormat() const;
+
 	private:
 		VulkanContext* m_context = nullptr;
 
@@ -72,5 +80,9 @@ namespace BetterThanNothing
 		std::vector<VkImage> m_images;
 		std::vector<std::unique_ptr<CVulkanImageView>> m_imageViews;
 		std::vector<std::unique_ptr<CVulkanFramebuffer>> m_framebuffers;
+
+		std::unique_ptr<CVulkanImage>     m_depthImage;
+		std::unique_ptr<CVulkanImageView> m_depthImageView;
+		VkFormat                          m_depthFormat;
 	};
 };
