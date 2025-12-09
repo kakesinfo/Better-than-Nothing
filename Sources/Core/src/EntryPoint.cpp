@@ -5,7 +5,7 @@ using namespace BetterThanNothing;
 extern CApplication* CreateApplication();
 
 int main() {
-	auto pApplication = CreateApplication();
+	const auto pApplication = CreateApplication();
 
 	try {
 		pApplication->Run();
