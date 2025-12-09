@@ -11,6 +11,7 @@
 namespace BetterThanNothing
 {
 	struct VulkanContext;
+	struct ShaderGpuData;
 
 	struct VulkanPipelineShaderInfo
 	{
@@ -27,7 +28,7 @@ namespace BetterThanNothing
 	class CVulkanPipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit CVulkanPipeline(VulkanPipelineParams params, std::vector<VulkanShaderModule> shaderModules, VulkanContext* context);
+		explicit CVulkanPipeline(VulkanPipelineParams params, std::vector<const ShaderGpuData*> shaders, VulkanContext* context);
 		~CVulkanPipeline();
 
 		[[nodiscard]]

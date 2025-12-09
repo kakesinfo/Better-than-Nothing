@@ -6,18 +6,18 @@
 
 namespace BetterThanNothing
 {
-	CVulkanPipeline::CVulkanPipeline(VulkanPipelineParams params, std::vector<VulkanShaderModule> shaderModules, VulkanContext* context)
+	CVulkanPipeline::CVulkanPipeline(VulkanPipelineParams params, std::vector<const ShaderGpuData*> shaders, VulkanContext* context)
 		: m_context(context), m_params(std::move(params))
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		for (const auto& shaderModule : shaderModules)
+		for (const ShaderGpuData* shaderGpuData : shaders)
 		{
-			VkShaderStageFlagBits shaderStageType = _getShaderStageTypeByShaderType(shaderModule.shaderType);
+			VkShaderStageFlagBits shaderStageType = _getShaderStageTypeByShaderType(shaderGpuData->type);
 
 			VkPipelineShaderStageCreateInfo shaderStageInfo{};
 			shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shaderStageInfo.stage = shaderStageType;
-			shaderStageInfo.module = shaderModule.shaderModule;
+			shaderStageInfo.module = shaderGpuData->vkModule;
 			shaderStageInfo.pName = params.name;
 			shaderStages.push_back(shaderStageInfo);
 		}

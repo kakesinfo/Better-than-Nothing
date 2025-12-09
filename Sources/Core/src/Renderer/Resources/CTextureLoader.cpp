@@ -7,11 +7,11 @@ namespace BetterThanNothing
 {
 	CTextureLoader::CTextureLoader(VulkanContext *context): IResourceLoader(context) {}
 
-	std::unique_ptr<TextureGpuData> CTextureLoader::Load(const std::string& path)
+	std::unique_ptr<TextureGpuData> CTextureLoader::Load(const std::string& input)
 	{
 		auto textureGpuData = std::make_unique<TextureGpuData>();
 
-		stbi_uc* pixels = stbi_load(path.c_str(), &textureGpuData->width, &textureGpuData->height, &textureGpuData->channels, STBI_rgb_alpha);
+		stbi_uc* pixels = stbi_load(input.c_str(), &textureGpuData->width, &textureGpuData->height, &textureGpuData->channels, STBI_rgb_alpha);
 		if (!pixels)
 			throw std::runtime_error("failed to load texture image!");
 

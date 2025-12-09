@@ -43,6 +43,7 @@
 #include "Renderer/Data/TextureData.hpp"
 #include "Renderer/Data/VertexData.hpp"
 #include "Renderer/Data/MeshData.hpp"
+#include "Renderer/Data/ShaderData.hpp"
 
 #include "Public/IRenderer.hpp"
 #include "Public/IPipelineBuilder.hpp"
@@ -56,12 +57,13 @@
 #include "Renderer/Data/TextureGpuData.hpp"
 #include "Renderer/Data/MaterialGpuData.hpp"
 #include "Renderer/Data/MeshGpuData.hpp"
+#include "Renderer/Data/ShaderGpuData.hpp"
 
 #include "Renderer/Resources/IResourceLoader.hpp"
 #include "Renderer/Resources/CTextureLoader.hpp"
+#include "Renderer/Resources/CShaderLoader.hpp"
 
 #include "Renderer/CRenderCache.hpp"
-#include "Renderer/CShaderPool.hpp"
 #include "Renderer/CRenderList.hpp"
 #include "Renderer/CRenderer.hpp"
 #include "Renderer/CRendererBuilder.hpp"

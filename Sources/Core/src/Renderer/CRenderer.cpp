@@ -40,7 +40,6 @@ namespace BetterThanNothing
 		_createCommandBuffers();
 		_createSyncObjects();
 
-		m_pShaderPool = std::make_unique<CShaderPool>(m_vkContext.vkSettings.shadersFolderPath, &m_vkContext);
 		m_pRenderCache = std::make_unique<CRenderCache>(&m_vkContext);
 
 		LOG_SUCCESS("Renderer: ok");
@@ -195,8 +194,7 @@ namespace BetterThanNothing
 
 			// Bind texture sampler
 			{
-				const TextureData textureData = { .filePath = texturePath };
-				const auto textureGpuData = m_pRenderCache->GetOrCreateTextureGpuData(&textureData);
+				const auto textureGpuData = m_pRenderCache->GetOrCreateTextureGpuData({ texturePath });
 
 				if (textureGpuData != lastTexture)
 				{
@@ -386,10 +384,14 @@ namespace BetterThanNothing
 
 		VulkanPipelineParams params = builder.GetBuildParams();
 
-		std::vector<VulkanShaderModule> shaderModules;
+		std::vector<const ShaderGpuData*> shaderModules;
 		shaderModules.reserve(params.shadersInfos.size());
-		for (auto&[shaderPath, shaderType] : params.shadersInfos)
-			shaderModules.push_back(m_pShaderPool->LoadShader(shaderPath, shaderType));
+
+		for (auto&[shaderPath, shaderType] : params.shadersInfos) {
+			const std::string fullShaderPath = m_vkContext.vkSettings.shadersFolderPath + shaderPath;
+			const ShaderGpuData* shaderGpuData = m_pRenderCache->GetOrCreateShaderGpuData({shaderType, fullShaderPath});
+			shaderModules.push_back(shaderGpuData);
+		}
 
 		m_vkContext.vkPipeline = std::make_unique<CVulkanPipeline>(params, shaderModules, &m_vkContext);
 	}
