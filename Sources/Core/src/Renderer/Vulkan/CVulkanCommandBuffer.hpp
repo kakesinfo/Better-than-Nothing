@@ -24,9 +24,15 @@ namespace BetterThanNothing
 		void EndRenderPass();
 
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32 bufferSize) const;
+		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32 width, uint32 height) const;
 
 		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, VulkanContext* context);
 
+	private:
+		static bool _hasStencilComponent(VkFormat format);
+
+	public:
 		[[nodiscard]]
 		VkCommandBuffer Handle() const;
 

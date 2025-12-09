@@ -8,8 +8,9 @@ namespace BetterThanNothing
 {
 	struct RenderQueueItem
 	{
-		MeshData* pMesh;
-		glm::mat4 modelTransform;
+		MeshData*	pMesh;
+		glm::mat4	modelTransform;
+		std::string	texturePath;
 	};
 
 	class CRenderList
@@ -18,7 +19,7 @@ namespace BetterThanNothing
 		CRenderList();
 		~CRenderList();
 
-		void Render(MeshData* pMesh, const glm::mat4& modelTransform);
+		void Render(MeshData* pMesh, const glm::mat4& modelTransform, const std::string& texturePath);
 		void Render(const RenderQueueItem& item);
 
 		[[nodiscard]]

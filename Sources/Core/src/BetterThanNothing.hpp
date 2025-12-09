@@ -12,7 +12,10 @@
 #include "Renderer/Vulkan/CVulkanSurface.hpp"
 #include "Renderer/Vulkan/CVulkanDevice.hpp"
 #include "Renderer/Vulkan/CVulkanQueue.hpp"
+#include "Renderer/Vulkan/CVulkanMemoryAllocator.hpp"
+#include "Renderer/Vulkan/CVulkanImage.hpp"
 #include "Renderer/Vulkan/CVulkanImageView.hpp"
+#include "Renderer/Vulkan/CVulkanSampler.hpp"
 #include "Renderer/Vulkan/CVulkanSwapChain.hpp"
 #include "Renderer/Vulkan/VulkanShaderModule.hpp"
 #include "Renderer/Vulkan/EVulkanShaderType.hpp"
@@ -22,7 +25,6 @@
 #include "Renderer/Vulkan/CVulkanFramebuffer.hpp"
 #include "Renderer/Vulkan/CVulkanRenderPass.hpp"
 #include "Renderer/Vulkan/CVulkanRenderPassContext.hpp"
-#include "Renderer/Vulkan/CVulkanMemoryAllocator.hpp"
 #include "Renderer/Vulkan/CVulkanSemaphore.hpp"
 #include "Renderer/Vulkan/CVulkanFence.hpp"
 #include "Renderer/Vulkan/CVulkanBuffer.hpp"
@@ -38,6 +40,7 @@
 
 #include "Manager/CBufferManager.hpp"
 
+#include "Renderer/Data/TextureData.hpp"
 #include "Renderer/Data/VertexData.hpp"
 #include "Renderer/Data/MeshData.hpp"
 
@@ -50,8 +53,13 @@
 #include "Renderer/CGlobalUniformProvider.hpp"
 #include "Renderer/CDynamicUniformProvider.hpp"
 
+#include "Renderer/Data/TextureGpuData.hpp"
 #include "Renderer/Data/MaterialGpuData.hpp"
 #include "Renderer/Data/MeshGpuData.hpp"
+
+#include "Renderer/Resources/IResourceLoader.hpp"
+#include "Renderer/Resources/CTextureLoader.hpp"
+
 #include "Renderer/CRenderCache.hpp"
 #include "Renderer/CShaderPool.hpp"
 #include "Renderer/CRenderList.hpp"

@@ -41,6 +41,21 @@ namespace BetterThanNothing
 		vmaDestroyBuffer(m_allocator, buffer, allocation);
 	}
 
+	VkResult CVulkanMemoryAllocator::CreateImage(
+		const VkImageCreateInfo* imageCreateInfo,
+		const VmaAllocationCreateInfo* allocCreateInfo,
+		VkImage* image,
+		VmaAllocation* allocation,
+		VmaAllocationInfo* allocationInfo
+	) const {
+		return vmaCreateImage(m_allocator, imageCreateInfo, allocCreateInfo, image, allocation, allocationInfo);
+	}
+
+	void CVulkanMemoryAllocator::DestroyImage(VkImage image, VmaAllocation allocation) const
+	{
+		vmaDestroyImage(m_allocator, image, allocation);
+	}
+
 	VkResult CVulkanMemoryAllocator::MapMemory(VmaAllocation allocation, void** data) const
 	{
 		return vmaMapMemory(m_allocator, allocation, data);

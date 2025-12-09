@@ -15,11 +15,20 @@ namespace BetterThanNothing
 			builder->AddFragmentShader("main/main.frag");
 		});
 
-		mesh.AddVertex({-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f});
-		mesh.AddVertex({0.5f, -0.5f}, {0.0f, 1.0f, 0.0f});
-		mesh.AddVertex({0.5f, 0.5f}, {0.0f, 0.0f, 1.0f});
-		mesh.AddVertex({-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f});
-		mesh.AddIndices({0, 1, 2, 2, 3, 0});
+		mesh.AddVertex({-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f});
+		mesh.AddVertex({0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f});
+		mesh.AddVertex({0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f});
+		mesh.AddVertex({-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f});
+
+		mesh.AddVertex({-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f});
+		mesh.AddVertex({0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f});
+		mesh.AddVertex({0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f});
+		mesh.AddVertex({-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f});
+
+		mesh.AddIndices({
+			0, 1, 2, 2, 3, 0,
+			4, 5, 6, 6, 7, 4
+		});
 
 		modelTransform = glm::mat4(1.0f);
 	}
@@ -48,7 +57,7 @@ namespace BetterThanNothing
 
 	void CRuntime::OnRender(CRenderList* renderList)
 	{
-		renderList->Render(&mesh, modelTransform);
+		renderList->Render(&mesh, modelTransform, "../../Assets/Textures/texture.jpg");
 	}
 
 	void CRuntime::OnDisable()

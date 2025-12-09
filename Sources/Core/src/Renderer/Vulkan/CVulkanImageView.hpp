@@ -8,7 +8,7 @@ namespace BetterThanNothing
 	class CVulkanImageView
 	{
 	public:
-		explicit CVulkanImageView(VkImageViewCreateInfo& createInfo, VulkanContext* context);
+		explicit CVulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 		~CVulkanImageView();
 
 		CVulkanImageView(const CVulkanImageView&) = delete;
