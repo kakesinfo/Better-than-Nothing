@@ -67,7 +67,6 @@
 #include "Renderer/CRenderCache.hpp"
 #include "Renderer/CRenderList.hpp"
 #include "Renderer/CRenderer.hpp"
-#include "Renderer/CRendererBuilder.hpp"
 
 // CApplication
 #include "CWindowBuilder.hpp"
