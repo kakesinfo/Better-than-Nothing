@@ -10,7 +10,7 @@ namespace BetterThanNothing
 {
 	struct ShaderGpuData
 	{
-		EVulkanShaderType	type{};
-		VkShaderModule		vkModule = VK_NULL_HANDLE; // TODO: use unique_ptr
+		EVulkanShaderType						type{};
+		std::unique_ptr<CVulkanShaderModule>	pVkShaderModule = VK_NULL_HANDLE;
 	};
 };

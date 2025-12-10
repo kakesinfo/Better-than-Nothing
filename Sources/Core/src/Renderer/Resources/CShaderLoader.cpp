@@ -21,7 +21,9 @@ namespace BetterThanNothing
 		glslang_program_t* shaderProgram = s_getShaderProgram(shaderSource, shaderStage);
 
 		shaderGpuData->type = input.type;
-		shaderGpuData->vkModule = _getShaderModule(shaderProgram);
+		shaderGpuData->pVkShaderModule = _getShaderModule(shaderProgram);
+
+		glslang_program_delete(shaderProgram);
 
 		return shaderGpuData;
 	}
@@ -96,7 +98,7 @@ namespace BetterThanNothing
 			throw std::runtime_error(
 				"failed to parse shader: " + std::string(glslang_shader_get_info_log(shader.get())));
 
-		glslang_program_t *program = glslang_program_create();
+		glslang_program_t* program = glslang_program_create();
 		glslang_program_add_shader(program, shader.get());
 
 		if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT))
@@ -138,21 +140,13 @@ namespace BetterThanNothing
 		return program;
 	}
 
-	VkShaderModule CShaderLoader::_getShaderModule(glslang_program_t *program) const
+	std::unique_ptr<CVulkanShaderModule> CShaderLoader::_getShaderModule(glslang_program_t *program) const
 	{
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.codeSize = glslang_program_SPIRV_get_size(program) * sizeof(unsigned int);
 		createInfo.pCode = glslang_program_SPIRV_get_ptr(program);
 
-		VkShaderModule shaderModule;
-		if (vkCreateShaderModule(m_context->vkDevice->Handle(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-			glslang_program_delete(program);
-			throw std::runtime_error("failed to create shader module!");
-		}
-
-		glslang_program_delete(program);
-
-		return shaderModule;
+		return std::make_unique<CVulkanShaderModule>(m_context, &createInfo);
 	}
-} // BetterThanNothing
+}
