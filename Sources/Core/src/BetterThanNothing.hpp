@@ -37,6 +37,7 @@
 #include "Renderer/Vulkan/CVulkanDescriptorSetLayout.hpp"
 #include "Renderer/Vulkan/CVulkanDescriptorPool.hpp"
 #include "Renderer/Vulkan/CVulkanDescriptorSet.hpp"
+#include "Renderer/Vulkan/CVulkanShaderModule.hpp"
 
 #include "Manager/CBufferManager.hpp"
 

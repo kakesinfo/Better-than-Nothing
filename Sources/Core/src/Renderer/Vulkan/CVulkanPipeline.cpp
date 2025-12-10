@@ -17,7 +17,7 @@ namespace BetterThanNothing
 			VkPipelineShaderStageCreateInfo shaderStageInfo{};
 			shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shaderStageInfo.stage = shaderStageType;
-			shaderStageInfo.module = shaderGpuData->vkModule;
+			shaderStageInfo.module = shaderGpuData->pVkShaderModule->Handle();
 			shaderStageInfo.pName = params.name;
 			shaderStages.push_back(shaderStageInfo);
 		}
