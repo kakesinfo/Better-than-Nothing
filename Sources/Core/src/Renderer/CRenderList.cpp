@@ -2,20 +2,22 @@
 
 namespace BetterThanNothing
 {
-	CRenderList::CRenderList() = default;
-	CRenderList::~CRenderList() = default;
-
-	void CRenderList::Render(MeshData *pMesh, const glm::mat4& modelTransform, const std::string& texturePath)
+	void CRenderList::Submit(const MeshData* pMesh, const std::string& texturePath, const glm::mat4& transform)
 	{
-		Render({pMesh, modelTransform, texturePath});
+		RenderListItem item;
+		item.pMeshGpuData = m_pRenderCache->GetOrCreateMeshGpuData(pMesh);
+		item.pTextureGpuData = m_pRenderCache->GetOrCreateTextureGpuData({texturePath});
+		item.transform = transform;
+
+		Submit(item);
 	}
 
-	void CRenderList::Render(const RenderQueueItem &item)
+	void CRenderList::Submit(const RenderListItem &item)
 	{
 		m_list.push_back(item);
 	}
 
-	RenderQueueItem CRenderList::Get(const size_t index) const
+	RenderListItem CRenderList::Get(const size_t index) const
 	{
 		return m_list[index];
 	}

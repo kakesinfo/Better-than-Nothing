@@ -25,10 +25,11 @@ namespace BetterThanNothing
 	class CRenderer final : public IRenderer
 	{
 	public:
-		explicit CRenderer(VulkanContext& vkContext);
+		explicit CRenderer(VulkanContext* pVkContext);
 		~CRenderer() override;
 
 		void RenderFrame(CRenderList* renderList);
+		void SetRenderCache(CRenderCache* pRenderCache);
 
 	private:
 		void _createCommandBuffers();
@@ -44,13 +45,13 @@ namespace BetterThanNothing
 		void AddPipeline(const std::function<void(IPipelineBuilder *)> &callback) override;
 
 	private:
-		VulkanContext m_vkContext{};
+		VulkanContext* m_pVkContext = nullptr;
+		CRenderCache* m_pRenderCache = nullptr;
 
 		std::vector<VulkanFrame> m_frames;
 		uint32 m_currentFrame = 0;
 
 		std::unique_ptr<CBufferManager> m_pBufferFactory = nullptr;
-		std::unique_ptr<CRenderCache> m_pRenderCache = nullptr;
 
 		std::unique_ptr<CGlobalUniformProvider> m_pGlobalUniformProvider = nullptr;
 		std::unique_ptr<CDynamicUniformProvider> m_pDynamicUniformProvider = nullptr;

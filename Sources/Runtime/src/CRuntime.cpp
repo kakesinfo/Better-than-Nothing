@@ -57,7 +57,7 @@ namespace BetterThanNothing
 
 	void CRuntime::OnRender(CRenderList* renderList)
 	{
-		renderList->Render(&mesh, modelTransform, "../../Assets/Textures/texture.jpg");
+		renderList->Submit(&mesh, "../../Assets/Textures/texture.jpg", modelTransform);
 	}
 
 	void CRuntime::OnDisable()
