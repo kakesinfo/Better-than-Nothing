@@ -65,6 +65,9 @@ namespace BetterThanNothing
 		float GetMaxAnisotropy() const;
 
 		[[nodiscard]]
+		VkSampleCountFlagBits GetMaxMsaaSamples();
+
+		[[nodiscard]]
 		SwapChainSupportDetails GetSwapChainSupport() const;
 
 		[[nodiscard]]
@@ -95,6 +98,7 @@ namespace BetterThanNothing
 		std::string m_deviceName;
 		std::string m_apiVersion;
 		uint32 m_minUniformBufferOffsetAlignment = 0;
+		VkSampleCountFlagBits m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
 		float m_maxAnisotropy = 1;
 	};
 };

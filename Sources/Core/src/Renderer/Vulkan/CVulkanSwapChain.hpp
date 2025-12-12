@@ -21,6 +21,7 @@ namespace BetterThanNothing
 		void CreateImageViews();
 		void CreateFramebuffers();
 		void CreateDepthResources();
+		void CreateColorResources();
 
 	private:
 		void _createSwapchain();
@@ -84,5 +85,8 @@ namespace BetterThanNothing
 		std::unique_ptr<CVulkanImage>     m_depthImage;
 		std::unique_ptr<CVulkanImageView> m_depthImageView;
 		VkFormat                          m_depthFormat;
+
+		std::unique_ptr<CVulkanImage>     m_colorImage; // For multisampling
+		std::unique_ptr<CVulkanImageView> m_colorImageView;
 	};
 };

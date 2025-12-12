@@ -92,11 +92,12 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < m_imageViews.size(); i++)
 		{
+			const auto colorImageView = m_colorImageView->Handle();
+			const auto depthImageView = m_depthImageView->Handle();
 			const auto imageView = m_imageViews.at(i)->Handle();
-			const auto dephImageView = m_depthImageView->Handle();
 			const auto renderPass = m_context->vkRenderPass->Handle();
 
-			const std::array attachments = { imageView, dephImageView };
+			const std::array attachments = { colorImageView, depthImageView, imageView};
 
 			VkFramebufferCreateInfo createInfo{};
 			createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -124,11 +125,11 @@ namespace BetterThanNothing
 		imageInfo.extent.depth = 1;
 		imageInfo.mipLevels = 1;
 		imageInfo.arrayLayers = 1;
+		imageInfo.samples = m_context->vkDevice->GetMaxMsaaSamples();
 		imageInfo.format = m_depthFormat;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		m_depthImage = std::make_unique<CVulkanImage>(m_context, &imageInfo);
@@ -137,6 +138,29 @@ namespace BetterThanNothing
 		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
 			commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 		}, m_context);
+	}
+
+	void CVulkanSwapChain::CreateColorResources()
+	{
+		VkFormat colorFormat = m_imageFormat;
+
+		VkImageCreateInfo imageInfo{};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.extent.width = m_extent.width;
+		imageInfo.extent.height = m_extent.height;
+		imageInfo.extent.depth = 1;
+		imageInfo.mipLevels = 1;
+		imageInfo.arrayLayers = 1;
+		imageInfo.samples = m_context->vkDevice->GetMaxMsaaSamples();
+		imageInfo.format = colorFormat;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageInfo.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		m_colorImage = std::make_unique<CVulkanImage>(m_context, &imageInfo);
+		m_colorImageView = std::make_unique<CVulkanImageView>(m_context, m_colorImage->Handle(), colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
 	void CVulkanSwapChain::RecreateSwapchain()
@@ -160,6 +184,7 @@ namespace BetterThanNothing
 		_createSwapchain();
 		CreateImages();
 		CreateImageViews();
+		CreateColorResources();
 		CreateDepthResources();
 		CreateFramebuffers();
 	}
@@ -167,9 +192,11 @@ namespace BetterThanNothing
 	void CVulkanSwapChain::_cleanupSwapchain()
 	{
 		m_framebuffers.clear();
-		m_imageViews.clear();
 		m_depthImageView.reset();
 		m_depthImage.reset();
+		m_colorImageView.reset();
+		m_colorImage.reset();
+		m_imageViews.clear();
 
 		vkDestroySwapchainKHR(m_context->vkDevice->Handle(), m_swapChain, nullptr);
 	}

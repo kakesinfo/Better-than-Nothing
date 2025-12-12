@@ -3,11 +3,6 @@
 #include <BetterThanNothing.hpp>
 #include "Renderer/Resources/CModelLoader_interim.hpp"
 
-#define ASSETS_PATH "../../Assets/Models/"
-
-#define TEXTURE_PATH ASSETS_PATH"viking_room/viking_room.png"
-#define MODEL_PATH ASSETS_PATH"viking_room/viking_room.obj"
-
 namespace BetterThanNothing
 {
 	ModelData model;
@@ -21,7 +16,7 @@ namespace BetterThanNothing
 			builder->AddFragmentShader("main/main.frag");
 		});
 
-		model = CModelLoader_interim::LoadModel(MODEL_PATH);
+		model = CModelLoader_interim::LoadModel("../../Assets/Models/viking_room/viking_room.obj");
 		modelTransform = glm::mat4(1.0f);
 	}
 
@@ -43,13 +38,12 @@ namespace BetterThanNothing
 		}
 
 		modelTransform = glm::rotate(glm::mat4(1.0f), accumulatedAngle, glm::vec3(0.0f, 0.0f, 1.0f));
-
 		lastMousePos = currentMousePos;
 	}
 
 	void CRuntime::OnRender(CRenderList* renderList)
 	{
-		renderList->Submit(&model, TEXTURE_PATH, modelTransform);
+		renderList->Submit(&model, "../../Assets/Models/viking_room/viking_room.png", modelTransform);
 	}
 
 	void CRuntime::OnDisable()

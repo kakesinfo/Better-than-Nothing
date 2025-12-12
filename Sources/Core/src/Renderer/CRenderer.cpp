@@ -15,11 +15,15 @@ namespace BetterThanNothing
 		m_pVkContext->vkDevice = std::make_unique<CVulkanDevice>(m_pVkContext);
 		m_pVkContext->vkMemoryAllocator = std::make_unique<CVulkanMemoryAllocator>(m_pVkContext);
 
+		LOG_INFO("Anisotropy: " << m_pVkContext->vkDevice->GetMaxAnisotropy() << "x");
+		LOG_INFO("Msaa: " << static_cast<uint32>(m_pVkContext->vkDevice->GetMaxMsaaSamples()) << "x");
+
 		m_pVkContext->vkCommandPool = std::make_unique<CVulkanCommandPool>(m_pVkContext);
 
 		m_pVkContext->vkSwapChain = std::make_unique<CVulkanSwapChain>(m_pVkContext);
 		m_pVkContext->vkSwapChain->CreateImages();
 		m_pVkContext->vkSwapChain->CreateImageViews();
+		m_pVkContext->vkSwapChain->CreateColorResources();
 		m_pVkContext->vkSwapChain->CreateDepthResources();
 
 		m_pVkContext->vkRenderPass = std::make_unique<CVulkanRenderPass>(m_pVkContext);
