@@ -13,6 +13,10 @@ namespace BetterThanNothing
 		glm::vec3 position;
 		glm::vec3 color;
 		glm::vec2 uv;
+
+		bool operator==(const VertexData& other) const {
+			return position == other.position && color == other.color && uv == other.uv;
+		}
 	};
 
 	struct VertexHash {

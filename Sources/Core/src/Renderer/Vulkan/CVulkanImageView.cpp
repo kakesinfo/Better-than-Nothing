@@ -2,7 +2,7 @@
 
 namespace BetterThanNothing
 {
-	CVulkanImageView::CVulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags): context(context)
+	CVulkanImageView::CVulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32 mipLevels): context(context)
 	{
 
 		VkImageViewCreateInfo createInfo{};
@@ -18,7 +18,7 @@ namespace BetterThanNothing
 
 		createInfo.subresourceRange.aspectMask = aspectFlags;
 		createInfo.subresourceRange.baseMipLevel = 0;
-		createInfo.subresourceRange.levelCount = 1;
+		createInfo.subresourceRange.levelCount = mipLevels;
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 

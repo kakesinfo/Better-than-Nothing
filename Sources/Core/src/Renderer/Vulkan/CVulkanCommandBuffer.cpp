@@ -77,7 +77,7 @@ namespace BetterThanNothing
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 	}
 
-	void CVulkanCommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const
+	void CVulkanCommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32 mipLevels) const
 	{
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -88,7 +88,7 @@ namespace BetterThanNothing
 		barrier.image = image;
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.levelCount = mipLevels;
 		barrier.subresourceRange.baseArrayLayer = 0;
 		barrier.subresourceRange.layerCount = 1;
 
@@ -146,6 +146,37 @@ namespace BetterThanNothing
 		region.imageExtent = {width, height, 1};
 
 		vkCmdCopyBufferToImage(m_commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	}
+
+	void CVulkanCommandBuffer::PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+		VkDependencyFlags dependencyFlags,
+		uint32 memoryBarrierCount, const VkMemoryBarrier* pMemoryBarriers,
+		uint32 bufferMemoryBarrierCount, const VkBufferMemoryBarrier* pBufferMemoryBarriers,
+		uint32 imageMemoryBarrierCount, const VkImageMemoryBarrier* pImageMemoryBarriers) const
+	{
+		vkCmdPipelineBarrier(
+			m_commandBuffer,
+			srcStageMask,
+			dstStageMask,
+			dependencyFlags,
+			memoryBarrierCount, pMemoryBarriers,
+			bufferMemoryBarrierCount, pBufferMemoryBarriers,
+			imageMemoryBarrierCount, pImageMemoryBarriers
+		);
+	}
+
+	void CVulkanCommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit *pBlit, VkFilter filter) const
+	{
+		vkCmdBlitImage(
+			m_commandBuffer,
+			srcImage,
+			srcImageLayout,
+			dstImage,
+			dstImageLayout,
+			1,
+			pBlit,
+			filter
+		);
 	}
 
 	void CVulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CVulkanCommandBuffer>&)>& callback, VulkanContext* context)
