@@ -32,7 +32,7 @@ namespace BetterThanNothing
 		void SetRenderCache(CRenderCache* pRenderCache);
 
 	private:
-		void _createCommandBuffers();
+		void _createCommandBuffers() const;
 		void _createSyncObjects();
 		void _createDescriptorSetLayout();
 		void _createDescriptorPool();

@@ -16,7 +16,7 @@ namespace BetterThanNothing
 			builder->AddFragmentShader("main/main.frag");
 		});
 
-		model = CModelLoader_interim::LoadModel("../../Assets/Models/viking_room/viking_room.obj");
+		model = CModelLoader_interim::LoadModel("../../Assets/Models/viking_room/viking_room.obj", false);
 		modelTransform = glm::mat4(1.0f);
 	}
 
@@ -37,7 +37,7 @@ namespace BetterThanNothing
 			accumulatedAngle += deltaAngle;
 		}
 
-		modelTransform = glm::rotate(glm::mat4(1.0f), accumulatedAngle, glm::vec3(0.0f, 0.0f, 1.0f));
+		modelTransform = glm::rotate(glm::mat4(1.0f), accumulatedAngle, glm::vec3(0.0f, 1.0f, 0.0f));
 		lastMousePos = currentMousePos;
 	}
 

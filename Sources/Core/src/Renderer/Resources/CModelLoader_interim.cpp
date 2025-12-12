@@ -6,7 +6,7 @@
 
 namespace BetterThanNothing
 {
-	ModelData CModelLoader_interim::LoadModel(const std::string &path)
+	ModelData CModelLoader_interim::LoadModel(const std::string &path, bool preTransform)
 	{
 		ModelData model;
 
@@ -22,6 +22,14 @@ namespace BetterThanNothing
 		if (!warn.empty())
 			LOG_WARNING(warn);
 
+		float minX = std::numeric_limits<float>::max();
+		float minY = std::numeric_limits<float>::max();
+		float minZ = std::numeric_limits<float>::max();
+
+		float maxX = std::numeric_limits<float>::lowest();
+		float maxY = std::numeric_limits<float>::lowest();
+		float maxZ = std::numeric_limits<float>::lowest();
+
 		for (const auto& shape : shapes) {
 			MeshData mesh;
 			std::unordered_map<VertexData, uint32_t, VertexHash, VertexEqual> uniqueVertices{};
@@ -29,11 +37,21 @@ namespace BetterThanNothing
 			for (const auto& index : shape.mesh.indices) {
 				VertexData vertex{};
 
-				vertex.position = {
-					attrib.vertices[3 * index.vertex_index + 0],
-					attrib.vertices[3 * index.vertex_index + 1],
-					attrib.vertices[3 * index.vertex_index + 2]
-				};
+				float rawX = attrib.vertices[3 * index.vertex_index + 0];
+				float rawY = attrib.vertices[3 * index.vertex_index + 1];
+				float rawZ = attrib.vertices[3 * index.vertex_index + 2];
+
+				// Coordinate system transformation:
+				// If preTransform is false, convert from Y-up (OBJ/Blender) to Z-up (engine) coordinate system.
+				// This maps (X, Y, Z) -> (X, Z, -Y):
+				//   - X remains the same.
+				//   - Y becomes Z (up axis).
+				//   - Z becomes -Y (to maintain right-handedness).
+				if (preTransform) {
+					vertex.position = { rawX, rawY, rawZ};
+				} else {
+					vertex.position = { rawX, rawZ, -rawY};
+				}
 
 				vertex.color = {1.0f, 1.0f, 1.0f};
 
@@ -48,12 +66,33 @@ namespace BetterThanNothing
 
 				if (!uniqueVertices.contains(vertex)) {
 					uniqueVertices[vertex] = static_cast<uint32_t>(mesh.vertices.size());
+
+					if (vertex.position.x < minX) minX = vertex.position.x;
+					if (vertex.position.y < minY) minY = vertex.position.y;
+					if (vertex.position.z < minZ) minZ = vertex.position.z;
+
+					if (vertex.position.x > maxX) maxX = vertex.position.x;
+					if (vertex.position.y > maxY) maxY = vertex.position.y;
+					if (vertex.position.z > maxZ) maxZ = vertex.position.z;
+
 					mesh.vertices.push_back(vertex);
 				}
 
 				mesh.indices.push_back(uniqueVertices[vertex]);
 			}
 			model.meshes.push_back(mesh);
+		}
+
+		float centerX = (minX + maxX) / 2.0f;
+		float centerY = (minY + maxY) / 2.0f;
+		float centerZ = (minZ + maxZ) / 2.0f;
+
+		for (auto& mesh : model.meshes) {
+			for (auto& vert : mesh.vertices) {
+				vert.position.x -= centerX;
+				vert.position.y -= centerY;
+				vert.position.z -= centerZ;
+			}
 		}
 
 		return model;
