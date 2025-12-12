@@ -170,8 +170,13 @@ namespace BetterThanNothing
 		// Bind global uniforms
 		{
 			const auto globalUniform = m_pGlobalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
-			globalUniform->view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-			globalUniform->projection = glm::perspective(glm::radians(45.0f), m_pVkContext->vkSwapChain->GetAspectRatio(), 0.1f, 10.0f);
+
+			constexpr auto cameraPos = glm::vec3(2.0f, 2.0f, 2.0f);
+			constexpr auto cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+			constexpr auto cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+			globalUniform->view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+			globalUniform->projection = glm::perspective(glm::radians(45.0f), m_pVkContext->vkSwapChain->GetAspectRatio(), 0.1f, 100.0f);
 			globalUniform->projection[1][1] *= -1;
 
 			const VkDescriptorSet& globalDescriptorSet = m_pVkContext->vkGlobalDescriptorSets[m_currentFrame]->Handle();
@@ -221,7 +226,7 @@ namespace BetterThanNothing
 		m_pRenderCache = pRenderCache;
 	}
 
-	void CRenderer::_createCommandBuffers()
+	void CRenderer::_createCommandBuffers() const
 	{
 		const auto device = m_pVkContext->vkDevice->Handle();
 		const uint32 count = m_pVkContext->vkSettings.maxFramesInFlight;
