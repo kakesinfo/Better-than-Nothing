@@ -15,6 +15,7 @@ namespace BetterThanNothing
 
 		stbi_uc *pixels = stbi_load(input.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels,
 		                            STBI_rgb_alpha);
+
 		if (!pixels)
 			throw std::runtime_error("failed to load texture image!");
 
@@ -53,8 +54,8 @@ namespace BetterThanNothing
 
 		auto pVkImage = std::make_unique<CVulkanImage>(m_context, &imageInfo);
 
-		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer> &commandBuffer) {
-			const VkImage vkImage = pVkImage->Handle();
+		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
+			VkImage vkImage = pVkImage->Handle();
 
 			commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 			commandBuffer->CopyBufferToImage(stagingBuffer.Handle(), vkImage, width, height);
@@ -68,8 +69,7 @@ namespace BetterThanNothing
 		return pVkImage;
 	}
 
-	std::unique_ptr<CVulkanImageView> CTextureLoader::_createTextureImageView(
-		VkImage image, VkFormat format, uint32 mipLevels)
+	std::unique_ptr<CVulkanImageView> CTextureLoader::_createTextureImageView(VkImage image, VkFormat format, uint32 mipLevels)
 	{
 		return std::make_unique<CVulkanImageView>(m_context, image, format, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 	}
@@ -82,7 +82,7 @@ namespace BetterThanNothing
 		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 			throw std::runtime_error("texture image format does not support linear blitting!");
 
-		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer> &commandBuffer) {
+		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
 			VkImageMemoryBarrier barrier{};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 			barrier.image = image;

@@ -51,6 +51,15 @@ namespace BetterThanNothing
 		m_apiVersion = std::to_string(deviceProperties.apiVersion);
 		m_minUniformBufferOffsetAlignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
 		m_maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
+
+		VkSampleCountFlags counts = deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
+		if (counts & VK_SAMPLE_COUNT_64_BIT) { m_maxMsaaSamples = VK_SAMPLE_COUNT_64_BIT; }
+		else if (counts & VK_SAMPLE_COUNT_32_BIT) { m_maxMsaaSamples = VK_SAMPLE_COUNT_32_BIT; }
+		else if (counts & VK_SAMPLE_COUNT_16_BIT) { m_maxMsaaSamples = VK_SAMPLE_COUNT_16_BIT; }
+		else if (counts & VK_SAMPLE_COUNT_8_BIT)  { m_maxMsaaSamples = VK_SAMPLE_COUNT_8_BIT; }
+		else if (counts & VK_SAMPLE_COUNT_4_BIT)  { m_maxMsaaSamples = VK_SAMPLE_COUNT_4_BIT; }
+		else if (counts & VK_SAMPLE_COUNT_2_BIT)  { m_maxMsaaSamples = VK_SAMPLE_COUNT_2_BIT; }
+		else m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
 	}
 
 	void CVulkanDevice::_createLogicalDevice()
@@ -79,6 +88,7 @@ namespace BetterThanNothing
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
+		deviceFeatures.sampleRateShading = VK_TRUE; // Enable sample shading for better quality MSAA
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -307,5 +317,10 @@ namespace BetterThanNothing
 	float CVulkanDevice::GetMaxAnisotropy() const
 	{
 		return m_maxAnisotropy;
+	}
+
+	VkSampleCountFlagBits CVulkanDevice::GetMaxMsaaSamples()
+	{
+		return m_maxMsaaSamples;
 	}
 }
