@@ -2,6 +2,15 @@
 
 namespace BetterThanNothing
 {
+
+	void CRenderList::Submit(const ModelData* pModel, const std::string& texturePath, const glm::mat4& transform)
+	{
+		for (const MeshData& mesh : pModel->meshes)
+		{
+			Submit(&mesh, texturePath, transform);
+		}
+	}
+
 	void CRenderList::Submit(const MeshData* pMesh, const std::string& texturePath, const glm::mat4& transform)
 	{
 		RenderListItem item;

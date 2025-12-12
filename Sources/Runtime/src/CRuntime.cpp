@@ -1,10 +1,11 @@
 #include "CRuntime.hpp"
 
 #include <BetterThanNothing.hpp>
+#include "Renderer/Resources/CModelLoader_interim.hpp"
 
 namespace BetterThanNothing
 {
-	MeshData mesh;
+	ModelData model;
 	glm::mat4 modelTransform;
 
 	void CRuntime::OnEnable(IRenderer* renderer)
@@ -15,21 +16,22 @@ namespace BetterThanNothing
 			builder->AddFragmentShader("main/main.frag");
 		});
 
-		mesh.AddVertex({-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f});
-		mesh.AddVertex({0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f});
-		mesh.AddVertex({0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f});
-		mesh.AddVertex({-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f});
+		// mesh.AddVertex({-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f});
+		// mesh.AddVertex({0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f});
+		// mesh.AddVertex({0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f});
+		// mesh.AddVertex({-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f});
+		//
+		// mesh.AddVertex({-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f});
+		// mesh.AddVertex({0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f});
+		// mesh.AddVertex({0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f});
+		// mesh.AddVertex({-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f});
+		//
+		// mesh.AddIndices({
+		// 	0, 1, 2, 2, 3, 0,
+		// 	4, 5, 6, 6, 7, 4
+		// });
 
-		mesh.AddVertex({-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f});
-		mesh.AddVertex({0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f});
-		mesh.AddVertex({0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f});
-		mesh.AddVertex({-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f});
-
-		mesh.AddIndices({
-			0, 1, 2, 2, 3, 0,
-			4, 5, 6, 6, 7, 4
-		});
-
+		model = CModelLoader_interim::LoadModel("../../Assets/Models/viking_room/viking_room.obj");
 		modelTransform = glm::mat4(1.0f);
 	}
 
@@ -57,7 +59,7 @@ namespace BetterThanNothing
 
 	void CRuntime::OnRender(CRenderList* renderList)
 	{
-		renderList->Submit(&mesh, "../../Assets/Textures/texture.jpg", modelTransform);
+		renderList->Submit(&model, "../../Assets/Models/viking_room/viking_room.png", modelTransform);
 	}
 
 	void CRuntime::OnDisable()

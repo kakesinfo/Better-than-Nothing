@@ -45,6 +45,7 @@
 #include "Renderer/Data/VertexData.hpp"
 #include "Renderer/Data/MeshData.hpp"
 #include "Renderer/Data/ShaderData.hpp"
+#include "Renderer/Data/ModelData.hpp"
 
 #include "Public/IRenderer.hpp"
 #include "Public/IPipelineBuilder.hpp"

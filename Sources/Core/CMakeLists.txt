@@ -55,7 +55,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/glslang/glsl
 target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/spirv_cross/spirv_cross)
 target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/vma/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/stb/include)
-# target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/tinyobjloader)
+target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/tinyobjloader)
 # target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/entt/single_include)
 # target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/imgui/include)
 # target_include_directories(${PROJECT_NAME} PRIVATE ../../ThirdParty/inih/include)
