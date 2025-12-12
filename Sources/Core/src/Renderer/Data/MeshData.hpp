@@ -11,9 +11,9 @@ namespace BetterThanNothing
 	struct MeshData
 	{
 		std::vector<VertexData> vertices;
-		std::vector<uint16> indices;
-		uint64 id = 0;
+		std::vector<uint32> indices;
 
+		uint64 id = 0;
 		explicit MeshData(): id(s_globalIdCounter++) {}
 
 		// TODO: put all these next lines in a builder
@@ -33,12 +33,12 @@ namespace BetterThanNothing
 			vertices.push_back(vertex);
 		}
 
-		void AddIndices(const std::vector<uint16> &newIndices)
+		void AddIndices(const std::vector<uint32> &newIndices)
 		{
 			indices.insert(indices.end(), newIndices.begin(), newIndices.end());
 		}
 
-		void AddIndex(const uint16 index)
+		void AddIndex(const uint32 index)
 		{
 			indices.push_back(index);
 		}

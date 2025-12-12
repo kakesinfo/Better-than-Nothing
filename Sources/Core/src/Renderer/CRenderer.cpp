@@ -29,7 +29,7 @@ namespace BetterThanNothing
 		m_pVkContext->vkFrames.resize(m_pVkContext->vkSettings.maxFramesInFlight);
 
 		m_pGlobalUniformProvider = std::make_unique<CGlobalUniformProvider>(m_pVkContext);
-		m_pDynamicUniformProvider = std::make_unique<CDynamicUniformProvider>(m_pVkContext, 1000);
+		m_pDynamicUniformProvider = std::make_unique<CDynamicUniformProvider>(m_pVkContext, 100000);
 
 		_createDescriptorSetLayout();
 		_createDescriptorPool();
@@ -201,7 +201,7 @@ namespace BetterThanNothing
 				const VkBuffer vertexBuffers[] = { pMeshGpuData->pVertexBuffer->Handle() };
 				constexpr VkDeviceSize offsets[] = {0};
 				passContext->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-				passContext->BindIndexBuffer(pMeshGpuData->pIndexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT16);
+				passContext->BindIndexBuffer(pMeshGpuData->pIndexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT32);
 			}
 
 			// Draw call

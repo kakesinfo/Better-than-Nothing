@@ -21,6 +21,7 @@
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 
+
 // Types
 
 typedef uint8_t  uint8;
