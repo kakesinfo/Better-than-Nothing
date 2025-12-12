@@ -5,29 +5,33 @@
 
 namespace BetterThanNothing
 {
-	CTextureLoader::CTextureLoader(VulkanContext *context): IResourceLoader(context) {}
-
-	std::unique_ptr<TextureGpuData> CTextureLoader::Load(const std::string& input)
+	CTextureLoader::CTextureLoader(VulkanContext *context) : IResourceLoader(context)
 	{
-		auto textureGpuData = std::make_unique<TextureGpuData>();
+	}
 
-		stbi_uc* pixels = stbi_load(input.c_str(), &textureGpuData->width, &textureGpuData->height, &textureGpuData->channels, STBI_rgb_alpha);
+	std::unique_ptr<TextureGpuData> CTextureLoader::Load(const std::string &input)
+	{
+		auto gpuData = std::make_unique<TextureGpuData>();
+
+		stbi_uc *pixels = stbi_load(input.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels,
+		                            STBI_rgb_alpha);
 		if (!pixels)
 			throw std::runtime_error("failed to load texture image!");
 
-		textureGpuData->size = textureGpuData->width * textureGpuData->height * STBI_rgb_alpha;
-		textureGpuData->pVkImage = _createTextureImage(textureGpuData->width, textureGpuData->height, textureGpuData->size, pixels);
+		gpuData->size = gpuData->width * gpuData->height * STBI_rgb_alpha;
+		gpuData->mipLevels = static_cast<uint32>(std::floor(std::log2(std::max(gpuData->width, gpuData->height)))) + 1;
+		gpuData->pVkImage = _createTextureImage(gpuData->width, gpuData->height, gpuData->mipLevels, gpuData->size, pixels);
 
 		stbi_image_free(pixels);
 
-		textureGpuData->pVkImageView = _createTextureImageView(textureGpuData->pVkImage->Handle(), VK_FORMAT_R8G8B8A8_SRGB);
-		textureGpuData->pVkSampler = _createTextureSampler();
-		textureGpuData->pVkDescriptorSet = _createTextureDescriptorSet(textureGpuData.get());
+		gpuData->pVkImageView = _createTextureImageView(gpuData->pVkImage->Handle(), VK_FORMAT_R8G8B8A8_SRGB, gpuData->mipLevels);
+		gpuData->pVkSampler = _createTextureSampler(gpuData->mipLevels);
+		gpuData->pVkDescriptorSet = _createTextureDescriptorSet(gpuData.get());
 
-		return textureGpuData;
+		return gpuData;
 	}
 
-	std::unique_ptr<CVulkanImage> CTextureLoader::_createTextureImage(uint32 width, uint32 height, uint32 size, void* pixels)
+	std::unique_ptr<CVulkanImage> CTextureLoader::_createTextureImage(uint32 width, uint32 height, uint32 mipLevels, uint32 size, void *pixels)
 	{
 		const CVulkanStagingBuffer stagingBuffer(m_context, size);
 		stagingBuffer.Write(pixels, size);
@@ -38,34 +42,117 @@ namespace BetterThanNothing
 		imageInfo.extent.width = width;
 		imageInfo.extent.height = height;
 		imageInfo.extent.depth = 1;
-		imageInfo.mipLevels = 1;
+		imageInfo.mipLevels = mipLevels;
 		imageInfo.arrayLayers = 1;
 		imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		auto pVkImage = std::make_unique<CVulkanImage>(m_context, &imageInfo);
 
-		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
-			VkImage vkImage = pVkImage->Handle();
+		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer> &commandBuffer) {
+			const VkImage vkImage = pVkImage->Handle();
 
-			commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 			commandBuffer->CopyBufferToImage(stagingBuffer.Handle(), vkImage, width, height);
-			commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+			// Transition to TRANSFER_DST_OPTIMAL is done in mipmap generation _createMipmaps
+			// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 		}, m_context);
+
+		_createMipmaps(pVkImage->Handle(), VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
 
 		return pVkImage;
 	}
 
-	std::unique_ptr<CVulkanImageView> CTextureLoader::_createTextureImageView(VkImage image, VkFormat format)
+	std::unique_ptr<CVulkanImageView> CTextureLoader::_createTextureImageView(
+		VkImage image, VkFormat format, uint32 mipLevels)
 	{
-		return std::make_unique<CVulkanImageView>(m_context, image, format, VK_IMAGE_ASPECT_COLOR_BIT);
+		return std::make_unique<CVulkanImageView>(m_context, image, format, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 	}
 
-	std::unique_ptr<CVulkanSampler> CTextureLoader::_createTextureSampler()
+	void CTextureLoader::_createMipmaps(VkImage image, VkFormat imageFormat, int32 texWidth, int32 texHeight, uint32 mipLevels) const
+	{
+		VkFormatProperties formatProperties;
+		vkGetPhysicalDeviceFormatProperties(m_context->vkDevice->PhysicalHandle(), imageFormat, &formatProperties);
+
+		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+			throw std::runtime_error("texture image format does not support linear blitting!");
+
+		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer> &commandBuffer) {
+			VkImageMemoryBarrier barrier{};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.image = image;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 1;
+			barrier.subresourceRange.levelCount = 1;
+
+			int32 mipWidth = texWidth;
+			int32 mipHeight = texHeight;
+			for (uint32 i = 1; i < mipLevels; i++) {
+				barrier.subresourceRange.baseMipLevel = i - 1;
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+				commandBuffer->PipelineBarrier(
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier);
+
+				VkImageBlit blit{};
+				blit.srcOffsets[0] = {0, 0, 0};
+				blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+				blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blit.srcSubresource.mipLevel = i - 1;
+				blit.srcSubresource.baseArrayLayer = 0;
+				blit.srcSubresource.layerCount = 1;
+				blit.dstOffsets[0] = {0, 0, 0};
+				blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
+				blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blit.dstSubresource.mipLevel = i;
+				blit.dstSubresource.baseArrayLayer = 0;
+				blit.dstSubresource.layerCount = 1;
+
+				commandBuffer->BlitImage(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				                         image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &blit, VK_FILTER_LINEAR);
+
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+				commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+				                               0, nullptr,
+				                               0, nullptr,
+				                               1, &barrier);
+
+				if (mipWidth > 1) mipWidth /= 2;
+				if (mipHeight > 1) mipHeight /= 2;
+			}
+
+			barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+			                               0, nullptr,
+			                               0, nullptr,
+			                               1, &barrier);
+		}, m_context);
+	}
+
+	std::unique_ptr<CVulkanSampler> CTextureLoader::_createTextureSampler(uint32 mipLevels)
 	{
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -80,15 +167,17 @@ namespace BetterThanNothing
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 		samplerInfo.compareEnable = VK_FALSE;
 		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
 		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		samplerInfo.mipLodBias = 0.0f;
 		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = 0.0f;
+		samplerInfo.maxLod = static_cast<float>(mipLevels);
+		samplerInfo.mipLodBias = 0.0f;
 
 		return std::make_unique<CVulkanSampler>(m_context, &samplerInfo);
 	}
 
-	std::unique_ptr<CVulkanDescriptorSet> CTextureLoader::_createTextureDescriptorSet(const TextureGpuData* textureGpuData)
+	std::unique_ptr<CVulkanDescriptorSet> CTextureLoader::_createTextureDescriptorSet(
+		const TextureGpuData *textureGpuData)
 	{
 		auto descriptorSet = std::make_unique<CVulkanDescriptorSet>(m_context->vkSamplerDescriptorSetLayout, m_context);
 
@@ -110,5 +199,4 @@ namespace BetterThanNothing
 
 		return descriptorSet;
 	}
-
 } // BetterThanNothing

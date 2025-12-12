@@ -83,7 +83,7 @@ namespace BetterThanNothing
 		m_imageViews.resize(imageCount);
 
 		for (size_t i = 0; i < imageCount; i++)
-			m_imageViews.at(i) = std::make_unique<CVulkanImageView>(m_context, m_images.at(i), m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+			m_imageViews.at(i) = std::make_unique<CVulkanImageView>(m_context, m_images.at(i), m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
 	void CVulkanSwapChain::CreateFramebuffers()
@@ -132,10 +132,10 @@ namespace BetterThanNothing
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		m_depthImage = std::make_unique<CVulkanImage>(m_context, &imageInfo);
-		m_depthImageView = std::make_unique<CVulkanImageView>(m_context, m_depthImage->Handle(), m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+		m_depthImageView = std::make_unique<CVulkanImageView>(m_context, m_depthImage->Handle(), m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
 		CVulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<CVulkanCommandBuffer>& commandBuffer) {
-			commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 		}, m_context);
 	}
 

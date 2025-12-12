@@ -12,6 +12,7 @@ namespace BetterThanNothing
 		int32									height;
 		int32									channels;
 		int32									size;
+		uint32									mipLevels;
 
 		std::unique_ptr<CVulkanImage>			pVkImage;
 		std::unique_ptr<CVulkanImageView>		pVkImageView;
