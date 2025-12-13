@@ -172,7 +172,7 @@ namespace BetterThanNothing
 			const auto globalUniform = m_pGlobalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
 			globalUniform->view = camera->GetViewMatrix();
 			globalUniform->projection = camera->GetProjectionMatrix(m_pVkContext->vkSwapChain->GetAspectRatio());
-			globalUniform->lightPosition = glm::vec3(0.0f, 5.0f, 0.0f);
+			globalUniform->lightPosition = glm::vec3(0.0f, 10.0f, 0.0f);
 			globalUniform->cameraPosition = camera->GetPosition();
 
 			const VkDescriptorSet& globalDescriptorSet = m_pVkContext->vkGlobalDescriptorSets[m_currentFrame]->Handle();

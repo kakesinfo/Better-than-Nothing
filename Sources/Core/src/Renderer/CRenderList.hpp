@@ -19,8 +19,9 @@ namespace BetterThanNothing
 		explicit CRenderList(CRenderCache* pRenderCache): m_pRenderCache(pRenderCache) {}
 		~CRenderList() = default;
 
-		void Submit(const ModelData* pModel, const std::string& texturePath, const glm::mat4& transform);
-		void Submit(const MeshData* pMesh, const std::string& texturePath, const glm::mat4& transform);
+		void Submit(const ModelData* pModel, const glm::mat4& transform, const std::string& texturePath);
+		void Submit(const ModelData* pModel, const glm::mat4& transform);
+		void Submit(const MeshData* pMesh, const glm::mat4& transform);
 		void Submit(const RenderListItem& item);
 
 		[[nodiscard]]

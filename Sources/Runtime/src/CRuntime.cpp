@@ -7,12 +7,11 @@
 
 namespace BetterThanNothing
 {
-	ModelData vikingModel;
-	ModelData robotModel;
-	CPlaneMesh planeMesh;
+	ModelData sponzaModel;
+	glm::mat4 sponzaTransform;
 
-	glm::mat4 vikingTransform = glm::mat4(1.0f);
-	glm::mat4 robotTransform = glm::mat4(1.0f);
+	ModelData robotModel;
+	glm::mat4 robotTransform;
 
 	void CRuntime::OnEnable(IRenderer* renderer)
 	{
@@ -22,13 +21,11 @@ namespace BetterThanNothing
 			builder->AddFragmentShader("main/main.frag");
 		});
 
-		vikingModel = CModelLoader_interim::LoadModel("../../Assets/Models/viking_room/viking_room.obj", false);
-		vikingTransform = glm::translate(vikingTransform, glm::vec3(0.0f, 0.5f, 0.0f));
+		sponzaModel = CModelLoader_interim::LoadModel("../../Assets/Models/sponza/sponza.obj");
+		sponzaTransform = glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
 
 		robotModel = CModelLoader_interim::LoadModel("../../Assets/Models/robot/robot.obj");
-		robotTransform = glm::translate(robotTransform, glm::vec3(4.0f, 1.0f, 0.0f));
-
-		planeMesh = CPlaneMesh(30.0f);
+		robotTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.5f, 0.0f));
 	}
 
 	void CRuntime::OnUpdate(CCamera* camera, const float deltaTime)
@@ -63,9 +60,8 @@ namespace BetterThanNothing
 
 	void CRuntime::OnRender(CRenderList* renderList)
 	{
-		renderList->Submit(&vikingModel, "../../Assets/Models/viking_room/viking_room.png", vikingTransform);
-		renderList->Submit(&robotModel, "../../Assets/Models/robot/robot.png", robotTransform);
-		renderList->Submit(&planeMesh, "../../Assets/Textures/wood.png", glm::mat4(1.0f));
+		renderList->Submit(&sponzaModel, sponzaTransform);
+		renderList->Submit(&robotModel, robotTransform, "../../Assets/Models/robot/robot.png");
 	}
 
 	void CRuntime::OnDisable()

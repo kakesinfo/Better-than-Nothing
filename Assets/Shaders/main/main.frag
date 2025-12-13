@@ -21,6 +21,12 @@ layout(set = 2, binding = 0) uniform sampler2D texSampler;
 // - https://learnopengl.com/Lighting/Basic-Lighting
 // - https://learnopengl.com/Advanced-Lighting/Advanced-Lighting
 void main() {
+    vec4 textureColor = texture(texSampler, fragTexCoord);
+
+    if (textureColor.a < 0.1) {
+        discard;
+    }
+
     const vec3 lightColor = vec3(1.0, 1.0, 1.0);
 
     const float ambientStrength = 0.1;
@@ -46,5 +52,5 @@ void main() {
     const float spec = kEnergyConservation * pow(max(dot(norm, halfwayDir), 0.0), kShininess);
     vec3 specular = specularStrength * spec * lightColor;
 
-    outColor = vec4(ambient + diffuse + specular, 1.0) * texture(texSampler, fragTexCoord);
+    outColor = vec4(ambient + diffuse + specular, 1.0) * textureColor;
 }

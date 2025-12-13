@@ -13,8 +13,13 @@ namespace BetterThanNothing
 		std::vector<VertexData> vertices;
 		std::vector<uint32> indices;
 
+		int32 materialId;
+		std::string texturePath;
+
 		uint64 id = 0;
-		explicit MeshData(): id(s_globalIdCounter++) {}
+		explicit MeshData() : materialId(-1), id(s_globalIdCounter++)
+		{
+		}
 
 		// TODO: put all these next lines in a builder
 
