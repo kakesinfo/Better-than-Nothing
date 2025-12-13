@@ -52,7 +52,7 @@ namespace BetterThanNothing
 		CBufferManager::Shutdown();
 	}
 
-	void CRenderer::RenderFrame(CRenderList* renderList)
+	void CRenderer::RenderFrame(CRenderList* renderList, CCamera* camera)
 	{
 		if (!m_pVkContext->vkPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
@@ -78,7 +78,7 @@ namespace BetterThanNothing
 		m_pVkContext->vkFrames[m_currentFrame].inFlightFence->Reset();
 		m_pVkContext->vkFrames[m_currentFrame].commandBuffer->Reset();
 
-		_recordCommandBuffer(renderList, imageIndex);
+		_recordCommandBuffer(renderList, camera, imageIndex);
 
 		const VkSemaphore waitSemaphores[] = { m_pVkContext->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle() };
 
@@ -127,7 +127,7 @@ namespace BetterThanNothing
 		m_currentFrame = (m_currentFrame + 1) % m_pVkContext->vkFrames.size();
 	}
 
-	void CRenderer::_recordCommandBuffer(CRenderList* renderList, const uint32 imageIndex) const
+	void CRenderer::_recordCommandBuffer(CRenderList* renderList, CCamera* camera, const uint32 imageIndex) const
 	{
 		const auto& currentFrame = m_pVkContext->vkFrames[m_currentFrame];
 
@@ -170,14 +170,8 @@ namespace BetterThanNothing
 		// Bind global uniforms
 		{
 			const auto globalUniform = m_pGlobalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
-
-			constexpr auto cameraPos = glm::vec3(2.0f, 2.0f, 2.0f);
-			constexpr auto cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-			constexpr auto cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-			globalUniform->view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
-			globalUniform->projection = glm::perspective(glm::radians(45.0f), m_pVkContext->vkSwapChain->GetAspectRatio(), 0.1f, 100.0f);
-			globalUniform->projection[1][1] *= -1;
+			globalUniform->view = camera->GetViewMatrix();
+			globalUniform->projection = camera->GetProjectionMatrix(m_pVkContext->vkSwapChain->GetAspectRatio());
 
 			const VkDescriptorSet& globalDescriptorSet = m_pVkContext->vkGlobalDescriptorSets[m_currentFrame]->Handle();
 			passContext->BindDescriptorSets(pipelineLayout, 0, 1, &globalDescriptorSet);

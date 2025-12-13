@@ -6,6 +6,8 @@
 #include "CWindow.hpp"
 #include "Manager/CWindowManager.hpp"
 
+#include "CCamera.hpp"
+
 // Vulkan
 #include "Renderer/Vulkan/EVulkanBufferingMode.hpp"
 #include "Renderer/Vulkan/CVulkanInstance.hpp"

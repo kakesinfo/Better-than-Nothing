@@ -9,7 +9,7 @@ namespace BetterThanNothing
 		CRuntime() = default;
 
 		void OnEnable(IRenderer* renderer) override;
-		void OnUpdate() override;
+		void OnUpdate(CCamera* camera, float deltaTime) override;
 		void OnRender(CRenderList* renderList) override;
 		void OnDisable() override;
 	};

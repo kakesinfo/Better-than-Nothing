@@ -56,6 +56,12 @@ namespace BetterThanNothing
 		m_mouseY = y;
 	}
 
+	void CInputManager::ResetMousePosition()
+	{
+		m_lastMouseX = m_mouseX;
+		m_lastMouseY = m_mouseY;
+	}
+
 	glm::vec2 CInputManager::GetMousePosition()
 	{
 		return {m_mouseX, m_mouseY};
@@ -68,10 +74,10 @@ namespace BetterThanNothing
 
 	glm::vec2 CInputManager::GetMouseDelta()
 	{
-		return {m_mouseX - m_lastMouseX, m_lastMouseY - m_mouseY};
+		return GetMousePosition() - GetLastMousePosition();
 	}
 
-	void CInputManager::UpdateMouseScroll(float64 y)
+	void CInputManager::UpdateMouseScroll(const float64 y)
 	{
 		m_mouseScroll = y;
 	}
