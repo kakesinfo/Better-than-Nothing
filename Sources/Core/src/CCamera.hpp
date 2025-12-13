@@ -21,6 +21,8 @@ namespace BetterThanNothing
 		glm::vec3 GetRight() const;
 		glm::vec3 GetUp() const;
 
+		glm::vec3 GetPosition() const;
+
 	private:
 		float		m_fov;
 		float		m_nearPlane;

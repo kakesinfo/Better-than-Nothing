@@ -64,6 +64,19 @@ namespace BetterThanNothing
 					vertex.uv = {0.0f, 0.0f};
 				}
 
+				// Load normals
+				if (!attrib.normals.empty() && index.normal_index != -1) {
+					auto xNormal = attrib.normals[3 * index.normal_index + 0];
+					auto yNormal = attrib.normals[3 * index.normal_index + 1];
+					auto zNormal = attrib.normals[3 * index.normal_index + 2];
+
+					vertex.normal = preTransform
+						? glm::vec3{xNormal, yNormal, zNormal}
+						: glm::vec3{xNormal, zNormal, -yNormal};
+				} else {
+					vertex.normal = {0.0f, 0.0f, 0.0f};
+				}
+
 				if (!uniqueVertices.contains(vertex)) {
 					uniqueVertices[vertex] = static_cast<uint32_t>(mesh.vertices.size());
 

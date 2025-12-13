@@ -13,6 +13,8 @@ file(GLOB SOURCES
 	"src/*.hpp"
 	"src/Renderer/*.hpp"
 	"src/Renderer/*.cpp"
+	"src/Mesh/*.hpp"
+	"src/Mesh/*.cpp"
 	"src/Manager/*.hpp"
 	"src/Manager/*.cpp"
 	"src/Renderer/Resources/*.hpp"

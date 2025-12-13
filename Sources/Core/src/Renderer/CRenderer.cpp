@@ -172,6 +172,8 @@ namespace BetterThanNothing
 			const auto globalUniform = m_pGlobalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
 			globalUniform->view = camera->GetViewMatrix();
 			globalUniform->projection = camera->GetProjectionMatrix(m_pVkContext->vkSwapChain->GetAspectRatio());
+			globalUniform->lightPosition = glm::vec3(0.0f, 5.0f, 0.0f);
+			globalUniform->cameraPosition = camera->GetPosition();
 
 			const VkDescriptorSet& globalDescriptorSet = m_pVkContext->vkGlobalDescriptorSets[m_currentFrame]->Handle();
 			passContext->BindDescriptorSets(pipelineLayout, 0, 1, &globalDescriptorSet);
@@ -265,7 +267,7 @@ namespace BetterThanNothing
 		globalUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		globalUniformLayoutBinding.descriptorCount = 1;
 		globalUniformLayoutBinding.pImmutableSamplers = nullptr;
-		globalUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		globalUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutBinding dynamicUniformLayoutBinding{};
 		dynamicUniformLayoutBinding.binding = 0;
