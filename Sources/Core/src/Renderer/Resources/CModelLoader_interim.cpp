@@ -16,7 +16,9 @@ namespace BetterThanNothing
 		std::string warn;
 		std::string err;
 
-		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str()))
+		std::filesystem::path parentFolder = std::filesystem::path(path).parent_path();
+
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), parentFolder.c_str()))
 			throw std::runtime_error(err);
 
 		if (!warn.empty())
@@ -33,6 +35,19 @@ namespace BetterThanNothing
 		for (const auto& shape : shapes) {
 			MeshData mesh;
 			std::unordered_map<VertexData, uint32_t, VertexHash, VertexEqual> uniqueVertices{};
+
+			if (!shape.mesh.material_ids.empty()) {
+				mesh.materialId = shape.mesh.material_ids[0];
+
+				if (mesh.materialId >= 0 && mesh.materialId < materials.size()) {
+					const auto& material = materials[mesh.materialId];
+
+					if (!material.diffuse_texname.empty()) {
+						std::filesystem::path texPath = parentFolder / material.diffuse_texname;
+						mesh.texturePath = texPath.string();
+					}
+				}
+			}
 
 			for (const auto& index : shape.mesh.indices) {
 				VertexData vertex{};

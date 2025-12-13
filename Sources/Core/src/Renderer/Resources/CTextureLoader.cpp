@@ -13,11 +13,13 @@ namespace BetterThanNothing
 	{
 		auto gpuData = std::make_unique<TextureGpuData>();
 
-		stbi_uc *pixels = stbi_load(input.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels,
-		                            STBI_rgb_alpha);
+		stbi_uc *pixels = stbi_load(input.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels, STBI_rgb_alpha);
 
-		if (!pixels)
-			throw std::runtime_error("failed to load texture image!");
+		if (!pixels) {
+			std::stringstream ss;
+			ss << "Failed to load texture image from path: " << input << " - " << stbi_failure_reason() << std::endl;
+			throw std::runtime_error(ss.str());
+		}
 
 		gpuData->size = gpuData->width * gpuData->height * STBI_rgb_alpha;
 		gpuData->mipLevels = static_cast<uint32>(std::floor(std::log2(std::max(gpuData->width, gpuData->height)))) + 1;

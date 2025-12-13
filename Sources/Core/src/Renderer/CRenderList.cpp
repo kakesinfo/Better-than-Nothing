@@ -3,19 +3,33 @@
 namespace BetterThanNothing
 {
 
-	void CRenderList::Submit(const ModelData* pModel, const std::string& texturePath, const glm::mat4& transform)
+	void CRenderList::Submit(const ModelData* pModel, const glm::mat4& transform, const std::string& texturePath)
 	{
 		for (const MeshData& mesh : pModel->meshes)
 		{
-			Submit(&mesh, texturePath, transform);
+			MeshData texturedMesh = mesh;
+			texturedMesh.texturePath = texturePath;
+			Submit(&texturedMesh, transform);
 		}
 	}
 
-	void CRenderList::Submit(const MeshData* pMesh, const std::string& texturePath, const glm::mat4& transform)
+	void CRenderList::Submit(const ModelData* pModel, const glm::mat4& transform)
+	{
+		for (const MeshData& mesh : pModel->meshes)
+		{
+			Submit(&mesh, transform);
+		}
+	}
+
+	void CRenderList::Submit(const MeshData* pMesh, const glm::mat4& transform)
 	{
 		RenderListItem item;
+
+		if (!pMesh->texturePath.empty()) {
+			item.pTextureGpuData = m_pRenderCache->GetOrCreateTextureGpuData({pMesh->texturePath});
+		}
+
 		item.pMeshGpuData = m_pRenderCache->GetOrCreateMeshGpuData(pMesh);
-		item.pTextureGpuData = m_pRenderCache->GetOrCreateTextureGpuData({texturePath});
 		item.transform = transform;
 
 		Submit(item);
