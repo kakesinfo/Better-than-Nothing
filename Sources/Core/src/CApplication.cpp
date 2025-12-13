@@ -4,7 +4,7 @@ namespace BetterThanNothing
 {
 	void CApplication::Run()
 	{
-		CWindowManager::Initialize({"Better Than Nothing", 800, 600});
+		CWindowManager::Initialize({"Better Than Nothing", 1280, 720});
 
 		VulkanContext vulkanContext;
 		vulkanContext.vkSettings.bufferingMode = EVulkanBufferingMode::DoubleBuffering;
@@ -18,7 +18,7 @@ namespace BetterThanNothing
 
 		const auto renderer = std::make_unique<CRenderer>(&vulkanContext);
 
-		const auto camera = std::make_shared<CCamera>(45.0f, 0.1f, 100.0f);
+		const auto camera = std::make_shared<CCamera>(45.0f, 0.1f, 1000.0f);
 
 		renderer->SetRenderCache(renderCache.get());
 		OnEnable(renderer.get());

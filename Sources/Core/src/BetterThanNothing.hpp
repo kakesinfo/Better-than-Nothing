@@ -49,6 +49,8 @@
 #include "Renderer/Data/ShaderData.hpp"
 #include "Renderer/Data/ModelData.hpp"
 
+#include "Mesh/CPlaneMesh.hpp"
+
 #include "Public/IRenderer.hpp"
 #include "Public/IPipelineBuilder.hpp"
 

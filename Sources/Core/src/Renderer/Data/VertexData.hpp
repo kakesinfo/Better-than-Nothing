@@ -13,10 +13,7 @@ namespace BetterThanNothing
 		glm::vec3 position;
 		glm::vec3 color;
 		glm::vec2 uv;
-
-		bool operator==(const VertexData& other) const {
-			return position == other.position && color == other.color && uv == other.uv;
-		}
+		glm::vec3 normal;
 	};
 
 	struct VertexHash {
@@ -29,6 +26,9 @@ namespace BetterThanNothing
 			h = h * 31 + std::hash<float>{}(v.color.x);
 			h = h * 31 + std::hash<float>{}(v.color.y);
 			h = h * 31 + std::hash<float>{}(v.color.z);
+			h = h * 31 + std::hash<float>{}(v.normal.x);
+			h = h * 31 + std::hash<float>{}(v.normal.y);
+			h = h * 31 + std::hash<float>{}(v.normal.z);
 			return h;
 		}
 	};
@@ -37,7 +37,8 @@ namespace BetterThanNothing
 		bool operator()(VertexData const& a, VertexData const& b) const noexcept {
 			return a.position == b.position
 				&& a.color == b.color
-				&& a.uv == b.uv;
+				&& a.uv == b.uv
+				&& a.normal == b.normal;
 		}
 	};
 }

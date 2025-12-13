@@ -10,5 +10,8 @@ namespace BetterThanNothing
 	{
 		alignas(16) glm::mat4 projection;
 		alignas(16) glm::mat4 view;
+
+		alignas(16) glm::vec3 lightPosition;
+		alignas(16) glm::vec3 cameraPosition;
 	};
 }

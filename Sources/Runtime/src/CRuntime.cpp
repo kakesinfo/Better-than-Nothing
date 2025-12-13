@@ -1,12 +1,18 @@
 #include "CRuntime.hpp"
 
 #include <BetterThanNothing.hpp>
+
+#include "Mesh/CPlaneMesh.hpp"
 #include "Renderer/Resources/CModelLoader_interim.hpp"
 
 namespace BetterThanNothing
 {
-	ModelData model;
-	glm::mat4 modelTransform = glm::mat4(1.0f);
+	ModelData vikingModel;
+	ModelData robotModel;
+	CPlaneMesh planeMesh;
+
+	glm::mat4 vikingTransform = glm::mat4(1.0f);
+	glm::mat4 robotTransform = glm::mat4(1.0f);
 
 	void CRuntime::OnEnable(IRenderer* renderer)
 	{
@@ -16,7 +22,13 @@ namespace BetterThanNothing
 			builder->AddFragmentShader("main/main.frag");
 		});
 
-		model = CModelLoader_interim::LoadModel("../../Assets/Models/viking_room/viking_room.obj", false);
+		vikingModel = CModelLoader_interim::LoadModel("../../Assets/Models/viking_room/viking_room.obj", false);
+		vikingTransform = glm::translate(vikingTransform, glm::vec3(0.0f, 0.5f, 0.0f));
+
+		robotModel = CModelLoader_interim::LoadModel("../../Assets/Models/robot/robot.obj");
+		robotTransform = glm::translate(robotTransform, glm::vec3(4.0f, 1.0f, 0.0f));
+
+		planeMesh = CPlaneMesh(30.0f);
 	}
 
 	void CRuntime::OnUpdate(CCamera* camera, const float deltaTime)
@@ -46,12 +58,14 @@ namespace BetterThanNothing
 
 		camera->Move(deltaPos);
 
-		modelTransform = glm::rotate(modelTransform, glm::radians(10.0f * deltaTime), glm::vec3(0.0f, 1.0f, 0.0f));
+		robotTransform = glm::rotate(robotTransform, glm::radians(20.0f * deltaTime), glm::vec3(0.0f, 1.0f, 0.0f));
 	}
 
 	void CRuntime::OnRender(CRenderList* renderList)
 	{
-		renderList->Submit(&model, "../../Assets/Models/viking_room/viking_room.png", modelTransform);
+		renderList->Submit(&vikingModel, "../../Assets/Models/viking_room/viking_room.png", vikingTransform);
+		renderList->Submit(&robotModel, "../../Assets/Models/robot/robot.png", robotTransform);
+		renderList->Submit(&planeMesh, "../../Assets/Textures/wood.png", glm::mat4(1.0f));
 	}
 
 	void CRuntime::OnDisable()
