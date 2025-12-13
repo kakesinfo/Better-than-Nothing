@@ -32,7 +32,9 @@ namespace BetterThanNothing
 		static void UpdateMouseButton(int button, int action);
 		static void PressMouseButton(int button);
 		static void ReleaseMouseButton(int button);
+
 		static void UpdateMousePosition(float64 x, float64 y);
+		static void ResetMousePosition();
 
 		static glm::vec2 GetMousePosition();
 		static glm::vec2 GetLastMousePosition();

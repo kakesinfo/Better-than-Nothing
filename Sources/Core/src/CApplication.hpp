@@ -17,7 +17,7 @@ namespace BetterThanNothing
 		void Run();
 
 		virtual void OnEnable(IRenderer* renderer) = 0;
-		virtual void OnUpdate() = 0;
+		virtual void OnUpdate(CCamera* camera, float deltaTime) = 0;
 		virtual void OnRender(CRenderList* renderQueue) = 0;
 		virtual void OnDisable() = 0;
 	};

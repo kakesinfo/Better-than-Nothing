@@ -28,7 +28,7 @@ namespace BetterThanNothing
 		explicit CRenderer(VulkanContext* pVkContext);
 		~CRenderer() override;
 
-		void RenderFrame(CRenderList* renderList);
+		void RenderFrame(CRenderList* renderList, CCamera* camera);
 		void SetRenderCache(CRenderCache* pRenderCache);
 
 	private:
@@ -39,7 +39,7 @@ namespace BetterThanNothing
 		void _createGlobalDescriptorSets();
 		void _createDynamicDescriptorSets();
 
-		void _recordCommandBuffer(CRenderList* renderList, uint32 imageIndex) const;
+		void _recordCommandBuffer(CRenderList* renderList, CCamera* camera, uint32 imageIndex) const;
 
 	public:
 		void AddPipeline(const std::function<void(IPipelineBuilder *)> &callback) override;
