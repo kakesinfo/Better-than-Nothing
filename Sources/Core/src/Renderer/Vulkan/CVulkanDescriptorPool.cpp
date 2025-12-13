@@ -3,13 +3,13 @@
 
 namespace BetterThanNothing
 {
-	CVulkanDescriptorPool::CVulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, VulkanContext* context): m_context(context)
+	CVulkanDescriptorPool::CVulkanDescriptorPool(const std::vector<VkDescriptorPoolSize> &poolSizes, VulkanContext *context) : m_context(context)
 	{
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = context->vkSettings.maxFramesInFlight * 3; // 3 sets per frame (global + dynamic + sampler)
+		poolInfo.maxSets = s_calculateMaxSets(poolSizes); // 3 sets per frame (global + dynamic + sampler)
 
 		if (vkCreateDescriptorPool(context->vkDevice->Handle(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create descriptor pool");
@@ -24,5 +24,13 @@ namespace BetterThanNothing
 	VkDescriptorPool CVulkanDescriptorPool::Handle() const
 	{
 		return m_descriptorPool;
+	}
+
+	uint32 CVulkanDescriptorPool::s_calculateMaxSets(const std::vector<VkDescriptorPoolSize> &poolSizes)
+	{
+		uint32 totalDescriptors = 0;
+		for (const auto &[_, descriptorCount]: poolSizes)
+			totalDescriptors += descriptorCount;
+		return totalDescriptors;
 	}
 }
