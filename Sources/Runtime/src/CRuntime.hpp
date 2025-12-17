@@ -1,16 +1,19 @@
 #pragma once
 
-#include <BetterThanNothing.hpp>
+#include "Module_Engine/CApplication.hpp"
 
 namespace BetterThanNothing
 {
+	class CUpdateContext;
+	class CRenderContext;
+
 	class CRuntime final : public CApplication {
 	public:
 		CRuntime() = default;
 
-		void OnEnable(IRenderer* renderer) override;
-		void OnUpdate(CCamera* camera, float deltaTime) override;
-		void OnRender(CRenderList* renderList) override;
+		void OnEnable() override;
+		void OnUpdate(const CUpdateContext* ctx) override;
+		void OnRender(const CRenderContext* ctx) override;
 		void OnDisable() override;
 	};
 };

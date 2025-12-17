@@ -23,7 +23,7 @@ layout(set = 2, binding = 0) uniform sampler2D texSampler;
 void main() {
     vec4 textureColor = texture(texSampler, fragTexCoord);
 
-    if (textureColor.a < 0.1) {
+    if (textureColor.a < 0.5) {
         discard;
     }
 

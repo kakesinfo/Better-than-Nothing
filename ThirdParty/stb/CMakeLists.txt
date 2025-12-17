@@ -1,13 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project("stb")
-
-set(CMAKE_CXX_STANDARD 17)
-
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+project(stb)
 
 set(SOURCES
 	"stb_image.cpp"
@@ -16,15 +9,14 @@ set(SOURCES
 	"include/stb_image_write.h"
 )
 
-include_directories(include)
+add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-add_library(${PROJECT_NAME} ${SOURCES})
+target_include_directories(${PROJECT_NAME} PUBLIC "include")
 
-install(TARGETS ${PROJECT_NAME}
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib
-	RUNTIME DESTINATION bin
-	PUBLIC_HEADER DESTINATION include)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Headers)
 
+set_target_properties(${PROJECT_NAME} PROPERTIES
+		POSITION_INDEPENDENT_CODE ON
+)
 
 
