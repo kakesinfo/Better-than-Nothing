@@ -1,13 +1,13 @@
 SHELL := /bin/bash
 
 all:
-	mkdir -p .build
-	time { cd .build; cmake ..; make -j$(shell nproc); }
+	mkdir -p build/debug
+	time { cd build/debug; cmake --preset ninja-debug ../.. ; ninja -j$(shell nproc); }
 
-run: all
-	cd .build; ./Runtime
+ninja-debug:
+	time { cd build/debug; ninja -j$(shell nproc); }
 
 fclean:
-	rm -rf .build
+	rm -rf build
 
 re: fclean all

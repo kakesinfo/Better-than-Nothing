@@ -1,5 +1,5 @@
 # Better than Nothing
-Everything is in the title, it is a better-than-nothing Game Engine
+Everything is in the title, it is a better-than-nothing Game Engine.
 
 ### 🚀 Features
 
@@ -22,10 +22,16 @@ Contributions are welcome. Both new features and bug fixes. Just open a pull req
 
 ### 📦 Dependencies
 
-- [glfw](https://github.com/glfw/glfw) : A multi-platform library for OpenGL, OpenGL ES, Vulkan, window and input.
-- [vulkan](https://github.com/KhronosGroup/Vulkan-Headers) : A low-overhead, cross-platform API and open standard for 3D graphics and computing.
-- [stb](https://github.com/nothings/stb) : Single-file public domain (or MIT licensed) libraries for C/C++.
-- [glm](https://github.com/g-truc/glm) : OpenGL Mathematics: An header only C++ mathematics library for graphics software based on the OpenGL Shading Language (GLSL) specifications.
-- [glslang](https://github.com/KhronosGroup/glslang) : A library used for JIT shader compilation from OpenGL Shading Language (GLSL) to SPIR-V format.
-- [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) : A practical tool and library for performing reflection on SPIR-V and disassembling SPIR-V back to high level languages.
-- [AMD Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator) : Easy to integrate Vulkan memory allocation library that help to manage memory allocations and resource creation.
+- [glfw](https://github.com/glfw/glfw): A multi-platform library for OpenGL, OpenGL ES, Vulkan, window and input.
+- [vulkan](https://github.com/KhronosGroup/Vulkan-Headers): A low-overhead, cross-platform API and open standard for 3D graphics and computing.
+- [vulkan memory allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator): Easy to integrate Vulkan memory allocation library that help to manage memory allocations and resource creation.
+- [glslang](https://github.com/KhronosGroup/glslang): A library used for JIT shader compilation from OpenGL Shading Language (GLSL) to SPIR-V format.
+- [spirv-cross](https://github.com/KhronosGroup/SPIRV-Cross): A practical tool and library for performing reflection on SPIR-V and disassembling SPIR-V back to high level languages.
+- [glm](https://github.com/g-truc/glm): An header only mathematics library based on the OpenGL Shading Language (GLSL) specifications.
+- [stb](https://github.com/nothings/stb): Single-file public domain (or MIT licensed) libraries for C/C++.
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader): A header only wavefront obj loader.
+
+### 📜 Licence
+
+This project is under the GNU General Public License v3.0 license - see the [LICENSE](LICENSE) file for details.
+

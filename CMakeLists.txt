@@ -1,16 +1,17 @@
 # ==================================================================================================
 # Global configuration
 # ==================================================================================================
-cmake_minimum_required(VERSION 3.16)
-
-project("better-than-nothing")
+cmake_minimum_required(VERSION 3.19)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+project("better-than-nothing" VERSION 0.3.0 LANGUAGES C CXX)
 
 # ==================================================================================================
 # Dependencies
@@ -22,16 +23,18 @@ add_subdirectory("ThirdParty/glm")
 add_subdirectory("ThirdParty/glslang")
 add_subdirectory("ThirdParty/spirv_cross")
 add_subdirectory("ThirdParty/stb")
-# add_subdirectory("ThirdParty/inih")
-# add_subdirectory("ThirdParty/imgui")
-# add_subdirectory("ThirdParty/entt")
+
+# ==================================================================================================
+# Modules
+# ==================================================================================================
+add_subdirectory("Sources/Modules/Base")
+add_subdirectory("Sources/Modules/Data")
+add_subdirectory("Sources/Modules/Platform")
+add_subdirectory("Sources/Modules/Vulkan")
+add_subdirectory("Sources/Modules/Renderer")
+add_subdirectory("Sources/Modules/Engine")
 
 # ==================================================================================================
 # Sources
 # ==================================================================================================
-add_subdirectory("Sources/Core")
 add_subdirectory("Sources/Runtime")
-
-
-
-
