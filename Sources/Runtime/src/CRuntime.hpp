@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Module_Engine/CApplication.hpp"
+#include "Module_Engine/IEngineApplication.hpp"
 
 namespace BetterThanNothing
 {
 	class CUpdateContext;
 	class CRenderContext;
 
-	class CRuntime final : public CApplication {
+	class CRuntime final : public IEngineApplication {
 	public:
 		CRuntime() = default;
 

@@ -1,9 +1,13 @@
 #pragma once
 
+#include <cstdint>
 #include <glm/glm.hpp>
 
 namespace BetterThanNothing
 {
+	enum class EKey : std::int16_t;
+	enum class EMouseButton : std::int16_t;
+
 	struct CInputManager {
 	protected:
 		static constexpr std::int32_t KEYBOARD_KEY_COUNT = 1024;
@@ -43,7 +47,9 @@ namespace BetterThanNothing
 		static void UpdateMouseScroll(float y);
 		static float GetMouseScroll();
 
-		static bool IsKeyPressed(int key);
-		static bool IsMouseButtonPressed(int button);
+		static bool IsKeyPressed(EKey key);
+		static bool IsKeyPressed(std::int16_t key);
+		static bool IsMouseButtonPressed(EMouseButton button);
+		static bool IsMouseButtonPressed(std::int16_t button);
 	};
 };

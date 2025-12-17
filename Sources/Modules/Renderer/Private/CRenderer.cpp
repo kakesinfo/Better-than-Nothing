@@ -234,11 +234,6 @@ namespace BetterThanNothing
 		currentFrame.commandBuffer->EndRecording();
 	}
 
-	void CRenderer::SetRenderCache(CRenderCache* pRenderCache)
-	{
-		m_pRenderCache = pRenderCache;
-	}
-
 	void CRenderer::_createCommandBuffers() const
 	{
 		const auto device = m_pVkContext->vkDevice->Handle();
@@ -392,7 +387,7 @@ namespace BetterThanNothing
 		CLogger::Log<Success>("Vulkan dynamic descriptor sets: ok (count: {})", m_pVkContext->vkDynamicDescriptorSets.size());
 	}
 
-	void CRenderer::AddPipeline(const std::function<void(CVulkanPipelineBuilder*)>& callback)
+	void CRenderer::AddPipeline(const std::function<void(CVulkanPipelineBuilder*)>& callback, CRenderCache* pRenderCache)
 	{
 		CVulkanPipelineBuilder builder;
 		callback(&builder);
@@ -404,7 +399,7 @@ namespace BetterThanNothing
 
 		for (auto&[shaderPath, shaderType] : params.shadersInfos) {
 			const std::string fullShaderPath = m_pVkContext->vkSettings.shadersFolderPath + shaderPath;
-			const ShaderGpuData* shaderGpuData = m_pRenderCache->GetOrCreateShaderGpuData({shaderType, fullShaderPath});
+			const ShaderGpuData* shaderGpuData = pRenderCache->GetOrCreateShaderGpuData({shaderType, fullShaderPath});
 			shaderModules.push_back(shaderGpuData);
 		}
 

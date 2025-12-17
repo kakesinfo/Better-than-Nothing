@@ -1,21 +1,22 @@
 #pragma once
 
+#include <memory>
+
 namespace BetterThanNothing
 {
 	class CUpdateContext;
 	class CRenderContext;
 
-	class CApplication
+	class IEngineApplication
 	{
 	public:
-		CApplication() = default;
-		virtual ~CApplication() = default;
-
-		void Run();
+		virtual ~IEngineApplication() = default;
 
 		virtual void OnEnable() = 0;
 		virtual void OnUpdate(const CUpdateContext* ctx) = 0;
 		virtual void OnRender(const CRenderContext* ctx) = 0;
 		virtual void OnDisable() = 0;
 	};
-};
+
+	extern std::unique_ptr<IEngineApplication> CreateEngineApplication();
+}

@@ -1,5 +1,8 @@
 #include "module_platform.hpp"
 
+#include <Module_Base/EKey.hpp>
+#include <Module_Base/EMouseButton.hpp>
+
 namespace BetterThanNothing
 {
 	int CInputManager::m_keys[KEYBOARD_KEY_COUNT] = {};
@@ -87,12 +90,22 @@ namespace BetterThanNothing
 		return m_mouseScroll;
 	}
 
-	bool CInputManager::IsKeyPressed(const int key)
+	bool CInputManager::IsKeyPressed(const EKey key)
+	{
+		return CInputManager::IsKeyPressed(static_cast<std::int16_t>(key));
+	}
+
+	bool CInputManager::IsKeyPressed(const std::int16_t key)
 	{
 		return m_keys[key] == GLFW_PRESS || m_keys[key] == GLFW_REPEAT;
 	}
 
-	bool CInputManager::IsMouseButtonPressed(const int button)
+	bool CInputManager::IsMouseButtonPressed(const EMouseButton button)
+	{
+		return CInputManager::IsMouseButtonPressed(static_cast<int>(button));
+	}
+
+	bool CInputManager::IsMouseButtonPressed(const std::int16_t button)
 	{
 		return m_buttons[button] == GLFW_PRESS || m_buttons[button] == GLFW_REPEAT;
 	}
