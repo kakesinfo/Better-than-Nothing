@@ -9,6 +9,8 @@
 
 #include <Module_Data/Graphics/ModelData.hpp>
 
+#include <Module_Engine/EntryPoint.hpp>
+
 namespace BetterThanNothing
 {
 	ModelData sponzaModel;
@@ -63,12 +65,9 @@ namespace BetterThanNothing
 	{
 
 	}
+
+	std::unique_ptr<IEngineApplication> CreateEngineApplication()
+	{
+		return std::make_unique<CRuntime>();
+	}
 };
-
-int main()
-{
-	BetterThanNothing::CRuntime runtime;
-	runtime.Run();
-
-	return 0;
-}

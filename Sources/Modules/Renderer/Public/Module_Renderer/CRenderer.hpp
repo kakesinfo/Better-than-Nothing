@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 
 namespace BetterThanNothing
 {
@@ -27,7 +28,6 @@ namespace BetterThanNothing
 	struct CameraData;
 	struct DirectionalLightData;
 
-
 	class CRenderer final
 	{
 	public:
@@ -35,7 +35,6 @@ namespace BetterThanNothing
 		~CRenderer();
 
 		void RenderFrame(CRenderList* renderList, const CameraData& camera, const DirectionalLightData& directionalLight);
-		void SetRenderCache(CRenderCache* pRenderCache);
 
 	private:
 		void _createCommandBuffers() const;
@@ -51,11 +50,10 @@ namespace BetterThanNothing
 		static std::vector<VkVertexInputAttributeDescription> s_getVertexAttributeDescriptions();
 
 	public:
-		void AddPipeline(const std::function<void(CVulkanPipelineBuilder*)> &callback);
+		void AddPipeline(const std::function<void(CVulkanPipelineBuilder*)> &callback, CRenderCache* pRenderCache);
 
 	private:
 		VulkanContext* m_pVkContext = nullptr;
-		CRenderCache* m_pRenderCache = nullptr;
 
 		std::vector<VulkanFrame> m_frames;
 		std::uint32_t m_currentFrame = 0;

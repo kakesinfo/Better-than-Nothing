@@ -28,12 +28,12 @@ namespace BetterThanNothing
 
 	bool CUpdateContext::IsKeyPressed(const EKey key) const
 	{
-		return CInputManager::IsKeyPressed(static_cast<std::int16_t>(key));
+		return CInputManager::IsKeyPressed(key);
 	}
 
 	bool CUpdateContext::IsMouseButtonPressed(const EMouseButton button) const
 	{
-		return CInputManager::IsMouseButtonPressed(static_cast<std::int16_t>(button));
+		return CInputManager::IsMouseButtonPressed(button);
 	}
 
 	glm::vec2 CUpdateContext::GetMouseDelta() const

@@ -1,11 +1,18 @@
 SHELL := /bin/bash
+PRESET := ninja-debug
 
-all:
-	mkdir -p build/debug
-	time { cd build/debug; cmake --preset ninja-debug ../.. ; ninja -j$(shell nproc); }
+.PHONY: all configure build fclean re
 
-ninja-debug:
-	time { cd build/debug; ninja -j$(shell nproc); }
+all: configure build
+
+configure:
+	time { cmake --preset $(PRESET); }
+
+build:
+	time { cmake --build --preset $(PRESET) --parallel $$(nproc); }
+
+run:
+	cmake --build --preset $(PRESET) --target Runtime
 
 fclean:
 	rm -rf build
