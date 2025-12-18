@@ -1,3 +1,21 @@
+/*
+*	Better than Nothing
+ *	Copyright (C) 2025 kakesinfo
+ *
+ *	This program is free software: you can redistribute it and/or modify
+ *	it under the terms of the GNU General Public License as published by
+ * 	the Free Software Foundation, either version 3 of the License, or
+ *	(at your option) any later version.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *	GNU General Public License for more details.
+ *
+ *	You should have received a copy of the GNU General Public License
+ * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include "EVulkanBufferingMode.hpp"
@@ -39,27 +57,27 @@ namespace BetterThanNothing
 			bool enableVSync = true;
 		} vkSettings;
 
-		std::unique_ptr<CVulkanInstance>					vkInstance = nullptr;
-		std::unique_ptr<CVulkanSurface>						vkSurface = nullptr;
-		std::unique_ptr<CVulkanDevice>						vkDevice = nullptr;
-		std::unique_ptr<CVulkanQueue>						vkGraphicsQueue = nullptr;
-		std::unique_ptr<CVulkanQueue>						vkPresentQueue = nullptr;
-		std::unique_ptr<CVulkanMemoryAllocator>				vkMemoryAllocator = nullptr;
-		std::unique_ptr<CVulkanSwapChain>					vkSwapChain = nullptr;
-		std::unique_ptr<CVulkanRenderPass>					vkRenderPass = nullptr;
-		std::unique_ptr<CVulkanCommandPool>					vkCommandPool = nullptr;
-		std::unique_ptr<CVulkanPipeline>					vkPipeline = nullptr;
+		std::unique_ptr<CVulkanInstance>					vkInstance;
+		std::unique_ptr<CVulkanSurface>						vkSurface;
+		std::unique_ptr<CVulkanDevice>						vkDevice;
+		std::unique_ptr<CVulkanQueue>						vkGraphicsQueue;
+		std::unique_ptr<CVulkanQueue>						vkPresentQueue;
+		std::unique_ptr<CVulkanMemoryAllocator>				vkMemoryAllocator;
+		std::unique_ptr<CVulkanSwapChain>					vkSwapChain;
+		std::unique_ptr<CVulkanRenderPass>					vkRenderPass;
+		std::unique_ptr<CVulkanCommandPool>					vkCommandPool;
+		std::unique_ptr<CVulkanPipeline>					vkPipeline;
 
 		std::vector<VulkanFrame>							vkFrames;
 
-		std::unique_ptr<CVulkanDescriptorPool>				vkDescriptorPool = nullptr;
+		std::unique_ptr<CVulkanDescriptorPool>				vkDescriptorPool;
 
-		std::unique_ptr<CVulkanDescriptorSetLayout>			vkGlobalDescriptorSetLayout = nullptr;
+		std::unique_ptr<CVulkanDescriptorSetLayout>			vkGlobalDescriptorSetLayout;
 		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkGlobalDescriptorSets;
 
-		std::unique_ptr<CVulkanDescriptorSetLayout>			vkDynamicDescriptorSetLayout = nullptr;
+		std::unique_ptr<CVulkanDescriptorSetLayout>			vkDynamicDescriptorSetLayout;
 		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkDynamicDescriptorSets;
 
-		std::unique_ptr<CVulkanDescriptorSetLayout>			vkSamplerDescriptorSetLayout = nullptr;
+		std::unique_ptr<CVulkanDescriptorSetLayout>			vkSamplerDescriptorSetLayout;
 	};
 };

@@ -11,9 +11,6 @@ configure:
 build:
 	time { cmake --build --preset $(PRESET) --parallel $$(nproc); }
 
-run:
-	cmake --build --preset $(PRESET) --target Runtime
-
 fclean:
 	rm -rf build
 
