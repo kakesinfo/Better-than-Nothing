@@ -17,6 +17,8 @@ namespace BetterThanNothing
 		m_pShaderLoader = std::make_unique<CShaderLoader>(pContext);
 	}
 
+	CRenderCache::~CRenderCache() = default;
+
 	MeshGpuData* CRenderCache::GetOrCreateMeshGpuData(const MeshData* pMesh)
 	{
 		const auto it = m_meshCache.find(pMesh->id);
