@@ -22,8 +22,8 @@
 
 namespace BetterThanNothing
 {
-	class CUpdateContext;
-	class CRenderContext;
+	class UpdateContext;
+	class RenderContext;
 
 	class IEngineApplication
 	{
@@ -31,8 +31,8 @@ namespace BetterThanNothing
 		virtual ~IEngineApplication() = default;
 
 		virtual void OnEnable() = 0;
-		virtual void OnUpdate(const CUpdateContext* ctx) = 0;
-		virtual void OnRender(const CRenderContext* ctx) = 0;
+		virtual void OnUpdate(const UpdateContext* ctx) = 0;
+		virtual void OnRender(const RenderContext* ctx) = 0;
 		virtual void OnDisable() = 0;
 	};
 

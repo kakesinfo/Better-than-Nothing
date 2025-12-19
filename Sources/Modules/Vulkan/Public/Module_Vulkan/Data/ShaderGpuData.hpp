@@ -22,11 +22,11 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanShaderModule;
+	class VulkanShaderModule;
 
 	struct ShaderGpuData
 	{
 		EVulkanShaderType						type{};
-		std::unique_ptr<CVulkanShaderModule>	pVkShaderModule = VK_NULL_HANDLE;
+		std::unique_ptr<VulkanShaderModule>	shaderModule = VK_NULL_HANDLE;
 	};
 };

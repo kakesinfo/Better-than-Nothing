@@ -20,18 +20,18 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanCommandBuffer;
-	class CVulkanUniformBuffer;
-	class CVulkanSemaphore;
-	class CVulkanFence;
+	class VulkanCommandBuffer;
+	class VulkanUniformBuffer;
+	class VulkanSemaphore;
+	class VulkanFence;
 
 	struct VulkanFrame
 	{
-		std::unique_ptr<CVulkanCommandBuffer>	commandBuffer;
-		std::unique_ptr<CVulkanUniformBuffer>	globalUniformBuffer;
-		std::unique_ptr<CVulkanUniformBuffer>	dynamicUniformBuffer;
-		std::unique_ptr<CVulkanSemaphore>		imageAvailableSemaphore;
-		std::unique_ptr<CVulkanSemaphore>		renderFinishedSemaphore;
-		std::unique_ptr<CVulkanFence>			inFlightFence;
+		std::unique_ptr<VulkanCommandBuffer>	commandBuffer;
+		std::unique_ptr<VulkanUniformBuffer>	globalUniformBuffer;
+		std::unique_ptr<VulkanUniformBuffer>	dynamicUniformBuffer;
+		std::unique_ptr<VulkanSemaphore>		imageAvailableSemaphore;
+		std::unique_ptr<VulkanSemaphore>		renderFinishedSemaphore;
+		std::unique_ptr<VulkanFence>			inFlightFence;
 	};
 };
