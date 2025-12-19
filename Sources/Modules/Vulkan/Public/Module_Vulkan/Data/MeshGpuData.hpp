@@ -20,13 +20,13 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanVertexBuffer;
-	class CVulkanIndexBuffer;
+	class VulkanVertexBuffer;
+	class VulkanIndexBuffer;
 
 	struct MeshGpuData
 	{
-		std::unique_ptr<CVulkanVertexBuffer> pVertexBuffer;
-		std::unique_ptr<CVulkanIndexBuffer> pIndexBuffer;
+		std::unique_ptr<VulkanVertexBuffer> vertexBuffer;
+		std::unique_ptr<VulkanIndexBuffer> indexBuffer;
 		std::uint32_t indexCount = 0;
 	};
 }

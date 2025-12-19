@@ -22,18 +22,18 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanInstance;
-	class CVulkanSurface;
-	class CVulkanDevice;
-	class CVulkanQueue;
-	class CVulkanMemoryAllocator;
-	class CVulkanSwapChain;
-	class CVulkanRenderPass;
-	class CVulkanCommandPool;
-	class CVulkanDescriptorSetLayout;
-	class CVulkanDescriptorPool;
-	class CVulkanDescriptorSet;
-	class CVulkanPipeline;
+	class VulkanInstance;
+	class VulkanSurface;
+	class VulkanDevice;
+	class VulkanQueue;
+	class VulkanMemoryAllocator;
+	class VulkanSwapChain;
+	class VulkanRenderPass;
+	class VulkanCommandPool;
+	class VulkanDescriptorSetLayout;
+	class VulkanDescriptorPool;
+	class VulkanDescriptorSet;
+	class VulkanPipeline;
 	struct VulkanFrame;
 
 	struct VulkanContext
@@ -51,33 +51,33 @@ namespace BetterThanNothing
 			union
 			{
 				EVulkanBufferingMode	bufferingMode = EVulkanBufferingMode::None;
-				std::uint32_t					maxFramesInFlight;
+				std::uint32_t			maxFramesInFlight;
 			};
 
 			bool enableVSync = true;
 		} vkSettings;
 
-		std::unique_ptr<CVulkanInstance>					vkInstance;
-		std::unique_ptr<CVulkanSurface>						vkSurface;
-		std::unique_ptr<CVulkanDevice>						vkDevice;
-		std::unique_ptr<CVulkanQueue>						vkGraphicsQueue;
-		std::unique_ptr<CVulkanQueue>						vkPresentQueue;
-		std::unique_ptr<CVulkanMemoryAllocator>				vkMemoryAllocator;
-		std::unique_ptr<CVulkanSwapChain>					vkSwapChain;
-		std::unique_ptr<CVulkanRenderPass>					vkRenderPass;
-		std::unique_ptr<CVulkanCommandPool>					vkCommandPool;
-		std::unique_ptr<CVulkanPipeline>					vkPipeline;
+		std::unique_ptr<VulkanInstance>					vkInstance;
+		std::unique_ptr<VulkanSurface>						vkSurface;
+		std::unique_ptr<VulkanDevice>						vkDevice;
+		std::unique_ptr<VulkanQueue>						vkGraphicsQueue;
+		std::unique_ptr<VulkanQueue>						vkPresentQueue;
+		std::unique_ptr<VulkanMemoryAllocator>				vkMemoryAllocator;
+		std::unique_ptr<VulkanSwapChain>					vkSwapChain;
+		std::unique_ptr<VulkanRenderPass>					vkRenderPass;
+		std::unique_ptr<VulkanCommandPool>					vkCommandPool;
+		std::unique_ptr<VulkanPipeline>					vkPipeline;
 
 		std::vector<VulkanFrame>							vkFrames;
 
-		std::unique_ptr<CVulkanDescriptorPool>				vkDescriptorPool;
+		std::unique_ptr<VulkanDescriptorPool>				vkDescriptorPool;
 
-		std::unique_ptr<CVulkanDescriptorSetLayout>			vkGlobalDescriptorSetLayout;
-		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkGlobalDescriptorSets;
+		std::unique_ptr<VulkanDescriptorSetLayout>			vkGlobalDescriptorSetLayout;
+		std::vector<std::unique_ptr<VulkanDescriptorSet>>	vkGlobalDescriptorSets;
 
-		std::unique_ptr<CVulkanDescriptorSetLayout>			vkDynamicDescriptorSetLayout;
-		std::vector<std::unique_ptr<CVulkanDescriptorSet>>	vkDynamicDescriptorSets;
+		std::unique_ptr<VulkanDescriptorSetLayout>			vkDynamicDescriptorSetLayout;
+		std::vector<std::unique_ptr<VulkanDescriptorSet>>	vkDynamicDescriptorSets;
 
-		std::unique_ptr<CVulkanDescriptorSetLayout>			vkSamplerDescriptorSetLayout;
+		std::unique_ptr<VulkanDescriptorSetLayout>			vkSamplerDescriptorSetLayout;
 	};
 };

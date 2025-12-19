@@ -16,8 +16,6 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE Private
 )
 
-target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")
-
 set_target_properties(${PROJECT_NAME} PROPERTIES
     SKIP_BUILD_RPATH FALSE
     BUILD_WITH_INSTALL_RPATH TRUE

@@ -18,14 +18,21 @@
 
 #pragma once
 
-#include "EVulkanShaderType.hpp"
-
 namespace BetterThanNothing
 {
-	struct VulkanShaderModule
+	struct VulkanContext;
+
+	class VulkanShaderModule
 	{
-		std::string shaderPath;
-		EVulkanShaderType shaderType;
-		VkShaderModule shaderModule = VK_NULL_HANDLE;
+	public:
+		VulkanShaderModule(VulkanContext* vkContext, const VkShaderModuleCreateInfo* createInfo);
+		~VulkanShaderModule();
+
+		[[nodiscard]]
+		VkShaderModule Handle() const;
+
+	private:
+		VulkanContext* m_vkContext = nullptr;
+		VkShaderModule m_shaderModule = VK_NULL_HANDLE;
 	};
-};
+}

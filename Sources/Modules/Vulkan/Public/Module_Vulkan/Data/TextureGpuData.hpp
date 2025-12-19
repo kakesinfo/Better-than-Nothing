@@ -20,10 +20,10 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanImage;
-	class CVulkanImageView;
-	class CVulkanSampler;
-	class CVulkanDescriptorSet;
+	class VulkanImage;
+	class VulkanImageView;
+	class VulkanSampler;
+	class VulkanDescriptorSet;
 
 	struct TextureGpuData
 	{
@@ -33,10 +33,10 @@ namespace BetterThanNothing
 		std::int32_t							size;
 		std::uint32_t							mipLevels;
 
-		std::unique_ptr<CVulkanImage>			pVkImage;
-		std::unique_ptr<CVulkanImageView>		pVkImageView;
-		std::unique_ptr<CVulkanSampler>			pVkSampler;
+		std::unique_ptr<VulkanImage>			image;
+		std::unique_ptr<VulkanImageView>		imageView;
+		std::unique_ptr<VulkanSampler>			sampler;
 
-		std::unique_ptr<CVulkanDescriptorSet>	pVkDescriptorSet;
+		std::unique_ptr<VulkanDescriptorSet>	descriptorSet;
 	};
 }

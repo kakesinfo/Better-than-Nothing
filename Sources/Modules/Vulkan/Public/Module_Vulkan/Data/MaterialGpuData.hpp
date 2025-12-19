@@ -20,11 +20,11 @@
 
 namespace BetterThanNothing
 {
-	class CVulkanDescriptorSet;
+	class VulkanDescriptorSet;
 
 	struct MaterialGpuData
 	{
 		// TODO: add textures when supported
-		std::unique_ptr<CVulkanDescriptorSet> pDescriptorSet;
+		std::unique_ptr<VulkanDescriptorSet> pDescriptorSet;
 	};
 }
