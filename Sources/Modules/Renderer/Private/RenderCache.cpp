@@ -21,11 +21,11 @@
 #include "Module_Renderer/Resources/ShaderLoader.hpp"
 #include "Module_Renderer/Resources/TextureLoader.hpp"
 
-#include <module_vulkan.hpp>
-
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/MeshData.hpp>
 #include <Module_Data/Graphics/TextureData.hpp>
+
+#include <module_vulkan.hpp>
 
 namespace BetterThanNothing
 {

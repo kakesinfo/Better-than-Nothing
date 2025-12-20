@@ -19,17 +19,9 @@
 #include "Module_Renderer/Resources/ShaderLoader.hpp"
 #include "Module_Renderer/Data/ShaderData.hpp"
 
-#include "Module_Vulkan/Data/ShaderGpuData.hpp"
-#include "Module_Vulkan/EVulkanShaderType.hpp"
-#include "Module_Vulkan/VulkanContext.hpp"
-#include "Module_Vulkan/VulkanShaderModule.hpp"
-
-#include <glslang/Include/glslang_c_interface.h>
-#include <glslang/Include/glslang_c_shader_types.h>
-#include <glslang/Public/resource_limits_c.h>
-#include <spirv_cross/spirv_cross.hpp>
-
 #include <Module_Base/Logger.hpp>
+
+#include <module_vulkan.hpp>
 
 namespace BetterThanNothing
 {

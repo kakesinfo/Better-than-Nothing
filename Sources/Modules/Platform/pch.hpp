@@ -18,7 +18,11 @@
 
 #pragma once
 
-#include <bits/stdc++.h>
+#include <cstdint>
+#include <algorithm>
+#include <string>
+#include <stdexcept>
+#include <memory>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>

@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <string>
-
 namespace BetterThanNothing
 {
 	struct ModelData;

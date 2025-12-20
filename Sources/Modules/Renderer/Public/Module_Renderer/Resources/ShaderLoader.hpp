@@ -18,17 +18,13 @@
 
 #pragma once
 
-#include <glslang/Include/glslang_c_interface.h>
-#include <glslang/Include/glslang_c_shader_types.h>
-#include <spirv_cross/spirv_cross.hpp>
-
-#include "Module_Renderer/Data/ShaderData.hpp"
 #include "Module_Renderer/Resources/ResourceLoader.hpp"
-#include "Module_Vulkan/Data/ShaderGpuData.hpp"
 
 namespace BetterThanNothing
 {
 	struct VulkanContext;
+	struct ShaderGpuData;
+	struct ShaderData;
 	class VulkanShaderModule;
 	enum class EVulkanShaderType;
 
