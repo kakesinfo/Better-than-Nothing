@@ -18,7 +18,11 @@
 
 #pragma once
 
-#include <bits/stdc++.h>
+#include <chrono>
+#include <cstdint>
+#include <string>
+#include <filesystem>
+#include <unordered_map>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>

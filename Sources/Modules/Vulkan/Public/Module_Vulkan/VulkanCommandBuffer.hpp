@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <functional>
+#include <memory>
+
 namespace BetterThanNothing
 {
 	class VulkanRenderPassContext;

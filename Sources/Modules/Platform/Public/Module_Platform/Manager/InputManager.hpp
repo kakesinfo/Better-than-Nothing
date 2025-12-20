@@ -18,9 +18,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <glm/glm.hpp>
-
 namespace BetterThanNothing
 {
 	enum class EKey : std::int16_t;

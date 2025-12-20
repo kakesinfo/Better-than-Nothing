@@ -34,7 +34,6 @@
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <Module_Vulkan/VertexInputDescription.hpp>
 
-#include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 

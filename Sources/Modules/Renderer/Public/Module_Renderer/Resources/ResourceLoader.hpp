@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <memory>
-
 namespace BetterThanNothing
 {
 	struct VulkanContext;

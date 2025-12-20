@@ -18,11 +18,26 @@
 
 #pragma once
 
-#include <bits/stdc++.h>
+#include <iostream>
+#include <cstdint>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <optional>
+#include <memory>
+#include <sstream>
+#include <fstream>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
+#include <vma/vk_mem_alloc.h>
+
+#include <glslang/Include/glslang_c_interface.h>
+#include <glslang/Include/glslang_c_shader_types.h>
+#include <glslang/Public/resource_limits_c.h>
+#include <spirv_cross/spirv_cross.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

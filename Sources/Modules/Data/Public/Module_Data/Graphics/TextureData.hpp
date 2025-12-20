@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <iostream>
-
 namespace BetterThanNothing
 {
 	struct TextureData

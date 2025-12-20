@@ -24,9 +24,6 @@
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/ModelData.hpp>
 
-#include <filesystem>
-#include <unordered_map>
-
 namespace BetterThanNothing
 {
 	ModelData ModelLoader::Load(const std::string& path, bool preTransform)
