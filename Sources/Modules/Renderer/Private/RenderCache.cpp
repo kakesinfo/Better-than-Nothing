@@ -66,15 +66,19 @@ namespace BetterThanNothing
 
 	TextureGpuData* RenderCache::GetOrCreateTextureGpuData(const TextureData& textureData)
 	{
-		const auto it = m_textureCache.find(textureData.filePath);
+		std::string filePath = textureData.filePath;
+		if (filePath.empty())
+			filePath = "../../../Assets/Textures/default_texture.png";
+
+		const auto it = m_textureCache.find(filePath);
 		if (it != m_textureCache.end())
 			return it->second.get();
 
-		m_textureCache[textureData.filePath] = m_textureLoader->Load(textureData.filePath);
+		m_textureCache[filePath] = m_textureLoader->Load(filePath);
 
-		Logger::Log<DEBUG>("TextureGpuData created and cached for Texture: {}", textureData.filePath);
+		Logger::Log<DEBUG>("TextureGpuData created and cached for Texture: {}", filePath);
 
-		return m_textureCache[textureData.filePath].get();
+		return m_textureCache[filePath].get();
 	}
 
 	ShaderGpuData* RenderCache::GetOrCreateShaderGpuData(const ShaderData& shaderData)

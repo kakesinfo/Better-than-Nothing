@@ -36,11 +36,15 @@ namespace BetterThanNothing
 		void OnRender(const RenderContext* ctx) override;
 		void OnDisable() override;
 
-	private:
-		ModelData m_sponzaModel;
-		glm::mat4 m_sponzaTransform{};
+		void SyncModels();
 
-		ModelData m_robotModel;
-		glm::mat4 m_robotTransform{};
+	private:
+		std::future<ModelData>	 m_sponzaFuture;
+		std::optional<ModelData> m_sponzaModel;
+		glm::mat4				 m_sponzaTransform{};
+
+		std::future<ModelData>	 m_robotFuture;
+		std::optional<ModelData> m_robotModel;
+		glm::mat4				 m_robotTransform{};
 	};
 };

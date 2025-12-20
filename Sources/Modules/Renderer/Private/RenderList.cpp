@@ -46,14 +46,10 @@ namespace BetterThanNothing
 
 	void RenderList::Submit(const MeshData* mesh, const glm::mat4& transform)
 	{
-		RenderListItem item;
-
-		if (!mesh->texturePath.empty())
-		{
-			item.textureGpuData = m_renderCache->GetOrCreateTextureGpuData({mesh->texturePath});
-		}
+		RenderListItem item{};
 
 		item.meshGpuData = m_renderCache->GetOrCreateMeshGpuData(mesh);
+		item.textureGpuData = m_renderCache->GetOrCreateTextureGpuData({mesh->texturePath});
 		item.transform = transform;
 
 		Submit(item);

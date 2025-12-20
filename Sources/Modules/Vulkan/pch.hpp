@@ -18,17 +18,17 @@
 
 #pragma once
 
-#include <iostream>
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include <string>
+#include <iostream>
 #include <optional>
 #include <set>
+#include <string>
 #include <vector>
-#include <algorithm>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan.h>

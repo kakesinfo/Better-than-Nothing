@@ -221,7 +221,6 @@ namespace BetterThanNothing
 		for (std::uint32_t i = 0; i < renderList->Size(); i++)
 		{
 			const auto& [meshGpuData, textureGpuData, transform] = renderList->Get(i);
-
 			// Bind dynamic uniforms
 			{
 				const auto dynamicUniform = m_dynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
