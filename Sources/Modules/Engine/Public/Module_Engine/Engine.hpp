@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -43,12 +43,12 @@ namespace BetterThanNothing
 		void Run() const;
 
 	private:
-		std::unique_ptr<VulkanContext>	m_context;
-		std::unique_ptr<RenderCache>	m_renderCache;
-		std::unique_ptr<RenderList>		m_renderList;
-		std::unique_ptr<Renderer>		m_renderer;
-		std::unique_ptr<Camera>			m_camera;
+		std::unique_ptr<VulkanContext> m_context;
+		std::unique_ptr<RenderCache>   m_renderCache;
+		std::unique_ptr<RenderList>	   m_renderList;
+		std::unique_ptr<Renderer>	   m_renderer;
+		std::unique_ptr<Camera>		   m_camera;
 
-		IEngineApplication*				m_application;
+		IEngineApplication* m_application;
 	};
 };

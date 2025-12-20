@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanImageView::VulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, std::uint32_t mipLevels): m_context(context)
+	VulkanImageView::VulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, std::uint32_t mipLevels) : m_context(context)
 	{
 
 		VkImageViewCreateInfo createInfo{};

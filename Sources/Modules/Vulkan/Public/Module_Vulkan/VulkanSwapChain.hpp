@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,8 @@ namespace BetterThanNothing
 	class VulkanImage;
 	class VulkanImageView;
 
-	class VulkanSwapChain {
+	class VulkanSwapChain
+	{
 	public:
 		explicit VulkanSwapChain(VulkanContext* context);
 		~VulkanSwapChain();
@@ -92,18 +93,18 @@ namespace BetterThanNothing
 		VulkanContext* m_context = nullptr;
 
 		VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
-		VkFormat m_imageFormat;
-		VkExtent2D m_extent;
+		VkFormat	   m_imageFormat;
+		VkExtent2D	   m_extent;
 
-		std::vector<VkImage> m_images;
-		std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
+		std::vector<VkImage>							m_images;
+		std::vector<std::unique_ptr<VulkanImageView>>	m_imageViews;
 		std::vector<std::unique_ptr<VulkanFramebuffer>> m_framebuffers;
 
-		std::unique_ptr<VulkanImage>     m_depthImage;
+		std::unique_ptr<VulkanImage>	 m_depthImage;
 		std::unique_ptr<VulkanImageView> m_depthImageView;
-		VkFormat                          m_depthFormat;
+		VkFormat						 m_depthFormat;
 
-		std::unique_ptr<VulkanImage>     m_colorImage; // For multisampling
+		std::unique_ptr<VulkanImage>	 m_colorImage; // For multisampling
 		std::unique_ptr<VulkanImageView> m_colorImageView;
 	};
 };

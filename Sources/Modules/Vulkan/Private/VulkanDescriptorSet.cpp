@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanDescriptorSet::VulkanDescriptorSet(const std::unique_ptr<VulkanDescriptorSetLayout>& layout, VulkanContext* context)
-		: m_context(context)
+	VulkanDescriptorSet::VulkanDescriptorSet(const std::unique_ptr<VulkanDescriptorSetLayout>& layout, VulkanContext* context) : m_context(context)
 	{
 		auto handle = layout->Handle();
 

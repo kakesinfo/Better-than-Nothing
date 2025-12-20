@@ -18,51 +18,48 @@
 
 #pragma once
 
-#include <string_view>
-#include <format>
 #include <cstdint>
-#include <source_location>
+#include <format>
 #include <mutex>
+#include <source_location>
+#include <string_view>
 
 namespace BetterThanNothing
 {
-	static constexpr std::uint8_t DEBUG   = 0;
-	static constexpr std::uint8_t INFO    = 1;
+	static constexpr std::uint8_t DEBUG = 0;
+	static constexpr std::uint8_t INFO = 1;
 	static constexpr std::uint8_t SUCCESS = 2;
 	static constexpr std::uint8_t WARNING = 3;
-	static constexpr std::uint8_t ERROR   = 4;
+	static constexpr std::uint8_t ERROR = 4;
 
 	struct LogFormat
 	{
-		std::string_view format;
+		std::string_view	 format;
 		std::source_location location;
 
 		template <typename T>
-		consteval LogFormat(
-			const T& s,
-			const std::source_location l = std::source_location::current()
-		): format(s), location(l) {}
+		consteval LogFormat(const T& s, const std::source_location l = std::source_location::current()) : format(s), location(l)
+		{}
 	};
 
 	class Logger
 	{
 	public:
 		template <std::uint8_t Level, typename... Args>
-		static void Log(const LogFormat arg, Args&&... args) {
+		static void Log(const LogFormat arg, Args&&... args)
+		{
 			Print(Level, arg.location, std::vformat(arg.format, std::make_format_args(args...)));
 		}
 
-		static void SetLogLevel(const std::uint8_t level) {
-			s_currentLogLevel = level;
-		}
+		static void SetLogLevel(const std::uint8_t level) { s_currentLogLevel = level; }
 
 	private:
 		static std::string GetTimestamp();
 		static std::string FormatSourceFile(const std::source_location& location);
 		static std::string SanitizeMessage(std::string_view message);
-		static void Print(std::uint8_t level, const std::source_location& location, std::string_view message);
+		static void		   Print(std::uint8_t level, const std::source_location& location, std::string_view message);
 
 		static std::uint8_t s_currentLogLevel;
-		static std::mutex s_printMutex;
+		static std::mutex	s_printMutex;
 	};
 }

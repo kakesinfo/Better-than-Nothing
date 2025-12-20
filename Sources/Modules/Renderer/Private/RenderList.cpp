@@ -48,7 +48,8 @@ namespace BetterThanNothing
 	{
 		RenderListItem item;
 
-		if (!mesh->texturePath.empty()) {
+		if (!mesh->texturePath.empty())
+		{
 			item.textureGpuData = m_renderCache->GetOrCreateTextureGpuData({mesh->texturePath});
 		}
 
@@ -58,7 +59,7 @@ namespace BetterThanNothing
 		Submit(item);
 	}
 
-	void RenderList::Submit(const RenderListItem &item)
+	void RenderList::Submit(const RenderListItem& item)
 	{
 		m_list.push_back(item);
 	}

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	class PlaneMesh: public MeshData
+	class PlaneMesh : public MeshData
 	{
 	public:
 		explicit PlaneMesh(float size = 1.0f);

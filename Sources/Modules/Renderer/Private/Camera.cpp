@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	Camera::Camera(const float fov, const float nearPlane, const float farPlane): m_fov(fov), m_nearPlane(nearPlane), m_farPlane(farPlane)
+	Camera::Camera(const float fov, const float nearPlane, const float farPlane) : m_fov(fov), m_nearPlane(nearPlane), m_farPlane(farPlane)
 	{
 		m_position = glm::vec3(2.0f, 2.0f, 2.0f);
 		m_orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);

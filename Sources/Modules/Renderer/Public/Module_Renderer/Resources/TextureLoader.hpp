@@ -20,9 +20,9 @@
 
 #include "Module_Renderer/Resources/ResourceLoader.hpp"
 
-#include <string>
-#include <memory>
 #include <cstdint>
+#include <memory>
+#include <string>
 
 namespace BetterThanNothing
 {
@@ -42,10 +42,10 @@ namespace BetterThanNothing
 		std::unique_ptr<TextureGpuData> Load(const std::string& input) override;
 
 	private:
-		std::unique_ptr<VulkanImage>			CreateTextureImage(std::uint32_t width, std::uint32_t height, std::uint32_t mipLevels, std::uint32_t size, void* pixels);
-		std::unique_ptr<VulkanImageView>		CreateTextureImageView(VkImage image, VkFormat format, std::uint32_t mipLevels);
-		void									CreateMipmaps(VkImage image, VkFormat format, std::int32_t texWidth, std::int32_t texHeight, std::uint32_t mipLevels) const;
-		std::unique_ptr<VulkanSampler>			CreateTextureSampler(std::uint32_t mipLevels);
-		std::unique_ptr<VulkanDescriptorSet>	CreateTextureDescriptorSet(const TextureGpuData* textureGpuData);
+		std::unique_ptr<VulkanImage>		 CreateTextureImage(std::uint32_t width, std::uint32_t height, std::uint32_t mipLevels, std::uint32_t size, void* pixels);
+		std::unique_ptr<VulkanImageView>	 CreateTextureImageView(VkImage image, VkFormat format, std::uint32_t mipLevels);
+		void								 CreateMipmaps(VkImage image, VkFormat format, std::int32_t texWidth, std::int32_t texHeight, std::uint32_t mipLevels) const;
+		std::unique_ptr<VulkanSampler>		 CreateTextureSampler(std::uint32_t mipLevels);
+		std::unique_ptr<VulkanDescriptorSet> CreateTextureDescriptorSet(const TextureGpuData* textureGpuData);
 	};
 }

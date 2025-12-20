@@ -19,24 +19,24 @@
 #include <module_vulkan.hpp>
 
 #include <Module_Base/EKey.hpp>
-#include <Module_Vulkan/VulkanContext.hpp>
 #include <Module_Engine/Engine.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
-#include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
+#include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-#include <Module_Renderer/Renderer.hpp>
-#include <Module_Renderer/RenderList.hpp>
-#include <Module_Renderer/RenderCache.hpp>
 #include <Module_Renderer/Camera.hpp>
 #include <Module_Renderer/Data/CameraData.hpp>
 #include <Module_Renderer/Data/DirectionalLightData.hpp>
+#include <Module_Renderer/RenderCache.hpp>
+#include <Module_Renderer/RenderList.hpp>
+#include <Module_Renderer/Renderer.hpp>
+#include <Module_Vulkan/VulkanContext.hpp>
 
 namespace BetterThanNothing
 {
-	Engine::Engine(IEngineApplication* application): m_application(application)
+	Engine::Engine(IEngineApplication* application) : m_application(application)
 	{
 		WindowManager::Initialize({"Better Than Nothing", 1280, 720});
 
@@ -51,11 +51,13 @@ namespace BetterThanNothing
 		m_renderer = std::make_unique<Renderer>(m_context.get());
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
 
-		m_renderer->AddPipeline([&](VulkanPipelineBuilder* builder) {
-			builder->SetName("main");
-			builder->AddVertexShader("main/main.vert");
-			builder->AddFragmentShader("main/main.frag");
-		}, m_renderCache.get()); // TODO: remove add pipeline from Renderer
+		m_renderer->AddPipeline(
+			[&](VulkanPipelineBuilder* builder) {
+				builder->SetName("main");
+				builder->AddVertexShader("main/main.vert");
+				builder->AddFragmentShader("main/main.frag");
+			},
+			m_renderCache.get()); // TODO: remove add pipeline from Renderer
 	}
 
 	void Engine::OnUpdate(const float deltaTime) const
@@ -92,7 +94,7 @@ namespace BetterThanNothing
 
 		while (!WindowManager::GetWindow()->ShouldClose() && !shouldClose)
 		{
-			const auto currentTime = std::chrono::high_resolution_clock::now();
+			const auto					 currentTime = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<float> elapsed = currentTime - lastTime;
 			lastTime = currentTime;
 
@@ -108,7 +110,6 @@ namespace BetterThanNothing
 
 			InputManager::ResetMousePosition();
 		}
-
 
 		m_application->OnDisable();
 		WindowManager::Shutdown();

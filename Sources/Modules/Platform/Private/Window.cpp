@@ -23,7 +23,7 @@
 
 namespace BetterThanNothing
 {
-	Window::Window(std::string  title, const std::uint32_t width, const std::uint32_t height, const bool fullscreen, const bool resizable)
+	Window::Window(std::string title, const std::uint32_t width, const std::uint32_t height, const bool fullscreen, const bool resizable)
 		: m_title(std::move(title)), m_width(width), m_height(height), m_fullscreen(fullscreen), m_resizable(resizable)
 	{
 		if (glfwInit() == GLFW_FALSE)
@@ -33,9 +33,7 @@ namespace BetterThanNothing
 		glfwWindowHint(GLFW_RESIZABLE, m_resizable ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
-		GLFWmonitor* monitor = m_fullscreen
-			? glfwGetPrimaryMonitor()
-			: nullptr;
+		GLFWmonitor* monitor = m_fullscreen ? glfwGetPrimaryMonitor() : nullptr;
 
 		m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), monitor, nullptr);
 
@@ -121,10 +119,11 @@ namespace BetterThanNothing
 
 	void Window::KeyCallback(GLFWwindow* window, const std::int32_t key, const std::int32_t scancode, const std::int32_t action, const std::int32_t mods)
 	{
-		(void) scancode;
-		(void) mods;
+		(void)scancode;
+		(void)mods;
 
-		if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE) {
+		if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
+		{
 			glfwSetWindowShouldClose(window, GLFW_TRUE);
 		}
 
@@ -133,23 +132,23 @@ namespace BetterThanNothing
 
 	void Window::MouseCursorCallback(GLFWwindow* window, const double xpos, const double ypos)
 	{
-		(void) window;
+		(void)window;
 
 		InputManager::UpdateMousePosition(xpos, ypos);
 	}
 
 	void Window::MouseScrollCallback(GLFWwindow* window, const double xoffset, const double yoffset)
 	{
-		(void) window;
-		(void) xoffset;
+		(void)window;
+		(void)xoffset;
 
 		InputManager::UpdateMouseScroll(yoffset);
 	}
 
 	void Window::MouseButtonCallback(GLFWwindow* window, const std::int32_t button, const std::int32_t action, const std::int32_t mods)
 	{
-		(void) window;
-		(void) mods;
+		(void)window;
+		(void)mods;
 
 		InputManager::UpdateMouseButton(button, action);
 	}

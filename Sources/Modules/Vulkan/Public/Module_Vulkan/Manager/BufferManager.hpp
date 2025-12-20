@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@ namespace BetterThanNothing
 		static void Shutdown();
 
 		static std::unique_ptr<VulkanVertexBuffer> CreateVertexBuffer(const void* data, std::uint32_t dataSize);
-		static std::unique_ptr<VulkanIndexBuffer> CreateIndexBuffer(const void* data, std::uint32_t dataSize);
+		static std::unique_ptr<VulkanIndexBuffer>  CreateIndexBuffer(const void* data, std::uint32_t dataSize);
 
 		template <typename T>
 		static std::unique_ptr<VulkanUniformBuffer> CreateUniformBuffer()

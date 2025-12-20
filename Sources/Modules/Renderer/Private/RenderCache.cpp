@@ -17,9 +17,9 @@
  */
 
 #include "Module_Renderer/RenderCache.hpp"
-#include "Module_Renderer/Resources/TextureLoader.hpp"
-#include "Module_Renderer/Resources/ShaderLoader.hpp"
 #include "Module_Renderer/Data/ShaderData.hpp"
+#include "Module_Renderer/Resources/ShaderLoader.hpp"
+#include "Module_Renderer/Resources/TextureLoader.hpp"
 
 #include <module_vulkan.hpp>
 
@@ -29,7 +29,7 @@
 
 namespace BetterThanNothing
 {
-	RenderCache::RenderCache(VulkanContext* context): m_context(context)
+	RenderCache::RenderCache(VulkanContext* context) : m_context(context)
 	{
 		m_textureLoader = std::make_unique<TextureLoader>(context);
 		m_shaderLoader = std::make_unique<ShaderLoader>(context);
@@ -49,11 +49,11 @@ namespace BetterThanNothing
 			throw std::runtime_error("Mesh has no vertices or indices!");
 
 		const std::uint32_t vertexBufferSize = sizeof(mesh->vertices[0]) * mesh->vertices.size();
-		const void* vertexBufferData = mesh->vertices.data();
+		const void*			vertexBufferData = mesh->vertices.data();
 		meshGpuData->vertexBuffer = BufferManager::CreateVertexBuffer(vertexBufferData, vertexBufferSize);
 
 		const std::uint32_t indexBufferSize = sizeof(mesh->indices[0]) * mesh->indices.size();
-		const void* indexBufferData = mesh->indices.data();
+		const void*			indexBufferData = mesh->indices.data();
 		meshGpuData->indexBuffer = BufferManager::CreateIndexBuffer(indexBufferData, indexBufferSize);
 		meshGpuData->indexCount = static_cast<std::uint32_t>(mesh->indices.size());
 

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanDescriptorPool::VulkanDescriptorPool(const std::vector<VkDescriptorPoolSize> &poolSizes, VulkanContext *context) : m_context(context)
+	VulkanDescriptorPool::VulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, VulkanContext* context) : m_context(context)
 	{
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -43,10 +43,10 @@ namespace BetterThanNothing
 		return m_descriptorPool;
 	}
 
-	std::uint32_t VulkanDescriptorPool::CalculateMaxSets(const std::vector<VkDescriptorPoolSize> &poolSizes)
+	std::uint32_t VulkanDescriptorPool::CalculateMaxSets(const std::vector<VkDescriptorPoolSize>& poolSizes)
 	{
 		std::uint32_t totalDescriptors = 0;
-		for (const auto &[_, descriptorCount]: poolSizes)
+		for (const auto& [_, descriptorCount] : poolSizes)
 			totalDescriptors += descriptorCount;
 		return totalDescriptors;
 	}

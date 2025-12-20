@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -16,18 +16,14 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "module_vulkan.hpp"
 #include "Module_Vulkan/VertexInputDescription.hpp"
+#include "module_vulkan.hpp"
 
 #include <Module_Base/Logger.hpp>
 
 namespace BetterThanNothing
 {
-	VulkanPipeline::VulkanPipeline(
-		VulkanPipelineParams params,
-		const VertexInputDescription& vertexInputDescription,
-		const std::vector<const ShaderGpuData*>& shaders,
-		VulkanContext* context)
+	VulkanPipeline::VulkanPipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
 		: m_context(context), m_params(std::move(params))
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
@@ -59,10 +55,10 @@ namespace BetterThanNothing
 		viewport.maxDepth = 1.0f;
 
 		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
+		scissor.offset = {0, 0};
 		scissor.extent = m_context->vkSwapChain->GetExtent();
 
-		std::vector dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		std::vector dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
 		VkPipelineDynamicStateCreateInfo dynamicState{};
 		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -86,8 +82,8 @@ namespace BetterThanNothing
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
-		rasterizer.depthBiasClamp = 0.0f; // Optional
-		rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+		rasterizer.depthBiasClamp = 0.0f;		   // Optional
+		rasterizer.depthBiasSlopeFactor = 0.0f;	   // Optional
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -127,19 +123,19 @@ namespace BetterThanNothing
 		depthStencil.maxDepthBounds = 1.0f; // Optional
 		depthStencil.stencilTestEnable = VK_FALSE;
 		depthStencil.front = {}; // Optional
-		depthStencil.back = {}; // Optional
+		depthStencil.back = {};	 // Optional
 
 		VkDescriptorSetLayout globalLayout = m_context->vkGlobalDescriptorSetLayout->Handle();
 		VkDescriptorSetLayout dynamicLayout = m_context->vkDynamicDescriptorSetLayout->Handle();
 		VkDescriptorSetLayout samplerLayout = m_context->vkSamplerDescriptorSetLayout->Handle();
 
-		auto layouts = std::array { globalLayout, dynamicLayout, samplerLayout };
+		auto layouts = std::array{globalLayout, dynamicLayout, samplerLayout};
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = static_cast<std::uint32_t>(layouts.size());
 		pipelineLayoutInfo.pSetLayouts = layouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+		pipelineLayoutInfo.pushConstantRangeCount = 0;	  // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
 		if (vkCreatePipelineLayout(m_context->vkDevice->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
@@ -164,7 +160,7 @@ namespace BetterThanNothing
 		pipelineInfo.renderPass = m_context->vkRenderPass->Handle();
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
-		pipelineInfo.basePipelineIndex = -1; // Optional
+		pipelineInfo.basePipelineIndex = -1;			  // Optional
 
 		if (vkCreateGraphicsPipelines(m_context->vkDevice->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create graphics pipeline");
@@ -195,12 +191,12 @@ namespace BetterThanNothing
 	{
 		switch (type)
 		{
-		case EVulkanShaderType::Vertex:
-			return VK_SHADER_STAGE_VERTEX_BIT;
-		case EVulkanShaderType::Fragment:
-			return VK_SHADER_STAGE_FRAGMENT_BIT;
-		default:
-			throw std::runtime_error("Invalid shader type");
+			case EVulkanShaderType::Vertex:
+				return VK_SHADER_STAGE_VERTEX_BIT;
+			case EVulkanShaderType::Fragment:
+				return VK_SHADER_STAGE_FRAGMENT_BIT;
+			default:
+				throw std::runtime_error("Invalid shader type");
 		}
 	}
 

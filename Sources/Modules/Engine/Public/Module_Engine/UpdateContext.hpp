@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@ namespace BetterThanNothing
 	class UpdateContext
 	{
 	public:
-		explicit UpdateContext(Camera* camera, const float deltaTime): m_camera(camera), m_deltaTime(deltaTime) {}
+		explicit UpdateContext(Camera* camera, const float deltaTime) : m_camera(camera), m_deltaTime(deltaTime) {}
 		~UpdateContext() = default;
 
 		void RotateCamera(float yaw, float pitch) const;
@@ -36,14 +36,14 @@ namespace BetterThanNothing
 		[[nodiscard]] glm::vec3 GetCameraForward() const;
 		[[nodiscard]] glm::vec3 GetCameraRight() const;
 
-		[[nodiscard]] bool IsKeyPressed(EKey key) const;
-		[[nodiscard]] bool IsMouseButtonPressed(EMouseButton button) const;
+		[[nodiscard]] bool		IsKeyPressed(EKey key) const;
+		[[nodiscard]] bool		IsMouseButtonPressed(EMouseButton button) const;
 		[[nodiscard]] glm::vec2 GetMouseDelta() const;
 
 		[[nodiscard]] float GetDeltaTime() const;
 
 	private:
-		Camera*	m_camera;
-		float		m_deltaTime;
+		Camera* m_camera;
+		float	m_deltaTime;
 	};
 }

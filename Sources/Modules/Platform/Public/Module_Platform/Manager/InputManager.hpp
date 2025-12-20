@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -26,7 +26,8 @@ namespace BetterThanNothing
 	enum class EKey : std::int16_t;
 	enum class EMouseButton : std::int16_t;
 
-	struct InputManager {
+	struct InputManager
+	{
 	protected:
 		static constexpr std::int32_t KEYBOARD_KEY_COUNT = 1024;
 		static constexpr std::int32_t MOUSE_BUTTON_COUNT = 32;
@@ -62,7 +63,7 @@ namespace BetterThanNothing
 		static glm::vec2 GetLastMousePosition();
 		static glm::vec2 GetMouseDelta();
 
-		static void UpdateMouseScroll(float y);
+		static void	 UpdateMouseScroll(float y);
 		static float GetMouseScroll();
 
 		static bool IsKeyPressed(EKey key);

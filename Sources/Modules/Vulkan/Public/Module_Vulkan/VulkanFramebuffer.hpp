@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -38,6 +38,6 @@ namespace BetterThanNothing
 
 	private:
 		VulkanContext* m_context;
-		VkFramebuffer m_framebuffer = VK_NULL_HANDLE;
+		VkFramebuffer  m_framebuffer = VK_NULL_HANDLE;
 	};
 }

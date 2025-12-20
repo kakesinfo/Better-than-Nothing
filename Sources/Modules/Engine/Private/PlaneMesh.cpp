@@ -28,7 +28,7 @@ namespace BetterThanNothing
 	void PlaneMesh::GeneratePlane(const float size)
 	{
 		const std::int32_t subdivisions = static_cast<std::int32_t>(size);
-		const float halfSize = size / 2.0f;
+		const float		   halfSize = size / 2.0f;
 
 		for (std::int32_t x = 0; x < subdivisions; x++)
 		{
@@ -37,12 +37,7 @@ namespace BetterThanNothing
 				const float posX = (static_cast<float>(x) / size) * size - halfSize;
 				const float posZ = (static_cast<float>(z) / size) * size - halfSize;
 
-				AddVertex(
-					{posX, 0.0f, posZ},
-					{1.0f, 1.0f, 1.0f},
-					{static_cast<float>(x), static_cast<float>(z)},
-					{0.0f, 1.0f, 0.0f}
-				);
+				AddVertex({posX, 0.0f, posZ}, {1.0f, 1.0f, 1.0f}, {static_cast<float>(x), static_cast<float>(z)}, {0.0f, 1.0f, 0.0f});
 
 				if (x < subdivisions - 1 && z < subdivisions - 1)
 				{
@@ -63,6 +58,5 @@ namespace BetterThanNothing
 				}
 			}
 		}
-
 	}
 }

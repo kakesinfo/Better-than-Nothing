@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -21,10 +21,10 @@
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Data/Graphics/ModelData.hpp>
+#include <Module_Engine/EntryPoint.hpp>
 #include <Module_Engine/ModelLoader.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
-#include <Module_Engine/EntryPoint.hpp>
 
 namespace BetterThanNothing
 {
@@ -46,18 +46,24 @@ namespace BetterThanNothing
 			ctx->RotateCamera(-delta.x * rotateSpeed, -delta.y * rotateSpeed);
 		}
 
-		const float deltaTime = ctx->GetDeltaTime();
-		const float moveSpeed = 5.0f * deltaTime;
+		const float	   deltaTime = ctx->GetDeltaTime();
+		const float	   moveSpeed = 5.0f * deltaTime;
 		constexpr auto up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 		auto deltaPos = glm::vec3(0.0f);
 
-		if (ctx->IsKeyPressed(EKey::W))			deltaPos += ctx->GetCameraForward() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::S))			deltaPos -= ctx->GetCameraForward() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::D))			deltaPos += ctx->GetCameraRight() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::A))			deltaPos -= ctx->GetCameraRight() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::Space))		deltaPos += up * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::LeftShift))	deltaPos -= up * moveSpeed;
+		if (ctx->IsKeyPressed(EKey::W))
+			deltaPos += ctx->GetCameraForward() * moveSpeed;
+		if (ctx->IsKeyPressed(EKey::S))
+			deltaPos -= ctx->GetCameraForward() * moveSpeed;
+		if (ctx->IsKeyPressed(EKey::D))
+			deltaPos += ctx->GetCameraRight() * moveSpeed;
+		if (ctx->IsKeyPressed(EKey::A))
+			deltaPos -= ctx->GetCameraRight() * moveSpeed;
+		if (ctx->IsKeyPressed(EKey::Space))
+			deltaPos += up * moveSpeed;
+		if (ctx->IsKeyPressed(EKey::LeftShift))
+			deltaPos -= up * moveSpeed;
 
 		ctx->MoveCamera(deltaPos);
 
@@ -70,10 +76,7 @@ namespace BetterThanNothing
 		ctx->Submit(&m_robotModel, m_robotTransform, "../../../Assets/Models/robot/robot.png");
 	}
 
-	void Runtime::OnDisable()
-	{
-
-	}
+	void Runtime::OnDisable() {}
 
 	std::unique_ptr<IEngineApplication> CreateEngineApplication()
 	{

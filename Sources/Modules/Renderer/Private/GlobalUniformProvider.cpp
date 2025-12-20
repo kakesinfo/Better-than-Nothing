@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,15 +20,16 @@
 #include "Module_Renderer/Data/GlobalUniformData.hpp"
 
 #include <Module_Base/Logger.hpp>
-#include <Module_Vulkan/VulkanContext.hpp>
 #include <Module_Vulkan/Manager/BufferManager.hpp>
+#include <Module_Vulkan/VulkanContext.hpp>
 
 namespace BetterThanNothing
 {
-	GlobalUniformProvider::GlobalUniformProvider(VulkanContext* context): m_context(context)
+	GlobalUniformProvider::GlobalUniformProvider(VulkanContext* context) : m_context(context)
 	{
 		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
-		for (std::uint32_t i = 0; i < count; i++) {
+		for (std::uint32_t i = 0; i < count; i++)
+		{
 			m_context->vkFrames[i].globalUniformBuffer = BufferManager::CreateUniformBuffer<GlobalUniformData>();
 		}
 

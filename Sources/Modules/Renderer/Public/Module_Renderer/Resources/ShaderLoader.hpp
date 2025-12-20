@@ -22,8 +22,8 @@
 #include <glslang/Include/glslang_c_shader_types.h>
 #include <spirv_cross/spirv_cross.hpp>
 
-#include "Module_Renderer/Resources/ResourceLoader.hpp"
 #include "Module_Renderer/Data/ShaderData.hpp"
+#include "Module_Renderer/Resources/ResourceLoader.hpp"
 #include "Module_Vulkan/Data/ShaderGpuData.hpp"
 
 namespace BetterThanNothing
@@ -44,6 +44,6 @@ namespace BetterThanNothing
 		static std::vector<char>			ReadFile(const std::string& filename);
 		static glslang_stage_t				GetShaderStage(EVulkanShaderType type);
 		static glslang_program_t*			GetShaderProgram(const std::vector<char>& source, glslang_stage_t stage);
-		std::unique_ptr<VulkanShaderModule>	GetShaderModule(glslang_program_t* program) const;
+		std::unique_ptr<VulkanShaderModule> GetShaderModule(glslang_program_t* program) const;
 	};
 }

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -27,8 +27,8 @@
 #include "Module_Renderer/Data/ShaderData.hpp"
 #include "Module_Renderer/DynamicUniformProvider.hpp"
 #include "Module_Renderer/GlobalUniformProvider.hpp"
-#include "Module_Renderer/RenderList.hpp"
 #include "Module_Renderer/RenderCache.hpp"
+#include "Module_Renderer/RenderList.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
@@ -40,7 +40,7 @@
 
 namespace BetterThanNothing
 {
-	Renderer::Renderer(VulkanContext* context): m_context(context)
+	Renderer::Renderer(VulkanContext* context) : m_context(context)
 	{
 		BufferManager::Initialize(m_context);
 
@@ -103,9 +103,8 @@ namespace BetterThanNothing
 		const auto device = m_context->vkDevice->Handle();
 		const auto swapchain = m_context->vkSwapChain->Handle();
 
-		std::uint32_t imageIndex;
-		const VkResult acquireResult = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
-			m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle(), VK_NULL_HANDLE, &imageIndex);
+		std::uint32_t  imageIndex;
+		const VkResult acquireResult = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle(), VK_NULL_HANDLE, &imageIndex);
 
 		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
 		{
@@ -121,10 +120,10 @@ namespace BetterThanNothing
 
 		RecordCommandBuffer(renderList, camera, directionalLight, imageIndex);
 
-		const VkSemaphore waitSemaphores[] = { m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle() };
+		const VkSemaphore waitSemaphores[] = {m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle()};
 
 		// We wait for the fragment shader to output the color before we can start writing to the image
-		constexpr VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -136,7 +135,7 @@ namespace BetterThanNothing
 		const auto commandBuffer = m_context->vkFrames[m_currentFrame].commandBuffer->Handle();
 		submitInfo.pCommandBuffers = &commandBuffer;
 
-		const VkSemaphore signalSemaphores[] = { m_context->vkFrames[m_currentFrame].renderFinishedSemaphore->Handle() };
+		const VkSemaphore signalSemaphores[] = {m_context->vkFrames[m_currentFrame].renderFinishedSemaphore->Handle()};
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -149,7 +148,7 @@ namespace BetterThanNothing
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pWaitSemaphores = signalSemaphores;
 
-		const VkSwapchainKHR swapChains[] = { swapchain };
+		const VkSwapchainKHR swapChains[] = {swapchain};
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;
 		presentInfo.pImageIndices = &imageIndex;
@@ -229,7 +228,7 @@ namespace BetterThanNothing
 				const auto dynamicUniform = m_dynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
 				dynamicUniform->model = transform;
 
-				VkDescriptorSet dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle();
+				VkDescriptorSet		dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle();
 				const std::uint32_t offset = m_dynamicUniformProvider->GetOffset(i);
 				passContext->BindDescriptorSets(pipelineLayout, 1, 1, &dynamicDescriptorSet, 1, &offset);
 			}
@@ -244,7 +243,7 @@ namespace BetterThanNothing
 			// Draw vertices and indices
 			{
 				// Bind mesh vertex and index buffers
-				const VkBuffer vertexBuffers[] = { meshGpuData->vertexBuffer->Handle() };
+				const VkBuffer		   vertexBuffers[] = {meshGpuData->vertexBuffer->Handle()};
 				constexpr VkDeviceSize offsets[] = {0};
 				passContext->BindVertexBuffers(0, 1, vertexBuffers, offsets);
 				passContext->BindIndexBuffer(meshGpuData->indexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT32);
@@ -260,7 +259,7 @@ namespace BetterThanNothing
 
 	void Renderer::CreateCommandBuffers() const
 	{
-		const auto device = m_context->vkDevice->Handle();
+		const auto			device = m_context->vkDevice->Handle();
 		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
 
 		VkCommandBufferAllocateInfo allocInfo{};
@@ -319,9 +318,9 @@ namespace BetterThanNothing
 		samplerLayoutBinding.pImmutableSamplers = nullptr;
 		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		auto globalBindings = { globalUniformLayoutBinding };
-		auto dynamicBindings = { dynamicUniformLayoutBinding };
-		auto samplerBindings = { samplerLayoutBinding };
+		auto globalBindings = {globalUniformLayoutBinding};
+		auto dynamicBindings = {dynamicUniformLayoutBinding};
+		auto samplerBindings = {samplerLayoutBinding};
 
 		m_context->vkGlobalDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(globalBindings, m_context);
 		m_context->vkDynamicDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(dynamicBindings, m_context);
@@ -346,7 +345,7 @@ namespace BetterThanNothing
 		samplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		samplerPoolSize.descriptorCount = 1000; // TODO: adjust based on expected number of textures
 
-		std::vector poolSizes = { globalPoolSize, dynamicPoolSize, samplerPoolSize };
+		std::vector poolSizes = {globalPoolSize, dynamicPoolSize, samplerPoolSize};
 
 		m_context->vkDescriptorPool = std::make_unique<VulkanDescriptorPool>(poolSizes, m_context);
 
@@ -357,7 +356,8 @@ namespace BetterThanNothing
 	{
 		m_context->vkGlobalDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
 
-		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++) {
+		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
+		{
 			m_context->vkGlobalDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkGlobalDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo globalInfo{};
@@ -382,12 +382,12 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan global descriptor sets: ok (count: {})", m_context->vkGlobalDescriptorSets.size());
 	}
 
-
 	void Renderer::CreateDynamicDescriptorSets()
 	{
 		m_context->vkDynamicDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
 
-		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++) {
+		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
+		{
 			m_context->vkDynamicDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkDynamicDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo dynamicInfo{};
@@ -421,14 +421,15 @@ namespace BetterThanNothing
 		std::vector<const ShaderGpuData*> shaderModules;
 		shaderModules.reserve(params.shadersInfos.size());
 
-		for (auto&[shaderPath, shaderType] : params.shadersInfos) {
-			const std::string fullShaderPath = m_context->vkSettings.shadersFolderPath + shaderPath;
+		for (auto& [shaderPath, shaderType] : params.shadersInfos)
+		{
+			const std::string	 fullShaderPath = m_context->vkSettings.shadersFolderPath + shaderPath;
 			const ShaderGpuData* shaderGpuData = renderCache->GetOrCreateShaderGpuData({shaderType, fullShaderPath});
 			shaderModules.push_back(shaderGpuData);
 		}
 
 		VertexInputDescription vertexInputDescription{};
-		vertexInputDescription.bindings = { GetVertexBindingDescription() };
+		vertexInputDescription.bindings = {GetVertexBindingDescription()};
 		vertexInputDescription.attributes = GetVertexAttributeDescriptions();
 
 		m_context->vkPipeline = std::make_unique<VulkanPipeline>(params, vertexInputDescription, shaderModules, m_context);

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanInstance::VulkanInstance(VulkanContext* context): m_context(context)
+	VulkanInstance::VulkanInstance(VulkanContext* context) : m_context(context)
 	{
 		bool validationLayersEnabled = context->vkSettings.enableValidationLayers;
 		bool validationLayersAvailable = CheckValidationLayerSupport();
@@ -65,7 +65,8 @@ namespace BetterThanNothing
 		}
 
 		// Create instance
-		if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS) {
+		if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS)
+		{
 			throw std::runtime_error("failed to create instance!");
 		}
 
@@ -83,11 +84,12 @@ namespace BetterThanNothing
 	std::vector<const char*> VulkanInstance::GetRequiredExtensions() const noexcept
 	{
 		std::uint32_t glfwExtensionCount = 0;
-		const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+		const char**  glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
 		std::vector extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-		if (m_context->vkSettings.enableValidationLayers) {
+		if (m_context->vkSettings.enableValidationLayers)
+		{
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
 
@@ -105,23 +107,22 @@ namespace BetterThanNothing
 		const auto validationLayers = m_context->vkSettings.validationLayers;
 
 		return std::ranges::any_of(availableLayers, [validationLayers](const VkLayerProperties& layerProperties) {
-			return std::ranges::any_of(validationLayers, [&layerProperties](const char* layerName) {
-				return layerProperties.layerName == std::string_view(layerName);
-			});
+			return std::ranges::any_of(validationLayers, [&layerProperties](const char* layerName) { return layerProperties.layerName == std::string_view(layerName); });
 		});
 	}
 
-	VKAPI_ATTR VkBool32 VKAPI_CALL VulkanInstance::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-																	VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
-																	void* userData) noexcept
+	VKAPI_ATTR VkBool32 VKAPI_CALL VulkanInstance::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+																 void* userData) noexcept
 	{
-		(void) messageType;
-		(void) userData;
+		(void)messageType;
+		(void)userData;
 
-		if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+		if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+		{
 			Logger::Log<ERROR>("validation layer: {}", callbackData->pMessage);
 		}
-		else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+		else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+		{
 			Logger::Log<WARNING>("validation layer: {}", callbackData->pMessage);
 		}
 
@@ -150,7 +151,8 @@ namespace BetterThanNothing
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		PopulateDebugMessengerCreateInfo(&createInfo);
 
-		if (CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
+		if (CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS)
+		{
 			throw std::runtime_error("failed to set up debug messenger!");
 		}
 
@@ -165,15 +167,15 @@ namespace BetterThanNothing
 		if (!m_context->vkSettings.enableValidationLayers)
 			return;
 
-		if (m_debugMessenger != VK_NULL_HANDLE) {
+		if (m_debugMessenger != VK_NULL_HANDLE)
+		{
 			DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
 		}
 	}
 
-	VkResult VulkanInstance::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-															const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* debugMessenger) noexcept
+	VkResult VulkanInstance::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* debugMessenger) noexcept
 	{
-		auto function = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+		auto function = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
 		if (function == nullptr)
 			return VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -181,12 +183,12 @@ namespace BetterThanNothing
 		return function(instance, createInfo, allocator, debugMessenger);
 	}
 
-	void VulkanInstance::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-														 const VkAllocationCallbacks* allocator) noexcept
+	void VulkanInstance::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* allocator) noexcept
 	{
-		auto function = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+		auto function = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
 
-		if (function != nullptr) {
+		if (function != nullptr)
+		{
 			function(instance, debugMessenger, allocator);
 		}
 	}
@@ -198,5 +200,3 @@ namespace BetterThanNothing
 		return m_instance;
 	}
 }
-
-

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -24,7 +24,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanSwapChain::VulkanSwapChain(VulkanContext* context): m_context(context)
+	VulkanSwapChain::VulkanSwapChain(VulkanContext* context) : m_context(context)
 	{
 		CreateSwapchain();
 		Logger::Log<SUCCESS>("Vulkan swap chain: ok");
@@ -40,8 +40,8 @@ namespace BetterThanNothing
 		auto swapChainSupport = m_context->vkDevice->GetSwapChainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR presentMode = ChoosePresentMode(swapChainSupport.presentModes);
-		VkExtent2D extent = ChooseExtent(swapChainSupport.capabilities);
+		VkPresentModeKHR   presentMode = ChoosePresentMode(swapChainSupport.presentModes);
+		VkExtent2D		   extent = ChooseExtent(swapChainSupport.capabilities);
 
 		std::uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 
@@ -59,13 +59,16 @@ namespace BetterThanNothing
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 		QueueFamilyIndices indices = m_context->vkDevice->GetQueueFamilies();
-		std::uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+		std::uint32_t	   queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
-		if (indices.graphicsFamily != indices.presentFamily) {
+		if (indices.graphicsFamily != indices.presentFamily)
+		{
 			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 			createInfo.queueFamilyIndexCount = 2;
 			createInfo.pQueueFamilyIndices = queueFamilyIndices;
-		} else {
+		}
+		else
+		{
 			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		}
 
@@ -119,7 +122,7 @@ namespace BetterThanNothing
 			const auto imageView = m_imageViews.at(i)->Handle();
 			const auto renderPass = m_context->vkRenderPass->Handle();
 
-			const std::array attachments = { colorImageView, depthImageView, imageView};
+			const std::array attachments = {colorImageView, depthImageView, imageView};
 
 			VkFramebufferCreateInfo createInfo{};
 			createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -157,9 +160,9 @@ namespace BetterThanNothing
 		m_depthImage = std::make_unique<VulkanImage>(m_context, &imageInfo);
 		m_depthImageView = std::make_unique<VulkanImageView>(m_context, m_depthImage->Handle(), m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-		VulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) {
-			commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
-		}, m_context);
+		VulkanCommandBuffer::SingleTimeCommands(
+			[&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) { commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1); },
+			m_context);
 	}
 
 	void VulkanSwapChain::CreateColorResources()
@@ -262,7 +265,7 @@ namespace BetterThanNothing
 
 	VkFormat VulkanSwapChain::ChooseDepthFormat(const std::vector<VkFormat>& candidates)
 	{
-		return  m_context->vkDevice->FindSupportedFormat(candidates, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		return m_context->vkDevice->FindSupportedFormat(candidates, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 	}
 
 	VkFormat VulkanSwapChain::GetImageFormat() const

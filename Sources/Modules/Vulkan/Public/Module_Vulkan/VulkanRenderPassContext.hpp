@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -37,25 +37,11 @@ namespace BetterThanNothing
 		void BindVertexBuffers(std::uint32_t firstBinding, std::uint32_t bindingCount, const VkBuffer* buffers, const VkDeviceSize* offsets) const;
 		void BindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) const;
 
-		void BindDescriptorSets(
-			VkPipelineLayout layout,
-			std::uint32_t firstSet,
-			std::uint32_t descriptorSetCount,
-			const VkDescriptorSet* descriptorSets,
-			std::uint32_t dynamicOffsetCount = 0,
-			const std::uint32_t* dynamicOffsets = nullptr
-		) const;
+		void BindDescriptorSets(VkPipelineLayout layout, std::uint32_t firstSet, std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, std::uint32_t dynamicOffsetCount = 0,
+								const std::uint32_t* dynamicOffsets = nullptr) const;
 
-		void BindDescriptorSets(
-			VkPipelineBindPoint pipelineBindPoint,
-			VkPipelineLayout layout,
-			std::uint32_t firstSet,
-			std::uint32_t descriptorSetCount,
-			const VkDescriptorSet* descriptorSets,
-			std::uint32_t dynamicOffsetCount = 0,
-			const std::uint32_t* dynamicOffsets = nullptr
-		) const;
-
+		void BindDescriptorSets(VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, std::uint32_t firstSet, std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, std::uint32_t dynamicOffsetCount = 0,
+								const std::uint32_t* dynamicOffsets = nullptr) const;
 
 		void Draw(std::uint32_t vertexCount, std::uint32_t instanceCount, std::uint32_t firstVertex, std::uint32_t firstInstance) const;
 		void DrawIndexed(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::int32_t vertexOffset, std::uint32_t firstInstance) const;

@@ -30,14 +30,14 @@ namespace BetterThanNothing
 	struct RenderListItem
 	{
 		MeshGpuData*	meshGpuData;
-		TextureGpuData*	textureGpuData;
+		TextureGpuData* textureGpuData;
 		glm::mat4		transform;
 	};
 
 	class RenderList
 	{
 	public:
-		explicit RenderList(RenderCache* renderCache): m_renderCache(renderCache) {}
+		explicit RenderList(RenderCache* renderCache) : m_renderCache(renderCache) {}
 		~RenderList() = default;
 
 		void Submit(const ModelData* model, const glm::mat4& transform, const std::string& texturePath);
@@ -51,10 +51,10 @@ namespace BetterThanNothing
 		void Clear();
 
 		[[nodiscard]] std::uint32_t Size() const;
-		[[nodiscard]] bool IsEmpty() const;
+		[[nodiscard]] bool			IsEmpty() const;
 
 	private:
-		RenderCache* 				m_renderCache;
-		std::vector<RenderListItem>	m_list;
+		RenderCache*				m_renderCache;
+		std::vector<RenderListItem> m_list;
 	};
 }

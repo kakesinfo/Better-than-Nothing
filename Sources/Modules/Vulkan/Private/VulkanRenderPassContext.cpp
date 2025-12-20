@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -21,10 +21,7 @@
 namespace BetterThanNothing
 {
 
-	VulkanRenderPassContext::VulkanRenderPassContext(VkCommandBuffer commandBuffer)
-		: m_commandBuffer(commandBuffer)
-	{
-	}
+	VulkanRenderPassContext::VulkanRenderPassContext(VkCommandBuffer commandBuffer) : m_commandBuffer(commandBuffer) {}
 
 	void VulkanRenderPassContext::SetViewport(const VkViewport* viewports, std::uint32_t firstViewport, std::uint32_t viewportCount) const
 	{
@@ -51,11 +48,15 @@ namespace BetterThanNothing
 		vkCmdBindIndexBuffer(m_commandBuffer, buffer, offset, indexType);
 	}
 
-	void VulkanRenderPassContext::BindDescriptorSets(const VkPipelineLayout layout, const std::uint32_t firstSet, const std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, const std::uint32_t dynamicOffsetCount, const std::uint32_t* dynamicOffsets) const {
+	void VulkanRenderPassContext::BindDescriptorSets(const VkPipelineLayout layout, const std::uint32_t firstSet, const std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, const std::uint32_t dynamicOffsetCount,
+													 const std::uint32_t* dynamicOffsets) const
+	{
 		BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet, descriptorSetCount, descriptorSets, dynamicOffsetCount, dynamicOffsets);
 	}
 
-	void VulkanRenderPassContext::BindDescriptorSets(const VkPipelineBindPoint pipelineBindPoint, const VkPipelineLayout layout, const std::uint32_t firstSet, const std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, std::uint32_t dynamicOffsetCount, const std::uint32_t* dynamicOffsets) const {
+	void VulkanRenderPassContext::BindDescriptorSets(const VkPipelineBindPoint pipelineBindPoint, const VkPipelineLayout layout, const std::uint32_t firstSet, const std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets,
+													 std::uint32_t dynamicOffsetCount, const std::uint32_t* dynamicOffsets) const
+	{
 		vkCmdBindDescriptorSets(m_commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, descriptorSets, dynamicOffsetCount, dynamicOffsets);
 	}
 
