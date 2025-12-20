@@ -38,18 +38,18 @@ namespace BetterThanNothing
 		explicit RenderCache(VulkanContext* context);
 		~RenderCache();
 
-		MeshGpuData* GetOrCreateMeshGpuData(const MeshData* mesh);
+		MeshGpuData*	GetOrCreateMeshGpuData(const MeshData* mesh);
 		TextureGpuData* GetOrCreateTextureGpuData(const TextureData& textureData);
-		ShaderGpuData* GetOrCreateShaderGpuData(const ShaderData& shaderData);
+		ShaderGpuData*	GetOrCreateShaderGpuData(const ShaderData& shaderData);
 
 	private:
 		std::unordered_map<std::uint64_t, std::unique_ptr<MeshGpuData>>		m_meshCache;
-		std::unordered_map<std::uint64_t, std::unique_ptr<MaterialGpuData>>	m_materialCache;
+		std::unordered_map<std::uint64_t, std::unique_ptr<MaterialGpuData>> m_materialCache;
 		std::unordered_map<std::string, std::unique_ptr<TextureGpuData>>	m_textureCache;
 		std::unordered_map<std::string, std::unique_ptr<ShaderGpuData>>		m_shaderCache;
 
-		VulkanContext* m_context;
+		VulkanContext*				   m_context;
 		std::unique_ptr<TextureLoader> m_textureLoader;
-		std::unique_ptr<ShaderLoader> m_shaderLoader;
+		std::unique_ptr<ShaderLoader>  m_shaderLoader;
 	};
 } // BetterThanNothing

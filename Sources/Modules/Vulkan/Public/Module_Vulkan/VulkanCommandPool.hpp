@@ -38,6 +38,6 @@ namespace BetterThanNothing
 
 	private:
 		VulkanContext* m_context = nullptr;
-		VkCommandPool m_commandPool = VK_NULL_HANDLE;
+		VkCommandPool  m_commandPool = VK_NULL_HANDLE;
 	};
 }

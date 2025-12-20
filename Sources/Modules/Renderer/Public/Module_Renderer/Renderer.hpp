@@ -63,21 +63,21 @@ namespace BetterThanNothing
 
 		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const DirectionalLightData& directionalLight, std::uint32_t imageIndex) const;
 
-		static VkVertexInputBindingDescription GetVertexBindingDescription();
+		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
 		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();
 
 	public:
-		void AddPipeline(const std::function<void(VulkanPipelineBuilder*)> &callback, RenderCache* renderCache);
+		void AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback, RenderCache* renderCache);
 
 	private:
 		VulkanContext* m_context = nullptr;
 
 		std::vector<VulkanFrame> m_frames;
-		std::uint32_t m_currentFrame = 0;
+		std::uint32_t			 m_currentFrame = 0;
 
 		std::unique_ptr<BufferManager> m_bufferFactory = nullptr;
 
-		std::unique_ptr<GlobalUniformProvider> m_globalUniformProvider = nullptr;
+		std::unique_ptr<GlobalUniformProvider>	m_globalUniformProvider = nullptr;
 		std::unique_ptr<DynamicUniformProvider> m_dynamicUniformProvider = nullptr;
 	};
 }

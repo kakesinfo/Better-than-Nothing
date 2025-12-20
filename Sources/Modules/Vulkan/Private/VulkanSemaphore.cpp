@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanSemaphore::VulkanSemaphore(VulkanContext* context): m_context(context)
+	VulkanSemaphore::VulkanSemaphore(VulkanContext* context) : m_context(context)
 	{
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;

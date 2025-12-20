@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -34,10 +34,13 @@ namespace BetterThanNothing
 		VulkanImageView& operator=(VulkanImageView&& other) = delete;
 
 		[[nodiscard]]
-		VkImageView Handle() const { return m_imageView; }
+		VkImageView Handle() const
+		{
+			return m_imageView;
+		}
 
 	private:
 		VulkanContext* m_context = nullptr;
-		VkImageView m_imageView = VK_NULL_HANDLE;
+		VkImageView	   m_imageView = VK_NULL_HANDLE;
 	};
 };

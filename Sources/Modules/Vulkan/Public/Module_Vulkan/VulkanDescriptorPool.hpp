@@ -25,16 +25,16 @@ namespace BetterThanNothing
 	class VulkanDescriptorPool
 	{
 	public:
-		explicit VulkanDescriptorPool(const std::vector<VkDescriptorPoolSize> &poolSizes, VulkanContext *context);
+		explicit VulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, VulkanContext* context);
 
 		~VulkanDescriptorPool();
 
 		VkDescriptorPool Handle() const;
 
 	private:
-		static std::uint32_t CalculateMaxSets(const std::vector<VkDescriptorPoolSize> &poolSizes);
+		static std::uint32_t CalculateMaxSets(const std::vector<VkDescriptorPoolSize>& poolSizes);
 
-		VulkanContext*		m_context = nullptr;
-		VkDescriptorPool	m_descriptorPool = VK_NULL_HANDLE;
+		VulkanContext*	 m_context = nullptr;
+		VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
 	};
 } // BetterThanNothing

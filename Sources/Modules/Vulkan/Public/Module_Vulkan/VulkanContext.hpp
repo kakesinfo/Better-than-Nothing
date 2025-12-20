@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -42,42 +42,42 @@ namespace BetterThanNothing
 		{
 			std::uint32_t apiVersion = VK_API_VERSION_1_3;
 
-			bool enableValidationLayers = false;
-			std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
-			std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME };
+			bool					 enableValidationLayers = false;
+			std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+			std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME};
 
 			std::string shadersFolderPath;
 
 			union
 			{
-				EVulkanBufferingMode	bufferingMode = EVulkanBufferingMode::None;
-				std::uint32_t			maxFramesInFlight;
+				EVulkanBufferingMode bufferingMode = EVulkanBufferingMode::None;
+				std::uint32_t		 maxFramesInFlight;
 			};
 
 			bool enableVSync = true;
 		} vkSettings;
 
-		std::unique_ptr<VulkanInstance>					vkInstance;
-		std::unique_ptr<VulkanSurface>						vkSurface;
-		std::unique_ptr<VulkanDevice>						vkDevice;
-		std::unique_ptr<VulkanQueue>						vkGraphicsQueue;
-		std::unique_ptr<VulkanQueue>						vkPresentQueue;
-		std::unique_ptr<VulkanMemoryAllocator>				vkMemoryAllocator;
-		std::unique_ptr<VulkanSwapChain>					vkSwapChain;
-		std::unique_ptr<VulkanRenderPass>					vkRenderPass;
-		std::unique_ptr<VulkanCommandPool>					vkCommandPool;
-		std::unique_ptr<VulkanPipeline>					vkPipeline;
+		std::unique_ptr<VulkanInstance>		   vkInstance;
+		std::unique_ptr<VulkanSurface>		   vkSurface;
+		std::unique_ptr<VulkanDevice>		   vkDevice;
+		std::unique_ptr<VulkanQueue>		   vkGraphicsQueue;
+		std::unique_ptr<VulkanQueue>		   vkPresentQueue;
+		std::unique_ptr<VulkanMemoryAllocator> vkMemoryAllocator;
+		std::unique_ptr<VulkanSwapChain>	   vkSwapChain;
+		std::unique_ptr<VulkanRenderPass>	   vkRenderPass;
+		std::unique_ptr<VulkanCommandPool>	   vkCommandPool;
+		std::unique_ptr<VulkanPipeline>		   vkPipeline;
 
-		std::vector<VulkanFrame>							vkFrames;
+		std::vector<VulkanFrame> vkFrames;
 
-		std::unique_ptr<VulkanDescriptorPool>				vkDescriptorPool;
+		std::unique_ptr<VulkanDescriptorPool> vkDescriptorPool;
 
-		std::unique_ptr<VulkanDescriptorSetLayout>			vkGlobalDescriptorSetLayout;
-		std::vector<std::unique_ptr<VulkanDescriptorSet>>	vkGlobalDescriptorSets;
+		std::unique_ptr<VulkanDescriptorSetLayout>		  vkGlobalDescriptorSetLayout;
+		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkGlobalDescriptorSets;
 
-		std::unique_ptr<VulkanDescriptorSetLayout>			vkDynamicDescriptorSetLayout;
-		std::vector<std::unique_ptr<VulkanDescriptorSet>>	vkDynamicDescriptorSets;
+		std::unique_ptr<VulkanDescriptorSetLayout>		  vkDynamicDescriptorSetLayout;
+		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkDynamicDescriptorSets;
 
-		std::unique_ptr<VulkanDescriptorSetLayout>			vkSamplerDescriptorSetLayout;
+		std::unique_ptr<VulkanDescriptorSetLayout> vkSamplerDescriptorSetLayout;
 	};
 };

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include <string>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <cstdint>
+#include <string>
 
 namespace BetterThanNothing
 {
@@ -30,17 +30,16 @@ namespace BetterThanNothing
 	class WindowBuilderError final : public std::runtime_error
 	{
 	public:
-		explicit WindowBuilderError(const std::string& message)
-			: std::runtime_error(message) {}
+		explicit WindowBuilderError(const std::string& message) : std::runtime_error(message) {}
 	};
 
 	struct WindowBuilderParams
 	{
-		std::string title;
+		std::string	  title;
 		std::uint32_t width = 0;
 		std::uint32_t height = 0;
-		bool fullscreen = false;
-		bool resizable = false;
+		bool		  fullscreen = false;
+		bool		  resizable = false;
 	};
 
 	class WindowBuilder

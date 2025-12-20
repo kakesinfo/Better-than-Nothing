@@ -24,7 +24,7 @@ namespace BetterThanNothing
 {
 	struct ShaderData
 	{
-		EVulkanShaderType	type;
-		std::string			filePath;
+		EVulkanShaderType type;
+		std::string		  filePath;
 	};
 };

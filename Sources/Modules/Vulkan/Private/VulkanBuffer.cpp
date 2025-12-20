@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,13 +20,8 @@
 
 namespace BetterThanNothing
 {
-	VulkanBuffer::VulkanBuffer(
-		VulkanContext*					context,
-		const VkDeviceSize				size,
-		const VkBufferUsageFlags		usage,
-		const VmaMemoryUsage			memoryUsage,
-		const VmaAllocationCreateFlags	vmaFlags
-	) : m_context(context), m_size(size) {
+	VulkanBuffer::VulkanBuffer(VulkanContext* context, const VkDeviceSize size, const VkBufferUsageFlags usage, const VmaMemoryUsage memoryUsage, const VmaAllocationCreateFlags vmaFlags) : m_context(context), m_size(size)
+	{
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = size;

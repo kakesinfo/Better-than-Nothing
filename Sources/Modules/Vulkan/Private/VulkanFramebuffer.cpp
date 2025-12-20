@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanFramebuffer::VulkanFramebuffer(VkFramebufferCreateInfo* createInfo, VulkanContext* context)
-		: m_context(context)
+	VulkanFramebuffer::VulkanFramebuffer(VkFramebufferCreateInfo* createInfo, VulkanContext* context) : m_context(context)
 	{
 		auto device = context->vkDevice->Handle();
 

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanDevice::VulkanDevice(VulkanContext* context): m_context(context)
+	VulkanDevice::VulkanDevice(VulkanContext* context) : m_context(context)
 	{
 		PickPhysicalDevice();
 		GetPhysicalDeviceProperties();
@@ -65,13 +65,32 @@ namespace BetterThanNothing
 		m_maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 
 		VkSampleCountFlags counts = deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
-		if (counts & VK_SAMPLE_COUNT_64_BIT) { m_maxMsaaSamples = VK_SAMPLE_COUNT_64_BIT; }
-		else if (counts & VK_SAMPLE_COUNT_32_BIT) { m_maxMsaaSamples = VK_SAMPLE_COUNT_32_BIT; }
-		else if (counts & VK_SAMPLE_COUNT_16_BIT) { m_maxMsaaSamples = VK_SAMPLE_COUNT_16_BIT; }
-		else if (counts & VK_SAMPLE_COUNT_8_BIT)  { m_maxMsaaSamples = VK_SAMPLE_COUNT_8_BIT; }
-		else if (counts & VK_SAMPLE_COUNT_4_BIT)  { m_maxMsaaSamples = VK_SAMPLE_COUNT_4_BIT; }
-		else if (counts & VK_SAMPLE_COUNT_2_BIT)  { m_maxMsaaSamples = VK_SAMPLE_COUNT_2_BIT; }
-		else m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
+		if (counts & VK_SAMPLE_COUNT_64_BIT)
+		{
+			m_maxMsaaSamples = VK_SAMPLE_COUNT_64_BIT;
+		}
+		else if (counts & VK_SAMPLE_COUNT_32_BIT)
+		{
+			m_maxMsaaSamples = VK_SAMPLE_COUNT_32_BIT;
+		}
+		else if (counts & VK_SAMPLE_COUNT_16_BIT)
+		{
+			m_maxMsaaSamples = VK_SAMPLE_COUNT_16_BIT;
+		}
+		else if (counts & VK_SAMPLE_COUNT_8_BIT)
+		{
+			m_maxMsaaSamples = VK_SAMPLE_COUNT_8_BIT;
+		}
+		else if (counts & VK_SAMPLE_COUNT_4_BIT)
+		{
+			m_maxMsaaSamples = VK_SAMPLE_COUNT_4_BIT;
+		}
+		else if (counts & VK_SAMPLE_COUNT_2_BIT)
+		{
+			m_maxMsaaSamples = VK_SAMPLE_COUNT_2_BIT;
+		}
+		else
+			m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
 	}
 
 	void VulkanDevice::CreateLogicalDevice()
@@ -81,10 +100,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("Failed to find queue families");
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set uniqueQueueFamilies = {
-			indices.graphicsFamily.value(),
-			indices.presentFamily.value()
-		};
+		std::set							 uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
 		float queuePriority = 1.0f;
 
@@ -112,11 +128,14 @@ namespace BetterThanNothing
 		createInfo.enabledExtensionCount = static_cast<std::uint32_t>(deviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-		if (m_context->vkSettings.enableValidationLayers) {
+		if (m_context->vkSettings.enableValidationLayers)
+		{
 			const auto& validationLayers = m_context->vkSettings.validationLayers;
 			createInfo.enabledLayerCount = static_cast<std::uint32_t>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
-		} else {
+		}
+		else
+		{
 			createInfo.enabledLayerCount = 0;
 		}
 
@@ -171,7 +190,7 @@ namespace BetterThanNothing
 
 		const bool queueFamiliesSupported = queueFamilyIndices.IsComplete();
 		const bool extensionsSupported = CheckDeviceExtensionSupport(device);
-		bool swapchainSupported = false;
+		bool	   swapchainSupported = false;
 
 		if (extensionsSupported)
 		{
@@ -197,7 +216,8 @@ namespace BetterThanNothing
 
 		std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
-		for (const auto& extension : availableExtensions) {
+		for (const auto& extension : availableExtensions)
+		{
 			requiredExtensions.erase(extension.extensionName);
 		}
 
@@ -283,12 +303,18 @@ namespace BetterThanNothing
 
 	std::string VulkanDevice::GetVendorById(const std::uint32_t vendorId) const
 	{
-		if (vendorId == 0x1002) return "AMD";
-		if (vendorId == 0x1010) return "ImgTec";
-		if (vendorId == 0x10DE) return "NVIDIA";
-		if (vendorId == 0x13B5) return "ARM";
-		if (vendorId == 0x5143) return "Qualcomm";
-		if (vendorId == 0x8086) return "INTEL";
+		if (vendorId == 0x1002)
+			return "AMD";
+		if (vendorId == 0x1010)
+			return "ImgTec";
+		if (vendorId == 0x10DE)
+			return "NVIDIA";
+		if (vendorId == 0x13B5)
+			return "ARM";
+		if (vendorId == 0x5143)
+			return "Qualcomm";
+		if (vendorId == 0x8086)
+			return "INTEL";
 		return "Unknown";
 	}
 

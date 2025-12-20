@@ -25,8 +25,7 @@ namespace BetterThanNothing
 	class VulkanDescriptorSetLayoutError final : public std::runtime_error
 	{
 	public:
-		explicit VulkanDescriptorSetLayoutError(const std::string& message)
-			: std::runtime_error(message) {}
+		explicit VulkanDescriptorSetLayoutError(const std::string& message) : std::runtime_error(message) {}
 	};
 
 	class VulkanDescriptorSetLayout
@@ -44,7 +43,7 @@ namespace BetterThanNothing
 		VkDescriptorSetLayout Handle() const;
 
 	private:
-		VulkanContext* m_context;
+		VulkanContext*		  m_context;
 		VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
 	};
 }

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanCommandPool::VulkanCommandPool(VulkanContext* context): m_context(context)
+	VulkanCommandPool::VulkanCommandPool(VulkanContext* context) : m_context(context)
 	{
 		auto device = m_context->vkDevice->Handle();
 		auto queueFamilyIndices = m_context->vkDevice->GetQueueFamilies();

@@ -29,6 +29,8 @@ BraceWrapping:
     SplitEmptyNamespace: false
     BeforeLambdaBody: false
 
+AccessModifierOffset: -4
+
 BinPackArguments: true
 
 AlignAfterOpenBracket: Align

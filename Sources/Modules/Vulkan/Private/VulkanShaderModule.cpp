@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,10 +20,10 @@
 
 namespace BetterThanNothing
 {
-	VulkanShaderModule::VulkanShaderModule(VulkanContext* vkContext, const VkShaderModuleCreateInfo* createInfo)
-		: m_vkContext(vkContext)
+	VulkanShaderModule::VulkanShaderModule(VulkanContext* vkContext, const VkShaderModuleCreateInfo* createInfo) : m_vkContext(vkContext)
 	{
-		if (vkCreateShaderModule(m_vkContext->vkDevice->Handle(), createInfo, nullptr, &m_shaderModule) != VK_SUCCESS) {
+		if (vkCreateShaderModule(m_vkContext->vkDevice->Handle(), createInfo, nullptr, &m_shaderModule) != VK_SUCCESS)
+		{
 			throw std::runtime_error("failed to create shader module!");
 		}
 	}

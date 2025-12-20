@@ -32,7 +32,7 @@ namespace BetterThanNothing
 		VkDescriptorSet Handle() const;
 
 	private:
-		VulkanContext* m_context = nullptr;
+		VulkanContext*	m_context = nullptr;
 		VkDescriptorSet m_descriptorSet = VK_NULL_HANDLE;
 	};
 }

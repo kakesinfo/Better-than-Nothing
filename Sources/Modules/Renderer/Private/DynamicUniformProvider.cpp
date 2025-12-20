@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,21 +20,21 @@
 #include "Module_Renderer/Data/DynamicUniformData.hpp"
 
 #include <Module_Base/Logger.hpp>
+#include <Module_Vulkan/Manager/BufferManager.hpp>
 #include <Module_Vulkan/VulkanContext.hpp>
 #include <Module_Vulkan/VulkanDevice.hpp>
-#include <Module_Vulkan/Manager/BufferManager.hpp>
 
 namespace BetterThanNothing
 {
-	DynamicUniformProvider::DynamicUniformProvider(VulkanContext* context, const std::uint32_t maxObjects) : m_context(context),
-		m_maxObjects(maxObjects)
+	DynamicUniformProvider::DynamicUniformProvider(VulkanContext* context, const std::uint32_t maxObjects) : m_context(context), m_maxObjects(maxObjects)
 	{
 		m_uniformAlignment = CalculateUniformAlignment();
 
 		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
 		const std::uint32_t bufferSize = m_maxObjects * m_uniformAlignment;
 
-		for (std::uint32_t i = 0; i < count; i++) {
+		for (std::uint32_t i = 0; i < count; i++)
+		{
 			m_context->vkFrames[i].dynamicUniformBuffer = BufferManager::CreateUniformBuffer(bufferSize);
 		}
 

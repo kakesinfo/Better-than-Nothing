@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -24,7 +24,7 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanIndexBuffer: public VulkanBuffer
+	class VulkanIndexBuffer : public VulkanBuffer
 	{
 	public:
 		VulkanIndexBuffer(VulkanContext* context, VkDeviceSize size, const void* data = nullptr);

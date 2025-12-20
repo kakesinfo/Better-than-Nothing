@@ -37,16 +37,13 @@ namespace BetterThanNothing
 			return reinterpret_cast<T*>(base + objectIndex * m_uniformAlignment);
 		}
 
-		std::uint32_t GetOffset(const std::uint32_t objectIndex) const
-		{
-			return objectIndex * m_uniformAlignment;
-		}
+		std::uint32_t GetOffset(const std::uint32_t objectIndex) const { return objectIndex * m_uniformAlignment; }
 
 	private:
 		std::uint32_t CalculateUniformAlignment() const;
 
 		VulkanContext* m_context = nullptr;
-		std::uint32_t m_maxObjects;
-		std::uint32_t m_uniformAlignment;
+		std::uint32_t  m_maxObjects;
+		std::uint32_t  m_uniformAlignment;
 	};
 };

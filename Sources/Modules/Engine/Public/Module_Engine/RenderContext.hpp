@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -26,11 +26,12 @@ namespace BetterThanNothing
 	class RenderContext
 	{
 	public:
-		explicit RenderContext(RenderList* renderList): m_renderList(renderList) {}
+		explicit RenderContext(RenderList* renderList) : m_renderList(renderList) {}
 		~RenderContext() = default;
 
 		void Submit(const ModelData* model, const glm::mat4& transform) const;
 		void Submit(const ModelData* model, const glm::mat4& transform, const std::string& texturePath) const;
+
 	private:
 		RenderList* m_renderList;
 	};

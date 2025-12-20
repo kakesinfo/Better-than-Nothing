@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -19,8 +19,8 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
-#include <string>
 #include <cstdint>
+#include <string>
 
 namespace BetterThanNothing
 {
@@ -39,7 +39,7 @@ namespace BetterThanNothing
 
 	public:
 		Window() = default;
-		explicit Window(std::string  title, std::uint32_t width, std::uint32_t height, bool fullscreen = false, bool resizable = false);
+		explicit Window(std::string title, std::uint32_t width, std::uint32_t height, bool fullscreen = false, bool resizable = false);
 		~Window();
 
 		[[nodiscard]]

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -26,7 +26,8 @@ namespace BetterThanNothing
 	class UpdateContext;
 	class RenderContext;
 
-	class Runtime final : public IEngineApplication {
+	class Runtime final : public IEngineApplication
+	{
 	public:
 		Runtime() = default;
 
@@ -37,9 +38,9 @@ namespace BetterThanNothing
 
 	private:
 		ModelData m_sponzaModel;
-		glm::mat4 m_sponzaTransform;
+		glm::mat4 m_sponzaTransform{};
 
 		ModelData m_robotModel;
-		glm::mat4 m_robotTransform;
+		glm::mat4 m_robotTransform{};
 	};
 };

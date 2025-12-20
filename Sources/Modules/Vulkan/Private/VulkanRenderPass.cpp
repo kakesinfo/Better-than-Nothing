@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanRenderPass::VulkanRenderPass(VulkanContext* context): m_context(context)
+	VulkanRenderPass::VulkanRenderPass(VulkanContext* context) : m_context(context)
 	{
 		auto msaaSamples = context->vkDevice->GetMaxMsaaSamples();
 
@@ -71,8 +71,8 @@ namespace BetterThanNothing
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentRef; // Fragment shader out color should always be at location 0
-		subpass.pDepthStencilAttachment = &depthAttachmentRef; // Depth attachment
+		subpass.pColorAttachments = &colorAttachmentRef;		  // Fragment shader out color should always be at location 0
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;	  // Depth attachment
 		subpass.pResolveAttachments = &colorAttachmentResolveRef; // Resolve attachment for MSAA
 
 		VkSubpassDependency dependency{};

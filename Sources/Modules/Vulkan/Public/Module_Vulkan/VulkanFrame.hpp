@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -27,11 +27,11 @@ namespace BetterThanNothing
 
 	struct VulkanFrame
 	{
-		std::unique_ptr<VulkanCommandBuffer>	commandBuffer;
-		std::unique_ptr<VulkanUniformBuffer>	globalUniformBuffer;
-		std::unique_ptr<VulkanUniformBuffer>	dynamicUniformBuffer;
-		std::unique_ptr<VulkanSemaphore>		imageAvailableSemaphore;
-		std::unique_ptr<VulkanSemaphore>		renderFinishedSemaphore;
-		std::unique_ptr<VulkanFence>			inFlightFence;
+		std::unique_ptr<VulkanCommandBuffer> commandBuffer;
+		std::unique_ptr<VulkanUniformBuffer> globalUniformBuffer;
+		std::unique_ptr<VulkanUniformBuffer> dynamicUniformBuffer;
+		std::unique_ptr<VulkanSemaphore>	 imageAvailableSemaphore;
+		std::unique_ptr<VulkanSemaphore>	 renderFinishedSemaphore;
+		std::unique_ptr<VulkanFence>		 inFlightFence;
 	};
 };

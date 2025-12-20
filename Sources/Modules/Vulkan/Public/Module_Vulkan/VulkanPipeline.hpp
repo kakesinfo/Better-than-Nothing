@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -28,13 +28,13 @@ namespace BetterThanNothing
 
 	struct VulkanPipelineShaderInfo
 	{
-		std::string shaderPath;
+		std::string		  shaderPath;
 		EVulkanShaderType shaderType;
 	};
 
 	struct VulkanPipelineParams
 	{
-		const char* name;
+		const char*							  name;
 		std::vector<VulkanPipelineShaderInfo> shadersInfos;
 	};
 
@@ -53,11 +53,11 @@ namespace BetterThanNothing
 	private:
 		static VkShaderStageFlagBits GetShaderStageTypeByShaderType(EVulkanShaderType type);
 
-		VulkanContext* m_context = nullptr;
+		VulkanContext*		 m_context = nullptr;
 		VulkanPipelineParams m_params;
 
 		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
-		VkPipeline m_pipeline = VK_NULL_HANDLE;
+		VkPipeline		 m_pipeline = VK_NULL_HANDLE;
 	};
 
 	class VulkanPipelineBuilder final

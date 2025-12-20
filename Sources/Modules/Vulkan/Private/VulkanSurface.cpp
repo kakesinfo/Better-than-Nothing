@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanSurface::VulkanSurface(VulkanContext* context): m_context(context)
+	VulkanSurface::VulkanSurface(VulkanContext* context) : m_context(context)
 	{
 		auto& window = WindowManager::GetWindow();
 
@@ -47,5 +47,3 @@ namespace BetterThanNothing
 		return m_surface;
 	}
 };
-
-

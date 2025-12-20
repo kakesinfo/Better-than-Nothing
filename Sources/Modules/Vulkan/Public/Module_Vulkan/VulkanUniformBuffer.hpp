@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -30,12 +30,14 @@ namespace BetterThanNothing
 		VulkanUniformBuffer(VulkanContext* context, VkDeviceSize size);
 
 		template <typename T>
-		void Update(const T& uboData) {
+		void Update(const T& uboData)
+		{
 			Write(&uboData, sizeof(T));
 		}
 
 		template <typename T>
-		void Update(const T& uboData, const std::uint32_t offset, const std::uint32_t alignment) {
+		void Update(const T& uboData, const std::uint32_t offset, const std::uint32_t alignment)
+		{
 			Write(&uboData, sizeof(T), offset, alignment);
 		}
 

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanFence::VulkanFence(VulkanContext* context): m_context(context)
+	VulkanFence::VulkanFence(VulkanContext* context) : m_context(context)
 	{
 		VkFenceCreateInfo fenceInfo{};
 		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;

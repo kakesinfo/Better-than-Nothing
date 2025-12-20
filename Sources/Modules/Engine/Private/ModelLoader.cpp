@@ -29,15 +29,15 @@
 
 namespace BetterThanNothing
 {
-	ModelData ModelLoader::Load(const std::string &path, bool preTransform)
+	ModelData ModelLoader::Load(const std::string& path, bool preTransform)
 	{
 		ModelData model;
 
-		tinyobj::attrib_t attrib;
-		std::vector<tinyobj::shape_t> shapes;
+		tinyobj::attrib_t				 attrib;
+		std::vector<tinyobj::shape_t>	 shapes;
 		std::vector<tinyobj::material_t> materials;
-		std::string warn;
-		std::string err;
+		std::string						 warn;
+		std::string						 err;
 
 		std::filesystem::path parentFolder = std::filesystem::path(path).parent_path();
 
@@ -55,24 +55,29 @@ namespace BetterThanNothing
 		float maxY = std::numeric_limits<float>::lowest();
 		float maxZ = std::numeric_limits<float>::lowest();
 
-		for (const auto& shape : shapes) {
-			MeshData mesh;
+		for (const auto& shape : shapes)
+		{
+			MeshData														  mesh;
 			std::unordered_map<VertexData, uint32_t, VertexHash, VertexEqual> uniqueVertices{};
 
-			if (!shape.mesh.material_ids.empty()) {
+			if (!shape.mesh.material_ids.empty())
+			{
 				mesh.materialId = shape.mesh.material_ids[0];
 
-				if (mesh.materialId >= 0 && mesh.materialId < materials.size()) {
+				if (mesh.materialId >= 0 && mesh.materialId < materials.size())
+				{
 					const auto& material = materials[mesh.materialId];
 
-					if (!material.diffuse_texname.empty()) {
+					if (!material.diffuse_texname.empty())
+					{
 						std::filesystem::path texPath = parentFolder / material.diffuse_texname;
 						mesh.texturePath = texPath.string();
 					}
 				}
 			}
 
-			for (const auto& index : shape.mesh.indices) {
+			for (const auto& index : shape.mesh.indices)
+			{
 				VertexData vertex{};
 
 				float rawX = attrib.vertices[3 * index.vertex_index + 0];
@@ -85,46 +90,57 @@ namespace BetterThanNothing
 				//   - X remains the same.
 				//   - Y becomes Z (up axis).
 				//   - Z becomes -Y (to maintain right-handedness).
-				if (preTransform) {
-					vertex.position = { rawX, rawY, rawZ};
-				} else {
-					vertex.position = { rawX, rawZ, -rawY};
+				if (preTransform)
+				{
+					vertex.position = {rawX, rawY, rawZ};
+				}
+				else
+				{
+					vertex.position = {rawX, rawZ, -rawY};
 				}
 
 				vertex.color = {1.0f, 1.0f, 1.0f};
 
-				if (!attrib.texcoords.empty() && index.texcoord_index != -1) {
-					vertex.uv = {
-						attrib.texcoords[2 * index.texcoord_index + 0],
-						1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-					};
-				} else {
+				if (!attrib.texcoords.empty() && index.texcoord_index != -1)
+				{
+					vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
+				}
+				else
+				{
 					vertex.uv = {0.0f, 0.0f};
 				}
 
 				// Load normals
-				if (!attrib.normals.empty() && index.normal_index != -1) {
+				if (!attrib.normals.empty() && index.normal_index != -1)
+				{
 					auto xNormal = attrib.normals[3 * index.normal_index + 0];
 					auto yNormal = attrib.normals[3 * index.normal_index + 1];
 					auto zNormal = attrib.normals[3 * index.normal_index + 2];
 
-					vertex.normal = preTransform
-						? glm::vec3{xNormal, yNormal, zNormal}
-						: glm::vec3{xNormal, zNormal, -yNormal};
-				} else {
+					vertex.normal = preTransform ? glm::vec3{xNormal, yNormal, zNormal} : glm::vec3{xNormal, zNormal, -yNormal};
+				}
+				else
+				{
 					vertex.normal = {0.0f, 0.0f, 0.0f};
 				}
 
-				if (!uniqueVertices.contains(vertex)) {
+				if (!uniqueVertices.contains(vertex))
+				{
 					uniqueVertices[vertex] = static_cast<uint32_t>(mesh.vertices.size());
 
-					if (vertex.position.x < minX) minX = vertex.position.x;
-					if (vertex.position.y < minY) minY = vertex.position.y;
-					if (vertex.position.z < minZ) minZ = vertex.position.z;
+					if (vertex.position.x < minX)
+						minX = vertex.position.x;
+					if (vertex.position.y < minY)
+						minY = vertex.position.y;
+					if (vertex.position.z < minZ)
+						minZ = vertex.position.z;
 
-					if (vertex.position.x > maxX) maxX = vertex.position.x;
-					if (vertex.position.y > maxY) maxY = vertex.position.y;
-					if (vertex.position.z > maxZ) maxZ = vertex.position.z;
+					if (vertex.position.x > maxX)
+						maxX = vertex.position.x;
+					if (vertex.position.y > maxY)
+						maxY = vertex.position.y;
+					if (vertex.position.z > maxZ)
+						maxZ = vertex.position.z;
 
 					mesh.vertices.push_back(vertex);
 				}
@@ -138,8 +154,10 @@ namespace BetterThanNothing
 		float centerY = (minY + maxY) / 2.0f;
 		float centerZ = (minZ + maxZ) / 2.0f;
 
-		for (auto& mesh : model.meshes) {
-			for (auto& vert : mesh.vertices) {
+		for (auto& mesh : model.meshes)
+		{
+			for (auto& vert : mesh.vertices)
+			{
 				vert.position.x -= centerX;
 				vert.position.y -= centerY;
 				vert.position.z -= centerZ;

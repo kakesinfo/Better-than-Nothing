@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -27,17 +27,14 @@ namespace BetterThanNothing
 		std::optional<std::uint32_t> graphicsFamily;
 		std::optional<std::uint32_t> presentFamily;
 
-		bool IsComplete() const
-		{
-			return graphicsFamily.has_value() && presentFamily.has_value();
-		}
+		bool IsComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
 	};
 
 	struct SwapChainSupportDetails
 	{
-		VkSurfaceCapabilitiesKHR capabilities;
+		VkSurfaceCapabilitiesKHR		capabilities;
 		std::vector<VkSurfaceFormatKHR> formats;
-		std::vector<VkPresentModeKHR> presentModes;
+		std::vector<VkPresentModeKHR>	presentModes;
 	};
 
 	class VulkanDevice
@@ -86,10 +83,10 @@ namespace BetterThanNothing
 		void WaitIdle() const;
 
 	private:
-		VkPhysicalDevice FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const;
-		bool IsDeviceSuitable(VkPhysicalDevice device) const noexcept;
-		bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept;
-		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device) const;
+		VkPhysicalDevice		FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const;
+		bool					IsDeviceSuitable(VkPhysicalDevice device) const noexcept;
+		bool					CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept;
+		QueueFamilyIndices		FindQueueFamilies(VkPhysicalDevice device) const;
 		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 
 		[[nodiscard]]
@@ -102,13 +99,13 @@ namespace BetterThanNothing
 		VulkanContext* m_context = nullptr;
 
 		VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
-		VkDevice m_logicalDevice = VK_NULL_HANDLE;
+		VkDevice		 m_logicalDevice = VK_NULL_HANDLE;
 
-		std::string m_vendorName;
-		std::string m_deviceName;
-		std::string m_apiVersion;
-		std::uint32_t m_minUniformBufferOffsetAlignment = 0;
+		std::string			  m_vendorName;
+		std::string			  m_deviceName;
+		std::string			  m_apiVersion;
+		std::uint32_t		  m_minUniformBufferOffsetAlignment = 0;
 		VkSampleCountFlagBits m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
-		float m_maxAnisotropy = 1;
+		float				  m_maxAnisotropy = 1;
 	};
 };

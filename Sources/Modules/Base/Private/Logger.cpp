@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -18,15 +18,15 @@
 
 #include "Module_Base/Logger.hpp"
 
-#include <iostream>
 #include <chrono>
 #include <filesystem>
 #include <iomanip>
+#include <iostream>
 
 namespace BetterThanNothing
 {
 	std::uint8_t Logger::s_currentLogLevel = INFO;
-	std::mutex Logger::s_printMutex {};
+	std::mutex	 Logger::s_printMutex{};
 
 	std::string Logger::GetTimestamp()
 	{
@@ -51,9 +51,7 @@ namespace BetterThanNothing
 	std::string Logger::SanitizeMessage(std::string_view message)
 	{
 		std::string s(message);
-		std::erase_if(s, [](const unsigned char c) {
-			return std::iscntrl(c);
-		});
+		std::erase_if(s, [](const unsigned char c) { return std::iscntrl(c); });
 		return s;
 	}
 
@@ -69,18 +67,29 @@ namespace BetterThanNothing
 
 		switch (level)
 		{
-			case DEBUG:		levelStr = "[DEBUG]",	levelColor = "\033[90m"; break;
-			case INFO:		levelStr = "[INFO]",	levelColor = "\033[36m"; break;
-			case SUCCESS:	levelStr = "[SUCCESS]",	levelColor = "\033[32m"; break;
-			case WARNING:	levelStr = "[WARNING]",	levelColor = "\033[33m"; break;
-			case ERROR:		levelStr = "[ERROR]",	levelColor = "\033[31m"; break;
-			default: break;
+			case DEBUG:
+				levelStr = "[DEBUG]", levelColor = "\033[90m";
+				break;
+			case INFO:
+				levelStr = "[INFO]", levelColor = "\033[36m";
+				break;
+			case SUCCESS:
+				levelStr = "[SUCCESS]", levelColor = "\033[32m";
+				break;
+			case WARNING:
+				levelStr = "[WARNING]", levelColor = "\033[33m";
+				break;
+			case ERROR:
+				levelStr = "[ERROR]", levelColor = "\033[31m";
+				break;
+			default:
+				break;
 		}
 
-		std::cout << "\033[37m"	<< std::left << GetTimestamp() << " ";
-		std::cout << levelColor	<< std::left << std::setw(10) << levelStr;
-		std::cout << "\033[37m"	<< std::left << std::setw(35) << FormatSourceFile(location);
-		std::cout << "\033[0m"	<< std::left << SanitizeMessage(message);
+		std::cout << "\033[37m" << std::left << GetTimestamp() << " ";
+		std::cout << levelColor << std::left << std::setw(10) << levelStr;
+		std::cout << "\033[37m" << std::left << std::setw(35) << FormatSourceFile(location);
+		std::cout << "\033[0m" << std::left << SanitizeMessage(message);
 		std::cout << std::endl;
 	}
 }

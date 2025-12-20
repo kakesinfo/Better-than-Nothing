@@ -42,11 +42,11 @@ namespace BetterThanNothing
 		glm::vec3 GetPosition() const;
 
 	private:
-		float		m_fov;
-		float		m_nearPlane;
-		float		m_farPlane;
+		float m_fov;
+		float m_nearPlane;
+		float m_farPlane;
 
-		glm::vec3	m_position{};
-		glm::quat	m_orientation{};
+		glm::vec3 m_position{};
+		glm::quat m_orientation{};
 	};
 }

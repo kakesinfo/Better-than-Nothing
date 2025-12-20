@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -19,10 +19,10 @@
 #include "Module_Renderer/Resources/ShaderLoader.hpp"
 #include "Module_Renderer/Data/ShaderData.hpp"
 
-#include "Module_Vulkan/VulkanContext.hpp"
-#include "Module_Vulkan/EVulkanShaderType.hpp"
-#include "Module_Vulkan/VulkanShaderModule.hpp"
 #include "Module_Vulkan/Data/ShaderGpuData.hpp"
+#include "Module_Vulkan/EVulkanShaderType.hpp"
+#include "Module_Vulkan/VulkanContext.hpp"
+#include "Module_Vulkan/VulkanShaderModule.hpp"
 
 #include <glslang/Include/glslang_c_interface.h>
 #include <glslang/Include/glslang_c_shader_types.h>
@@ -33,7 +33,7 @@
 
 namespace BetterThanNothing
 {
-	ShaderLoader::ShaderLoader(VulkanContext *context) : ResourceLoader(context)
+	ShaderLoader::ShaderLoader(VulkanContext* context) : ResourceLoader(context)
 	{
 		glslang_initialize_process();
 	}
@@ -48,8 +48,8 @@ namespace BetterThanNothing
 		auto shaderGpuData = std::make_unique<ShaderGpuData>();
 
 		const std::vector<char> shaderSource = ReadFile(input.filePath);
-		const glslang_stage_t shaderStage = GetShaderStage(input.type);
-		glslang_program_t* shaderProgram = GetShaderProgram(shaderSource, shaderStage);
+		const glslang_stage_t	shaderStage = GetShaderStage(input.type);
+		glslang_program_t*		shaderProgram = GetShaderProgram(shaderSource, shaderStage);
 
 		shaderGpuData->type = input.type;
 		shaderGpuData->shaderModule = GetShaderModule(shaderProgram);
@@ -59,7 +59,7 @@ namespace BetterThanNothing
 		return shaderGpuData;
 	}
 
-	std::vector<char> ShaderLoader::ReadFile(const std::string &filename)
+	std::vector<char> ShaderLoader::ReadFile(const std::string& filename)
 	{
 		std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
@@ -73,7 +73,8 @@ namespace BetterThanNothing
 		const std::streamsize fileSize = endPos;
 
 		std::vector<char> buffer(fileSize + 1);
-		if (fileSize > 0) {
+		if (fileSize > 0)
+		{
 			file.seekg(0, std::ios::beg);
 			file.read(buffer.data(), fileSize);
 			if (!file)
@@ -88,7 +89,8 @@ namespace BetterThanNothing
 
 	glslang_stage_t ShaderLoader::GetShaderStage(const EVulkanShaderType type)
 	{
-		switch (type) {
+		switch (type)
+		{
 			case EVulkanShaderType::Vertex:
 				return GLSLANG_STAGE_VERTEX;
 			case EVulkanShaderType::Fragment:
@@ -98,43 +100,38 @@ namespace BetterThanNothing
 		}
 	}
 
-	glslang_program_t *ShaderLoader::GetShaderProgram(const std::vector<char> &source, glslang_stage_t stage)
+	glslang_program_t* ShaderLoader::GetShaderProgram(const std::vector<char>& source, glslang_stage_t stage)
 	{
-		const glslang_input_t input = {
-			.language = GLSLANG_SOURCE_GLSL,
-			.stage = stage,
-			.client = GLSLANG_CLIENT_VULKAN,
-			.client_version = GLSLANG_TARGET_VULKAN_1_3,
-			.target_language = GLSLANG_TARGET_SPV,
-			.target_language_version = GLSLANG_TARGET_SPV_1_0,
-			.code = source.data(),
-			.default_version = 450,
-			.default_profile = GLSLANG_NO_PROFILE,
-			.force_default_version_and_profile = false,
-			.forward_compatible = false,
-			.messages = GLSLANG_MSG_DEFAULT_BIT,
-			.resource = glslang_default_resource(),
-			.callbacks = {},
-			.callbacks_ctx = nullptr
-		};
+		const glslang_input_t input = {.language = GLSLANG_SOURCE_GLSL,
+									   .stage = stage,
+									   .client = GLSLANG_CLIENT_VULKAN,
+									   .client_version = GLSLANG_TARGET_VULKAN_1_3,
+									   .target_language = GLSLANG_TARGET_SPV,
+									   .target_language_version = GLSLANG_TARGET_SPV_1_0,
+									   .code = source.data(),
+									   .default_version = 450,
+									   .default_profile = GLSLANG_NO_PROFILE,
+									   .force_default_version_and_profile = false,
+									   .forward_compatible = false,
+									   .messages = GLSLANG_MSG_DEFAULT_BIT,
+									   .resource = glslang_default_resource(),
+									   .callbacks = {},
+									   .callbacks_ctx = nullptr};
 
 		using shader_ptr_t = std::unique_ptr<glslang_shader_t, decltype(&glslang_shader_delete)>;
 		const shader_ptr_t shader(glslang_shader_create(&input), glslang_shader_delete);
 
 		if (!glslang_shader_preprocess(shader.get(), &input))
-			throw std::runtime_error(
-				"failed to preprocess shader: " + std::string(glslang_shader_get_info_log(shader.get())));
+			throw std::runtime_error("failed to preprocess shader: " + std::string(glslang_shader_get_info_log(shader.get())));
 
 		if (!glslang_shader_parse(shader.get(), &input))
-			throw std::runtime_error(
-				"failed to parse shader: " + std::string(glslang_shader_get_info_log(shader.get())));
+			throw std::runtime_error("failed to parse shader: " + std::string(glslang_shader_get_info_log(shader.get())));
 
 		glslang_program_t* program = glslang_program_create();
 		glslang_program_add_shader(program, shader.get());
 
 		if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT))
-			throw std::runtime_error(
-				"failed to compile shader program: " + std::string(glslang_program_get_info_log(program)));
+			throw std::runtime_error("failed to compile shader program: " + std::string(glslang_program_get_info_log(program)));
 
 		glslang_program_SPIRV_generate(program, input.stage);
 
@@ -171,7 +168,7 @@ namespace BetterThanNothing
 		return program;
 	}
 
-	std::unique_ptr<VulkanShaderModule> ShaderLoader::GetShaderModule(glslang_program_t *program) const
+	std::unique_ptr<VulkanShaderModule> ShaderLoader::GetShaderModule(glslang_program_t* program) const
 	{
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

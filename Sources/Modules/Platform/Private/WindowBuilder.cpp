@@ -64,12 +64,6 @@ namespace BetterThanNothing
 		if (m_windowParams.width == 0 || m_windowParams.height == 0)
 			throw WindowBuilderError("CWindow size is not set");
 
-		return std::make_unique<Window>(
-			m_windowParams.title,
-			m_windowParams.width,
-			m_windowParams.height,
-			m_windowParams.fullscreen,
-			m_windowParams.resizable
-		);
+		return std::make_unique<Window>(m_windowParams.title, m_windowParams.width, m_windowParams.height, m_windowParams.fullscreen, m_windowParams.resizable);
 	}
 }

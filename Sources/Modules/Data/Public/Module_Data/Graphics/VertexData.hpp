@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -36,8 +36,10 @@ namespace BetterThanNothing
 		glm::vec3 normal;
 	};
 
-	struct VertexHash {
-		std::size_t operator()(VertexData const& v) const noexcept {
+	struct VertexHash
+	{
+		std::size_t operator()(VertexData const& v) const noexcept
+		{
 			auto h = std::hash<float>{}(v.position.x);
 			h = h * 31 + std::hash<float>{}(v.position.y);
 			h = h * 31 + std::hash<float>{}(v.position.z);
@@ -53,12 +55,8 @@ namespace BetterThanNothing
 		}
 	};
 
-	struct VertexEqual {
-		bool operator()(VertexData const& a, VertexData const& b) const noexcept {
-			return a.position == b.position
-				&& a.color == b.color
-				&& a.uv == b.uv
-				&& a.normal == b.normal;
-		}
+	struct VertexEqual
+	{
+		bool operator()(VertexData const& a, VertexData const& b) const noexcept { return a.position == b.position && a.color == b.color && a.uv == b.uv && a.normal == b.normal; }
 	};
 }
