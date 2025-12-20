@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanImageView::VulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, std::uint32_t mipLevels): context(context)
+	VulkanImageView::VulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, std::uint32_t mipLevels): m_context(context)
 	{
 
 		VkImageViewCreateInfo createInfo{};
@@ -40,12 +40,12 @@ namespace BetterThanNothing
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 
-		if (vkCreateImageView(context->vkDevice->Handle(), &createInfo, nullptr, &m_imageView) != VK_SUCCESS)
+		if (vkCreateImageView(m_context->vkDevice->Handle(), &createInfo, nullptr, &m_imageView) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create image view");
 	}
 
 	VulkanImageView::~VulkanImageView()
 	{
-		vkDestroyImageView(context->vkDevice->Handle(), m_imageView, nullptr);
+		vkDestroyImageView(m_context->vkDevice->Handle(), m_imageView, nullptr);
 	}
 };

@@ -28,7 +28,7 @@ namespace BetterThanNothing
 		bool validationLayersAvailable = CheckValidationLayerSupport();
 
 		if (validationLayersEnabled && !validationLayersAvailable)
-			Logger::Log<Warning>("Validation layers are enabled but not available on this system");
+			Logger::Log<WARNING>("Validation layers are enabled but not available on this system");
 
 		validationLayersEnabled &= validationLayersAvailable;
 		context->vkSettings.enableValidationLayers = validationLayersEnabled;
@@ -69,7 +69,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to create instance!");
 		}
 
-		Logger::Log<Success>("Vulkan instance: ok");
+		Logger::Log<SUCCESS>("Vulkan instance: ok");
 
 		CreateDebugMessenger();
 	}
@@ -119,10 +119,10 @@ namespace BetterThanNothing
 		(void) userData;
 
 		if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-			Logger::Log<Error>("validation layer: {}", callbackData->pMessage);
+			Logger::Log<ERROR>("validation layer: {}", callbackData->pMessage);
 		}
 		else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-			Logger::Log<Warning>("validation layer: {}", callbackData->pMessage);
+			Logger::Log<WARNING>("validation layer: {}", callbackData->pMessage);
 		}
 
 		return VK_FALSE;
@@ -154,7 +154,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to set up debug messenger!");
 		}
 
-		Logger::Log<Success>("Debug Messenger: ok");
+		Logger::Log<SUCCESS>("Debug Messenger: ok");
 	}
 
 	void VulkanInstance::DestroyDebugMessenger()

@@ -38,7 +38,7 @@ namespace BetterThanNothing
 			m_context->vkFrames[i].dynamicUniformBuffer = BufferManager::CreateUniformBuffer(bufferSize);
 		}
 
-		Logger::Log<Success>("Vulkan dynamic uniforms: ok (count: {})", count);
+		Logger::Log<SUCCESS>("Vulkan dynamic uniforms: ok (count: {})", count);
 	}
 
 	std::uint32_t DynamicUniformProvider::CalculateUniformAlignment() const

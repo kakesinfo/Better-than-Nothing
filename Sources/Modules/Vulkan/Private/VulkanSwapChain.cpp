@@ -27,7 +27,7 @@ namespace BetterThanNothing
 	VulkanSwapChain::VulkanSwapChain(VulkanContext* context): m_context(context)
 	{
 		CreateSwapchain();
-		Logger::Log<Success>("Vulkan swap chain: ok");
+		Logger::Log<SUCCESS>("Vulkan swap chain: ok");
 	}
 
 	VulkanSwapChain::~VulkanSwapChain()

@@ -18,8 +18,15 @@
 
 #pragma once
 
+#include <string>
+#include <memory>
+#include <stdexcept>
+#include <cstdint>
+
 namespace BetterThanNothing
 {
+	class Window;
+
 	class WindowBuilderError final : public std::runtime_error
 	{
 	public:
@@ -38,60 +45,18 @@ namespace BetterThanNothing
 
 	class WindowBuilder
 	{
+	public:
+		explicit WindowBuilder(const std::string& title, std::uint32_t width, std::uint32_t height);
+		~WindowBuilder();
+
+		WindowBuilder& SetTitle(const std::string& title);
+		WindowBuilder& SetSize(std::uint32_t width, std::uint32_t height);
+		WindowBuilder& SeFullscreen(bool fullscreen);
+		WindowBuilder& SetResizable(bool resizable);
+
+		std::unique_ptr<Window> Build() const;
+
 	private:
 		WindowBuilderParams m_windowParams{};
-
-	public:
-		WindowBuilder() = default;
-		WindowBuilder(const std::string& title, std::uint32_t width, std::uint32_t height)
-		{
-			m_windowParams.title = title;
-			m_windowParams.width = width;
-			m_windowParams.height = height;
-		}
-
-		~WindowBuilder() = default;
-
-		WindowBuilder& SetTitle(const std::string& title)
-		{
-			m_windowParams.title = title;
-			return *this;
-		}
-
-		WindowBuilder& SetSize(std::uint32_t width, std::uint32_t height)
-		{
-			m_windowParams.width = width;
-			m_windowParams.height = height;
-			return *this;
-		}
-
-		WindowBuilder& SeFullscreen(bool fullscreen)
-		{
-			m_windowParams.fullscreen = fullscreen;
-			return *this;
-		}
-
-		WindowBuilder& SetResizable(bool resizable)
-		{
-			m_windowParams.resizable = resizable;
-			return *this;
-		}
-
-		std::unique_ptr<CWindow> Build() const
-		{
-			if (m_windowParams.title.empty())
-				throw WindowBuilderError("CWindow title is not set");
-
-			if (m_windowParams.width == 0 || m_windowParams.height == 0)
-				throw WindowBuilderError("CWindow size is not set");
-
-			return std::make_unique<CWindow>(
-				m_windowParams.title,
-				m_windowParams.width,
-				m_windowParams.height,
-				m_windowParams.fullscreen,
-				m_windowParams.resizable
-			);
-		}
 	};
-} // BetterThanNothing
+}

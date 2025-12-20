@@ -18,6 +18,10 @@
 
 #pragma once
 
+#include <GLFW/glfw3.h>
+#include <string>
+#include <cstdint>
+
 namespace BetterThanNothing
 {
 	class Window

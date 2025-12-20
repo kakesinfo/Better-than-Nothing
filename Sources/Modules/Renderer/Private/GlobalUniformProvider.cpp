@@ -32,6 +32,6 @@ namespace BetterThanNothing
 			m_context->vkFrames[i].globalUniformBuffer = BufferManager::CreateUniformBuffer<GlobalUniformData>();
 		}
 
-		Logger::Log<Success>("Vulkan global uniforms: ok (count: {})", count);
+		Logger::Log<SUCCESS>("Vulkan global uniforms: ok (count: {})", count);
 	}
 }

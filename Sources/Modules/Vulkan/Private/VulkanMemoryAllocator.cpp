@@ -39,7 +39,7 @@ namespace BetterThanNothing
 		if (vmaCreateAllocator(&allocatorCreateInfo, &m_allocator) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create Vulkan allocator");
 
-		Logger::Log<Success>("Vulkan memory allocator (Vma): ok");
+		Logger::Log<SUCCESS>("Vulkan memory allocator (Vma): ok");
 	}
 
 	VkResult VulkanMemoryAllocator::CreateBuffer(

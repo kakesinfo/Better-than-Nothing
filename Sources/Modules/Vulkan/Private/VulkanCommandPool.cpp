@@ -35,7 +35,7 @@ namespace BetterThanNothing
 		if (vkCreateCommandPool(device, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS)
 			throw std::runtime_error("failed to create command pool!");
 
-		Logger::Log<Success>("Vulkan command pool: ok");
+		Logger::Log<SUCCESS>("Vulkan command pool: ok");
 	}
 
 	VulkanCommandPool::~VulkanCommandPool()

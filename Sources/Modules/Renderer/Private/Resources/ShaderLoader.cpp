@@ -139,7 +139,7 @@ namespace BetterThanNothing
 		glslang_program_SPIRV_generate(program, input.stage);
 
 		if (glslang_program_SPIRV_get_messages(program))
-			Logger::Log<Warning>("Shader warnings: {}", glslang_program_SPIRV_get_messages(program));
+			Logger::Log<WARNING>("Shader warnings: {}", glslang_program_SPIRV_get_messages(program));
 
 		// {
 		// 	const uint32 *spirvCode = glslang_program_SPIRV_get_ptr(program);

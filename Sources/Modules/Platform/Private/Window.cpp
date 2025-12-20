@@ -19,6 +19,8 @@
 #include "Module_Platform/Window.hpp"
 #include "Module_Platform/Manager/InputManager.hpp"
 
+#include <stdexcept>
+
 namespace BetterThanNothing
 {
 	Window::Window(std::string  title, const std::uint32_t width, const std::uint32_t height, const bool fullscreen, const bool resizable)
