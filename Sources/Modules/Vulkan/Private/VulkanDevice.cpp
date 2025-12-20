@@ -50,7 +50,7 @@ namespace BetterThanNothing
 
 		m_physicalDevice = FindSuitableDevice(devices);
 
-		Logger::Log<Success>("Vulkan physical device: ok");
+		Logger::Log<SUCCESS>("Vulkan physical device: ok");
 	}
 
 	void VulkanDevice::GetPhysicalDeviceProperties()
@@ -123,19 +123,19 @@ namespace BetterThanNothing
 		if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_logicalDevice) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create logical device");
 
-		Logger::Log<Success>("Vulkan logical device: ok");
+		Logger::Log<SUCCESS>("Vulkan logical device: ok");
 
 		VkQueue graphicsQueue;
 		vkGetDeviceQueue(m_logicalDevice, indices.graphicsFamily.value(), 0, &graphicsQueue);
 		m_context->vkGraphicsQueue = std::make_unique<VulkanQueue>(graphicsQueue);
 
-		Logger::Log<Success>("Vulkan graphics queue: ok");
+		Logger::Log<SUCCESS>("Vulkan graphics queue: ok");
 
 		VkQueue presentQueue;
 		vkGetDeviceQueue(m_logicalDevice, indices.presentFamily.value(), 0, &presentQueue);
 		m_context->vkPresentQueue = std::make_unique<VulkanQueue>(presentQueue);
 
-		Logger::Log<Success>("Vulkan presentation queue: ok");
+		Logger::Log<SUCCESS>("Vulkan presentation queue: ok");
 	}
 
 	VkFormat VulkanDevice::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const

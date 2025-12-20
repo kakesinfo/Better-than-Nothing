@@ -18,13 +18,15 @@
 
 #pragma once
 
+#include <string>
+
 namespace BetterThanNothing
 {
 	struct ModelData;
 
-	class ModelLoader_interim
+	class ModelLoader
 	{
 	public:
-		static ModelData LoadModel(const std::string& path, bool preTransform = true);
+		static ModelData Load(const std::string& path, bool preTransform = true);
 	};
 }

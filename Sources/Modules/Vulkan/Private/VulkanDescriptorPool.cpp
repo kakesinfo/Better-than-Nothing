@@ -26,7 +26,7 @@ namespace BetterThanNothing
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = s_calculateMaxSets(poolSizes); // 3 sets per frame (global + dynamic + sampler)
+		poolInfo.maxSets = CalculateMaxSets(poolSizes); // 3 sets per frame (global + dynamic + sampler)
 
 		if (vkCreateDescriptorPool(context->vkDevice->Handle(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create descriptor pool");
@@ -43,7 +43,7 @@ namespace BetterThanNothing
 		return m_descriptorPool;
 	}
 
-	std::uint32_t VulkanDescriptorPool::s_calculateMaxSets(const std::vector<VkDescriptorPoolSize> &poolSizes)
+	std::uint32_t VulkanDescriptorPool::CalculateMaxSets(const std::vector<VkDescriptorPoolSize> &poolSizes)
 	{
 		std::uint32_t totalDescriptors = 0;
 		for (const auto &[_, descriptorCount]: poolSizes)

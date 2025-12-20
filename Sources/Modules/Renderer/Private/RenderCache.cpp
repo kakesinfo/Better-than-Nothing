@@ -59,7 +59,7 @@ namespace BetterThanNothing
 
 		m_meshCache[mesh->id] = std::move(meshGpuData);
 
-		Logger::Log<Debug>("MeshGpuData created and cached for Mesh ID: {}", mesh->id);
+		Logger::Log<DEBUG>("MeshGpuData created and cached for Mesh ID: {}", mesh->id);
 
 		return m_meshCache[mesh->id].get();
 	}
@@ -72,7 +72,7 @@ namespace BetterThanNothing
 
 		m_textureCache[textureData.filePath] = m_textureLoader->Load(textureData.filePath);
 
-		Logger::Log<Debug>("TextureGpuData created and cached for Texture: {}", textureData.filePath);
+		Logger::Log<DEBUG>("TextureGpuData created and cached for Texture: {}", textureData.filePath);
 
 		return m_textureCache[textureData.filePath].get();
 	}
@@ -85,7 +85,7 @@ namespace BetterThanNothing
 
 		m_shaderCache[shaderData.filePath] = m_shaderLoader->Load(shaderData);
 
-		Logger::Log<Debug>("ShaderGpuData created and cached for Shader: {}", shaderData.filePath);
+		Logger::Log<DEBUG>("ShaderGpuData created and cached for Shader: {}", shaderData.filePath);
 
 		return m_shaderCache[shaderData.filePath].get();
 	}

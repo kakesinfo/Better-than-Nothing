@@ -21,7 +21,7 @@
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Data/Graphics/ModelData.hpp>
-#include <Module_Engine/ModelLoader_interim.hpp>
+#include <Module_Engine/ModelLoader.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
 #include <Module_Engine/EntryPoint.hpp>
@@ -30,10 +30,10 @@ namespace BetterThanNothing
 {
 	void Runtime::OnEnable()
 	{
-		m_sponzaModel = ModelLoader_interim::LoadModel("../../../Assets/Models/sponza/sponza.obj");
+		m_sponzaModel = ModelLoader::Load("../../../Assets/Models/sponza/sponza.obj");
 		m_sponzaTransform = glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
 
-		m_robotModel = ModelLoader_interim::LoadModel("../../../Assets/Models/robot/robot.obj");
+		m_robotModel = ModelLoader::Load("../../../Assets/Models/robot/robot.obj");
 		m_robotTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.5f, 0.0f));
 	}
 

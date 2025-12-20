@@ -37,7 +37,7 @@ namespace BetterThanNothing
 		VkImageView Handle() const { return m_imageView; }
 
 	private:
-		VulkanContext* context = nullptr;
+		VulkanContext* m_context = nullptr;
 		VkImageView m_imageView = VK_NULL_HANDLE;
 	};
 };

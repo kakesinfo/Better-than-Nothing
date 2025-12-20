@@ -97,7 +97,7 @@ namespace BetterThanNothing
 		if (vkCreateRenderPass(context->vkDevice->Handle(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create render pass");
 
-		Logger::Log<Success>("Vulkan render pass: ok");
+		Logger::Log<SUCCESS>("Vulkan render pass: ok");
 	}
 
 	VulkanRenderPass::~VulkanRenderPass()

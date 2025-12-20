@@ -41,9 +41,9 @@ namespace BetterThanNothing
 		std::unique_ptr<ShaderGpuData> Load(const ShaderData& input) override;
 
 	private:
-		static std::vector<char>				ReadFile(const std::string& filename);
-		static glslang_stage_t					GetShaderStage(EVulkanShaderType type);
-		static glslang_program_t*				GetShaderProgram(const std::vector<char>& source, glslang_stage_t stage);
+		static std::vector<char>			ReadFile(const std::string& filename);
+		static glslang_stage_t				GetShaderStage(EVulkanShaderType type);
+		static glslang_program_t*			GetShaderProgram(const std::vector<char>& source, glslang_stage_t stage);
 		std::unique_ptr<VulkanShaderModule>	GetShaderModule(glslang_program_t* program) const;
 	};
 }

@@ -32,7 +32,7 @@ namespace BetterThanNothing
 		if (glfwCreateWindowSurface(m_context->vkInstance->Handle(), window->Handle(), nullptr, &m_surface) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create window surface");
 
-		Logger::Log<Success>("Vulkan surface: ok");
+		Logger::Log<SUCCESS>("Vulkan surface: ok");
 	}
 
 	VulkanSurface::~VulkanSurface()

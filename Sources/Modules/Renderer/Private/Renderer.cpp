@@ -44,20 +44,20 @@ namespace BetterThanNothing
 	{
 		BufferManager::Initialize(m_context);
 
-		Logger::Log<Info>("Buffering mode: {}", m_context->vkSettings.maxFramesInFlight);
-		Logger::Log<Info>("VSync: {}", m_context->vkSettings.enableVSync ? "enabled" : "disabled");
+		Logger::Log<INFO>("Buffering mode: {}", m_context->vkSettings.maxFramesInFlight);
+		Logger::Log<INFO>("VSync: {}", m_context->vkSettings.enableVSync ? "enabled" : "disabled");
 
 		m_context->vkInstance = std::make_unique<VulkanInstance>(m_context);
 		m_context->vkSurface = std::make_unique<VulkanSurface>(m_context);
 		m_context->vkDevice = std::make_unique<VulkanDevice>(m_context);
 		m_context->vkMemoryAllocator = std::make_unique<VulkanMemoryAllocator>(m_context);
 
-		Logger::Log<Info>("Vendor: {}", m_context->vkDevice->GetVendorName());
-		Logger::Log<Info>("Device: {}", m_context->vkDevice->GetDeviceName());
-		Logger::Log<Info>("API Version: {}", m_context->vkDevice->GetApiVersion());
+		Logger::Log<INFO>("Vendor: {}", m_context->vkDevice->GetVendorName());
+		Logger::Log<INFO>("Device: {}", m_context->vkDevice->GetDeviceName());
+		Logger::Log<INFO>("API Version: {}", m_context->vkDevice->GetApiVersion());
 
-		Logger::Log<Info>("Anisotropy: {}x", m_context->vkDevice->GetMaxAnisotropy());
-		Logger::Log<Info>("Msaa: {}x", static_cast<std::uint32_t>(m_context->vkDevice->GetMaxMsaaSamples()));
+		Logger::Log<INFO>("Anisotropy: {}x", m_context->vkDevice->GetMaxAnisotropy());
+		Logger::Log<INFO>("Msaa: {}x", static_cast<std::uint32_t>(m_context->vkDevice->GetMaxMsaaSamples()));
 
 		m_context->vkCommandPool = std::make_unique<VulkanCommandPool>(m_context);
 
@@ -84,7 +84,7 @@ namespace BetterThanNothing
 		CreateCommandBuffers();
 		CreateSyncObjects();
 
-		Logger::Log<Success>("Renderer: initialized successfully");
+		Logger::Log<SUCCESS>("Renderer: initialized successfully");
 	}
 
 	Renderer::~Renderer()
@@ -278,7 +278,7 @@ namespace BetterThanNothing
 			m_context->vkFrames[i].commandBuffer = std::make_unique<VulkanCommandBuffer>(commandBuffer);
 		}
 
-		Logger::Log<Success>("Vulkan command buffers: ok (count: {})", count);
+		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
 	}
 
 	void Renderer::CreateSyncObjects()
@@ -293,7 +293,7 @@ namespace BetterThanNothing
 			frame.inFlightFence = std::make_unique<VulkanFence>(m_context);
 		}
 
-		Logger::Log<Success>("Vulkan sync objects: ok (count: {})", count);
+		Logger::Log<SUCCESS>("Vulkan sync objects: ok (count: {})", count);
 	}
 
 	void Renderer::CreateDescriptorSetLayout()
@@ -327,7 +327,7 @@ namespace BetterThanNothing
 		m_context->vkDynamicDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(dynamicBindings, m_context);
 		m_context->vkSamplerDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(samplerBindings, m_context);
 
-		Logger::Log<Success>("Vulkan descriptor set layout: ok");
+		Logger::Log<SUCCESS>("Vulkan descriptor set layout: ok");
 	}
 
 	void Renderer::CreateDescriptorPool()
@@ -350,7 +350,7 @@ namespace BetterThanNothing
 
 		m_context->vkDescriptorPool = std::make_unique<VulkanDescriptorPool>(poolSizes, m_context);
 
-		Logger::Log<Success>("Vulkan descriptor pool: ok");
+		Logger::Log<SUCCESS>("Vulkan descriptor pool: ok");
 	}
 
 	void Renderer::CreateGlobalDescriptorSets()
@@ -379,7 +379,7 @@ namespace BetterThanNothing
 			vkUpdateDescriptorSets(m_context->vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
 		}
 
-		Logger::Log<Success>("Vulkan global descriptor sets: ok (count: {})", m_context->vkGlobalDescriptorSets.size());
+		Logger::Log<SUCCESS>("Vulkan global descriptor sets: ok (count: {})", m_context->vkGlobalDescriptorSets.size());
 	}
 
 
@@ -408,7 +408,7 @@ namespace BetterThanNothing
 			vkUpdateDescriptorSets(m_context->vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
 		}
 
-		Logger::Log<Success>("Vulkan dynamic descriptor sets: ok (count: {})", m_context->vkDynamicDescriptorSets.size());
+		Logger::Log<SUCCESS>("Vulkan dynamic descriptor sets: ok (count: {})", m_context->vkDynamicDescriptorSets.size());
 	}
 
 	void Renderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback, RenderCache* renderCache)

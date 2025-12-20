@@ -20,16 +20,20 @@
 
 #include "Module_Renderer/Resources/ResourceLoader.hpp"
 
+#include <string>
+#include <memory>
+#include <cstdint>
+
 namespace BetterThanNothing
 {
 	struct TextureGpuData;
 	struct VulkanContext;
-	
+
 	class VulkanImage;
 	class VulkanImageView;
 	class VulkanSampler;
 	class VulkanDescriptorSet;
-	
+
 	class TextureLoader final : public ResourceLoader<std::string, TextureGpuData>
 	{
 	public:

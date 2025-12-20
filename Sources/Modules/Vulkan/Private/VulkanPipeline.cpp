@@ -145,7 +145,7 @@ namespace BetterThanNothing
 		if (vkCreatePipelineLayout(m_context->vkDevice->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create pipeline layout");
 
-		Logger::Log<Success>("Vulkan pipeline layout: ok");
+		Logger::Log<SUCCESS>("Vulkan pipeline layout: ok");
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -169,7 +169,7 @@ namespace BetterThanNothing
 		if (vkCreateGraphicsPipelines(m_context->vkDevice->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create graphics pipeline");
 
-		Logger::Log<Success>("Vulkan graphics pipeline: ok");
+		Logger::Log<SUCCESS>("Vulkan graphics pipeline: ok");
 	}
 
 	VulkanPipeline::~VulkanPipeline()

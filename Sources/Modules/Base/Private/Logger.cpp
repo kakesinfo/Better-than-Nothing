@@ -25,7 +25,7 @@
 
 namespace BetterThanNothing
 {
-	std::uint8_t Logger::s_currentLogLevel = Info;
+	std::uint8_t Logger::s_currentLogLevel = INFO;
 	std::mutex Logger::s_printMutex {};
 
 	std::string Logger::GetTimestamp()
@@ -69,11 +69,11 @@ namespace BetterThanNothing
 
 		switch (level)
 		{
-			case Debug:		levelStr = "[DEBUG]",	levelColor = "\033[90m"; break;
-			case Info:		levelStr = "[INFO]",	levelColor = "\033[36m"; break;
-			case Success:	levelStr = "[SUCCESS]",	levelColor = "\033[32m"; break;
-			case Warning:	levelStr = "[WARNING]",	levelColor = "\033[33m"; break;
-			case Error:		levelStr = "[ERROR]",	levelColor = "\033[31m"; break;
+			case DEBUG:		levelStr = "[DEBUG]",	levelColor = "\033[90m"; break;
+			case INFO:		levelStr = "[INFO]",	levelColor = "\033[36m"; break;
+			case SUCCESS:	levelStr = "[SUCCESS]",	levelColor = "\033[32m"; break;
+			case WARNING:	levelStr = "[WARNING]",	levelColor = "\033[33m"; break;
+			case ERROR:		levelStr = "[ERROR]",	levelColor = "\033[31m"; break;
 			default: break;
 		}
 

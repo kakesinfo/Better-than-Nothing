@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Engine/ModelLoader_interim.hpp"
+#include "Module_Engine/ModelLoader.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -24,9 +24,12 @@
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/ModelData.hpp>
 
+#include <filesystem>
+#include <unordered_map>
+
 namespace BetterThanNothing
 {
-	ModelData ModelLoader_interim::LoadModel(const std::string &path, bool preTransform)
+	ModelData ModelLoader::Load(const std::string &path, bool preTransform)
 	{
 		ModelData model;
 
@@ -38,11 +41,11 @@ namespace BetterThanNothing
 
 		std::filesystem::path parentFolder = std::filesystem::path(path).parent_path();
 
-		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), parentFolder.c_str()))
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), parentFolder.string().c_str()))
 			throw std::runtime_error(err);
 
 		if (!warn.empty())
-			Logger::Log<Warning>("TinyObjLoader warning: {}", warn);
+			Logger::Log<WARNING>("TinyObjLoader warning: {}", warn);
 
 		float minX = std::numeric_limits<float>::max();
 		float minY = std::numeric_limits<float>::max();

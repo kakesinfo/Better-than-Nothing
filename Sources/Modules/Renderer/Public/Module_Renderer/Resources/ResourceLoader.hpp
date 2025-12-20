@@ -24,14 +24,14 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	template <typename input_type, typename output_type>
+	template <typename InputType, typename OutputType>
 	class ResourceLoader
 	{
 	public:
 		explicit ResourceLoader(VulkanContext* context) : m_context(context) {}
 
 		virtual ~ResourceLoader() = default;
-		virtual std::unique_ptr<output_type> Load(const input_type& input) = 0;
+		virtual std::unique_ptr<OutputType> Load(const InputType& input) = 0;
 
 	protected:
 		VulkanContext* m_context;

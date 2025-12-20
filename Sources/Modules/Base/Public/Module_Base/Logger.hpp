@@ -26,11 +26,11 @@
 
 namespace BetterThanNothing
 {
-	static constexpr std::uint8_t Debug   = 0;
-	static constexpr std::uint8_t Info    = 1;
-	static constexpr std::uint8_t Success = 2;
-	static constexpr std::uint8_t Warning = 3;
-	static constexpr std::uint8_t Error   = 4;
+	static constexpr std::uint8_t DEBUG   = 0;
+	static constexpr std::uint8_t INFO    = 1;
+	static constexpr std::uint8_t SUCCESS = 2;
+	static constexpr std::uint8_t WARNING = 3;
+	static constexpr std::uint8_t ERROR   = 4;
 
 	struct LogFormat
 	{

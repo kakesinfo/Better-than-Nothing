@@ -32,9 +32,9 @@ namespace BetterThanNothing
 		VkDescriptorPool Handle() const;
 
 	private:
-		static std::uint32_t s_calculateMaxSets(const std::vector<VkDescriptorPoolSize> &poolSizes);
+		static std::uint32_t CalculateMaxSets(const std::vector<VkDescriptorPoolSize> &poolSizes);
 
-		VulkanContext *m_context = nullptr;
-		VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
+		VulkanContext*		m_context = nullptr;
+		VkDescriptorPool	m_descriptorPool = VK_NULL_HANDLE;
 	};
 } // BetterThanNothing
