@@ -20,8 +20,8 @@
 
 #include <chrono>
 #include <cstdint>
-#include <string>
 #include <filesystem>
+#include <string>
 #include <unordered_map>
 
 #define GLFW_INCLUDE_VULKAN

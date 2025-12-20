@@ -18,6 +18,8 @@
 
 #include "Runtime.hpp"
 
+#include "Module_Engine/MeshFactory.hpp"
+
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Data/Graphics/ModelData.hpp>
@@ -30,11 +32,15 @@ namespace BetterThanNothing
 {
 	void Runtime::OnEnable()
 	{
-		m_sponzaModel = ModelLoader::Load("../../../Assets/Models/sponza/sponza.obj");
-		m_sponzaTransform = glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
+		m_robotTransform = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f));
+		m_robotFuture = std::async(std::launch::async, []() {
+			return ModelLoader::Load("../../../Assets/Models/robot/robot.obj");
+		});
 
-		m_robotModel = ModelLoader::Load("../../../Assets/Models/robot/robot.obj");
-		m_robotTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.5f, 0.0f));
+		m_sponzaTransform = glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
+		m_sponzaFuture = std::async(std::launch::async, []() {
+			return ModelLoader::Load("../../../Assets/Models/sponza/sponza.obj");
+		});
 	}
 
 	void Runtime::OnUpdate(const UpdateContext* ctx)
@@ -68,15 +74,29 @@ namespace BetterThanNothing
 		ctx->MoveCamera(deltaPos);
 
 		m_robotTransform = glm::rotate(m_robotTransform, glm::radians(20.0f * deltaTime), up);
+
+		SyncModels();
 	}
 
 	void Runtime::OnRender(const RenderContext* ctx)
 	{
-		ctx->Submit(&m_sponzaModel, m_sponzaTransform);
-		ctx->Submit(&m_robotModel, m_robotTransform, "../../../Assets/Models/robot/robot.png");
+		if (m_sponzaModel.has_value())
+			ctx->Submit(&m_sponzaModel.value(), m_sponzaTransform);
+
+		if (m_robotModel.has_value())
+			ctx->Submit(&m_robotModel.value(), m_robotTransform, "../../../Assets/Models/robot/robot.png");
 	}
 
 	void Runtime::OnDisable() {}
+
+	void Runtime::SyncModels()
+	{
+		if (m_sponzaFuture.valid() && m_sponzaFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+			m_sponzaModel = m_sponzaFuture.get();
+
+		if (m_robotFuture.valid() && m_robotFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+			m_robotModel = m_robotFuture.get();
+	}
 
 	std::unique_ptr<IEngineApplication> CreateEngineApplication()
 	{
