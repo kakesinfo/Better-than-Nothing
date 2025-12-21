@@ -32,8 +32,8 @@ namespace BetterThanNothing
 		~MeshBuilder() = default;
 
 		void AddVertex(float x, float y, float z, float r, float g, float b, float u, float v, float nx, float ny, float nz);
-		void AddVertex(glm::vec3 position, glm::vec3 color, glm::vec2 uv, glm::vec3 normal);
-		void AddVertex(VertexData vertexData);
+		void AddVertex(Vector3 position, Vector3 color, Vector2 uv, Vector3 normal);
+		void AddVertex(const VertexData& vertexData);
 
 		void AddIndices(const std::vector<std::uint32_t>& newIndices);
 		void AddIndex(std::uint32_t index);

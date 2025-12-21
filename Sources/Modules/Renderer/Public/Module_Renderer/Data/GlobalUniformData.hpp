@@ -18,14 +18,17 @@
 
 #pragma once
 
+#include "Module_Math/Matrix4.hpp"
+#include "Module_Math/Vector3.hpp"
+
 namespace BetterThanNothing
 {
 	struct GlobalUniformData
 	{
-		alignas(16) glm::mat4 projection;
-		alignas(16) glm::mat4 view;
+		alignas(16) Matrix4 projection;
+		alignas(16) Matrix4 view;
 
-		alignas(16) glm::vec3 lightPosition;
-		alignas(16) glm::vec3 cameraPosition;
+		alignas(16) Vector3 lightPosition;
+		alignas(16) Vector3 cameraPosition;
 	};
 }

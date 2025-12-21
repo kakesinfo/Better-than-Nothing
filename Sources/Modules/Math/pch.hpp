@@ -18,16 +18,4 @@
 
 #pragma once
 
-#include <Module_Data/Graphics/MeshData.hpp>
-
-namespace BetterThanNothing
-{
-	class PlaneMesh : public MeshData
-	{
-	public:
-		explicit PlaneMesh(float size = 1.0f);
-
-	private:
-		void GeneratePlane(float size);
-	};
-}
+#include <ostream>

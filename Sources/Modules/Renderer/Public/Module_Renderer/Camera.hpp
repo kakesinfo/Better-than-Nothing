@@ -18,35 +18,40 @@
 
 #pragma once
 
+#include "Module_Math/Quaternion.hpp"
+#include "Module_Math/Vector3.hpp"
+
 namespace BetterThanNothing
 {
+	class Matrix4;
+
 	class Camera
 	{
 	public:
 		Camera(float fov, float nearPlane, float farPlane);
-		~Camera() = default;
+		~Camera();
 
-		void SetPosition(const glm::vec3& position);
-		void SetOrientation(const glm::quat& orientation);
+		void SetPosition(const Vector3& position);
+		void SetOrientation(const Quaternion& orientation);
 
-		void Move(const glm::vec3& delta);
+		void Move(const Vector3& delta);
 		void Rotate(float yaw, float pitch);
 
-		glm::mat4 GetViewMatrix() const;
-		glm::mat4 GetProjectionMatrix(float aspectRatio) const;
+		Matrix4 GetViewMatrix() const;
+		Matrix4 GetProjectionMatrix(float aspectRatio) const;
 
-		glm::vec3 GetForward() const;
-		glm::vec3 GetRight() const;
-		glm::vec3 GetUp() const;
+		Vector3 GetForward() const;
+		Vector3 GetRight() const;
+		Vector3 GetUp() const;
 
-		glm::vec3 GetPosition() const;
+		Vector3 GetPosition() const;
 
 	private:
 		float m_fov;
 		float m_nearPlane;
 		float m_farPlane;
 
-		glm::vec3 m_position{};
-		glm::quat m_orientation{};
+		Vector3 m_position;
+		Quaternion m_orientation;
 	};
 }

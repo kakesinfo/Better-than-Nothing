@@ -21,12 +21,12 @@
 
 namespace BetterThanNothing
 {
-	void RenderContext::Submit(const ModelData* model, const glm::mat4& transform) const
+	void RenderContext::Submit(const ModelData* model, const Matrix4& transform) const
 	{
 		m_renderList->Submit(model, transform);
 	}
 
-	void RenderContext::Submit(const ModelData* model, const glm::mat4& transform, const std::string& texturePath) const
+	void RenderContext::Submit(const ModelData* model, const Matrix4& transform, const std::string& texturePath) const
 	{
 		m_renderList->Submit(model, transform, texturePath);
 	}

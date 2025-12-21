@@ -18,67 +18,72 @@
 
 #include "Module_Renderer/Camera.hpp"
 
+#include "Module_Math/Matrix4.hpp"
+#include "Module_Math/Quaternion.hpp"
+#include "Module_Math/Vector3.hpp"
+
 namespace BetterThanNothing
 {
-	Camera::Camera(const float fov, const float nearPlane, const float farPlane) : m_fov(fov), m_nearPlane(nearPlane), m_farPlane(farPlane)
+	Camera::Camera(const float fov, const float nearPlane, const float farPlane)
+		: m_fov(fov), m_nearPlane(nearPlane), m_farPlane(farPlane)
 	{
-		m_position = glm::vec3(2.0f, 2.0f, 2.0f);
-		m_orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+		m_position = Vector3(2.0f, 2.0f, 2.0f);
+		m_orientation = Quaternion(1.0f, 0.0f, 0.0f, 0.0f);
 	}
 
-	void Camera::SetPosition(const glm::vec3& position)
+	Camera::~Camera() {}
+
+	void Camera::SetPosition(const Vector3& position)
 	{
 		m_position = position;
 	}
 
-	void Camera::SetOrientation(const glm::quat& orientation)
+	void Camera::SetOrientation(const Quaternion& orientation)
 	{
 		m_orientation = orientation;
 	}
 
-	void Camera::Move(const glm::vec3& delta)
+	void Camera::Move(const Vector3& delta)
 	{
 		m_position += delta;
 	}
 
 	void Camera::Rotate(const float yaw, const float pitch)
 	{
-		const glm::quat qYaw = glm::angleAxis(glm::radians(yaw), glm::vec3(0.0f, 1.0f, 0.0f));
-		const glm::quat qPitch = glm::angleAxis(glm::radians(pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+		const Quaternion qYaw = Quaternion::AngleAxis(yaw, Vector3::Up);
+		const Quaternion qPitch = Quaternion::AngleAxis(pitch, Vector3::Right);
 
-		m_orientation = glm::normalize(qYaw * m_orientation * qPitch);
+		m_orientation = (qYaw * m_orientation * qPitch).Normalized();
 	}
 
-	glm::mat4 Camera::GetViewMatrix() const
+	Matrix4 Camera::GetViewMatrix() const
 	{
-		const glm::mat4 rotate = glm::mat4_cast(glm::conjugate(m_orientation));
-		const glm::mat4 translate = glm::translate(glm::mat4(1.0f), -m_position);
-		return rotate * translate;
+		const auto	  rotate = Matrix4(m_orientation.Conjugated());
+		const Matrix4 translate = Matrix4::Identity.Translate(-m_position);
+		return (rotate * translate);
 	}
 
-	glm::mat4 Camera::GetProjectionMatrix(const float aspectRatio) const
+	Matrix4 Camera::GetProjectionMatrix(const float aspectRatio) const
 	{
-		auto perspective = glm::perspective(glm::radians(m_fov), aspectRatio, m_nearPlane, m_farPlane);
-		perspective[1][1] *= -1;
-		return perspective;
+		return Matrix4::Perspective(m_fov, aspectRatio, m_nearPlane, m_farPlane);
 	}
 
-	glm::vec3 Camera::GetForward() const
+	Vector3 Camera::GetForward() const
 	{
-		return m_orientation * glm::vec3(0.0f, 0.0f, -1.0f);
+		return m_orientation * Vector3::Forward;
 	}
 
-	glm::vec3 Camera::GetRight() const
+	Vector3 Camera::GetRight() const
 	{
-		return m_orientation * glm::vec3(1.0f, 0.0f, 0.0f);
+		return m_orientation * Vector3::Right;
 	}
 
-	glm::vec3 Camera::GetUp() const
+	Vector3 Camera::GetUp() const
 	{
-		return m_orientation * glm::vec3(0.0f, 1.0f, 0.0f);
+		return m_orientation * Vector3::Up;
 	}
 
-	glm::vec3 Camera::GetPosition() const
+	Vector3 Camera::GetPosition() const
 	{
 		return m_position;
 	}

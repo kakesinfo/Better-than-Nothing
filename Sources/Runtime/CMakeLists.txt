@@ -16,10 +16,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE
 		Module_Base
+		Module_Math
 		Module_Data
 		Module_Engine
-	PUBLIC
-		glm::glm
 )
 
 install(TARGETS ${PROJECT_NAME}

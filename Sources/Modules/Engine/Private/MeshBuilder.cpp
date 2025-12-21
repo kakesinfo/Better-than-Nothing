@@ -17,6 +17,8 @@
  */
 
 #include "Module_Engine/MeshBuilder.hpp"
+#include "Module_Math/Vector3.hpp"
+#include "Module_Math/Vector2.hpp"
 
 namespace BetterThanNothing
 {
@@ -25,12 +27,12 @@ namespace BetterThanNothing
 		AddVertex({x, y, z}, {r, g, b}, {u, v}, {nx, ny, nz});
 	}
 
-	void MeshBuilder::AddVertex(const glm::vec3 position, const glm::vec3 color, const glm::vec2 uv, const glm::vec3 normal)
+	void MeshBuilder::AddVertex(const Vector3 position, const Vector3 color, const Vector2 uv, const Vector3 normal)
 	{
 		AddVertex({position, color, uv, normal});
 	}
 
-	void MeshBuilder::AddVertex(const VertexData vertexData)
+	void MeshBuilder::AddVertex(const VertexData& vertexData)
 	{
 		meshData.vertices.push_back(vertexData);
 	}

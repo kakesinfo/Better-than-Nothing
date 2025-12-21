@@ -20,11 +20,14 @@
 
 #include "Module_Engine/IEngineApplication.hpp"
 #include <Module_Data/Graphics/ModelData.hpp>
+#include <Module_Math/Matrix4.hpp>
 
 namespace BetterThanNothing
 {
 	class UpdateContext;
 	class RenderContext;
+
+	class Matrix4;
 
 	class Runtime final : public IEngineApplication
 	{
@@ -41,10 +44,10 @@ namespace BetterThanNothing
 	private:
 		std::future<ModelData>	 m_sponzaFuture;
 		std::optional<ModelData> m_sponzaModel;
-		glm::mat4				 m_sponzaTransform{};
+		Matrix4					 m_sponzaTransform;
 
 		std::future<ModelData>	 m_robotFuture;
 		std::optional<ModelData> m_robotModel;
-		glm::mat4				 m_robotTransform{};
+		Matrix4					 m_robotTransform;
 	};
 };
