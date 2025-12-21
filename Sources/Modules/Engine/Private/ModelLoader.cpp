@@ -114,7 +114,9 @@ namespace BetterThanNothing
 					auto yNormal = attrib.normals[3 * index.normal_index + 1];
 					auto zNormal = attrib.normals[3 * index.normal_index + 2];
 
-					vertex.normal = preTransform ? glm::vec3{xNormal, yNormal, zNormal} : glm::vec3{xNormal, zNormal, -yNormal};
+					vertex.normal = preTransform
+						? Vector3{xNormal, yNormal, zNormal}
+						: Vector3{xNormal, zNormal, -yNormal};
 				}
 				else
 				{
@@ -125,19 +127,19 @@ namespace BetterThanNothing
 				{
 					uniqueVertices[vertex] = static_cast<uint32_t>(mesh.vertices.size());
 
-					if (vertex.position.x < minX)
-						minX = vertex.position.x;
-					if (vertex.position.y < minY)
-						minY = vertex.position.y;
-					if (vertex.position.z < minZ)
-						minZ = vertex.position.z;
+					if (vertex.position.GetX() < minX)
+						minX = vertex.position.GetX();
+					if (vertex.position.GetY() < minY)
+						minY = vertex.position.GetY();
+					if (vertex.position.GetZ() < minZ)
+						minZ = vertex.position.GetZ();
 
-					if (vertex.position.x > maxX)
-						maxX = vertex.position.x;
-					if (vertex.position.y > maxY)
-						maxY = vertex.position.y;
-					if (vertex.position.z > maxZ)
-						maxZ = vertex.position.z;
+					if (vertex.position.GetZ() > maxX)
+						maxX = vertex.position.GetX();
+					if (vertex.position.GetY() > maxY)
+						maxY = vertex.position.GetY();
+					if (vertex.position.GetZ() > maxZ)
+						maxZ = vertex.position.GetZ();
 
 					mesh.vertices.push_back(vertex);
 				}
@@ -154,11 +156,7 @@ namespace BetterThanNothing
 		for (auto& mesh : model.meshes)
 		{
 			for (auto& vert : mesh.vertices)
-			{
-				vert.position.x -= centerX;
-				vert.position.y -= centerY;
-				vert.position.z -= centerZ;
-			}
+				vert.position -= {centerX, centerY, centerZ};
 		}
 
 		return model;

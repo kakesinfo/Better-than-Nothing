@@ -20,6 +20,9 @@
 
 #include <Module_Base/EKey.hpp>
 #include <Module_Engine/Engine.hpp>
+
+#include "Module_Math/Matrix4.hpp"
+
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
@@ -77,8 +80,8 @@ namespace BetterThanNothing
 		cameraData.position = m_camera->GetPosition();
 
 		DirectionalLightData directionalLight{};
-		directionalLight.position = glm::vec3(10.0f, 10.0f, 10.0f);
-		directionalLight.color = glm::vec3(1.0f, 1.0f, 1.0f);
+		directionalLight.position = Vector3(10.0f, 10.0f, 10.0f);
+		directionalLight.color = Vector3(1.0f, 1.0f, 1.0f);
 
 		m_renderer->RenderFrame(m_renderList.get(), cameraData, directionalLight);
 	}

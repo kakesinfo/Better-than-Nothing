@@ -22,6 +22,7 @@ namespace BetterThanNothing
 {
 	class RenderList;
 	struct ModelData;
+	class Matrix4;
 
 	class RenderContext
 	{
@@ -29,8 +30,8 @@ namespace BetterThanNothing
 		explicit RenderContext(RenderList* renderList) : m_renderList(renderList) {}
 		~RenderContext() = default;
 
-		void Submit(const ModelData* model, const glm::mat4& transform) const;
-		void Submit(const ModelData* model, const glm::mat4& transform, const std::string& texturePath) const;
+		void Submit(const ModelData* model, const Matrix4& transform) const;
+		void Submit(const ModelData* model, const Matrix4& transform, const std::string& texturePath) const;
 
 	private:
 		RenderList* m_renderList;

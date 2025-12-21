@@ -28,6 +28,7 @@ add_subdirectory("ThirdParty/stb")
 # Modules
 # ==================================================================================================
 add_subdirectory("Sources/Modules/Base")
+add_subdirectory("Sources/Modules/Math")
 add_subdirectory("Sources/Modules/Data")
 add_subdirectory("Sources/Modules/Platform")
 add_subdirectory("Sources/Modules/Vulkan")

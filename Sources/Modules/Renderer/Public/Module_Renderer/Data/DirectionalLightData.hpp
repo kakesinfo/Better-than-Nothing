@@ -18,11 +18,13 @@
 
 #pragma once
 
+#include "Module_Math/Vector3.hpp"
+
 namespace BetterThanNothing
 {
 	struct DirectionalLightData
 	{
-		alignas(16) glm::vec3 position;
-		alignas(16) glm::vec3 color;
+		alignas(16) Vector3 position;
+		alignas(16) Vector3 color;
 	};
 }

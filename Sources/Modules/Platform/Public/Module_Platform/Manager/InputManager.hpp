@@ -20,6 +20,8 @@
 
 namespace BetterThanNothing
 {
+	class Vector2;
+
 	enum class EKey : std::int16_t;
 	enum class EMouseButton : std::int16_t;
 
@@ -56,9 +58,9 @@ namespace BetterThanNothing
 		static void UpdateMousePosition(float x, float y);
 		static void ResetMousePosition();
 
-		static glm::vec2 GetMousePosition();
-		static glm::vec2 GetLastMousePosition();
-		static glm::vec2 GetMouseDelta();
+		static Vector2 GetMousePosition();
+		static Vector2 GetLastMousePosition();
+		static Vector2 GetMouseDelta();
 
 		static void	 UpdateMouseScroll(float y);
 		static float GetMouseScroll();

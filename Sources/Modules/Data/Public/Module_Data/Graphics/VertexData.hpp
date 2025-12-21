@@ -18,45 +18,43 @@
 
 #pragma once
 
-#include <memory>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/glm.hpp>
+#include "Module_Math/Vector2.hpp"
+#include "Module_Math/Vector3.hpp"
 
 namespace BetterThanNothing
 {
 	struct VertexData
 	{
-		glm::vec3 position;
-		glm::vec3 color;
-		glm::vec2 uv;
-		glm::vec3 normal;
+		Vector3 position;
+		Vector3 color;
+		Vector2 uv;
+		Vector3 normal;
 	};
 
 	struct VertexHash
 	{
 		std::size_t operator()(VertexData const& v) const noexcept
 		{
-			auto h = std::hash<float>{}(v.position.x);
-			h = h * 31 + std::hash<float>{}(v.position.y);
-			h = h * 31 + std::hash<float>{}(v.position.z);
-			h = h * 31 + std::hash<float>{}(v.uv.x);
-			h = h * 31 + std::hash<float>{}(v.uv.y);
-			h = h * 31 + std::hash<float>{}(v.color.x);
-			h = h * 31 + std::hash<float>{}(v.color.y);
-			h = h * 31 + std::hash<float>{}(v.color.z);
-			h = h * 31 + std::hash<float>{}(v.normal.x);
-			h = h * 31 + std::hash<float>{}(v.normal.y);
-			h = h * 31 + std::hash<float>{}(v.normal.z);
+			auto h = std::hash<float>{}(v.position.GetX());
+			h = h * 31 + std::hash<float>{}(v.position.GetY());
+			h = h * 31 + std::hash<float>{}(v.position.GetZ());
+			h = h * 31 + std::hash<float>{}(v.uv.GetX());
+			h = h * 31 + std::hash<float>{}(v.uv.GetY());
+			h = h * 31 + std::hash<float>{}(v.color.GetX());
+			h = h * 31 + std::hash<float>{}(v.color.GetY());
+			h = h * 31 + std::hash<float>{}(v.color.GetZ());
+			h = h * 31 + std::hash<float>{}(v.normal.GetX());
+			h = h * 31 + std::hash<float>{}(v.normal.GetY());
+			h = h * 31 + std::hash<float>{}(v.normal.GetZ());
 			return h;
 		}
 	};
 
 	struct VertexEqual
 	{
-		bool operator()(VertexData const& a, VertexData const& b) const noexcept { return a.position == b.position && a.color == b.color && a.uv == b.uv && a.normal == b.normal; }
+		bool operator()(VertexData const& a, VertexData const& b) const noexcept
+		{
+			return a.position.Equals(b.position) && a.color.Equals(b.color) && a.uv.Equals(b.uv) && a.normal.Equals(b.normal);
+		}
 	};
 }

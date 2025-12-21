@@ -20,6 +20,7 @@
 
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
+#include <Module_Math/Vector2.hpp>
 
 namespace BetterThanNothing
 {
@@ -83,17 +84,17 @@ namespace BetterThanNothing
 		m_lastMouseY = m_mouseY;
 	}
 
-	glm::vec2 InputManager::GetMousePosition()
+	Vector2 InputManager::GetMousePosition()
 	{
 		return {m_mouseX, m_mouseY};
 	}
 
-	glm::vec2 InputManager::GetLastMousePosition()
+	Vector2 InputManager::GetLastMousePosition()
 	{
 		return {m_lastMouseX, m_lastMouseY};
 	}
 
-	glm::vec2 InputManager::GetMouseDelta()
+	Vector2 InputManager::GetMouseDelta()
 	{
 		return GetMousePosition() - GetLastMousePosition();
 	}

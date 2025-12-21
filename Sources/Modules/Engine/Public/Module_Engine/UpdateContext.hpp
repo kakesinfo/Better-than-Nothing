@@ -21,6 +21,9 @@
 namespace BetterThanNothing
 {
 	class Camera;
+	class Vector2;
+	class Vector3;
+
 	enum class EKey : std::int16_t;
 	enum class EMouseButton : std::int16_t;
 
@@ -31,14 +34,14 @@ namespace BetterThanNothing
 		~UpdateContext() = default;
 
 		void RotateCamera(float yaw, float pitch) const;
-		void MoveCamera(const glm::vec3& delta) const;
+		void MoveCamera(const Vector3& delta) const;
 
-		[[nodiscard]] glm::vec3 GetCameraForward() const;
-		[[nodiscard]] glm::vec3 GetCameraRight() const;
+		[[nodiscard]] Vector3 GetCameraForward() const;
+		[[nodiscard]] Vector3 GetCameraRight() const;
 
-		[[nodiscard]] bool		IsKeyPressed(EKey key) const;
-		[[nodiscard]] bool		IsMouseButtonPressed(EMouseButton button) const;
-		[[nodiscard]] glm::vec2 GetMouseDelta() const;
+		[[nodiscard]] bool	  IsKeyPressed(EKey key) const;
+		[[nodiscard]] bool	  IsMouseButtonPressed(EMouseButton button) const;
+		[[nodiscard]] Vector2 GetMouseDelta() const;
 
 		[[nodiscard]] float GetDeltaTime() const;
 

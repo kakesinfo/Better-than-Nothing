@@ -19,6 +19,8 @@
 #include "Module_Engine/UpdateContext.hpp"
 #include "Module_Base/EKey.hpp"
 #include "Module_Base/EMouseButton.hpp"
+#include "Module_Math/Vector2.hpp"
+#include "Module_Math/Vector3.hpp"
 #include "Module_Platform/Manager/InputManager.hpp"
 #include "Module_Renderer/Camera.hpp"
 
@@ -29,17 +31,17 @@ namespace BetterThanNothing
 		m_camera->Rotate(yaw, pitch);
 	}
 
-	void UpdateContext::MoveCamera(const glm::vec3& delta) const
+	void UpdateContext::MoveCamera(const Vector3& delta) const
 	{
 		m_camera->Move(delta);
 	}
 
-	glm::vec3 UpdateContext::GetCameraForward() const
+	Vector3 UpdateContext::GetCameraForward() const
 	{
 		return m_camera->GetForward();
 	}
 
-	glm::vec3 UpdateContext::GetCameraRight() const
+	Vector3 UpdateContext::GetCameraRight() const
 	{
 		return m_camera->GetRight();
 	}
@@ -54,7 +56,7 @@ namespace BetterThanNothing
 		return InputManager::IsMouseButtonPressed(button);
 	}
 
-	glm::vec2 UpdateContext::GetMouseDelta() const
+	Vector2 UpdateContext::GetMouseDelta() const
 	{
 		return InputManager::GetMouseDelta();
 	}

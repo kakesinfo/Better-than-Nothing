@@ -27,20 +27,21 @@
 #include <Module_Engine/ModelLoader.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
+#include <Module_Math/Matrix4.hpp>
+#include <Module_Math/Vector2.hpp>
+#include <Module_Math/Vector3.hpp>
 
 namespace BetterThanNothing
 {
 	void Runtime::OnEnable()
 	{
-		m_robotTransform = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f));
-		m_robotFuture = std::async(std::launch::async, []() {
-			return ModelLoader::Load("../../../Assets/Models/robot/robot.obj");
-		});
+		m_robotTransform = Matrix4::Identity.Translate(2.0f, 0.0f, 0.0f);
+		m_robotFuture = std::async(std::launch::async,
+								   []() { return ModelLoader::Load("../../../Assets/Models/robot/robot.obj"); });
 
-		m_sponzaTransform = glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
-		m_sponzaFuture = std::async(std::launch::async, []() {
-			return ModelLoader::Load("../../../Assets/Models/sponza/sponza.obj");
-		});
+		m_sponzaTransform = Matrix4::Identity.Scale(0.01f);
+		m_sponzaFuture = std::async(std::launch::async,
+									[]() { return ModelLoader::Load("../../../Assets/Models/sponza/sponza.obj"); });
 	}
 
 	void Runtime::OnUpdate(const UpdateContext* ctx)
@@ -48,15 +49,14 @@ namespace BetterThanNothing
 		if (ctx->IsMouseButtonPressed(EMouseButton::Left))
 		{
 			constexpr float rotateSpeed = 0.1f;
-			const glm::vec2 delta = ctx->GetMouseDelta();
-			ctx->RotateCamera(-delta.x * rotateSpeed, -delta.y * rotateSpeed);
+			const Vector2	delta = ctx->GetMouseDelta();
+			ctx->RotateCamera(-delta.GetX() * rotateSpeed, -delta.GetY() * rotateSpeed);
 		}
 
-		const float	   deltaTime = ctx->GetDeltaTime();
-		const float	   moveSpeed = 5.0f * deltaTime;
-		constexpr auto up = glm::vec3(0.0f, 1.0f, 0.0f);
+		const float deltaTime = ctx->GetDeltaTime();
+		const float moveSpeed = 5.0f * deltaTime;
 
-		auto deltaPos = glm::vec3(0.0f);
+		auto deltaPos = Vector3::Zero;
 
 		if (ctx->IsKeyPressed(EKey::W))
 			deltaPos += ctx->GetCameraForward() * moveSpeed;
@@ -67,13 +67,13 @@ namespace BetterThanNothing
 		if (ctx->IsKeyPressed(EKey::A))
 			deltaPos -= ctx->GetCameraRight() * moveSpeed;
 		if (ctx->IsKeyPressed(EKey::Space))
-			deltaPos += up * moveSpeed;
+			deltaPos += Vector3::Up * moveSpeed;
 		if (ctx->IsKeyPressed(EKey::LeftShift))
-			deltaPos -= up * moveSpeed;
+			deltaPos -= Vector3::Up * moveSpeed;
 
 		ctx->MoveCamera(deltaPos);
 
-		m_robotTransform = glm::rotate(m_robotTransform, glm::radians(20.0f * deltaTime), up);
+		m_robotTransform = m_robotTransform.Rotate(20.0f * deltaTime, Vector3::Up);
 
 		SyncModels();
 	}

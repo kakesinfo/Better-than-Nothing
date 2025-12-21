@@ -1,5 +1,5 @@
 /*
- *	Better than Nothing
+*	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -16,14 +16,14 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Engine/PlaneMesh.hpp"
+#pragma once
 
-namespace BetterThanNothing
-{
-	PlaneMesh::PlaneMesh(const float size)
-	{
-		GeneratePlane(size);
-	}
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+#define GLM_ENABLE_EXPERIMENTAL
 
-	void PlaneMesh::GeneratePlane(const float size) {}
-}
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>

@@ -8,6 +8,12 @@ target_include_directories(${PROJECT_NAME}
     INTERFACE Public
 )
 
+target_link_libraries(${PROJECT_NAME}
+    INTERFACE
+        Module_Base
+        Module_Math
+)
+
 install(DIRECTORY Public/ DESTINATION include)
 
 install(TARGETS ${PROJECT_NAME}

@@ -18,12 +18,15 @@
 
 #pragma once
 
+#include "Module_Math/Matrix4.hpp"
+#include "Module_Math/Vector3.hpp"
+
 namespace BetterThanNothing
 {
 	struct CameraData
 	{
-		glm::mat4 view;
-		glm::mat4 projection;
-		glm::vec3 position;
+		Matrix4 view;
+		Matrix4 projection;
+		Vector3 position;
 	};
 }

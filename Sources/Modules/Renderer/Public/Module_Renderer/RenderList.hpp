@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "Module_Math/Matrix4.hpp"
+
 namespace BetterThanNothing
 {
 	struct ModelData;
@@ -25,13 +27,14 @@ namespace BetterThanNothing
 	struct TextureGpuData;
 	struct MeshData;
 
+	class Matrix4;
 	class RenderCache;
 
 	struct RenderListItem
 	{
 		MeshGpuData*	meshGpuData;
 		TextureGpuData* textureGpuData;
-		glm::mat4		transform;
+		Matrix4			transform;
 	};
 
 	class RenderList
@@ -40,9 +43,9 @@ namespace BetterThanNothing
 		explicit RenderList(RenderCache* renderCache) : m_renderCache(renderCache) {}
 		~RenderList() = default;
 
-		void Submit(const ModelData* model, const glm::mat4& transform, const std::string& texturePath);
-		void Submit(const ModelData* model, const glm::mat4& transform);
-		void Submit(const MeshData* mesh, const glm::mat4& transform);
+		void Submit(const ModelData* model, const Matrix4& transform, const std::string& texturePath);
+		void Submit(const ModelData* model, const Matrix4& transform);
+		void Submit(const MeshData* mesh, const Matrix4& transform);
 		void Submit(const RenderListItem& item);
 
 		[[nodiscard]]

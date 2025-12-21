@@ -18,10 +18,12 @@
 
 #pragma once
 
+#include "Module_Math/Matrix4.hpp"
+
 namespace BetterThanNothing
 {
 	struct DynamicUniformData
 	{
-		alignas(16) glm::mat4 model;
+		alignas(16) Matrix4 model;
 	};
 }

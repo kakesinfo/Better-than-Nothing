@@ -92,7 +92,8 @@ namespace BetterThanNothing
 		BufferManager::Shutdown();
 	}
 
-	void Renderer::RenderFrame(RenderList* renderList, const CameraData& camera, const DirectionalLightData& directionalLight)
+	void Renderer::RenderFrame(RenderList* renderList, const CameraData& camera,
+							   const DirectionalLightData& directionalLight)
 	{
 		if (!m_context->vkPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
@@ -103,7 +104,9 @@ namespace BetterThanNothing
 		const auto swapchain = m_context->vkSwapChain->Handle();
 
 		std::uint32_t  imageIndex;
-		const VkResult acquireResult = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle(), VK_NULL_HANDLE, &imageIndex);
+		const VkResult acquireResult = vkAcquireNextImageKHR(
+			device, swapchain, UINT64_MAX, m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle(),
+			VK_NULL_HANDLE, &imageIndex);
 
 		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
 		{
@@ -139,7 +142,8 @@ namespace BetterThanNothing
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		auto graphicsQueue = m_context->vkGraphicsQueue->Handle();
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->vkFrames[m_currentFrame].inFlightFence->Handle()) != VK_SUCCESS)
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->vkFrames[m_currentFrame].inFlightFence->Handle()) !=
+			VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
 		VkPresentInfoKHR presentInfo{};
@@ -166,7 +170,9 @@ namespace BetterThanNothing
 		m_currentFrame = (m_currentFrame + 1) % m_context->vkFrames.size();
 	}
 
-	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& cameraData, const DirectionalLightData& directionalLight, const std::uint32_t imageIndex) const
+	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera,
+									   const DirectionalLightData& directionalLight,
+									   const std::uint32_t		   imageIndex) const
 	{
 		const auto& currentFrame = m_context->vkFrames[m_currentFrame];
 
@@ -209,9 +215,9 @@ namespace BetterThanNothing
 		// Bind global uniforms
 		{
 			const auto globalUniform = m_globalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
-			globalUniform->view = cameraData.view;
-			globalUniform->projection = cameraData.projection;
-			globalUniform->cameraPosition = cameraData.position;
+			globalUniform->view = camera.view;
+			globalUniform->projection = camera.projection;
+			globalUniform->cameraPosition = camera.position;
 			globalUniform->lightPosition = directionalLight.position;
 
 			const VkDescriptorSet& globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle();
@@ -321,8 +327,10 @@ namespace BetterThanNothing
 		auto samplerBindings = {samplerLayoutBinding};
 
 		m_context->vkGlobalDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(globalBindings, m_context);
-		m_context->vkDynamicDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(dynamicBindings, m_context);
-		m_context->vkSamplerDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(samplerBindings, m_context);
+		m_context->vkDynamicDescriptorSetLayout =
+			std::make_unique<VulkanDescriptorSetLayout>(dynamicBindings, m_context);
+		m_context->vkSamplerDescriptorSetLayout =
+			std::make_unique<VulkanDescriptorSetLayout>(samplerBindings, m_context);
 
 		Logger::Log<SUCCESS>("Vulkan descriptor set layout: ok");
 	}
@@ -356,7 +364,8 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
 		{
-			m_context->vkGlobalDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkGlobalDescriptorSetLayout, m_context);
+			m_context->vkGlobalDescriptorSets[i] =
+				std::make_unique<VulkanDescriptorSet>(m_context->vkGlobalDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo globalInfo{};
 			globalInfo.buffer = m_context->vkFrames[i].globalUniformBuffer->Handle();
@@ -386,7 +395,8 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
 		{
-			m_context->vkDynamicDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkDynamicDescriptorSetLayout, m_context);
+			m_context->vkDynamicDescriptorSets[i] =
+				std::make_unique<VulkanDescriptorSet>(m_context->vkDynamicDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo dynamicInfo{};
 			dynamicInfo.buffer = m_context->vkFrames[i].dynamicUniformBuffer->Handle();
@@ -406,7 +416,8 @@ namespace BetterThanNothing
 			vkUpdateDescriptorSets(m_context->vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
 		}
 
-		Logger::Log<SUCCESS>("Vulkan dynamic descriptor sets: ok (count: {})", m_context->vkDynamicDescriptorSets.size());
+		Logger::Log<SUCCESS>("Vulkan dynamic descriptor sets: ok (count: {})",
+							 m_context->vkDynamicDescriptorSets.size());
 	}
 
 	void Renderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback, RenderCache* renderCache)
@@ -430,7 +441,8 @@ namespace BetterThanNothing
 		vertexInputDescription.bindings = {GetVertexBindingDescription()};
 		vertexInputDescription.attributes = GetVertexAttributeDescriptions();
 
-		m_context->vkPipeline = std::make_unique<VulkanPipeline>(params, vertexInputDescription, shaderModules, m_context);
+		m_context->vkPipeline =
+			std::make_unique<VulkanPipeline>(params, vertexInputDescription, shaderModules, m_context);
 	}
 
 	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()
