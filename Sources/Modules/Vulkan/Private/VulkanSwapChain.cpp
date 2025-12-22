@@ -111,33 +111,6 @@ namespace BetterThanNothing
 			m_imageViews.at(i) = std::make_unique<VulkanImageView>(m_context, m_images.at(i), m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
-	void VulkanSwapChain::CreateFramebuffers()
-	{
-		m_framebuffers.resize(m_imageViews.size());
-
-		for (size_t i = 0; i < m_imageViews.size(); i++)
-		{
-			const auto colorImageView = m_colorImageView->Handle();
-			const auto depthImageView = m_depthImageView->Handle();
-			const auto imageView = m_imageViews.at(i)->Handle();
-			const auto renderPass = m_context->vkRenderPass->Handle();
-
-			const std::array attachments = {colorImageView, depthImageView, imageView};
-
-			VkFramebufferCreateInfo createInfo{};
-			createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			createInfo.renderPass = renderPass;
-			createInfo.attachmentCount = static_cast<std::uint32_t>(attachments.size());
-			createInfo.pAttachments = attachments.data();
-			createInfo.width = m_extent.width;
-			createInfo.height = m_extent.height;
-			createInfo.layers = 1;
-
-			auto framebuffer = std::make_unique<VulkanFramebuffer>(&createInfo, m_context);
-			m_framebuffers.at(i) = std::move(framebuffer);
-		}
-	}
-
 	void VulkanSwapChain::CreateDepthResources()
 	{
 		m_depthFormat = ChooseDepthFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT});
@@ -211,12 +184,10 @@ namespace BetterThanNothing
 		CreateImageViews();
 		CreateColorResources();
 		CreateDepthResources();
-		CreateFramebuffers();
 	}
 
 	void VulkanSwapChain::CleanupSwapchain()
 	{
-		m_framebuffers.clear();
 		m_depthImageView.reset();
 		m_depthImage.reset();
 		m_colorImageView.reset();
@@ -268,16 +239,6 @@ namespace BetterThanNothing
 		return m_context->vkDevice->FindSupportedFormat(candidates, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 	}
 
-	VkFormat VulkanSwapChain::GetImageFormat() const
-	{
-		return m_imageFormat;
-	}
-
-	std::uint32_t VulkanSwapChain::GetImageCount() const
-	{
-		return m_images.size();
-	}
-
 	VkExtent2D VulkanSwapChain::GetExtent() const
 	{
 		return m_extent;
@@ -298,20 +259,70 @@ namespace BetterThanNothing
 		return static_cast<float>(m_extent.width) / static_cast<float>(m_extent.height);
 	}
 
-	VkFramebuffer VulkanSwapChain::GetFramebuffer(std::uint32_t imageIndex)
-	{
-		if (imageIndex >= m_framebuffers.size())
-			throw std::runtime_error("Framebuffer index out of range");
-		return m_framebuffers.at(imageIndex)->Handle();
-	}
-
 	VkSwapchainKHR VulkanSwapChain::Handle() const
 	{
 		return m_swapChain;
 	}
 
+	std::uint32_t VulkanSwapChain::GetImageCount() const
+	{
+		return m_images.size();
+	}
+
+	VkFormat VulkanSwapChain::GetImageFormat() const
+	{
+		return m_imageFormat;
+	}
+
+	VulkanImageView* VulkanSwapChain::GetImageView(std::uint32_t index) const
+	{
+		if (index >= m_imageViews.size())
+			throw std::runtime_error("Image view index out of range");
+		return m_imageViews.at(index).get();
+	}
+
+	VkImage VulkanSwapChain::GetImage(std::uint32_t index) const
+	{
+		if (index >= m_images.size())
+			throw std::runtime_error("Image index out of range");
+		return m_images.at(index);
+	}
+
 	VkFormat VulkanSwapChain::GetDepthFormat() const
 	{
 		return m_depthFormat;
+	}
+
+	VulkanImageView* VulkanSwapChain::GetDepthImageView() const
+	{
+		if (!m_depthImageView)
+			throw std::runtime_error("Depth image view not created");
+		return m_depthImageView.get();
+	}
+
+	VulkanImage* VulkanSwapChain::GetDepthImage() const
+	{
+		if (!m_depthImage)
+			throw std::runtime_error("Depth image not created");
+		return m_depthImage.get();
+	}
+
+	VkFormat VulkanSwapChain::GetColorFormat() const
+	{
+		return m_imageFormat;
+	}
+
+	VulkanImageView* VulkanSwapChain::GetColorImageView() const
+	{
+		if (!m_colorImageView)
+			throw std::runtime_error("Color image view not created");
+		return m_colorImageView.get();
+	}
+
+	VulkanImage* VulkanSwapChain::GetColorImage() const
+	{
+		if (!m_colorImage)
+			throw std::runtime_error("Color image not created");
+		return m_colorImage.get();
 	}
 };

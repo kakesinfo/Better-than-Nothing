@@ -66,10 +66,6 @@ namespace BetterThanNothing
 		m_context->vkSwapChain->CreateColorResources();
 		m_context->vkSwapChain->CreateDepthResources();
 
-		m_context->vkRenderPass = std::make_unique<VulkanRenderPass>(m_context);
-
-		m_context->vkSwapChain->CreateFramebuffers();
-
 		m_context->vkFrames.resize(m_context->vkSettings.maxFramesInFlight);
 
 		m_globalUniformProvider = std::make_unique<GlobalUniformProvider>(m_context);
@@ -176,23 +172,56 @@ namespace BetterThanNothing
 	{
 		const auto& currentFrame = m_context->vkFrames[m_currentFrame];
 
-		currentFrame.commandBuffer->BeginRecording();
+		auto cmdContext = currentFrame.commandBuffer->BeginRecording();
 
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = m_context->vkRenderPass->Handle();
-		renderPassInfo.framebuffer = m_context->vkSwapChain->GetFramebuffer(imageIndex);
-		renderPassInfo.renderArea.offset = {0, 0};
-		renderPassInfo.renderArea.extent = m_context->vkSwapChain->GetExtent();
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = m_context->vkSwapChain->GetImage(imageIndex);
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
 
-		std::array<VkClearValue, 2> clearValues{};
-		clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-		clearValues[1].depthStencil = {1.0f, 0};
+		currentFrame.commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		renderPassInfo.pClearValues = clearValues.data();
+		VkRenderingAttachmentInfo colorAttachment{};
+		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		colorAttachment.imageView = m_context->vkSwapChain->GetColorImageView()->Handle();
+		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+		colorAttachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+		colorAttachment.resolveImageView = m_context->vkSwapChain->GetImageView(imageIndex)->Handle();
+		colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		const auto passContext = currentFrame.commandBuffer->BeginRenderPass(&renderPassInfo);
+		VkRenderingAttachmentInfo depthAttachment{};
+		depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		depthAttachment.imageView = m_context->vkSwapChain->GetDepthImageView()->Handle();
+		depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+		depthAttachment.clearValue.depthStencil = {1.0f, 0};
+
+		VkRenderingInfo renderingInfo{};
+		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+		renderingInfo.renderArea = {{0, 0}, m_context->vkSwapChain->GetExtent()};
+		renderingInfo.layerCount = 1;
+		renderingInfo.colorAttachmentCount = 1;
+		renderingInfo.pColorAttachments = &colorAttachment;
+		renderingInfo.pDepthAttachment = &depthAttachment;
+
+		vkCmdBeginRendering(currentFrame.commandBuffer->Handle(), &renderingInfo);
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -201,16 +230,16 @@ namespace BetterThanNothing
 		viewport.height = static_cast<float>(m_context->vkSwapChain->GetExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		passContext->SetViewport(&viewport);
+		cmdContext.SetViewport(&viewport);
 
 		VkRect2D scissor{};
 		scissor.offset = {0, 0};
 		scissor.extent = m_context->vkSwapChain->GetExtent();
-		passContext->SetScissor(&scissor);
+		cmdContext.SetScissor(&scissor);
 
 		// Bind shader pipeline
 		VkPipelineLayout pipelineLayout = m_context->vkPipeline->GetLayout();
-		passContext->BindPipeline(m_context->vkPipeline->Handle());
+		cmdContext.BindPipeline(m_context->vkPipeline->Handle());
 
 		// Bind global uniforms
 		{
@@ -221,7 +250,7 @@ namespace BetterThanNothing
 			globalUniform->lightPosition = directionalLight.position;
 
 			const VkDescriptorSet& globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle();
-			passContext->BindDescriptorSets(pipelineLayout, 0, 1, &globalDescriptorSet);
+			cmdContext.BindDescriptorSets(pipelineLayout, 0, 1, &globalDescriptorSet);
 		}
 
 		for (std::uint32_t i = 0; i < renderList->Size(); i++)
@@ -234,13 +263,13 @@ namespace BetterThanNothing
 
 				VkDescriptorSet		dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle();
 				const std::uint32_t offset = m_dynamicUniformProvider->GetOffset(i);
-				passContext->BindDescriptorSets(pipelineLayout, 1, 1, &dynamicDescriptorSet, 1, &offset);
+				cmdContext.BindDescriptorSets(pipelineLayout, 1, 1, &dynamicDescriptorSet, 1, &offset);
 			}
 
 			// Bind texture sampler
 			{
 				const VkDescriptorSet& samplerDescriptorSet = textureGpuData->descriptorSet->Handle();
-				passContext->BindDescriptorSets(pipelineLayout, 2, 1, &samplerDescriptorSet);
+				cmdContext.BindDescriptorSets(pipelineLayout, 2, 1, &samplerDescriptorSet);
 				// TODO: bind only if different from last frame
 			}
 
@@ -249,15 +278,26 @@ namespace BetterThanNothing
 				// Bind mesh vertex and index buffers
 				const VkBuffer		   vertexBuffers[] = {meshGpuData->vertexBuffer->Handle()};
 				constexpr VkDeviceSize offsets[] = {0};
-				passContext->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-				passContext->BindIndexBuffer(meshGpuData->indexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT32);
+				cmdContext.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+				cmdContext.BindIndexBuffer(meshGpuData->indexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT32);
 			}
 
 			// Draw call
-			passContext->DrawIndexed(meshGpuData->indexCount, 1, 0, 0, 0);
+			cmdContext.DrawIndexed(meshGpuData->indexCount, 1, 0, 0, 0);
 		}
 
-		currentFrame.commandBuffer->EndRenderPass();
+		vkCmdEndRendering(currentFrame.commandBuffer->Handle());
+
+		VkImageMemoryBarrier presentBarrier = barrier;
+		presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		presentBarrier.dstAccessMask = 0;
+		presentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		currentFrame.commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+		0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+
 		currentFrame.commandBuffer->EndRecording();
 	}
 

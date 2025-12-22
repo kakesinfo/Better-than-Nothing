@@ -21,7 +21,6 @@
 namespace BetterThanNothing
 {
 	struct VulkanContext;
-	class VulkanFramebuffer;
 	class VulkanImage;
 	class VulkanImageView;
 
@@ -38,7 +37,6 @@ namespace BetterThanNothing
 
 		void CreateImages();
 		void CreateImageViews();
-		void CreateFramebuffers();
 		void CreateDepthResources();
 		void CreateColorResources();
 
@@ -48,7 +46,6 @@ namespace BetterThanNothing
 		void CreateSwapchain();
 		void CleanupSwapchain();
 
-	private:
 		[[nodiscard]]
 		VkSurfaceFormatKHR ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 
@@ -62,32 +59,25 @@ namespace BetterThanNothing
 		VkFormat ChooseDepthFormat(const std::vector<VkFormat>& candidates);
 
 	public:
-		[[nodiscard]]
-		VkFormat GetImageFormat() const;
+		[[nodiscard]] VkExtent2D GetExtent() const;
+		[[nodiscard]] std::uint32_t GetWidth() const;
+		[[nodiscard]] std::uint32_t GetHeight() const;
+		[[nodiscard]] float GetAspectRatio() const;
 
-		[[nodiscard]]
-		std::uint32_t GetImageCount() const;
+		[[nodiscard]] VkSwapchainKHR Handle() const;
 
-		[[nodiscard]]
-		VkExtent2D GetExtent() const;
+		[[nodiscard]] std::uint32_t GetImageCount() const;
+		[[nodiscard]] VkFormat GetImageFormat() const;
+		[[nodiscard]] VulkanImageView* GetImageView(std::uint32_t index) const;
+		[[nodiscard]] VkImage GetImage(std::uint32_t index) const;
 
-		[[nodiscard]]
-		std::uint32_t GetWidth() const;
+		[[nodiscard]] VkFormat GetDepthFormat() const;
+		[[nodiscard]] VulkanImageView* GetDepthImageView() const;
+		[[nodiscard]] VulkanImage* GetDepthImage() const;
 
-		[[nodiscard]]
-		std::uint32_t GetHeight() const;
-
-		[[nodiscard]]
-		float GetAspectRatio() const;
-
-		[[nodiscard]]
-		VkFramebuffer GetFramebuffer(std::uint32_t index);
-
-		[[nodiscard]]
-		VkSwapchainKHR Handle() const;
-
-		[[nodiscard]]
-		VkFormat GetDepthFormat() const;
+		[[nodiscard]] VkFormat GetColorFormat() const;
+		[[nodiscard]] VulkanImageView* GetColorImageView() const;
+		[[nodiscard]] VulkanImage* GetColorImage() const;
 
 	private:
 		VulkanContext* m_context = nullptr;
@@ -98,7 +88,6 @@ namespace BetterThanNothing
 
 		std::vector<VkImage>							m_images;
 		std::vector<std::unique_ptr<VulkanImageView>>	m_imageViews;
-		std::vector<std::unique_ptr<VulkanFramebuffer>> m_framebuffers;
 
 		std::unique_ptr<VulkanImage>	 m_depthImage;
 		std::unique_ptr<VulkanImageView> m_depthImageView;

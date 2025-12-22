@@ -31,7 +31,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to reset command buffer!");
 	}
 
-	void VulkanCommandBuffer::BeginRecording(const VkCommandBufferUsageFlags flags)
+	VulkanCommandBufferContext VulkanCommandBuffer::BeginRecording(const VkCommandBufferUsageFlags flags)
 	{
 		if (m_isRecording)
 			throw std::runtime_error("Command buffer is already recording");
@@ -44,6 +44,8 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to begin recording command buffer!");
 
 		m_isRecording = true;
+
+		return VulkanCommandBufferContext(m_commandBuffer);
 	}
 
 	void VulkanCommandBuffer::EndRecording()
@@ -51,35 +53,10 @@ namespace BetterThanNothing
 		if (!m_isRecording)
 			throw std::runtime_error("Command buffer is not recording");
 
-		if (m_isRenderPassActive)
-			throw std::runtime_error("Trying to end recording while render pass is active");
-
 		if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS)
 			throw std::runtime_error("failed to record command buffer!");
 
 		m_isRecording = false;
-	}
-
-	std::unique_ptr<VulkanRenderPassContext> VulkanCommandBuffer::BeginRenderPass(VkRenderPassBeginInfo* renderPassInfo, VkSubpassContents subpassContents)
-	{
-		if (m_isRenderPassActive)
-			throw std::runtime_error("Trying to begin render pass without ending the previous one");
-
-		m_isRenderPassActive = true;
-
-		vkCmdBeginRenderPass(m_commandBuffer, renderPassInfo, subpassContents);
-
-		return std::make_unique<VulkanRenderPassContext>(m_commandBuffer);
-	}
-
-	void VulkanCommandBuffer::EndRenderPass()
-	{
-		if (!m_isRenderPassActive)
-			throw std::runtime_error("Trying to end render pass without having begun one");
-
-		m_isRenderPassActive = false;
-
-		vkCmdEndRenderPass(m_commandBuffer);
 	}
 
 	void VulkanCommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, std::uint32_t bufferSize) const

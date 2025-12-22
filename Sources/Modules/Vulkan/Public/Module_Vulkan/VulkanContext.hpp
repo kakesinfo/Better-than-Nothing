@@ -28,7 +28,6 @@ namespace BetterThanNothing
 	class VulkanQueue;
 	class VulkanMemoryAllocator;
 	class VulkanSwapChain;
-	class VulkanRenderPass;
 	class VulkanCommandPool;
 	class VulkanDescriptorSetLayout;
 	class VulkanDescriptorPool;
@@ -64,7 +63,6 @@ namespace BetterThanNothing
 		std::unique_ptr<VulkanQueue>		   vkPresentQueue;
 		std::unique_ptr<VulkanMemoryAllocator> vkMemoryAllocator;
 		std::unique_ptr<VulkanSwapChain>	   vkSwapChain;
-		std::unique_ptr<VulkanRenderPass>	   vkRenderPass;
 		std::unique_ptr<VulkanCommandPool>	   vkCommandPool;
 		std::unique_ptr<VulkanPipeline>		   vkPipeline;
 

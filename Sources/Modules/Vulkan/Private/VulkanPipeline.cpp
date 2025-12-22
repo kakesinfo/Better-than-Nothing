@@ -46,18 +46,6 @@ namespace BetterThanNothing
 		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(m_context->vkSwapChain->GetExtent().width);
-		viewport.height = static_cast<float>(m_context->vkSwapChain->GetExtent().height);
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor{};
-		scissor.offset = {0, 0};
-		scissor.extent = m_context->vkSwapChain->GetExtent();
-
 		std::vector dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
 		VkPipelineDynamicStateCreateInfo dynamicState{};
@@ -68,9 +56,9 @@ namespace BetterThanNothing
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		viewportState.viewportCount = 1;
-		viewportState.pViewports = &viewport;
+		viewportState.pViewports = nullptr; // Dynamic
 		viewportState.scissorCount = 1;
-		viewportState.pScissors = &scissor;
+		viewportState.pScissors = nullptr; // Dynamic
 
 		VkPipelineRasterizationStateCreateInfo rasterizer{};
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -87,31 +75,44 @@ namespace BetterThanNothing
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-
 		multisampling.rasterizationSamples = m_context->vkDevice->GetMaxMsaaSamples();
 		multisampling.sampleShadingEnable = VK_TRUE;
 		multisampling.minSampleShading = 0.8f; // closer to one is better quality
 
-		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable = VK_TRUE;
-		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+		// Fallback: If no color attachment format is defined, we take the one from the Swapchain
+		if (m_params.colorAttachmentFormats.empty())
+			m_params.colorAttachmentFormats.push_back(m_context->vkSwapChain->GetImageFormat());
+
+		// Fallback: If no depth attachment format is defined, we take the one from the Swapchain
+		if (m_params.depthAttachmentFormat == VK_FORMAT_UNDEFINED)
+			m_params.depthAttachmentFormat = m_context->vkSwapChain->GetDepthFormat();
+
+		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
+		pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+		pipelineRenderingInfo.colorAttachmentCount = static_cast<std::uint32_t>(m_params.colorAttachmentFormats.size());
+		pipelineRenderingInfo.pColorAttachmentFormats = m_params.colorAttachmentFormats.data();
+		pipelineRenderingInfo.depthAttachmentFormat = m_params.depthAttachmentFormat;
+		pipelineRenderingInfo.stencilAttachmentFormat = m_params.stencilAttachmentFormat;
+
+		VkPipelineColorBlendAttachmentState colorBlendState{};
+		colorBlendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colorBlendState.blendEnable = VK_TRUE;
+		colorBlendState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		colorBlendState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colorBlendState.colorBlendOp = VK_BLEND_OP_ADD;
+		colorBlendState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorBlendState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorBlendState.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
+		blendAttachments.resize(m_params.colorAttachmentFormats.size(), colorBlendState);
 
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
-		colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
-		colorBlending.blendConstants[0] = 0.0f; // Optional
-		colorBlending.blendConstants[1] = 0.0f; // Optional
-		colorBlending.blendConstants[2] = 0.0f; // Optional
-		colorBlending.blendConstants[3] = 0.0f; // Optional
+		colorBlending.logicOp = VK_LOGIC_OP_COPY;
+		colorBlending.attachmentCount = static_cast<std::uint32_t>(blendAttachments.size());
+		colorBlending.pAttachments = blendAttachments.data();
 
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
 		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -147,7 +148,6 @@ namespace BetterThanNothing
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderStages.size());
 		pipelineInfo.pStages = shaderStages.data();
-
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &inputAssembly;
 		pipelineInfo.pViewportState = &viewportState;
@@ -157,10 +157,9 @@ namespace BetterThanNothing
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
 		pipelineInfo.layout = m_pipelineLayout;
-		pipelineInfo.renderPass = m_context->vkRenderPass->Handle();
+		pipelineInfo.pNext = &pipelineRenderingInfo;
+		pipelineInfo.renderPass = VK_NULL_HANDLE; // m_context->vkRenderPass->Handle();
 		pipelineInfo.subpass = 0;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
-		pipelineInfo.basePipelineIndex = -1;			  // Optional
 
 		if (vkCreateGraphicsPipelines(m_context->vkDevice->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create graphics pipeline");
@@ -231,6 +230,24 @@ namespace BetterThanNothing
 	VulkanPipelineBuilder& VulkanPipelineBuilder::AddFragmentShader(const std::string& shaderPath)
 	{
 		return AddShader(shaderPath, EVulkanShaderType::Fragment);
+	}
+
+	VulkanPipelineBuilder& VulkanPipelineBuilder::AddColorAttachment(VkFormat format)
+	{
+		m_params.colorAttachmentFormats.push_back(format);
+		return *this;
+	}
+
+	VulkanPipelineBuilder& VulkanPipelineBuilder::SetDepthAttachment(VkFormat format)
+	{
+		m_params.depthAttachmentFormat = format;
+		return *this;
+	}
+
+	VulkanPipelineBuilder& VulkanPipelineBuilder::SetStencilAttachment(VkFormat format)
+	{
+		m_params.stencilAttachmentFormat = format;
+		return *this;
 	}
 
 	VulkanPipelineParams& VulkanPipelineBuilder::GetBuildParams()

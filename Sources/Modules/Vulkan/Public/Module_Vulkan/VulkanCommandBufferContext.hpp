@@ -20,16 +20,16 @@
 
 namespace BetterThanNothing
 {
-	class VulkanRenderPassContext
+	class VulkanCommandBufferContext
 	{
 	public:
-		explicit VulkanRenderPassContext(VkCommandBuffer commandBuffer);
-		~VulkanRenderPassContext() = default;
+		explicit VulkanCommandBufferContext(VkCommandBuffer commandBuffer);
+		~VulkanCommandBufferContext() = default;
 
-		VulkanRenderPassContext(const VulkanRenderPassContext&) = delete;
-		VulkanRenderPassContext& operator=(const VulkanRenderPassContext&) = delete;
-		VulkanRenderPassContext(VulkanRenderPassContext&& other) = delete;
-		VulkanRenderPassContext& operator=(VulkanRenderPassContext&& other) = delete;
+		VulkanCommandBufferContext(const VulkanCommandBufferContext&) = delete;
+		VulkanCommandBufferContext& operator=(const VulkanCommandBufferContext&) = delete;
+		VulkanCommandBufferContext(VulkanCommandBufferContext&& other) = delete;
+		VulkanCommandBufferContext& operator=(VulkanCommandBufferContext&& other) = delete;
 
 		void SetViewport(const VkViewport* viewports, std::uint32_t firstViewport = 0, std::uint32_t viewportCount = 1) const;
 		void SetScissor(const VkRect2D* scissors, std::uint32_t firstScissor = 0, std::uint32_t scissorCount = 1) const;
@@ -46,6 +46,8 @@ namespace BetterThanNothing
 		void Draw(std::uint32_t vertexCount, std::uint32_t instanceCount, std::uint32_t firstVertex, std::uint32_t firstInstance) const;
 		void DrawIndexed(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::int32_t vertexOffset, std::uint32_t firstInstance) const;
 
+		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers,
+							 std::uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const;
 	private:
 		VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
 	};
