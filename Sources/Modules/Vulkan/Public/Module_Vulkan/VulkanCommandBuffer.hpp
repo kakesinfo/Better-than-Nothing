@@ -23,7 +23,7 @@
 
 namespace BetterThanNothing
 {
-	class VulkanRenderPassContext;
+	class VulkanCommandBufferContext;
 	struct VulkanContext;
 
 	class VulkanCommandBuffer
@@ -38,11 +38,8 @@ namespace BetterThanNothing
 		VulkanCommandBuffer& operator=(VulkanCommandBuffer&& other) = delete;
 
 		void Reset() const;
-		void BeginRecording(VkCommandBufferUsageFlags flags = 0);
+		VulkanCommandBufferContext BeginRecording(VkCommandBufferUsageFlags flags = 0);
 		void EndRecording();
-
-		std::unique_ptr<VulkanRenderPassContext> BeginRenderPass(VkRenderPassBeginInfo* renderPassInfo, VkSubpassContents subpassContents = VK_SUBPASS_CONTENTS_INLINE);
-		void									 EndRenderPass();
 
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, std::uint32_t bufferSize) const;
 		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, std::uint32_t mipLevels) const;
@@ -66,7 +63,7 @@ namespace BetterThanNothing
 		VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
 
 		bool m_isRecording = false;
-		bool m_isRenderPassActive = false;
+		// bool m_isRenderPassActive = false;
 	};
 
 }

@@ -36,6 +36,10 @@ namespace BetterThanNothing
 	{
 		const char*							  name;
 		std::vector<VulkanPipelineShaderInfo> shadersInfos;
+
+		std::vector<VkFormat> colorAttachmentFormats;
+		VkFormat              depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+		VkFormat              stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 	};
 
 	class VulkanPipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
@@ -76,6 +80,10 @@ namespace BetterThanNothing
 		VulkanPipelineBuilder& AddShader(const std::string& shaderPath, EVulkanShaderType shaderType);
 		VulkanPipelineBuilder& AddVertexShader(const std::string& shaderPath);
 		VulkanPipelineBuilder& AddFragmentShader(const std::string& shaderPath);
+
+		VulkanPipelineBuilder& AddColorAttachment(VkFormat format);
+		VulkanPipelineBuilder& SetDepthAttachment(VkFormat format);
+		VulkanPipelineBuilder& SetStencilAttachment(VkFormat format);
 
 		[[nodiscard]]
 		VulkanPipelineParams& GetBuildParams();

@@ -38,10 +38,6 @@ namespace BetterThanNothing
 		m_robotTransform = Matrix4::Identity.Translate(2.0f, 0.0f, 0.0f);
 		m_robotFuture = std::async(std::launch::async,
 								   []() { return ModelLoader::Load("../../../Assets/Models/robot/robot.obj"); });
-
-		m_sponzaTransform = Matrix4::Identity.Scale(0.01f);
-		m_sponzaFuture = std::async(std::launch::async,
-									[]() { return ModelLoader::Load("../../../Assets/Models/sponza/sponza.obj"); });
 	}
 
 	void Runtime::OnUpdate(const UpdateContext* ctx)
@@ -80,9 +76,6 @@ namespace BetterThanNothing
 
 	void Runtime::OnRender(const RenderContext* ctx)
 	{
-		if (m_sponzaModel.has_value())
-			ctx->Submit(&m_sponzaModel.value(), m_sponzaTransform);
-
 		if (m_robotModel.has_value())
 			ctx->Submit(&m_robotModel.value(), m_robotTransform, "../../../Assets/Models/robot/robot.png");
 	}
@@ -91,9 +84,6 @@ namespace BetterThanNothing
 
 	void Runtime::SyncModels()
 	{
-		if (m_sponzaFuture.valid() && m_sponzaFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-			m_sponzaModel = m_sponzaFuture.get();
-
 		if (m_robotFuture.valid() && m_robotFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 			m_robotModel = m_robotFuture.get();
 	}

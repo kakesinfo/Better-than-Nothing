@@ -42,10 +42,6 @@ namespace BetterThanNothing
 		void SyncModels();
 
 	private:
-		std::future<ModelData>	 m_sponzaFuture;
-		std::optional<ModelData> m_sponzaModel;
-		Matrix4					 m_sponzaTransform;
-
 		std::future<ModelData>	 m_robotFuture;
 		std::optional<ModelData> m_robotModel;
 		Matrix4					 m_robotTransform;
