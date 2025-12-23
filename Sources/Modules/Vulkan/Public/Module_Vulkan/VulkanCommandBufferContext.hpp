@@ -31,6 +31,9 @@ namespace BetterThanNothing
 		VulkanCommandBufferContext(VulkanCommandBufferContext&& other) = delete;
 		VulkanCommandBufferContext& operator=(VulkanCommandBufferContext&& other) = delete;
 
+		void BeginRendering(const VkRenderingInfo* renderingInfo) const;
+		void EndRendering() const;
+
 		void SetViewport(const VkViewport* viewports, std::uint32_t firstViewport = 0, std::uint32_t viewportCount = 1) const;
 		void SetScissor(const VkRect2D* scissors, std::uint32_t firstScissor = 0, std::uint32_t scissorCount = 1) const;
 		void BindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS) const;
