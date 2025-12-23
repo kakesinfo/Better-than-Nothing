@@ -51,6 +51,7 @@ namespace BetterThanNothing
 		const std::uint32_t vertexBufferSize = sizeof(mesh->vertices[0]) * mesh->vertices.size();
 		const void*			vertexBufferData = mesh->vertices.data();
 		meshGpuData->vertexBuffer = BufferManager::CreateVertexBuffer(vertexBufferData, vertexBufferSize);
+		meshGpuData->vertexCount = static_cast<std::uint32_t>(mesh->vertices.size());
 
 		const std::uint32_t indexBufferSize = sizeof(mesh->indices[0]) * mesh->indices.size();
 		const void*			indexBufferData = mesh->indices.data();

@@ -37,6 +37,8 @@
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 
+#include "Module_Renderer/RenderMetrics.hpp"
+
 namespace BetterThanNothing
 {
 	Renderer::Renderer(VulkanContext* context) : m_context(context)
@@ -88,7 +90,7 @@ namespace BetterThanNothing
 		BufferManager::Shutdown();
 	}
 
-	void Renderer::RenderFrame(RenderList* renderList, const CameraData& camera,
+	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera,
 							   const DirectionalLightData& directionalLight)
 	{
 		if (!m_context->vkPipeline)
@@ -284,6 +286,8 @@ namespace BetterThanNothing
 
 			// Draw call
 			cmdContext.DrawIndexed(meshGpuData->indexCount, 1, 0, 0, 0);
+
+			RenderMetrics::AddDrawCall(meshGpuData->vertexCount);
 		}
 
 		vkCmdEndRendering(currentFrame.commandBuffer->Handle());

@@ -51,7 +51,7 @@ namespace BetterThanNothing
 		explicit Renderer(VulkanContext* context);
 		~Renderer();
 
-		void RenderFrame(RenderList* renderList, const CameraData& camera, const DirectionalLightData& directionalLight);
+		void RenderFrame(const RenderList* renderList, const CameraData& camera, const DirectionalLightData& directionalLight);
 
 	private:
 		void CreateCommandBuffers() const;
