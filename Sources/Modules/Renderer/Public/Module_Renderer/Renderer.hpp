@@ -33,6 +33,7 @@ namespace BetterThanNothing
 
 	class RenderList;
 	class RenderCache;
+	class RenderGraph;
 
 	class GlobalUniformProvider;
 	class DynamicUniformProvider;
@@ -79,5 +80,7 @@ namespace BetterThanNothing
 
 		std::unique_ptr<GlobalUniformProvider>	m_globalUniformProvider = nullptr;
 		std::unique_ptr<DynamicUniformProvider> m_dynamicUniformProvider = nullptr;
+
+		std::unique_ptr<RenderGraph> m_renderGraph = nullptr;
 	};
 }

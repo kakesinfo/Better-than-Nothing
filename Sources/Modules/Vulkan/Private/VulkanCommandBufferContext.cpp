@@ -23,6 +23,16 @@ namespace BetterThanNothing
 	VulkanCommandBufferContext::VulkanCommandBufferContext(const VkCommandBuffer commandBuffer) : m_commandBuffer(
 		commandBuffer) {}
 
+	void VulkanCommandBufferContext::BeginRendering(const VkRenderingInfo *renderingInfo) const
+	{
+		vkCmdBeginRendering(m_commandBuffer, renderingInfo);
+	}
+
+	void VulkanCommandBufferContext::EndRendering() const
+	{
+		vkCmdEndRendering(m_commandBuffer);
+	}
+
 	void VulkanCommandBufferContext::SetViewport(const VkViewport *viewports, std::uint32_t firstViewport,
 	                                             std::uint32_t viewportCount) const
 	{

@@ -37,7 +37,10 @@
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 
+#include "Module_Renderer/DrawStream.hpp"
 #include "Module_Renderer/RenderMetrics.hpp"
+#include "Module_Renderer/Passes/ForwardPass.hpp"
+#include "Module_Renderer/Passes/RenderGraph.hpp"
 
 namespace BetterThanNothing
 {
@@ -72,6 +75,9 @@ namespace BetterThanNothing
 
 		m_globalUniformProvider = std::make_unique<GlobalUniformProvider>(m_context);
 		m_dynamicUniformProvider = std::make_unique<DynamicUniformProvider>(m_context, 100000);
+
+		m_renderGraph = std::make_unique<RenderGraph>(m_context);
+		m_renderGraph->AddRenderPass<ForwardPass>();
 
 		CreateDescriptorSetLayout();
 		CreateDescriptorPool();
@@ -170,137 +176,48 @@ namespace BetterThanNothing
 
 	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera,
 									   const DirectionalLightData& directionalLight,
-									   const std::uint32_t		   imageIndex) const
+									   const std
+									   ::uint32_t		   imageIndex) const
 	{
 		const auto& currentFrame = m_context->vkFrames[m_currentFrame];
 
 		auto cmdContext = currentFrame.commandBuffer->BeginRecording();
 
-		VkImageMemoryBarrier barrier{};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = m_context->vkSwapChain->GetImage(imageIndex);
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
+		const auto globalUniform = m_globalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
+		globalUniform->view = camera.view;
+		globalUniform->projection = camera.projection;
+		globalUniform->cameraPosition = camera.position;
+		globalUniform->lightPosition = directionalLight.position;
 
-		currentFrame.commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-		0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-		VkRenderingAttachmentInfo colorAttachment{};
-		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = m_context->vkSwapChain->GetColorImageView()->Handle();
-		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-		colorAttachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorAttachment.resolveImageView = m_context->vkSwapChain->GetImageView(imageIndex)->Handle();
-		colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkRenderingAttachmentInfo depthAttachment{};
-		depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		depthAttachment.imageView = m_context->vkSwapChain->GetDepthImageView()->Handle();
-		depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-		depthAttachment.clearValue.depthStencil = {1.0f, 0};
-
-		VkRenderingInfo renderingInfo{};
-		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.renderArea = {{0, 0}, m_context->vkSwapChain->GetExtent()};
-		renderingInfo.layerCount = 1;
-		renderingInfo.colorAttachmentCount = 1;
-		renderingInfo.pColorAttachments = &colorAttachment;
-		renderingInfo.pDepthAttachment = &depthAttachment;
-
-		vkCmdBeginRendering(currentFrame.commandBuffer->Handle(), &renderingInfo);
-
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(m_context->vkSwapChain->GetExtent().width);
-		viewport.height = static_cast<float>(m_context->vkSwapChain->GetExtent().height);
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		cmdContext.SetViewport(&viewport);
-
-		VkRect2D scissor{};
-		scissor.offset = {0, 0};
-		scissor.extent = m_context->vkSwapChain->GetExtent();
-		cmdContext.SetScissor(&scissor);
-
-		// Bind shader pipeline
-		VkPipelineLayout pipelineLayout = m_context->vkPipeline->GetLayout();
-		cmdContext.BindPipeline(m_context->vkPipeline->Handle());
-
-		// Bind global uniforms
-		{
-			const auto globalUniform = m_globalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
-			globalUniform->view = camera.view;
-			globalUniform->projection = camera.projection;
-			globalUniform->cameraPosition = camera.position;
-			globalUniform->lightPosition = directionalLight.position;
-
-			const VkDescriptorSet& globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle();
-			cmdContext.BindDescriptorSets(pipelineLayout, 0, 1, &globalDescriptorSet);
-		}
-
+		DrawStream drawStream;
 		for (std::uint32_t i = 0; i < renderList->Size(); i++)
 		{
 			const auto& [meshGpuData, textureGpuData, transform] = renderList->Get(i);
-			// Bind dynamic uniforms
-			{
-				const auto dynamicUniform = m_dynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
-				dynamicUniform->model = transform;
 
-				VkDescriptorSet		dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle();
-				const std::uint32_t offset = m_dynamicUniformProvider->GetOffset(i);
-				cmdContext.BindDescriptorSets(pipelineLayout, 1, 1, &dynamicDescriptorSet, 1, &offset);
-			}
+			const auto dynamicUniform = m_dynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
+			dynamicUniform->model = transform;
 
-			// Bind texture sampler
-			{
-				const VkDescriptorSet& samplerDescriptorSet = textureGpuData->descriptorSet->Handle();
-				cmdContext.BindDescriptorSets(pipelineLayout, 2, 1, &samplerDescriptorSet);
-				// TODO: bind only if different from last frame
-			}
-
-			// Draw vertices and indices
-			{
-				// Bind mesh vertex and index buffers
-				const VkBuffer		   vertexBuffers[] = {meshGpuData->vertexBuffer->Handle()};
-				constexpr VkDeviceSize offsets[] = {0};
-				cmdContext.BindVertexBuffers(0, 1, vertexBuffers, offsets);
-				cmdContext.BindIndexBuffer(meshGpuData->indexBuffer->Handle(), 0, VK_INDEX_TYPE_UINT32);
-			}
-
-			// Draw call
-			cmdContext.DrawIndexed(meshGpuData->indexCount, 1, 0, 0, 0);
+			drawStream.Draw({
+				.pipeline =  m_context->vkPipeline->Handle(),
+				.pipelineLayout = m_context->vkPipeline->GetLayout(),
+				.vertexBuffer = meshGpuData->vertexBuffer->Handle(),
+				.indexBuffer = meshGpuData->indexBuffer->Handle(),
+				.indexCount = meshGpuData->indexCount,
+				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
+				.dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle(),
+				.dynamicOffset = m_dynamicUniformProvider->GetOffset(i),
+				.samplerDescriptorSet = textureGpuData->descriptorSet->Handle()
+			});
 
 			RenderMetrics::AddDrawCall(meshGpuData->vertexCount);
 		}
 
-		vkCmdEndRendering(currentFrame.commandBuffer->Handle());
+		RenderPassContext renderPassContext{};
+		renderPassContext.commandBuffer = &cmdContext;
+		renderPassContext.imageIndex = imageIndex;
+		renderPassContext.currentFrame = m_currentFrame;
 
-		VkImageMemoryBarrier presentBarrier = barrier;
-		presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		presentBarrier.dstAccessMask = 0;
-		presentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		currentFrame.commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-		0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+		m_renderGraph->Execute(renderPassContext, drawStream);
 
 		currentFrame.commandBuffer->EndRecording();
 	}
