@@ -37,6 +37,8 @@
 #include <Module_Renderer/Renderer.hpp>
 #include <Module_Vulkan/VulkanContext.hpp>
 
+#include "Module_Renderer/RenderMetrics.hpp"
+
 namespace BetterThanNothing
 {
 	Engine::Engine(IEngineApplication* application) : m_application(application)
@@ -97,9 +99,13 @@ namespace BetterThanNothing
 
 		while (!WindowManager::GetWindow()->ShouldClose() && !shouldClose)
 		{
+			RenderMetrics::BeginRecording();
+
 			const auto					 currentTime = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<float> elapsed = currentTime - lastTime;
 			lastTime = currentTime;
+
+			RenderMetrics::SetFrameTime(elapsed.count() * 1000.0f);
 
 			Window::PollEvents();
 
@@ -112,6 +118,8 @@ namespace BetterThanNothing
 				shouldClose = true;
 
 			InputManager::ResetMousePosition();
+
+			RenderMetrics::EndRecording();
 		}
 
 		m_application->OnDisable();
