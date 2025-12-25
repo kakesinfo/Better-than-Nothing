@@ -51,6 +51,8 @@ namespace BetterThanNothing
 
 		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers,
 							 std::uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const;
+
+		VkCommandBuffer Handle() const;
 	private:
 		VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
 	};

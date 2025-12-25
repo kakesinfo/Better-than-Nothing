@@ -26,7 +26,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Platform
         Module_Vulkan
         stb
-
+        imgui
     PUBLIC
         glslang
         glslang-default-resource-limits

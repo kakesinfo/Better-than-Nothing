@@ -106,6 +106,7 @@ namespace BetterThanNothing
 			lastTime = currentTime;
 
 			RenderMetrics::SetFrameTime(elapsed.count() * 1000.0f);
+			RenderMetrics::SetFps(1.0f / elapsed.count());
 
 			Window::PollEvents();
 
