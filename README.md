@@ -33,5 +33,5 @@ Contributions are welcome. Both new features and bug fixes. Just open a pull req
 
 ### 📜 Licence
 
-This project is under the GNU General Public License v3.0 license - see the [LICENSE](LICENSE) file for details.
+This project is under the GNU General Public License v3.0 license - see the [LICENSE](LICENSE.md) file for details.
 

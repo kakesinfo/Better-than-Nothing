@@ -109,4 +109,9 @@ namespace BetterThanNothing
 		                     memoryBarriers, bufferMemoryBarrierCount, bufferMemoryBarriers, imageMemoryBarrierCount,
 		                     imageMemoryBarriers);
 	}
+
+	VkCommandBuffer VulkanCommandBufferContext::Handle() const
+	{
+		return m_commandBuffer;
+	}
 };

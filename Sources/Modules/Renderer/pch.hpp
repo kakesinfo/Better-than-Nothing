@@ -38,3 +38,9 @@
 #include <glslang/Include/glslang_c_shader_types.h>
 #include <glslang/Public/resource_limits_c.h>
 #include <spirv_cross/spirv_cross.hpp>
+
+#define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>

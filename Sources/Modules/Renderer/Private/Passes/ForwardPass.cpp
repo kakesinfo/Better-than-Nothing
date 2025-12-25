@@ -130,26 +130,5 @@ namespace BetterThanNothing
 		}
 
 		commandBuffer->EndRendering();
-
-		{
-			VkImageMemoryBarrier presentationBarrier{};
-			presentationBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			presentationBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			presentationBarrier.dstAccessMask = 0;
-			presentationBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			presentationBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			presentationBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			presentationBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			presentationBarrier.image = m_context->vkSwapChain->GetImage(context.imageIndex);
-			presentationBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			presentationBarrier.subresourceRange.baseMipLevel = 0;
-			presentationBarrier.subresourceRange.levelCount = 1;
-			presentationBarrier.subresourceRange.baseArrayLayer = 0;
-			presentationBarrier.subresourceRange.layerCount = 1;
-
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
-		}
 	}
 }

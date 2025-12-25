@@ -38,9 +38,10 @@
 #include <Module_Platform/Window.hpp>
 
 #include "Module_Renderer/DrawStream.hpp"
-#include "Module_Renderer/RenderMetrics.hpp"
 #include "Module_Renderer/Passes/ForwardPass.hpp"
+#include "Module_Renderer/Passes/ImGuiPass.hpp"
 #include "Module_Renderer/Passes/RenderGraph.hpp"
+#include "Module_Renderer/RenderMetrics.hpp"
 
 namespace BetterThanNothing
 {
@@ -78,6 +79,7 @@ namespace BetterThanNothing
 
 		m_renderGraph = std::make_unique<RenderGraph>(m_context);
 		m_renderGraph->AddRenderPass<ForwardPass>();
+		m_renderGraph->AddRenderPass<ImGuiPass>();
 
 		CreateDescriptorSetLayout();
 		CreateDescriptorPool();
@@ -188,6 +190,8 @@ namespace BetterThanNothing
 		globalUniform->projection = camera.projection;
 		globalUniform->cameraPosition = camera.position;
 		globalUniform->lightPosition = directionalLight.position;
+
+		RenderMetrics::SetCameraCoordinates(camera.position.GetX(), camera.position.GetY(), camera.position.GetZ());
 
 		DrawStream drawStream;
 		for (std::uint32_t i = 0; i < renderList->Size(); i++)

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <cmath>
+
 namespace BetterThanNothing
 {
 	struct RenderMetricsData
@@ -28,6 +30,11 @@ namespace BetterThanNothing
 		std::uint64_t	totalDrawCalls = 0;
 		std::uint64_t	totalVerticesRendered = 0;
 		float			frameTime = 0;
+		int				fps = 0;
+
+		float			cameraX;
+		float			cameraY;
+		float			cameraZ;
 	};
 
 	class RenderMetrics
@@ -42,6 +49,18 @@ namespace BetterThanNothing
 		static void SetFrameTime(const float frameTime)
 		{
 			s_currentFrameMetrics.frameTime = frameTime;
+		}
+
+		static void SetFps(const float fps)
+		{
+			s_currentFrameMetrics.fps = static_cast<int>(std::round(fps));
+		}
+
+		static void SetCameraCoordinates(const float x, const float y, const float z)
+		{
+			s_currentFrameMetrics.cameraX = x;
+			s_currentFrameMetrics.cameraY = y;
+			s_currentFrameMetrics.cameraZ = z;
 		}
 
 		static void BeginRecording()
