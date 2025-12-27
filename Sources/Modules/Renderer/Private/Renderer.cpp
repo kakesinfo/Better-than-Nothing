@@ -20,8 +20,8 @@
 
 #include "Module_Renderer/Renderer.hpp"
 
-#include "Module_Renderer/Data/CameraData.hpp"
-#include "Module_Renderer/Data/DirectionalLightData.hpp"
+#include "Module_Data/Graphics/CameraData.hpp"
+#include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Renderer/Data/DynamicUniformData.hpp"
 #include "Module_Renderer/Data/GlobalUniformData.hpp"
 #include "Module_Renderer/Data/ShaderData.hpp"
@@ -86,6 +86,10 @@ namespace BetterThanNothing
 		CreateGlobalDescriptorSets();
 		CreateDynamicDescriptorSets();
 
+		constexpr std::uint32_t MAX_LIGHT_COUNT = 1000;
+		CreatePointLightBuffers(MAX_LIGHT_COUNT);
+		CreatePointLightDescriptorSets(MAX_LIGHT_COUNT);
+
 		CreateCommandBuffers();
 		CreateSyncObjects();
 
@@ -98,8 +102,7 @@ namespace BetterThanNothing
 		BufferManager::Shutdown();
 	}
 
-	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera,
-							   const DirectionalLightData& directionalLight)
+	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera)
 	{
 		if (!m_context->vkPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
@@ -126,7 +129,7 @@ namespace BetterThanNothing
 		m_context->vkFrames[m_currentFrame].inFlightFence->Reset();
 		m_context->vkFrames[m_currentFrame].commandBuffer->Reset();
 
-		RecordCommandBuffer(renderList, camera, directionalLight, imageIndex);
+		RecordCommandBuffer(renderList, camera, imageIndex);
 
 		const VkSemaphore waitSemaphores[] = {m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle()};
 
@@ -177,18 +180,25 @@ namespace BetterThanNothing
 	}
 
 	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera,
-									   const DirectionalLightData& directionalLight,
-									   const std ::uint32_t		   imageIndex) const
+									   const std ::uint32_t imageIndex) const
 	{
 		const auto& currentFrame = m_context->vkFrames[m_currentFrame];
 
 		auto cmdContext = currentFrame.commandBuffer->BeginRecording();
 
+		auto directionalLight = renderList->GetDirectionalLight();
+
 		const auto globalUniform = m_globalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
 		globalUniform->view = camera.view;
 		globalUniform->projection = camera.projection;
 		globalUniform->cameraPosition = camera.position;
-		globalUniform->lightPosition = directionalLight.position;
+		globalUniform->cameraExposure = camera.exposure;
+		globalUniform->lightDirection = directionalLight.revDirection;
+		globalUniform->lightColor = directionalLight.color;
+		globalUniform->lightIntensity = directionalLight.intensity;
+		globalUniform->pointLightCount = renderList->GetPointLightCount();
+
+		DrawPointLights(renderList);
 
 		RenderMetrics::SetCameraCoordinates(camera.position.GetX(), camera.position.GetY(), camera.position.GetZ());
 
@@ -200,15 +210,18 @@ namespace BetterThanNothing
 			const auto dynamicUniform = m_dynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
 			dynamicUniform->model = transform;
 
-			drawStream.Draw({.pipeline = m_context->vkPipeline->Handle(),
-							 .pipelineLayout = m_context->vkPipeline->GetLayout(),
-							 .vertexBuffer = meshGpuData->vertexBuffer->Handle(),
-							 .indexBuffer = meshGpuData->indexBuffer->Handle(),
-							 .indexCount = meshGpuData->indexCount,
-							 .globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
-							 .dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle(),
-							 .dynamicOffset = m_dynamicUniformProvider->GetOffset(i),
-							 .samplerDescriptorSet = textureGpuData->descriptorSet->Handle()});
+			drawStream.Draw({
+				.pipeline = m_context->vkPipeline->Handle(),
+				.pipelineLayout = m_context->vkPipeline->GetLayout(),
+				.vertexBuffer = meshGpuData->vertexBuffer->Handle(),
+				.indexBuffer = meshGpuData->indexBuffer->Handle(),
+				.indexCount = meshGpuData->indexCount,
+				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
+				.dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle(),
+				.dynamicOffset = m_dynamicUniformProvider->GetOffset(i),
+				.samplerDescriptorSet = textureGpuData->descriptorSet->Handle(),
+				.pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
+			});
 
 			RenderMetrics::AddDrawCall(meshGpuData->vertexCount);
 		}
@@ -221,6 +234,17 @@ namespace BetterThanNothing
 		m_renderGraph->Execute(renderPassContext, drawStream);
 
 		currentFrame.commandBuffer->EndRecording();
+	}
+
+	void Renderer::DrawPointLights(const RenderList* renderList) const
+	{
+		const std::uint32_t count = renderList->GetPointLightCount();
+
+		if (count == 0)
+			return;
+
+		void* dstData = m_context->vkFrames[m_currentFrame].pointLightBuffer->GetMappedData();
+		std::memcpy(dstData, renderList->GetPointLights().data(), count * sizeof(PointLightData));
 	}
 
 	void Renderer::CreateCommandBuffers() const
@@ -284,15 +308,25 @@ namespace BetterThanNothing
 		samplerLayoutBinding.pImmutableSamplers = nullptr;
 		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkDescriptorSetLayoutBinding pointLightLayoutBinding{};
+		pointLightLayoutBinding.binding = 0;
+		pointLightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		pointLightLayoutBinding.descriptorCount = 1;
+		pointLightLayoutBinding.pImmutableSamplers = nullptr;
+		pointLightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		auto globalBindings = {globalUniformLayoutBinding};
 		auto dynamicBindings = {dynamicUniformLayoutBinding};
 		auto samplerBindings = {samplerLayoutBinding};
+		auto pointLightBinding = {pointLightLayoutBinding};
 
 		m_context->vkGlobalDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(globalBindings, m_context);
 		m_context->vkDynamicDescriptorSetLayout =
 			std::make_unique<VulkanDescriptorSetLayout>(dynamicBindings, m_context);
 		m_context->vkSamplerDescriptorSetLayout =
 			std::make_unique<VulkanDescriptorSetLayout>(samplerBindings, m_context);
+		m_context->vkPointLightDescriptorLayout =
+			std::make_unique<VulkanDescriptorSetLayout>(pointLightBinding, m_context);
 
 		Logger::Log<SUCCESS>("Vulkan descriptor set layout: ok");
 	}
@@ -313,7 +347,11 @@ namespace BetterThanNothing
 		samplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		samplerPoolSize.descriptorCount = 1000; // TODO: adjust based on expected number of textures
 
-		std::vector poolSizes = {globalPoolSize, dynamicPoolSize, samplerPoolSize};
+		VkDescriptorPoolSize pointLightPoolSize{};
+		pointLightPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		pointLightPoolSize.descriptorCount = frames;
+
+		std::vector poolSizes = {globalPoolSize, dynamicPoolSize, samplerPoolSize, pointLightPoolSize};
 
 		m_context->vkDescriptorPool = std::make_unique<VulkanDescriptorPool>(poolSizes, m_context);
 
@@ -380,6 +418,52 @@ namespace BetterThanNothing
 
 		Logger::Log<SUCCESS>("Vulkan dynamic descriptor sets: ok (count: {})",
 							 m_context->vkDynamicDescriptorSets.size());
+	}
+
+	void Renderer::CreatePointLightBuffers(std::uint32_t maxLights) const
+	{
+		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
+		const std::uint32_t bufferSize = maxLights * sizeof(PointLightData);
+
+		for (std::uint32_t i = 0; i < count; i++)
+		{
+			m_context->vkFrames[i].pointLightBuffer = BufferManager::CreateStorageBuffer(bufferSize);
+		}
+
+		Logger::Log<SUCCESS>("Point light buffers: ok (count: {})", count);
+	}
+
+	void Renderer::CreatePointLightDescriptorSets(std::uint32_t maxLights)
+	{
+		m_context->vkPointLightDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
+
+		const VkDeviceSize lightBufferSize = sizeof(PointLightData) * maxLights;
+
+		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
+		{
+			m_context->vkPointLightDescriptorSets[i] =
+				std::make_unique<VulkanDescriptorSet>(m_context->vkPointLightDescriptorLayout, m_context);
+
+			VkDescriptorBufferInfo dynamicInfo{};
+			dynamicInfo.buffer = m_context->vkFrames[i].pointLightBuffer->Handle();
+			dynamicInfo.offset = 0;
+			dynamicInfo.range = lightBufferSize;
+
+			const auto& descriptorSet = m_context->vkPointLightDescriptorSets[i]->Handle();
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSet;
+			descriptorWrite.dstBinding = 0;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &dynamicInfo;
+
+			vkUpdateDescriptorSets(m_context->vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
+		}
+
+		Logger::Log<SUCCESS>("Point light descriptor sets: ok (count: {})",
+							 m_context->vkPointLightDescriptorSets.size());
 	}
 
 	void Renderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback, RenderCache* renderCache)

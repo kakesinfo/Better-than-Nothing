@@ -16,15 +16,17 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include "Module_Math/Vector3.hpp"
+#include "module_vulkan.hpp"
 
 namespace BetterThanNothing
 {
-	struct DirectionalLightData
+	VulkanStorageBuffer::VulkanStorageBuffer(VulkanContext* context, VkDeviceSize size)
+		: VulkanBuffer(context, size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU,
+					   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT)
+	{}
+
+	void* VulkanStorageBuffer::GetMappedData() const
 	{
-		alignas(16) Vector3 position;
-		alignas(16) Vector3 color;
-	};
+		return m_allocInfo.pMappedData;
+	}
 }

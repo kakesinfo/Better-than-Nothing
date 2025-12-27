@@ -41,6 +41,7 @@
 #include "Module_Vulkan/VulkanShaderModule.hpp"
 #include "Module_Vulkan/VulkanStagingBuffer.hpp"
 #include "Module_Vulkan/VulkanSurface.hpp"
+#include "Module_Vulkan/VulkanStorageBuffer.hpp"
 #include "Module_Vulkan/VulkanSwapChain.hpp"
 #include "Module_Vulkan/VulkanUniformBuffer.hpp"
 #include "Module_Vulkan/VulkanVertexBuffer.hpp"

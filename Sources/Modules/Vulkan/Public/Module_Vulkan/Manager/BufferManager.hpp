@@ -33,6 +33,7 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<VulkanVertexBuffer> CreateVertexBuffer(const void* data, std::uint32_t dataSize);
 		static std::unique_ptr<VulkanIndexBuffer>  CreateIndexBuffer(const void* data, std::uint32_t dataSize);
+		static std::unique_ptr<VulkanStorageBuffer> CreateStorageBuffer(std::uint32_t dataSize);
 
 		template <typename T>
 		static std::unique_ptr<VulkanUniformBuffer> CreateUniformBuffer()

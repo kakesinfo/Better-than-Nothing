@@ -35,6 +35,7 @@ namespace BetterThanNothing
 		uint32_t		dynamicOffset;
 
 		VkDescriptorSet samplerDescriptorSet;
+		VkDescriptorSet pointLightDescriptorSet;
 	};
 
 	class DrawStream

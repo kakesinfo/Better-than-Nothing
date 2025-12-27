@@ -28,7 +28,12 @@ namespace BetterThanNothing
 		alignas(16) Matrix4 projection;
 		alignas(16) Matrix4 view;
 
-		alignas(16) Vector3 lightPosition;
+		alignas(16) Vector3 lightDirection;
+		alignas(16) Vector3 lightColor;
+		float lightIntensity;
+
 		alignas(16) Vector3 cameraPosition;
+		float cameraExposure;
+		int pointLightCount;
 	};
 }

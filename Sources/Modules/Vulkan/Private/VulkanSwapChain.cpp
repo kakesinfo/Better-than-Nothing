@@ -206,7 +206,7 @@ namespace BetterThanNothing
 	{
 		for (const auto& surfaceFormat : availableFormats)
 		{
-			const bool correctFormat = surfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB;
+			const bool correctFormat = surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM; // disable Gamma Correction
 			const bool correctColorSpace = surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 			if (correctFormat && correctColorSpace)

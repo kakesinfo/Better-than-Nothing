@@ -18,6 +18,8 @@
 
 #include "Runtime.hpp"
 
+#include "Module_Engine/MeshFactory.hpp"
+
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Data/Graphics/ModelData.hpp>
@@ -33,7 +35,10 @@ namespace BetterThanNothing
 {
 	void Runtime::OnEnable()
 	{
-		m_robotTransform = Matrix4::Identity.Translate(2.0f, 0.0f, 0.0f);
+		m_planeModel = ModelLoader::Load("../../../Assets/Models/sponza/sponza.obj");
+		m_planeTransform = Matrix4::Identity.Translate(0.0f, 0.0f, 0.0f).Scale(0.01);
+
+		m_robotTransform = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
 		m_robotFuture = std::async(std::launch::async,
 								   []() { return ModelLoader::Load("../../../Assets/Models/robot/robot.obj"); });
 	}
@@ -76,6 +81,8 @@ namespace BetterThanNothing
 	{
 		if (m_robotModel.has_value())
 			ctx->Submit(&m_robotModel.value(), m_robotTransform, "../../../Assets/Models/robot/robot.png");
+
+		ctx->Submit(&m_planeModel, m_planeTransform);
 	}
 
 	void Runtime::OnDisable() {}

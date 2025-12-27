@@ -22,6 +22,7 @@ namespace BetterThanNothing
 {
 	class VulkanCommandBuffer;
 	class VulkanUniformBuffer;
+	class VulkanStorageBuffer;
 	class VulkanSemaphore;
 	class VulkanFence;
 
@@ -30,6 +31,7 @@ namespace BetterThanNothing
 		std::unique_ptr<VulkanCommandBuffer> commandBuffer;
 		std::unique_ptr<VulkanUniformBuffer> globalUniformBuffer;
 		std::unique_ptr<VulkanUniformBuffer> dynamicUniformBuffer;
+		std::unique_ptr<VulkanStorageBuffer> pointLightBuffer;
 		std::unique_ptr<VulkanSemaphore>	 imageAvailableSemaphore;
 		std::unique_ptr<VulkanSemaphore>	 renderFinishedSemaphore;
 		std::unique_ptr<VulkanFence>		 inFlightFence;
