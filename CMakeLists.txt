@@ -16,11 +16,7 @@ project("better-than-nothing" VERSION 0.3.0 LANGUAGES C CXX)
 # ==================================================================================================
 # Dependencies
 # ==================================================================================================
-set(SDL_SHARED ON CACHE BOOL "Build shared SDL" FORCE)
-set(SDL_STATIC OFF CACHE BOOL "Build static SDL" FORCE)
 add_subdirectory("ThirdParty/sdl")
-
-#add_subdirectory("ThirdParty/glfw")
 add_subdirectory("ThirdParty/vulkan")
 add_subdirectory("ThirdParty/vma")
 add_subdirectory("ThirdParty/glm")

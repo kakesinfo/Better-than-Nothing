@@ -35,7 +35,6 @@ apt-get update && apt-get install -y \
     vulkan-tools \
     libvulkan-dev \
     spirv-tools \
-    libglfw3-dev \
     libglm-dev \
     python3 \
     doxygen \
