@@ -23,6 +23,3 @@
 #include <filesystem>
 #include <string>
 #include <unordered_map>
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
