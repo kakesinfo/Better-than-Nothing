@@ -108,12 +108,14 @@ namespace BetterThanNothing
 		m_imageViews.resize(imageCount);
 
 		for (size_t i = 0; i < imageCount; i++)
-			m_imageViews.at(i) = std::make_unique<VulkanImageView>(m_context, m_images.at(i), m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+			m_imageViews.at(i) = std::make_unique<VulkanImageView>(m_context, m_images.at(i), m_imageFormat,
+																   VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
 	void VulkanSwapChain::CreateDepthResources()
 	{
-		m_depthFormat = ChooseDepthFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT});
+		m_depthFormat =
+			ChooseDepthFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT});
 
 		VkImageCreateInfo imageInfo{};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -131,10 +133,14 @@ namespace BetterThanNothing
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		m_depthImage = std::make_unique<VulkanImage>(m_context, &imageInfo);
-		m_depthImageView = std::make_unique<VulkanImageView>(m_context, m_depthImage->Handle(), m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+		m_depthImageView = std::make_unique<VulkanImageView>(m_context, m_depthImage->Handle(), m_depthFormat,
+															 VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
 		VulkanCommandBuffer::SingleTimeCommands(
-			[&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) { commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1); },
+			[&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) {
+				commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED,
+													 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+			},
 			m_context);
 	}
 
@@ -158,7 +164,8 @@ namespace BetterThanNothing
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		m_colorImage = std::make_unique<VulkanImage>(m_context, &imageInfo);
-		m_colorImageView = std::make_unique<VulkanImageView>(m_context, m_colorImage->Handle(), colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+		m_colorImageView = std::make_unique<VulkanImageView>(m_context, m_colorImage->Handle(), colorFormat,
+															 VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
 	void VulkanSwapChain::RecreateSwapchain()
@@ -171,8 +178,6 @@ namespace BetterThanNothing
 			auto framebufferSize = pWindow->GetFramebufferSize();
 			width = framebufferSize.first;
 			height = framebufferSize.second;
-
-			glfwWaitEvents();
 		}
 
 		m_context->vkDevice->WaitIdle();
@@ -229,14 +234,16 @@ namespace BetterThanNothing
 
 		VkExtent2D actualExtent;
 		actualExtent.width = std::clamp(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-		actualExtent.height = std::clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+		actualExtent.height =
+			std::clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
 		return actualExtent;
 	}
 
 	VkFormat VulkanSwapChain::ChooseDepthFormat(const std::vector<VkFormat>& candidates)
 	{
-		return m_context->vkDevice->FindSupportedFormat(candidates, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		return m_context->vkDevice->FindSupportedFormat(candidates, VK_IMAGE_TILING_OPTIMAL,
+														VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 	}
 
 	VkExtent2D VulkanSwapChain::GetExtent() const

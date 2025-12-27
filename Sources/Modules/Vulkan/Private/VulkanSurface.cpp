@@ -29,8 +29,8 @@ namespace BetterThanNothing
 	{
 		auto& window = WindowManager::GetWindow();
 
-		if (glfwCreateWindowSurface(m_context->vkInstance->Handle(), window->Handle(), nullptr, &m_surface) != VK_SUCCESS)
-			throw std::runtime_error("Failed to create window surface");
+		if (!SDL_Vulkan_CreateSurface(window->Handle(), m_context->vkInstance->Handle(), nullptr, &m_surface))
+			throw std::runtime_error(std::format("Failed to create Vulkan surface: {}", SDL_GetError()));
 
 		Logger::Log<SUCCESS>("Vulkan surface: ok");
 	}

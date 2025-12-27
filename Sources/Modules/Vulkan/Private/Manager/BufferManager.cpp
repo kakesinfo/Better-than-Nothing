@@ -32,7 +32,8 @@ namespace BetterThanNothing
 		m_context = nullptr;
 	}
 
-	std::unique_ptr<VulkanVertexBuffer> BufferManager::CreateVertexBuffer(const void* data, const std::uint32_t dataSize)
+	std::unique_ptr<VulkanVertexBuffer> BufferManager::CreateVertexBuffer(const void*		  data,
+																		  const std::uint32_t dataSize)
 	{
 		return std::make_unique<VulkanVertexBuffer>(m_context, dataSize, data);
 	}

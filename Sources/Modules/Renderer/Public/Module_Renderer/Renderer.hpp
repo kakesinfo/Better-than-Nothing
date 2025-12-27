@@ -52,7 +52,8 @@ namespace BetterThanNothing
 		explicit Renderer(VulkanContext* context);
 		~Renderer();
 
-		void RenderFrame(const RenderList* renderList, const CameraData& camera, const DirectionalLightData& directionalLight);
+		void RenderFrame(const RenderList* renderList, const CameraData& camera,
+						 const DirectionalLightData& directionalLight);
 
 	private:
 		void CreateCommandBuffers() const;
@@ -62,7 +63,8 @@ namespace BetterThanNothing
 		void CreateGlobalDescriptorSets();
 		void CreateDynamicDescriptorSets();
 
-		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const DirectionalLightData& directionalLight, std::uint32_t imageIndex) const;
+		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera,
+								 const DirectionalLightData& directionalLight, std::uint32_t imageIndex) const;
 
 		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
 		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();

@@ -12,7 +12,8 @@ namespace BetterThanNothing
 	{
 		auto gpuData = std::make_unique<TextureGpuData>();
 
-		stbi_uc* pixels = stbi_load(input.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels, STBI_rgb_alpha);
+		stbi_uc* pixels =
+			stbi_load(input.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels, STBI_rgb_alpha);
 
 		if (!pixels)
 		{
@@ -22,19 +23,23 @@ namespace BetterThanNothing
 		}
 
 		gpuData->size = gpuData->width * gpuData->height * STBI_rgb_alpha;
-		gpuData->mipLevels = static_cast<std::uint32_t>(std::floor(std::log2(std::max(gpuData->width, gpuData->height)))) + 1;
+		gpuData->mipLevels =
+			static_cast<std::uint32_t>(std::floor(std::log2(std::max(gpuData->width, gpuData->height)))) + 1;
 		gpuData->image = CreateTextureImage(gpuData->width, gpuData->height, gpuData->mipLevels, gpuData->size, pixels);
 
 		stbi_image_free(pixels);
 
-		gpuData->imageView = CreateTextureImageView(gpuData->image->Handle(), VK_FORMAT_R8G8B8A8_SRGB, gpuData->mipLevels);
+		gpuData->imageView =
+			CreateTextureImageView(gpuData->image->Handle(), VK_FORMAT_R8G8B8A8_SRGB, gpuData->mipLevels);
 		gpuData->sampler = CreateTextureSampler(gpuData->mipLevels);
 		gpuData->descriptorSet = CreateTextureDescriptorSet(gpuData.get());
 
 		return gpuData;
 	}
 
-	std::unique_ptr<VulkanImage> TextureLoader::CreateTextureImage(std::uint32_t width, std::uint32_t height, std::uint32_t mipLevels, std::uint32_t size, void* pixels)
+	std::unique_ptr<VulkanImage> TextureLoader::CreateTextureImage(std::uint32_t width, std::uint32_t height,
+																   std::uint32_t mipLevels, std::uint32_t size,
+																   void* pixels)
 	{
 		const VulkanStagingBuffer stagingBuffer(m_context, size);
 		stagingBuffer.Write(pixels, size);
@@ -50,7 +55,8 @@ namespace BetterThanNothing
 		imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageInfo.usage =
+			VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -60,11 +66,13 @@ namespace BetterThanNothing
 			[&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) {
 				VkImage vkImage = image->Handle();
 
-				commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+				commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+													 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 				commandBuffer->CopyBufferToImage(stagingBuffer.Handle(), vkImage, width, height);
 
 				// Transition to TRANSFER_DST_OPTIMAL is done in mipmap generation _createMipmaps
-				// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
+				// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB,
+				// VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 			},
 			m_context);
 
@@ -73,12 +81,14 @@ namespace BetterThanNothing
 		return image;
 	}
 
-	std::unique_ptr<VulkanImageView> TextureLoader::CreateTextureImageView(VkImage image, VkFormat format, std::uint32_t mipLevels)
+	std::unique_ptr<VulkanImageView> TextureLoader::CreateTextureImageView(VkImage image, VkFormat format,
+																		   std::uint32_t mipLevels)
 	{
 		return std::make_unique<VulkanImageView>(m_context, image, format, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 	}
 
-	void TextureLoader::CreateMipmaps(VkImage image, VkFormat imageFormat, std::int32_t texWidth, std::int32_t texHeight, std::uint32_t mipLevels) const
+	void TextureLoader::CreateMipmaps(VkImage image, VkFormat imageFormat, std::int32_t texWidth,
+									  std::int32_t texHeight, std::uint32_t mipLevels) const
 	{
 		VkFormatProperties formatProperties;
 		vkGetPhysicalDeviceFormatProperties(m_context->vkDevice->PhysicalHandle(), imageFormat, &formatProperties);
@@ -108,7 +118,8 @@ namespace BetterThanNothing
 					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 					barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-					commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+					commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
+												   nullptr, 0, nullptr, 1, &barrier);
 
 					VkImageBlit blit{};
 					blit.srcOffsets[0] = {0, 0, 0};
@@ -124,14 +135,17 @@ namespace BetterThanNothing
 					blit.dstSubresource.baseArrayLayer = 0;
 					blit.dstSubresource.layerCount = 1;
 
-					commandBuffer->BlitImage(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &blit, VK_FILTER_LINEAR);
+					commandBuffer->BlitImage(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
+											 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &blit, VK_FILTER_LINEAR);
 
 					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 					barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 					barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-					commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+					commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
+												   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1,
+												   &barrier);
 
 					if (mipWidth > 1)
 						mipWidth /= 2;
@@ -145,7 +159,8 @@ namespace BetterThanNothing
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-				commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+				commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+											   0, nullptr, 0, nullptr, 1, &barrier);
 			},
 			m_context);
 	}

@@ -20,7 +20,8 @@
 
 namespace BetterThanNothing
 {
-	VulkanSampler::VulkanSampler(VulkanContext* context, const VkSamplerCreateInfo* samplerCreateInfo) : m_context(context)
+	VulkanSampler::VulkanSampler(VulkanContext* context, const VkSamplerCreateInfo* samplerCreateInfo)
+		: m_context(context)
 	{
 		if (vkCreateSampler(m_context->vkDevice->Handle(), samplerCreateInfo, nullptr, &m_sampler) != VK_SUCCESS)
 			throw std::runtime_error("failed to create texture sampler!");

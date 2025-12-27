@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -27,10 +27,10 @@
 
 namespace BetterThanNothing
 {
-	ForwardPass::ForwardPass(VulkanContext* context): m_context(context) {}
+	ForwardPass::ForwardPass(VulkanContext* context) : m_context(context) {}
 	ForwardPass::~ForwardPass() = default;
 
-	void ForwardPass::Execute(const RenderPassContext &context, const DrawStream& drawStream)
+	void ForwardPass::Execute(const RenderPassContext& context, const DrawStream& drawStream)
 	{
 		auto commandBuffer = context.commandBuffer;
 
@@ -51,8 +51,8 @@ namespace BetterThanNothing
 			barrier.subresourceRange.layerCount = 1;
 
 			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			0, 0, nullptr, 0, nullptr, 1, &barrier);
+										   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1,
+										   &barrier);
 		}
 
 		VkRenderingAttachmentInfo colorAttachment{};
@@ -100,28 +100,30 @@ namespace BetterThanNothing
 		commandBuffer->SetScissor(&scissor);
 
 		VkPipeline lastPipeline = VK_NULL_HANDLE;
-		bool boundGlobalDescriptor = false;
+		bool	   boundGlobalDescriptor = false;
 
 		for (std::uint32_t i = 0; i < drawStream.Size(); i++)
 		{
 			const DrawCommand& drawCommand = drawStream[i];
 
-			if (lastPipeline != drawCommand.pipeline) {
+			if (lastPipeline != drawCommand.pipeline)
+			{
 				commandBuffer->BindPipeline(drawCommand.pipeline);
 				lastPipeline = drawCommand.pipeline;
 			}
 
-			if (!boundGlobalDescriptor) {
+			if (!boundGlobalDescriptor)
+			{
 				commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 0, 1, &drawCommand.globalDescriptorSet);
 				boundGlobalDescriptor = true;
 			}
 
-			commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 1, 1,
-				&drawCommand.dynamicDescriptorSet, 1, &drawCommand.dynamicOffset);
+			commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 1, 1, &drawCommand.dynamicDescriptorSet, 1,
+											  &drawCommand.dynamicOffset);
 
 			commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 2, 1, &drawCommand.samplerDescriptorSet);
 
-			const VkBuffer vertexBuffers[] = {drawCommand.vertexBuffer};
+			const VkBuffer		   vertexBuffers[] = {drawCommand.vertexBuffer};
 			constexpr VkDeviceSize offsets[] = {0};
 			commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
 			commandBuffer->BindIndexBuffer(drawCommand.indexBuffer, 0, VK_INDEX_TYPE_UINT32);

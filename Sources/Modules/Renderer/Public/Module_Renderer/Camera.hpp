@@ -51,7 +51,7 @@ namespace BetterThanNothing
 		float m_nearPlane;
 		float m_farPlane;
 
-		Vector3 m_position;
+		Vector3	   m_position;
 		Quaternion m_orientation;
 	};
 }

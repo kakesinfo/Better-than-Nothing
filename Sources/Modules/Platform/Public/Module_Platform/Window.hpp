@@ -18,11 +18,16 @@
 
 #pragma once
 
+#include <Module_Base/EKey.hpp>
+#include <Module_Base/EMouseButton.hpp>
+
+#include <SDL3/SDL.h>
+
 namespace BetterThanNothing
 {
 	class Window
 	{
-		GLFWwindow* m_window = nullptr;
+		SDL_Window* m_window = nullptr;
 
 		std::string m_title{};
 
@@ -33,15 +38,17 @@ namespace BetterThanNothing
 		bool m_resizable = true;
 		bool m_resized = false;
 
+		bool m_shouldClose = false;
+
 	public:
-		Window() = default;
-		explicit Window(std::string title, std::uint32_t width, std::uint32_t height, bool fullscreen = false, bool resizable = false);
+		explicit Window(std::string title, std::uint32_t width, std::uint32_t height, bool fullscreen = false,
+						bool resizable = false);
 		~Window();
 
 		[[nodiscard]]
-		GLFWwindow* Handle() const;
+		SDL_Window* Handle() const;
 
-		static void PollEvents();
+		void PollEvents();
 
 		void Show() const;
 
@@ -59,10 +66,10 @@ namespace BetterThanNothing
 		void SetWidth(std::uint32_t width);
 		void SetHeight(std::uint32_t height);
 
-		static void ResizeCallback(GLFWwindow* window, std::int32_t width, std::int32_t height);
-		static void KeyCallback(GLFWwindow* window, std::int32_t key, std::int32_t scancode, std::int32_t action, std::int32_t mods);
-		static void MouseCursorCallback(GLFWwindow* window, double xpos, double ypos);
-		static void MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-		static void MouseButtonCallback(GLFWwindow* window, std::int32_t button, std::int32_t action, std::int32_t mods);
+		static void ResizeCallback(Window* window, std::int32_t width, std::int32_t height);
+		static void KeyCallback(std::int32_t key, EKeyAction action);
+		static void MouseCursorCallback(double xpos, double ypos);
+		static void MouseScrollCallback(double yoffset);
+		static void MouseButtonCallback(std::int32_t button, EMouseButtonAction action);
 	};
 };

@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,20 +20,21 @@
 
 namespace BetterThanNothing
 {
-	struct DrawCommand {
-		VkPipeline			pipeline;
-		VkPipelineLayout	pipelineLayout;
+	struct DrawCommand
+	{
+		VkPipeline		 pipeline;
+		VkPipelineLayout pipelineLayout;
 
-		VkBuffer			vertexBuffer;
-		VkBuffer			indexBuffer;
-		uint32_t			indexCount;
+		VkBuffer vertexBuffer;
+		VkBuffer indexBuffer;
+		uint32_t indexCount;
 
-		VkDescriptorSet		globalDescriptorSet;
+		VkDescriptorSet globalDescriptorSet;
 
-		VkDescriptorSet		dynamicDescriptorSet;
-		uint32_t			dynamicOffset;
+		VkDescriptorSet dynamicDescriptorSet;
+		uint32_t		dynamicOffset;
 
-		VkDescriptorSet		samplerDescriptorSet;
+		VkDescriptorSet samplerDescriptorSet;
 	};
 
 	class DrawStream
@@ -44,7 +45,7 @@ namespace BetterThanNothing
 
 		void Draw(const DrawCommand& command);
 
-		DrawCommand& operator[](std::uint32_t index);
+		DrawCommand&	   operator[](std::uint32_t index);
 		const DrawCommand& operator[](std::uint32_t index) const;
 
 		[[nodiscard]] std::uint32_t Size() const;

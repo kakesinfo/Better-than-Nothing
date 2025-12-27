@@ -43,7 +43,11 @@ namespace BetterThanNothing
 {
 	Engine::Engine(IEngineApplication* application) : m_application(application)
 	{
+		if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+			throw std::runtime_error(std::format("Cannot init SDL: {}", SDL_GetError()));
+
 		WindowManager::Initialize({"Better Than Nothing", 1280, 720});
+		InputManager::Initialize();
 
 		m_context = std::make_unique<VulkanContext>();
 		m_context->vkSettings.bufferingMode = EVulkanBufferingMode::DoubleBuffering;
@@ -108,15 +112,15 @@ namespace BetterThanNothing
 			RenderMetrics::SetFrameTime(elapsed.count() * 1000.0f);
 			RenderMetrics::SetFps(1.0f / elapsed.count());
 
-			Window::PollEvents();
+			WindowManager::GetWindow()->PollEvents();
+
+			if (InputManager::IsKeyPressed(EKey::Escape))
+				shouldClose = true;
 
 			OnUpdate(elapsed.count());
 			OnRender();
 
 			m_renderList->Clear();
-
-			if (InputManager::IsKeyPressed(EKey::Escape))
-				shouldClose = true;
 
 			InputManager::ResetMousePosition();
 

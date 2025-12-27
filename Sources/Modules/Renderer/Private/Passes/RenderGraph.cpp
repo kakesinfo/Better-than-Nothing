@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -21,12 +21,12 @@
 
 namespace BetterThanNothing
 {
-	RenderGraph::RenderGraph(VulkanContext* context): m_context(context) {}
+	RenderGraph::RenderGraph(VulkanContext* context) : m_context(context) {}
 	RenderGraph::~RenderGraph() = default;
 
-	void RenderGraph::Execute(const RenderPassContext &context, const DrawStream& drawStream) const
+	void RenderGraph::Execute(const RenderPassContext& context, const DrawStream& drawStream) const
 	{
-		for (const auto& renderPass: m_renderPasses)
+		for (const auto& renderPass : m_renderPasses)
 		{
 			renderPass->Execute(context, drawStream);
 		}

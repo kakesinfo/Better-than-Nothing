@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -28,6 +28,6 @@ namespace BetterThanNothing
 	{
 	public:
 		virtual ~IRenderPass() = default;
-		virtual void Execute(const RenderPassContext &context, const DrawStream& drawStream) = 0;
+		virtual void Execute(const RenderPassContext& context, const DrawStream& drawStream) = 0;
 	};
 }

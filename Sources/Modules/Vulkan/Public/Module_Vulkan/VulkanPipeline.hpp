@@ -38,14 +38,15 @@ namespace BetterThanNothing
 		std::vector<VulkanPipelineShaderInfo> shadersInfos;
 
 		std::vector<VkFormat> colorAttachmentFormats;
-		VkFormat              depthAttachmentFormat = VK_FORMAT_UNDEFINED;
-		VkFormat              stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+		VkFormat			  depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+		VkFormat			  stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 	};
 
 	class VulkanPipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit VulkanPipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context);
+		explicit VulkanPipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription,
+								const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context);
 		~VulkanPipeline();
 
 		[[nodiscard]]

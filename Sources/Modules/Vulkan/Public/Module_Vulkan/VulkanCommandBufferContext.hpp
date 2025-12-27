@@ -34,25 +34,36 @@ namespace BetterThanNothing
 		void BeginRendering(const VkRenderingInfo* renderingInfo) const;
 		void EndRendering() const;
 
-		void SetViewport(const VkViewport* viewports, std::uint32_t firstViewport = 0, std::uint32_t viewportCount = 1) const;
+		void SetViewport(const VkViewport* viewports, std::uint32_t firstViewport = 0,
+						 std::uint32_t viewportCount = 1) const;
 		void SetScissor(const VkRect2D* scissors, std::uint32_t firstScissor = 0, std::uint32_t scissorCount = 1) const;
 		void BindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS) const;
-		void BindVertexBuffers(std::uint32_t firstBinding, std::uint32_t bindingCount, const VkBuffer* buffers, const VkDeviceSize* offsets) const;
+		void BindVertexBuffers(std::uint32_t firstBinding, std::uint32_t bindingCount, const VkBuffer* buffers,
+							   const VkDeviceSize* offsets) const;
 		void BindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) const;
 
-		void BindDescriptorSets(VkPipelineLayout layout, std::uint32_t firstSet, std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, std::uint32_t dynamicOffsetCount = 0,
+		void BindDescriptorSets(VkPipelineLayout layout, std::uint32_t firstSet, std::uint32_t descriptorSetCount,
+								const VkDescriptorSet* descriptorSets, std::uint32_t dynamicOffsetCount = 0,
 								const std::uint32_t* dynamicOffsets = nullptr) const;
 
-		void BindDescriptorSets(VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, std::uint32_t firstSet, std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, std::uint32_t dynamicOffsetCount = 0,
+		void BindDescriptorSets(VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, std::uint32_t firstSet,
+								std::uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets,
+								std::uint32_t		 dynamicOffsetCount = 0,
 								const std::uint32_t* dynamicOffsets = nullptr) const;
 
-		void Draw(std::uint32_t vertexCount, std::uint32_t instanceCount, std::uint32_t firstVertex, std::uint32_t firstInstance) const;
-		void DrawIndexed(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::int32_t vertexOffset, std::uint32_t firstInstance) const;
+		void Draw(std::uint32_t vertexCount, std::uint32_t instanceCount, std::uint32_t firstVertex,
+				  std::uint32_t firstInstance) const;
+		void DrawIndexed(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
+						 std::int32_t vertexOffset, std::uint32_t firstInstance) const;
 
-		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers,
-							 std::uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const;
+		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+							 VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount,
+							 const VkMemoryBarrier* memoryBarriers, std::uint32_t bufferMemoryBarrierCount,
+							 const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount,
+							 const VkImageMemoryBarrier* imageMemoryBarriers) const;
 
 		VkCommandBuffer Handle() const;
+
 	private:
 		VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
 	};

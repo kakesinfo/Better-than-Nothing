@@ -17,12 +17,14 @@
  */
 
 #include "Module_Engine/MeshBuilder.hpp"
-#include "Module_Math/Vector3.hpp"
 #include "Module_Math/Vector2.hpp"
+#include "Module_Math/Vector3.hpp"
 
 namespace BetterThanNothing
 {
-	void MeshBuilder::AddVertex(const float x, const float y, const float z, const float r, const float g, const float b, const float u, const float v, const float nx, const float ny, const float nz)
+	void MeshBuilder::AddVertex(const float x, const float y, const float z, const float r, const float g,
+								const float b, const float u, const float v, const float nx, const float ny,
+								const float nz)
 	{
 		AddVertex({x, y, z}, {r, g, b}, {u, v}, {nx, ny, nz});
 	}

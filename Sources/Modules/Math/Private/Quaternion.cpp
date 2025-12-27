@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -23,9 +23,9 @@ namespace BetterThanNothing
 {
 	const Quaternion Quaternion::Identity = Quaternion(1.0f, 0.0f, 0.0f, 0.0f);
 
-	Quaternion::Quaternion(): m_data(0.0f, 0.0f, 0.0f, 0.0f) {}
-	Quaternion::Quaternion(const float w, const float x, const float y, const float z): m_data(w, x, y, z) {}
-	Quaternion::Quaternion(const glm::quat& quat): m_data(quat) {}
+	Quaternion::Quaternion() : m_data(0.0f, 0.0f, 0.0f, 0.0f) {}
+	Quaternion::Quaternion(const float w, const float x, const float y, const float z) : m_data(w, x, y, z) {}
+	Quaternion::Quaternion(const glm::quat& quat) : m_data(quat) {}
 
 	float Quaternion::GetX() const
 	{

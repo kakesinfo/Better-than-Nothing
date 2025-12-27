@@ -34,7 +34,8 @@ namespace BetterThanNothing
 				const float posX = (static_cast<float>(x) / size) * size - halfSize;
 				const float posZ = (static_cast<float>(z) / size) * size - halfSize;
 
-				builder.AddVertex({posX, 0.0f, posZ}, {1.0f, 1.0f, 1.0f}, {static_cast<float>(x), static_cast<float>(z)}, {0.0f, 1.0f, 0.0f});
+				builder.AddVertex({posX, 0.0f, posZ}, {1.0f, 1.0f, 1.0f},
+								  {static_cast<float>(x), static_cast<float>(z)}, {0.0f, 1.0f, 0.0f});
 
 				if (x < subdivisions - 1 && z < subdivisions - 1)
 				{

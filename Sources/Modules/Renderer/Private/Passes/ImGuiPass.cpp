@@ -63,7 +63,7 @@ namespace BetterThanNothing
 		(void)io;
 		ImGui::StyleColorsDark();
 
-		ImGui_ImplGlfw_InitForVulkan(WindowManager::GetWindow()->Handle(), true);
+		ImGui_ImplSDL3_InitForVulkan(WindowManager::GetWindow()->Handle());
 
 		const std::vector formats = {m_context->vkSwapChain->GetImageFormat()};
 
@@ -97,7 +97,7 @@ namespace BetterThanNothing
 		vkDeviceWaitIdle(m_context->vkDevice->Handle());
 
 		ImGui_ImplVulkan_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
 		ImGui::DestroyContext();
 
 		vkDestroyDescriptorPool(m_context->vkDevice->Handle(), m_imguiPool, nullptr);
@@ -106,11 +106,11 @@ namespace BetterThanNothing
 	void ImGuiPass::Execute(const RenderPassContext& context, const DrawStream& drawStream)
 	{
 		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 
 		static float updateTimer = 0.0f;
-		static auto cachedMetrics = RenderMetrics::GetLastFrameMetrics();
+		static auto	 cachedMetrics = RenderMetrics::GetLastFrameMetrics();
 
 		updateTimer += ImGui::GetIO().DeltaTime;
 		if (updateTimer > 0.1f)
@@ -176,8 +176,8 @@ namespace BetterThanNothing
 			presentationBarrier.subresourceRange.layerCount = 1;
 
 			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
+										   VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
+										   &presentationBarrier);
 		}
 	}
 }

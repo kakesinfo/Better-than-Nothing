@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,8 @@
 
 #include "IRenderPass.hpp"
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace BetterThanNothing
 {
@@ -45,7 +45,7 @@ namespace BetterThanNothing
 		void Execute(const RenderPassContext& context, const DrawStream& drawStream) const;
 
 	private:
-		VulkanContext* m_context;
+		VulkanContext*							  m_context;
 		std::vector<std::unique_ptr<IRenderPass>> m_renderPasses;
 	};
 }

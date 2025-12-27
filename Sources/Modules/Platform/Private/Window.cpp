@@ -19,71 +19,103 @@
 #include "Module_Platform/Window.hpp"
 #include "Module_Platform/Manager/InputManager.hpp"
 
+#include <Module_Base/EKey.hpp>
+#include <Module_Base/Logger.hpp>
+
+#include <format>
+
 namespace BetterThanNothing
 {
-	Window::Window(std::string title, const std::uint32_t width, const std::uint32_t height, const bool fullscreen, const bool resizable)
+	Window::Window(std::string title, const std::uint32_t width, const std::uint32_t height, const bool fullscreen,
+				   const bool resizable)
 		: m_title(std::move(title)), m_width(width), m_height(height), m_fullscreen(fullscreen), m_resizable(resizable)
 	{
-		if (glfwInit() == GLFW_FALSE)
-			throw std::runtime_error("Failed to initialize GLFW");
+		uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN;
+		flags |= m_fullscreen ? SDL_WINDOW_FULLSCREEN : 0;
+		flags |= m_resizable ? SDL_WINDOW_RESIZABLE : 0;
 
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		glfwWindowHint(GLFW_RESIZABLE, m_resizable ? GLFW_TRUE : GLFW_FALSE);
-		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+		m_window = SDL_CreateWindow(m_title.c_str(), m_width, m_height, flags);
 
-		GLFWmonitor* monitor = m_fullscreen ? glfwGetPrimaryMonitor() : nullptr;
-
-		m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), monitor, nullptr);
-
-		if (m_window == nullptr)
-		{
-			glfwTerminate();
-			throw std::runtime_error("Failed to create GLFW window");
-		}
-
-		glfwSetWindowUserPointer(m_window, this);
-		glfwSetFramebufferSizeCallback(m_window, ResizeCallback);
-		glfwSetKeyCallback(m_window, KeyCallback);
-		glfwSetCursorPosCallback(m_window, MouseCursorCallback);
-		glfwSetScrollCallback(m_window, MouseScrollCallback);
-		glfwSetMouseButtonCallback(m_window, MouseButtonCallback);
+		if (!m_window)
+			throw std::runtime_error(std::format("Cannot create SDL window: {}", SDL_GetError()));
 	}
 
 	Window::~Window()
 	{
 		if (m_window != nullptr)
 		{
-			glfwDestroyWindow(m_window);
-			glfwTerminate();
+			SDL_DestroyWindow(m_window);
+			SDL_Quit();
 		}
 	}
 
-	GLFWwindow* Window::Handle() const
+	SDL_Window* Window::Handle() const
 	{
 		return m_window;
 	}
 
 	void Window::PollEvents()
 	{
-		glfwPollEvents();
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			switch (event.type)
+			{
+				case SDL_EVENT_QUIT:
+					m_shouldClose = true;
+					break;
+
+				case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+					ResizeCallback(this, event.window.data1, event.window.data2);
+					break;
+
+				case SDL_EVENT_KEY_DOWN:
+					KeyCallback(event.key.scancode, EKeyAction::Pressed);
+					break;
+
+				case SDL_EVENT_KEY_UP:
+					KeyCallback(event.key.scancode, EKeyAction::Released);
+					break;
+
+				case SDL_EVENT_MOUSE_MOTION:
+					MouseCursorCallback(event.motion.x, event.motion.y);
+					break;
+
+				case SDL_EVENT_MOUSE_WHEEL:
+					MouseScrollCallback(event.wheel.y);
+					break;
+
+				case SDL_EVENT_MOUSE_BUTTON_DOWN:
+					MouseButtonCallback(event.button.button, EMouseButtonAction::Pressed);
+					break;
+
+				case SDL_EVENT_MOUSE_BUTTON_UP:
+					MouseButtonCallback(event.button.button, EMouseButtonAction::Released);
+					break;
+
+				default:
+					break;
+			}
+		}
 	}
 
 	void Window::Show() const
 	{
-		glfwShowWindow(m_window);
+		if (!SDL_ShowWindow(m_window))
+			throw std::runtime_error(std::format("Cannot show SDL window: {}", SDL_GetError()));
 	}
 
 	bool Window::ShouldClose() const
 	{
 		if (m_window == nullptr)
 			return true;
-		return glfwWindowShouldClose(m_window) == GLFW_TRUE;
+		return m_shouldClose;
 	}
 
 	std::pair<std::uint32_t, std::uint32_t> Window::GetFramebufferSize() const
 	{
 		int width, height;
-		glfwGetFramebufferSize(m_window, &width, &height);
+		SDL_GetWindowSizeInPixels(m_window, &width, &height);
 		return {width, height};
 	}
 
@@ -107,46 +139,30 @@ namespace BetterThanNothing
 		m_height = height;
 	}
 
-	void Window::ResizeCallback(GLFWwindow* window, const std::int32_t width, const std::int32_t height)
+	void Window::ResizeCallback(Window* window, const std::int32_t width, const std::int32_t height)
 	{
-		const auto windowPtr = static_cast<Window*>(glfwGetWindowUserPointer(window));
-		windowPtr->SetWidth(width);
-		windowPtr->SetHeight(height);
-		windowPtr->SetResized(true);
+		window->SetWidth(width);
+		window->SetHeight(height);
+		window->SetResized(true);
 	}
 
-	void Window::KeyCallback(GLFWwindow* window, const std::int32_t key, const std::int32_t scancode, const std::int32_t action, const std::int32_t mods)
+	void Window::KeyCallback(const std::int32_t key, const EKeyAction action)
 	{
-		(void)scancode;
-		(void)mods;
-
-		if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
-		{
-			glfwSetWindowShouldClose(window, GLFW_TRUE);
-		}
-
 		InputManager::UpdateKey(key, action);
 	}
 
-	void Window::MouseCursorCallback(GLFWwindow* window, const double xpos, const double ypos)
+	void Window::MouseCursorCallback(const double xpos, const double ypos)
 	{
-		(void)window;
-
 		InputManager::UpdateMousePosition(xpos, ypos);
 	}
 
-	void Window::MouseScrollCallback(GLFWwindow* window, const double xoffset, const double yoffset)
+	void Window::MouseScrollCallback(const double yoffset)
 	{
-		(void)window;
-		(void)xoffset;
-
 		InputManager::UpdateMouseScroll(yoffset);
 	}
 
-	void Window::MouseButtonCallback(GLFWwindow* window, const std::int32_t button, const std::int32_t action, const std::int32_t mods)
+	void Window::MouseButtonCallback(const std::int32_t button, const EMouseButtonAction action)
 	{
-		(void)window;
-		(void)mods;
 
 		InputManager::UpdateMouseButton(button, action);
 	}

@@ -20,10 +20,11 @@
 
 namespace BetterThanNothing
 {
-	VulkanCommandBufferContext::VulkanCommandBufferContext(const VkCommandBuffer commandBuffer) : m_commandBuffer(
-		commandBuffer) {}
+	VulkanCommandBufferContext::VulkanCommandBufferContext(const VkCommandBuffer commandBuffer)
+		: m_commandBuffer(commandBuffer)
+	{}
 
-	void VulkanCommandBufferContext::BeginRendering(const VkRenderingInfo *renderingInfo) const
+	void VulkanCommandBufferContext::BeginRendering(const VkRenderingInfo* renderingInfo) const
 	{
 		vkCmdBeginRendering(m_commandBuffer, renderingInfo);
 	}
@@ -33,14 +34,14 @@ namespace BetterThanNothing
 		vkCmdEndRendering(m_commandBuffer);
 	}
 
-	void VulkanCommandBufferContext::SetViewport(const VkViewport *viewports, std::uint32_t firstViewport,
-	                                             std::uint32_t viewportCount) const
+	void VulkanCommandBufferContext::SetViewport(const VkViewport* viewports, std::uint32_t firstViewport,
+												 std::uint32_t viewportCount) const
 	{
 		vkCmdSetViewport(m_commandBuffer, firstViewport, viewportCount, viewports);
 	}
 
-	void VulkanCommandBufferContext::SetScissor(const VkRect2D *scissors, std::uint32_t firstScissor,
-	                                            std::uint32_t scissorCount) const
+	void VulkanCommandBufferContext::SetScissor(const VkRect2D* scissors, std::uint32_t firstScissor,
+												std::uint32_t scissorCount) const
 	{
 		vkCmdSetScissor(m_commandBuffer, firstScissor, scissorCount, scissors);
 	}
@@ -51,7 +52,7 @@ namespace BetterThanNothing
 	}
 
 	void VulkanCommandBufferContext::BindVertexBuffers(std::uint32_t firstBinding, std::uint32_t bindingCount,
-	                                                   const VkBuffer *buffers, const VkDeviceSize *offsets) const
+													   const VkBuffer* buffers, const VkDeviceSize* offsets) const
 	{
 		vkCmdBindVertexBuffers(m_commandBuffer, firstBinding, bindingCount, buffers, offsets);
 	}
@@ -62,52 +63,48 @@ namespace BetterThanNothing
 	}
 
 	void VulkanCommandBufferContext::BindDescriptorSets(const VkPipelineLayout layout, const std::uint32_t firstSet,
-	                                                    const std::uint32_t descriptorSetCount,
-	                                                    const VkDescriptorSet *descriptorSets,
-	                                                    const std::uint32_t dynamicOffsetCount,
-	                                                    const std::uint32_t *dynamicOffsets) const
+														const std::uint32_t	   descriptorSetCount,
+														const VkDescriptorSet* descriptorSets,
+														const std::uint32_t	   dynamicOffsetCount,
+														const std::uint32_t*   dynamicOffsets) const
 	{
 		BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet, descriptorSetCount, descriptorSets,
-		                   dynamicOffsetCount, dynamicOffsets);
+						   dynamicOffsetCount, dynamicOffsets);
 	}
 
 	void VulkanCommandBufferContext::BindDescriptorSets(const VkPipelineBindPoint pipelineBindPoint,
-	                                                    const VkPipelineLayout layout, const std::uint32_t firstSet,
-	                                                    const std::uint32_t descriptorSetCount,
-	                                                    const VkDescriptorSet *descriptorSets,
-	                                                    std::uint32_t dynamicOffsetCount,
-	                                                    const std::uint32_t *dynamicOffsets) const
+														const VkPipelineLayout layout, const std::uint32_t firstSet,
+														const std::uint32_t	   descriptorSetCount,
+														const VkDescriptorSet* descriptorSets,
+														std::uint32_t		   dynamicOffsetCount,
+														const std::uint32_t*   dynamicOffsets) const
 	{
 		vkCmdBindDescriptorSets(m_commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount,
-		                        descriptorSets, dynamicOffsetCount, dynamicOffsets);
+								descriptorSets, dynamicOffsetCount, dynamicOffsets);
 	}
 
 	void VulkanCommandBufferContext::Draw(const std::uint32_t vertexCount, const std::uint32_t instanceCount,
-	                                      const std::uint32_t firstVertex, const std::uint32_t firstInstance) const
+										  const std::uint32_t firstVertex, const std::uint32_t firstInstance) const
 	{
 		vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 
 	void VulkanCommandBufferContext::DrawIndexed(const std::uint32_t indexCount, const std::uint32_t instanceCount,
-	                                             const std::uint32_t firstIndex, const std::int32_t vertexOffset,
-	                                             const std::uint32_t firstInstance) const
+												 const std::uint32_t firstIndex, const std::int32_t vertexOffset,
+												 const std::uint32_t firstInstance) const
 	{
 		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
-	void VulkanCommandBufferContext::PipelineBarrier(VkPipelineStageFlags srcStageMask,
-	                                                 VkPipelineStageFlags dstStageMask,
-	                                                 VkDependencyFlags dependencyFlags,
-	                                                 std::uint32_t memoryBarrierCount,
-	                                                 const VkMemoryBarrier *memoryBarriers,
-	                                                 std::uint32_t bufferMemoryBarrierCount,
-	                                                 const VkBufferMemoryBarrier *bufferMemoryBarriers,
-	                                                 std::uint32_t imageMemoryBarrierCount,
-	                                                 const VkImageMemoryBarrier *imageMemoryBarriers) const
+	void VulkanCommandBufferContext::PipelineBarrier(
+		VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags,
+		std::uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers, std::uint32_t bufferMemoryBarrierCount,
+		const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount,
+		const VkImageMemoryBarrier* imageMemoryBarriers) const
 	{
 		vkCmdPipelineBarrier(m_commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
-		                     memoryBarriers, bufferMemoryBarrierCount, bufferMemoryBarriers, imageMemoryBarrierCount,
-		                     imageMemoryBarriers);
+							 memoryBarriers, bufferMemoryBarrierCount, bufferMemoryBarriers, imageMemoryBarrierCount,
+							 imageMemoryBarriers);
 	}
 
 	VkCommandBuffer VulkanCommandBufferContext::Handle() const

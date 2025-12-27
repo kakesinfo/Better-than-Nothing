@@ -28,7 +28,8 @@ namespace BetterThanNothing
 		if (m_window != nullptr)
 			throw WindowManagerError("WindowManager is already initialized.");
 
-		m_window = std::make_unique<Window>(params.title, params.width, params.height, params.fullscreen, params.resizable);
+		m_window =
+			std::make_unique<Window>(params.title, params.width, params.height, params.fullscreen, params.resizable);
 	}
 
 	std::unique_ptr<Window>& WindowManager::GetWindow()

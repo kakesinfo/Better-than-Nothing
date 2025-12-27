@@ -24,7 +24,7 @@
 
 namespace BetterThanNothing
 {
-	int InputManager::m_keys[KEYBOARD_KEY_COUNT] = {};
+	EKeyAction InputManager::m_keys[KEYBOARD_KEY_COUNT] = {};
 
 	float InputManager::m_mouseX = 0;
 	float InputManager::m_mouseY = 0;
@@ -32,42 +32,42 @@ namespace BetterThanNothing
 	float InputManager::m_lastMouseY = 0;
 	float InputManager::m_mouseScroll = 0;
 
-	int InputManager::m_buttons[MOUSE_BUTTON_COUNT] = {};
+	EMouseButtonAction InputManager::m_buttons[MOUSE_BUTTON_COUNT] = {};
 
 	void InputManager::Initialize()
 	{
-		std::ranges::fill(m_keys, GLFW_RELEASE);
-		std::ranges::fill(m_buttons, GLFW_RELEASE);
+		std::ranges::fill(m_keys, EKeyAction::Released);
+		std::ranges::fill(m_buttons, EMouseButtonAction::Released);
 	}
 
-	void InputManager::UpdateKey(const int key, const int action)
+	void InputManager::UpdateKey(const int key, const EKeyAction action)
 	{
 		m_keys[key] = action;
 	}
 
 	void InputManager::PressKey(const int key)
 	{
-		m_keys[key] = GLFW_PRESS;
+		m_keys[key] = EKeyAction::Pressed;
 	}
 
 	void InputManager::ReleaseKey(const int key)
 	{
-		m_keys[key] = GLFW_RELEASE;
+		m_keys[key] = EKeyAction::Released;
 	}
 
-	void InputManager::UpdateMouseButton(const int button, const int action)
+	void InputManager::UpdateMouseButton(const int button, const EMouseButtonAction action)
 	{
 		m_buttons[button] = action;
 	}
 
 	void InputManager::PressMouseButton(const int button)
 	{
-		m_buttons[button] = GLFW_PRESS;
+		m_buttons[button] = EMouseButtonAction::Pressed;
 	}
 
 	void InputManager::ReleaseMouseButton(const int button)
 	{
-		m_buttons[button] = GLFW_RELEASE;
+		m_buttons[button] = EMouseButtonAction::Released;
 	}
 
 	void InputManager::UpdateMousePosition(const float x, const float y)
@@ -109,23 +109,22 @@ namespace BetterThanNothing
 		return m_mouseScroll;
 	}
 
-	bool InputManager::IsKeyPressed(const EKey key)
+	bool InputManager::IsKeyPressed(EKey key)
 	{
-		return InputManager::IsKeyPressed(static_cast<std::int16_t>(key));
+		return IsKeyPressed(static_cast<std::int16_t>(key));
 	}
 
 	bool InputManager::IsKeyPressed(const std::int16_t key)
 	{
-		return m_keys[key] == GLFW_PRESS || m_keys[key] == GLFW_REPEAT;
+		return m_keys[key] == EKeyAction::Pressed; // or repeat ?
 	}
 
-	bool InputManager::IsMouseButtonPressed(const EMouseButton button)
+	bool InputManager::IsMouseButtonPressed(EMouseButton button)
 	{
-		return InputManager::IsMouseButtonPressed(static_cast<int>(button));
+		return IsMouseButtonPressed(static_cast<std::int16_t>(button));
 	}
-
 	bool InputManager::IsMouseButtonPressed(const std::int16_t button)
 	{
-		return m_buttons[button] == GLFW_PRESS || m_buttons[button] == GLFW_REPEAT;
+		return m_buttons[button] == EMouseButtonAction::Pressed; // or repeat ?
 	}
 };
