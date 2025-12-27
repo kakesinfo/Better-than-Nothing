@@ -178,8 +178,7 @@ namespace BetterThanNothing
 
 	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera,
 									   const DirectionalLightData& directionalLight,
-									   const std
-									   ::uint32_t		   imageIndex) const
+									   const std ::uint32_t		   imageIndex) const
 	{
 		const auto& currentFrame = m_context->vkFrames[m_currentFrame];
 
@@ -201,17 +200,15 @@ namespace BetterThanNothing
 			const auto dynamicUniform = m_dynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
 			dynamicUniform->model = transform;
 
-			drawStream.Draw({
-				.pipeline =  m_context->vkPipeline->Handle(),
-				.pipelineLayout = m_context->vkPipeline->GetLayout(),
-				.vertexBuffer = meshGpuData->vertexBuffer->Handle(),
-				.indexBuffer = meshGpuData->indexBuffer->Handle(),
-				.indexCount = meshGpuData->indexCount,
-				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
-				.dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle(),
-				.dynamicOffset = m_dynamicUniformProvider->GetOffset(i),
-				.samplerDescriptorSet = textureGpuData->descriptorSet->Handle()
-			});
+			drawStream.Draw({.pipeline = m_context->vkPipeline->Handle(),
+							 .pipelineLayout = m_context->vkPipeline->GetLayout(),
+							 .vertexBuffer = meshGpuData->vertexBuffer->Handle(),
+							 .indexBuffer = meshGpuData->indexBuffer->Handle(),
+							 .indexCount = meshGpuData->indexCount,
+							 .globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
+							 .dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle(),
+							 .dynamicOffset = m_dynamicUniformProvider->GetOffset(i),
+							 .samplerDescriptorSet = textureGpuData->descriptorSet->Handle()});
 
 			RenderMetrics::AddDrawCall(meshGpuData->vertexCount);
 		}

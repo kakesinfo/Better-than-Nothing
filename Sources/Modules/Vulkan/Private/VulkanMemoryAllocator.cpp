@@ -42,7 +42,9 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan memory allocator (Vma): ok");
 	}
 
-	VkResult VulkanMemoryAllocator::CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
+	VkResult VulkanMemoryAllocator::CreateBuffer(const VkBufferCreateInfo*		bufferCreateInfo,
+												 const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer,
+												 VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
 	{
 		return vmaCreateBuffer(m_allocator, bufferCreateInfo, allocCreateInfo, buffer, allocation, allocationInfo);
 	}
@@ -52,7 +54,9 @@ namespace BetterThanNothing
 		vmaDestroyBuffer(m_allocator, buffer, allocation);
 	}
 
-	VkResult VulkanMemoryAllocator::CreateImage(const VkImageCreateInfo* imageCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
+	VkResult VulkanMemoryAllocator::CreateImage(const VkImageCreateInfo*	   imageCreateInfo,
+												const VmaAllocationCreateInfo* allocCreateInfo, VkImage* image,
+												VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
 	{
 		return vmaCreateImage(m_allocator, imageCreateInfo, allocCreateInfo, image, allocation, allocationInfo);
 	}

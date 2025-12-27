@@ -34,7 +34,8 @@ namespace BetterThanNothing
 	class VulkanBuffer
 	{
 	public:
-		VulkanBuffer(VulkanContext* context, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags vmaFlags);
+		VulkanBuffer(VulkanContext* context, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+					 VmaAllocationCreateFlags vmaFlags);
 		virtual ~VulkanBuffer();
 
 		VulkanBuffer(const VulkanBuffer&) = delete;

@@ -41,7 +41,7 @@ namespace BetterThanNothing
 		[[nodiscard]] Quaternion operator*(const Quaternion& other) const;
 		[[nodiscard]] Quaternion operator+(const Quaternion& other) const;
 		[[nodiscard]] Quaternion operator-(const Quaternion& other) const;
-		[[nodiscard]] Vector3 operator*(const Vector3& other) const;
+		[[nodiscard]] Vector3	 operator*(const Vector3& other) const;
 
 		static Quaternion AngleAxis(float angleInDegrees, float x, float y, float z);
 		static Quaternion AngleAxis(float angleInDegrees, const Vector3& axis);

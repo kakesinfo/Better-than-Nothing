@@ -20,13 +20,19 @@
 
 namespace BetterThanNothing
 {
-	VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext* context, VkDeviceSize size, const void* data) : VulkanBuffer(context, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, 0)
+	VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext* context, VkDeviceSize size, const void* data)
+		: VulkanBuffer(context, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+					   VMA_MEMORY_USAGE_GPU_ONLY, 0)
 	{
 		if (data)
 		{
 			const VulkanStagingBuffer stagingBuffer(context, size, data);
 
-			VulkanCommandBuffer::SingleTimeCommands([&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) { commandBuffer->CopyBuffer(stagingBuffer.Handle(), m_buffer, size); }, context);
+			VulkanCommandBuffer::SingleTimeCommands(
+				[&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) {
+					commandBuffer->CopyBuffer(stagingBuffer.Handle(), m_buffer, size);
+				},
+				context);
 		}
 	}
 }

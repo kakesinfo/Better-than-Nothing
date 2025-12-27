@@ -25,10 +25,10 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Module_Base
         Module_Platform
+        SDL3::SDL3
         Vulkan::Vulkan # Replace with https://github.com/zeux/volk
 
     PUBLIC
-        glfw
         Vulkan::Headers
         VulkanMemoryAllocator
 )

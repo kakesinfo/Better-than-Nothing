@@ -42,16 +42,21 @@ namespace BetterThanNothing
 		[[nodiscard]]
 		std::vector<const char*> GetRequiredExtensions() const noexcept;
 
-		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT		messageSeverity,
+															VkDebugUtilsMessageTypeFlagsEXT				messageType,
+															const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
 															void* userData) noexcept;
 
 		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept;
 		void CreateDebugMessenger();
 		void DestroyDebugMessenger();
 
-		VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* debugMessenger) noexcept;
+		VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
+											  const VkAllocationCallbacks* allocator,
+											  VkDebugUtilsMessengerEXT*	   debugMessenger) noexcept;
 
-		void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* allocator) noexcept;
+		void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
+										   const VkAllocationCallbacks* allocator) noexcept;
 
 		VulkanContext*			 m_context = nullptr;
 		VkInstance				 m_instance = VK_NULL_HANDLE;

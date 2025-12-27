@@ -26,7 +26,8 @@
 
 namespace BetterThanNothing
 {
-	DynamicUniformProvider::DynamicUniformProvider(VulkanContext* context, const std::uint32_t maxObjects) : m_context(context), m_maxObjects(maxObjects)
+	DynamicUniformProvider::DynamicUniformProvider(VulkanContext* context, const std::uint32_t maxObjects)
+		: m_context(context), m_maxObjects(maxObjects)
 	{
 		m_uniformAlignment = CalculateUniformAlignment();
 

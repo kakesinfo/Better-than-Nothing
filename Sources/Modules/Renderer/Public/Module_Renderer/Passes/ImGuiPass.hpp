@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -23,18 +23,17 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class ImGuiPass: public IRenderPass
+	class ImGuiPass : public IRenderPass
 	{
 	public:
 		explicit ImGuiPass(VulkanContext* context);
 		~ImGuiPass() override;
 
-		void Execute(const RenderPassContext &context, const DrawStream& drawStream) override;
+		void Execute(const RenderPassContext& context, const DrawStream& drawStream) override;
 
 	private:
 		VulkanContext* m_context;
 
 		VkDescriptorPool m_imguiPool;
-
 	};
 }

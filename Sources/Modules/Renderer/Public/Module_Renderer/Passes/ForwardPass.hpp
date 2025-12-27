@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -23,13 +23,13 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class ForwardPass: public IRenderPass
+	class ForwardPass : public IRenderPass
 	{
 	public:
 		explicit ForwardPass(VulkanContext* context);
 		~ForwardPass() override;
 
-		void Execute(const RenderPassContext &context, const DrawStream& drawStream) override;
+		void Execute(const RenderPassContext& context, const DrawStream& drawStream) override;
 
 	private:
 		VulkanContext* m_context;

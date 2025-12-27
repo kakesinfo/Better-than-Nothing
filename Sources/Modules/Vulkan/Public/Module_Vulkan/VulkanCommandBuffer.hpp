@@ -37,20 +37,26 @@ namespace BetterThanNothing
 		VulkanCommandBuffer(VulkanCommandBuffer&& other) = delete;
 		VulkanCommandBuffer& operator=(VulkanCommandBuffer&& other) = delete;
 
-		void Reset() const;
+		void					   Reset() const;
 		VulkanCommandBufferContext BeginRecording(VkCommandBufferUsageFlags flags = 0);
-		void EndRecording();
+		void					   EndRecording();
 
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, std::uint32_t bufferSize) const;
-		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, std::uint32_t mipLevels) const;
+		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
+								   std::uint32_t mipLevels) const;
 		void CopyBufferToImage(VkBuffer buffer, VkImage image, std::uint32_t width, std::uint32_t height) const;
 
-		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers,
-							 std::uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const;
+		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+							 VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount,
+							 const VkMemoryBarrier* memoryBarriers, std::uint32_t bufferMemoryBarrierCount,
+							 const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount,
+							 const VkImageMemoryBarrier* imageMemoryBarriers) const;
 
-		void BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter) const;
+		void BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout,
+					   const VkImageBlit* blit, VkFilter filter) const;
 
-		static void SingleTimeCommands(const std::function<void(std::unique_ptr<VulkanCommandBuffer>&)>& callback, VulkanContext* context);
+		static void SingleTimeCommands(const std::function<void(std::unique_ptr<VulkanCommandBuffer>&)>& callback,
+									   VulkanContext*													 context);
 
 	private:
 		static bool HasStencilComponent(VkFormat format);

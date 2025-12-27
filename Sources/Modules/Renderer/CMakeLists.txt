@@ -25,6 +25,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Data
         Module_Platform
         Module_Vulkan
+        SDL3::SDL3
         stb
         imgui
     PUBLIC

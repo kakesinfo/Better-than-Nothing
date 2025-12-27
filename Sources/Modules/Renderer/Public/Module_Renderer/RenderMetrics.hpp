@@ -1,5 +1,5 @@
 /*
-*	Better than Nothing
+ *	Better than Nothing
  *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -24,17 +24,17 @@ namespace BetterThanNothing
 {
 	struct RenderMetricsData
 	{
-		std::uint32_t	frameCount = 0;
-		std::uint32_t	drawCalls = 0;
-		std::uint32_t	verticesRendered = 0;
-		std::uint64_t	totalDrawCalls = 0;
-		std::uint64_t	totalVerticesRendered = 0;
-		float			frameTime = 0;
-		int				fps = 0;
+		std::uint32_t frameCount = 0;
+		std::uint32_t drawCalls = 0;
+		std::uint32_t verticesRendered = 0;
+		std::uint64_t totalDrawCalls = 0;
+		std::uint64_t totalVerticesRendered = 0;
+		float		  frameTime = 0;
+		int			  fps = 0;
 
-		float			cameraX;
-		float			cameraY;
-		float			cameraZ;
+		float cameraX;
+		float cameraY;
+		float cameraZ;
 	};
 
 	class RenderMetrics
@@ -46,15 +46,9 @@ namespace BetterThanNothing
 			s_currentFrameMetrics.verticesRendered += vertexCount;
 		}
 
-		static void SetFrameTime(const float frameTime)
-		{
-			s_currentFrameMetrics.frameTime = frameTime;
-		}
+		static void SetFrameTime(const float frameTime) { s_currentFrameMetrics.frameTime = frameTime; }
 
-		static void SetFps(const float fps)
-		{
-			s_currentFrameMetrics.fps = static_cast<int>(std::round(fps));
-		}
+		static void SetFps(const float fps) { s_currentFrameMetrics.fps = static_cast<int>(std::round(fps)); }
 
 		static void SetCameraCoordinates(const float x, const float y, const float z)
 		{
@@ -92,6 +86,6 @@ namespace BetterThanNothing
 	private:
 		static inline RenderMetricsData s_currentFrameMetrics = {};
 		static inline RenderMetricsData s_lastFrameMetrics = {};
-		static inline std::mutex s_mutex = {};
+		static inline std::mutex		s_mutex = {};
 	};
 }

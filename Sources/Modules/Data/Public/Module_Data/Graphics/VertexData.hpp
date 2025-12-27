@@ -54,7 +54,8 @@ namespace BetterThanNothing
 	{
 		bool operator()(VertexData const& a, VertexData const& b) const noexcept
 		{
-			return a.position.Equals(b.position) && a.color.Equals(b.color) && a.uv.Equals(b.uv) && a.normal.Equals(b.normal);
+			return a.position.Equals(b.position) && a.color.Equals(b.color) && a.uv.Equals(b.uv) &&
+				   a.normal.Equals(b.normal);
 		}
 	};
 }

@@ -20,7 +20,8 @@
 
 namespace BetterThanNothing
 {
-	VulkanShaderModule::VulkanShaderModule(VulkanContext* vkContext, const VkShaderModuleCreateInfo* createInfo) : m_vkContext(vkContext)
+	VulkanShaderModule::VulkanShaderModule(VulkanContext* vkContext, const VkShaderModuleCreateInfo* createInfo)
+		: m_vkContext(vkContext)
 	{
 		if (vkCreateShaderModule(m_vkContext->vkDevice->Handle(), createInfo, nullptr, &m_shaderModule) != VK_SUCCESS)
 		{

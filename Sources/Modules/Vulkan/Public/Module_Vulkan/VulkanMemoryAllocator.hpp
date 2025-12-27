@@ -30,10 +30,13 @@ namespace BetterThanNothing
 		explicit VulkanMemoryAllocator(VulkanContext* context);
 		~VulkanMemoryAllocator();
 
-		VkResult CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		VkResult CreateBuffer(const VkBufferCreateInfo*		 bufferCreateInfo,
+							  const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer,
+							  VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
 		void	 DestroyBuffer(VkBuffer buffer, VmaAllocation allocation) const;
 
-		VkResult CreateImage(const VkImageCreateInfo* imageCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		VkResult CreateImage(const VkImageCreateInfo* imageCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo,
+							 VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
 		void	 DestroyImage(VkImage image, VmaAllocation allocation) const;
 
 		VkResult MapMemory(VmaAllocation allocation, void** data) const;

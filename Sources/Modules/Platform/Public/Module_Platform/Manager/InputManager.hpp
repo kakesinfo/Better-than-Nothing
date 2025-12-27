@@ -17,6 +17,8 @@
  */
 
 #pragma once
+#include <Module_Base/EKey.hpp>
+#include <Module_Base/EMouseButton.hpp>
 
 namespace BetterThanNothing
 {
@@ -31,7 +33,7 @@ namespace BetterThanNothing
 		static constexpr std::int32_t KEYBOARD_KEY_COUNT = 1024;
 		static constexpr std::int32_t MOUSE_BUTTON_COUNT = 32;
 
-		static int m_keys[KEYBOARD_KEY_COUNT];
+		static EKeyAction m_keys[KEYBOARD_KEY_COUNT];
 
 		static float m_mouseX;
 		static float m_mouseY;
@@ -39,7 +41,7 @@ namespace BetterThanNothing
 		static float m_lastMouseY;
 		static float m_mouseScroll;
 
-		static int m_buttons[MOUSE_BUTTON_COUNT];
+		static EMouseButtonAction m_buttons[MOUSE_BUTTON_COUNT];
 
 	public:
 		explicit InputManager() = default;
@@ -47,11 +49,11 @@ namespace BetterThanNothing
 
 		static void Initialize();
 
-		static void UpdateKey(int key, int action);
+		static void UpdateKey(int key, EKeyAction action);
 		static void PressKey(int key);
 		static void ReleaseKey(int key);
 
-		static void UpdateMouseButton(int button, int action);
+		static void UpdateMouseButton(int button, EMouseButtonAction action);
 		static void PressMouseButton(int button);
 		static void ReleaseMouseButton(int button);
 

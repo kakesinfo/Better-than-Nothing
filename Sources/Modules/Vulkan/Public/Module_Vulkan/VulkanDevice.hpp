@@ -48,7 +48,8 @@ namespace BetterThanNothing
 		VulkanDevice(VulkanDevice&& other) = delete;
 		VulkanDevice& operator=(VulkanDevice&& other) = delete;
 
-		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
+		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
+									 VkFormatFeatureFlags features) const;
 
 		[[nodiscard]]
 		VkPhysicalDevice PhysicalHandle() const;

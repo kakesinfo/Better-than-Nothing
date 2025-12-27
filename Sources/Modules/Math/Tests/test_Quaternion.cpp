@@ -96,8 +96,8 @@ TEST(Quaternion, Multiplication_Operator)
 TEST(Quaternion, AngleAxis_Method)
 {
 	const Quaternion quat(1.0f, 0.0f, 0.0f, 0.0f);
-	constexpr float angle = 90.0f;
-	const Vector3 axis(0.0f, 1.0f, 0.0f);
+	constexpr float	 angle = 90.0f;
+	const Vector3	 axis(0.0f, 1.0f, 0.0f);
 
 	const Quaternion result = quat.AngleAxis(angle, axis);
 

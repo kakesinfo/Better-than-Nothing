@@ -64,7 +64,8 @@ namespace BetterThanNothing
 		m_minUniformBufferOffsetAlignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
 		m_maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 
-		VkSampleCountFlags counts = deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
+		VkSampleCountFlags counts =
+			deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
 		if (counts & VK_SAMPLE_COUNT_64_BIT)
 		{
 			m_maxMsaaSamples = VK_SAMPLE_COUNT_64_BIT;
@@ -100,7 +101,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("Failed to find queue families");
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set							 uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+		std::set uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
 		float queuePriority = 1.0f;
 
@@ -162,7 +163,8 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan presentation queue: ok");
 	}
 
-	VkFormat VulkanDevice::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
+	VkFormat VulkanDevice::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
+											   VkFormatFeatureFlags features) const
 	{
 		for (const VkFormat format : candidates)
 		{
@@ -206,7 +208,8 @@ namespace BetterThanNothing
 		VkPhysicalDeviceFeatures supportedFeatures;
 		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-		return queueFamiliesSupported && extensionsSupported && swapchainSupported && supportedFeatures.samplerAnisotropy;
+		return queueFamiliesSupported && extensionsSupported && swapchainSupported &&
+			   supportedFeatures.samplerAnisotropy;
 	}
 
 	bool VulkanDevice::CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept

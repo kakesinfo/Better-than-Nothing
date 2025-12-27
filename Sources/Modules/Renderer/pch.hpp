@@ -29,8 +29,10 @@
 #include <unordered_map>
 #include <vector>
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+// #define GLFW_INCLUDE_VULKAN
+// #include <GLFW/glfw3.h>
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -42,5 +44,6 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 
 #include <imgui.h>
-#include <imgui_impl_glfw.h>
+// #include <imgui_impl_glfw.h>
+#include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>

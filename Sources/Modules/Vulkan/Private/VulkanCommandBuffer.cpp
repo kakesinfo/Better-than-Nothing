@@ -67,7 +67,8 @@ namespace BetterThanNothing
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 	}
 
-	void VulkanCommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, std::uint32_t mipLevels) const
+	void VulkanCommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,
+													VkImageLayout newLayout, std::uint32_t mipLevels) const
 	{
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -105,7 +106,8 @@ namespace BetterThanNothing
 			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		}
-		else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+		else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+				 newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 		{
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -113,10 +115,12 @@ namespace BetterThanNothing
 			sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		}
-		else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+		else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+				 newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 		{
 			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			barrier.dstAccessMask =
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
 			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
@@ -129,7 +133,8 @@ namespace BetterThanNothing
 		vkCmdPipelineBarrier(m_commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void VulkanCommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, std::uint32_t width, std::uint32_t height) const
+	void VulkanCommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, std::uint32_t width,
+												std::uint32_t height) const
 	{
 		VkBufferImageCopy region{};
 		region.bufferOffset = 0;
@@ -147,18 +152,28 @@ namespace BetterThanNothing
 		vkCmdCopyBufferToImage(m_commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 	}
 
-	void VulkanCommandBuffer::PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers,
-											  std::uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const
+	void VulkanCommandBuffer::PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+											  VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount,
+											  const VkMemoryBarrier*	   memoryBarriers,
+											  std::uint32_t				   bufferMemoryBarrierCount,
+											  const VkBufferMemoryBarrier* bufferMemoryBarriers,
+											  std::uint32_t				   imageMemoryBarrierCount,
+											  const VkImageMemoryBarrier*  imageMemoryBarriers) const
 	{
-		vkCmdPipelineBarrier(m_commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, memoryBarriers, bufferMemoryBarrierCount, bufferMemoryBarriers, imageMemoryBarrierCount, imageMemoryBarriers);
+		vkCmdPipelineBarrier(m_commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
+							 memoryBarriers, bufferMemoryBarrierCount, bufferMemoryBarriers, imageMemoryBarrierCount,
+							 imageMemoryBarriers);
 	}
 
-	void VulkanCommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter) const
+	void VulkanCommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
+										VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter) const
 	{
 		vkCmdBlitImage(m_commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 1, blit, filter);
 	}
 
-	void VulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<VulkanCommandBuffer>&)>& callback, VulkanContext* context)
+	void
+	VulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<VulkanCommandBuffer>&)>& callback,
+											VulkanContext*													  context)
 	{
 		const auto device = context->vkDevice->Handle();
 		const auto commandPool = context->vkCommandPool->Handle();

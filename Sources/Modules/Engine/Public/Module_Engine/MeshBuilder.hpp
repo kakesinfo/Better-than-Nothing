@@ -31,7 +31,8 @@ namespace BetterThanNothing
 		MeshBuilder& operator=(const MeshBuilder&) = delete;
 		~MeshBuilder() = default;
 
-		void AddVertex(float x, float y, float z, float r, float g, float b, float u, float v, float nx, float ny, float nz);
+		void AddVertex(float x, float y, float z, float r, float g, float b, float u, float v, float nx, float ny,
+					   float nz);
 		void AddVertex(Vector3 position, Vector3 color, Vector2 uv, Vector3 normal);
 		void AddVertex(const VertexData& vertexData);
 

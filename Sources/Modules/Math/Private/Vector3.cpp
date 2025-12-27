@@ -31,7 +31,7 @@ namespace BetterThanNothing
 	Vector3::Vector3() : m_data(0.0f, 0.0f, 0.0f) {}
 	Vector3::Vector3(const float x, const float y, const float z) : m_data(x, y, z) {}
 	Vector3::Vector3(const glm::vec3& other) : m_data(other) {}
-	Vector3::Vector3(const float value): m_data(value) {}
+	Vector3::Vector3(const float value) : m_data(value) {}
 
 	Vector3::Vector3(const Vector3& other) : m_data(other.m_data) {}
 

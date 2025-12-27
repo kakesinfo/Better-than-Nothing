@@ -114,16 +114,19 @@ namespace BetterThanNothing
 		const shader_ptr_t shader(glslang_shader_create(&input), glslang_shader_delete);
 
 		if (!glslang_shader_preprocess(shader.get(), &input))
-			throw std::runtime_error("failed to preprocess shader: " + std::string(glslang_shader_get_info_log(shader.get())));
+			throw std::runtime_error("failed to preprocess shader: " +
+									 std::string(glslang_shader_get_info_log(shader.get())));
 
 		if (!glslang_shader_parse(shader.get(), &input))
-			throw std::runtime_error("failed to parse shader: " + std::string(glslang_shader_get_info_log(shader.get())));
+			throw std::runtime_error("failed to parse shader: " +
+									 std::string(glslang_shader_get_info_log(shader.get())));
 
 		glslang_program_t* program = glslang_program_create();
 		glslang_program_add_shader(program, shader.get());
 
 		if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT))
-			throw std::runtime_error("failed to compile shader program: " + std::string(glslang_program_get_info_log(program)));
+			throw std::runtime_error("failed to compile shader program: " +
+									 std::string(glslang_program_get_info_log(program)));
 
 		glslang_program_SPIRV_generate(program, input.stage);
 

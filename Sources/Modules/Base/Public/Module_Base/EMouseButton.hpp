@@ -24,10 +24,16 @@ namespace BetterThanNothing
 {
 	enum class EMouseButton : std::int16_t
 	{
-		Left = 0,
-		Right = 1,
+		Left = 1,
 		Middle = 2,
-		Button4 = 3,
-		Button5 = 4
+		Right = 3,
+		Button4 = 4,
+		Button5 = 5
+	};
+
+	enum class EMouseButtonAction : std::int16_t
+	{
+		Pressed = 0,
+		Released = 1,
 	};
 }

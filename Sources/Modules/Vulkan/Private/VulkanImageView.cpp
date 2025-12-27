@@ -20,7 +20,9 @@
 
 namespace BetterThanNothing
 {
-	VulkanImageView::VulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, std::uint32_t mipLevels) : m_context(context)
+	VulkanImageView::VulkanImageView(VulkanContext* context, VkImage image, VkFormat format,
+									 VkImageAspectFlags aspectFlags, std::uint32_t mipLevels)
+		: m_context(context)
 	{
 
 		VkImageViewCreateInfo createInfo{};

@@ -31,7 +31,8 @@ namespace BetterThanNothing
 	class VulkanDescriptorSetLayout
 	{
 	public:
-		explicit VulkanDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& layoutBindings, VulkanContext* context);
+		explicit VulkanDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& layoutBindings,
+										   VulkanContext*									context);
 		~VulkanDescriptorSetLayout();
 
 		VulkanDescriptorSetLayout(const VulkanDescriptorSetLayout&) = delete;

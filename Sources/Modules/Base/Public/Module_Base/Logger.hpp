@@ -38,7 +38,8 @@ namespace BetterThanNothing
 		std::source_location location;
 
 		template <typename T>
-		consteval LogFormat(const T& s, const std::source_location l = std::source_location::current()) : format(s), location(l)
+		consteval LogFormat(const T& s, const std::source_location l = std::source_location::current())
+			: format(s), location(l)
 		{}
 	};
 
