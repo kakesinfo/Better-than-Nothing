@@ -30,7 +30,7 @@ namespace BetterThanNothing
 		stbi_image_free(pixels);
 
 		gpuData->imageView =
-			CreateTextureImageView(gpuData->image->Handle(), VK_FORMAT_R8G8B8A8_SRGB, gpuData->mipLevels);
+			CreateTextureImageView(gpuData->image->Handle(), VK_FORMAT_R8G8B8A8_UNORM, gpuData->mipLevels);
 		gpuData->sampler = CreateTextureSampler(gpuData->mipLevels);
 		gpuData->descriptorSet = CreateTextureDescriptorSet(gpuData.get());
 
@@ -52,7 +52,7 @@ namespace BetterThanNothing
 		imageInfo.extent.depth = 1;
 		imageInfo.mipLevels = mipLevels;
 		imageInfo.arrayLayers = 1;
-		imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+		imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.usage =
@@ -66,7 +66,7 @@ namespace BetterThanNothing
 			[&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) {
 				VkImage vkImage = image->Handle();
 
-				commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+				commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED,
 													 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 				commandBuffer->CopyBufferToImage(stagingBuffer.Handle(), vkImage, width, height);
 
@@ -76,7 +76,7 @@ namespace BetterThanNothing
 			},
 			m_context);
 
-		CreateMipmaps(image->Handle(), VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
+		CreateMipmaps(image->Handle(), VK_FORMAT_R8G8B8A8_UNORM, width, height, mipLevels);
 
 		return image;
 	}

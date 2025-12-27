@@ -43,6 +43,11 @@ namespace BetterThanNothing
 		return std::make_unique<VulkanIndexBuffer>(m_context, dataSize, data);
 	}
 
+	std::unique_ptr<VulkanStorageBuffer> BufferManager::CreateStorageBuffer(const std::uint32_t dataSize)
+	{
+		return std::make_unique<VulkanStorageBuffer>(m_context, dataSize);
+	}
+
 	std::unique_ptr<VulkanUniformBuffer> BufferManager::CreateUniformBuffer(const std::uint32_t dataSize)
 	{
 		return std::make_unique<VulkanUniformBuffer>(m_context, dataSize);

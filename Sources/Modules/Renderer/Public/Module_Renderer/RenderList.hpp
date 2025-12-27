@@ -18,7 +18,9 @@
 
 #pragma once
 
-#include "Module_Math/Matrix4.hpp"
+#include "Module_Data/Graphics/DirectionalLightData.hpp"
+#include "Module_Data/Graphics/PointLightData.hpp"
+#include <Module_Math/Matrix4.hpp>
 
 namespace BetterThanNothing
 {
@@ -48,8 +50,16 @@ namespace BetterThanNothing
 		void Submit(const MeshData* mesh, const Matrix4& transform);
 		void Submit(const RenderListItem& item);
 
+		void SetDirectionalLight(const DirectionalLightData& data);
+		void AddPointLight(const PointLightData& data);
+
 		[[nodiscard]]
 		RenderListItem Get(std::uint32_t index) const;
+
+		const DirectionalLightData& GetDirectionalLight() const;
+		std::uint32_t GetPointLightCount() const;
+		const std::vector<PointLightData>& GetPointLights() const;
+		const PointLightData& GetPointLight(std::uint32_t index) const;
 
 		void Clear();
 
@@ -59,5 +69,8 @@ namespace BetterThanNothing
 	private:
 		RenderCache*				m_renderCache;
 		std::vector<RenderListItem> m_list;
+
+		std::optional<DirectionalLightData> m_directionalLight;
+		std::vector<PointLightData>			m_pointLights;
 	};
 }

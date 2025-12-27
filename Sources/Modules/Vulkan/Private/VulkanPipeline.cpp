@@ -131,8 +131,9 @@ namespace BetterThanNothing
 		VkDescriptorSetLayout globalLayout = m_context->vkGlobalDescriptorSetLayout->Handle();
 		VkDescriptorSetLayout dynamicLayout = m_context->vkDynamicDescriptorSetLayout->Handle();
 		VkDescriptorSetLayout samplerLayout = m_context->vkSamplerDescriptorSetLayout->Handle();
+		VkDescriptorSetLayout pointLightLayout = m_context->vkPointLightDescriptorLayout->Handle();
 
-		auto layouts = std::array{globalLayout, dynamicLayout, samplerLayout};
+		auto layouts = std::array{globalLayout, dynamicLayout, samplerLayout, pointLightLayout};
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

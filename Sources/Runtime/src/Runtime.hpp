@@ -45,5 +45,8 @@ namespace BetterThanNothing
 		std::future<ModelData>	 m_robotFuture;
 		std::optional<ModelData> m_robotModel;
 		Matrix4					 m_robotTransform;
+
+		ModelData m_planeModel;
+		Matrix4	  m_planeTransform;
 	};
 };

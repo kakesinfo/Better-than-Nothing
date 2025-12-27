@@ -23,6 +23,8 @@
 
 #include "Module_Math/Matrix4.hpp"
 
+#include <Module_Data/Graphics/CameraData.hpp>
+#include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
@@ -30,8 +32,6 @@
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <Module_Renderer/Camera.hpp>
-#include <Module_Renderer/Data/CameraData.hpp>
-#include <Module_Renderer/Data/DirectionalLightData.hpp>
 #include <Module_Renderer/RenderCache.hpp>
 #include <Module_Renderer/RenderList.hpp>
 #include <Module_Renderer/Renderer.hpp>
@@ -67,6 +67,46 @@ namespace BetterThanNothing
 				builder->AddFragmentShader("main/main.frag");
 			},
 			m_renderCache.get()); // TODO: remove add pipeline from Renderer
+
+		DirectionalLightData directionalLight{};
+		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();
+		directionalLight.color = Vector3(1.0f, 0.95f, 0.8f);
+		directionalLight.intensity = 5.0f;
+
+		m_renderList->SetDirectionalLight(directionalLight);
+
+		float kConstant = 1.0f;
+		float kLinear = 0.09f;
+		float kQuadratic = 0.032f;
+		float kIntensity = 10.0f;
+
+		PointLightData redLight{};
+		redLight.color      = Vector3(1.0f, 0.0f, 0.0f);
+		redLight.position   = Vector3(15.0f, 0.0f, 5.0f);
+		redLight.constant   = kConstant;
+		redLight.linear     = kLinear;
+		redLight.quadratic  = kQuadratic;
+		redLight.intensity  = kIntensity;
+
+		PointLightData greenLight{};
+		greenLight.color      = Vector3(0.0f, 1.0f, 0.0f);
+		greenLight.position   = Vector3(0.0f, 0.0f, -5.0f);
+		greenLight.constant   = kConstant;
+		greenLight.linear     = kLinear;
+		greenLight.quadratic  = kQuadratic;
+		greenLight.intensity  = kIntensity;
+
+		PointLightData blueLight{};
+		blueLight.color      = Vector3(0.0f, 0.0f, 1.0f);
+		blueLight.position   = Vector3(-10.0f, 0.0f, 5.0f);
+		blueLight.constant   = kConstant;
+		blueLight.linear     = kLinear;
+		blueLight.quadratic  = kQuadratic;
+		blueLight.intensity  = kIntensity;
+
+		m_renderList->AddPointLight(redLight);
+		m_renderList->AddPointLight(greenLight);
+		m_renderList->AddPointLight(blueLight);
 	}
 
 	void Engine::OnUpdate(const float deltaTime) const
@@ -84,12 +124,9 @@ namespace BetterThanNothing
 		cameraData.view = m_camera->GetViewMatrix();
 		cameraData.projection = m_camera->GetProjectionMatrix(m_context->vkSwapChain->GetAspectRatio());
 		cameraData.position = m_camera->GetPosition();
+		cameraData.exposure = 0.5f;
 
-		DirectionalLightData directionalLight{};
-		directionalLight.position = Vector3(10.0f, 10.0f, 10.0f);
-		directionalLight.color = Vector3(1.0f, 1.0f, 1.0f);
-
-		m_renderer->RenderFrame(m_renderList.get(), cameraData, directionalLight);
+		m_renderer->RenderFrame(m_renderList.get(), cameraData);
 	}
 
 	void Engine::Run() const

@@ -60,9 +60,41 @@ namespace BetterThanNothing
 		m_list.push_back(item);
 	}
 
+	void RenderList::SetDirectionalLight(const DirectionalLightData& data)
+	{
+		m_directionalLight = data;
+	}
+
+	void RenderList::AddPointLight(const PointLightData& data)
+	{
+		m_pointLights.push_back(data);
+	}
+
 	RenderListItem RenderList::Get(const std::uint32_t index) const
 	{
 		return m_list[index];
+	}
+
+	const DirectionalLightData& RenderList::GetDirectionalLight() const
+	{
+		if (!m_directionalLight.has_value())
+			throw std::runtime_error("No directional light");
+		return m_directionalLight.value();
+	}
+
+	std::uint32_t RenderList::GetPointLightCount() const
+	{
+		return m_pointLights.size();
+	}
+
+	const std::vector<PointLightData>& RenderList::GetPointLights() const
+	{
+		return m_pointLights;
+	}
+
+	const PointLightData& RenderList::GetPointLight(const std::uint32_t index) const
+	{
+		return m_pointLights[index];
 	}
 
 	void RenderList::Clear()

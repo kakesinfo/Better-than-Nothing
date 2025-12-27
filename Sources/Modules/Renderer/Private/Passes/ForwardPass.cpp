@@ -101,6 +101,7 @@ namespace BetterThanNothing
 
 		VkPipeline lastPipeline = VK_NULL_HANDLE;
 		bool	   boundGlobalDescriptor = false;
+		bool	   boundPointLightDescriptor = false;
 
 		for (std::uint32_t i = 0; i < drawStream.Size(); i++)
 		{
@@ -116,6 +117,12 @@ namespace BetterThanNothing
 			{
 				commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 0, 1, &drawCommand.globalDescriptorSet);
 				boundGlobalDescriptor = true;
+			}
+
+			if (!boundPointLightDescriptor)
+			{
+				commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 3, 1, &drawCommand.pointLightDescriptorSet);
+				boundPointLightDescriptor = true;
 			}
 
 			commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 1, 1, &drawCommand.dynamicDescriptorSet, 1,
