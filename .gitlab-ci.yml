@@ -1,20 +1,38 @@
 stages:
+    - build-image
     - build-and-test
+
+build-image:
+    stage: build-image
+    image: docker:latest
+    before_script:
+        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    script:
+        - docker build -t $CI_REGISTRY_IMAGE/gamedev-ubuntu:latest -f Scripts/Dockerfile .
+        - docker push $CI_REGISTRY_IMAGE/gamedev-ubuntu:latest
+    rules:
+        - changes:
+              - Scripts/Dockerfile
+              - Scripts/setup-linux.sh
+          when: always
+        - if: $CI_PIPELINE_SOURCE == "web"
+          when: always
+        - when: manual
+          allow_failure: true
 
 build-and-test:
     stage: build-and-test
-
-    image: ghcr.io/kakesinfo/better-than-nothing/better-than-nothing-ubuntu:latest
-
+    image: $CI_REGISTRY_IMAGE/gamedev-ubuntu:latest
+    variables:
+        GIT_STRATEGY: fetch
     script:
         - mkdir -p build
         - cmake --preset ninja-release
         - cmake --build --preset ninja-release
         - ctest --test-dir build/release --output-on-failure
-
     rules:
         - if: $CI_COMMIT_BRANCH == "main"
         - if: $CI_PIPELINE_SOURCE == "merge_request_event"
         - if: $CI_PIPELINE_SOURCE == "web"
-          when: manual
+          when: always
 
