@@ -1,0 +1,17 @@
+stages:
+    - build-and-test
+
+build-and-test:
+    stage: build-and-test
+
+    image: ghcr.io/kakesinfo/better-than-nothing/better-than-nothing-ubuntu:latest
+
+    script:
+        - mkdir -p build
+        - cmake --preset ninja-release
+        - cmake --build --preset ninja-release
+        - ctest --test-dir build/release --output-on-failure
+
+    rules:
+        - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+        - if: $CI_PIPELINE_SOURCE == "web"
