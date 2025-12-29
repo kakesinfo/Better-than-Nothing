@@ -13,5 +13,8 @@ build-and-test:
         - ctest --test-dir build/release --output-on-failure
 
     rules:
+        - if: $CI_COMMIT_BRANCH == "main"
         - if: $CI_PIPELINE_SOURCE == "merge_request_event"
         - if: $CI_PIPELINE_SOURCE == "web"
+          when: manual
+
