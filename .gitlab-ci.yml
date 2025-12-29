@@ -11,8 +11,8 @@ build-image:
     before_script:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     script:
-        - docker build -t $CI_REGISTRY_IMAGE/gamedev-ubuntu:latest -f Scripts/Dockerfile .
-        - docker push $CI_REGISTRY_IMAGE/gamedev-ubuntu:latest
+        - docker build -t $CI_REGISTRY_IMAGE/btn-ubuntu:latest -f Scripts/Dockerfile .
+        - docker push $CI_REGISTRY_IMAGE/btn-ubuntu:latest
     rules:
         - changes:
               - Scripts/Dockerfile
@@ -25,14 +25,14 @@ build-image:
 
 build-and-test:
     stage: build-and-test
-    image: $CI_REGISTRY_IMAGE/gamedev-ubuntu:latest
+    image: $CI_REGISTRY_IMAGE/btn-ubuntu:latest
     variables:
         GIT_STRATEGY: fetch
     script:
         - mkdir -p build
         - cmake --preset ninja-release
-        - cmake --build --preset ninja-release
-        - ctest --test-dir build/release --output-on-failure
+        - cmake --build --preset ninja-release --parallel $(nproc)
+        - ctest --test-dir build/release --output-on-failure --parallel $(nproc)
     rules:
         - if: $CI_COMMIT_BRANCH == "main"
         - if: $CI_PIPELINE_SOURCE == "merge_request_event"
