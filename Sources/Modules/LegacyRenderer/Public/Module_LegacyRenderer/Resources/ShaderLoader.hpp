@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Module_Renderer/Resources/ResourceLoader.hpp"
+#include "ResourceLoader.hpp"
 
 namespace BetterThanNothing
 {

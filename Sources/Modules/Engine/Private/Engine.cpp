@@ -28,16 +28,16 @@
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
+#include <Module_LegacyRenderer/Camera.hpp>
+#include <Module_LegacyRenderer/RenderCache.hpp>
+#include <Module_LegacyRenderer/RenderList.hpp>
+#include <Module_LegacyRenderer/Renderer.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-#include <Module_Renderer/Camera.hpp>
-#include <Module_Renderer/RenderCache.hpp>
-#include <Module_Renderer/RenderList.hpp>
-#include <Module_Renderer/Renderer.hpp>
 #include <Module_Vulkan/VulkanContext.hpp>
 
-#include "Module_Renderer/RenderMetrics.hpp"
+#include "Module_LegacyRenderer/RenderMetrics.hpp"
 
 namespace BetterThanNothing
 {

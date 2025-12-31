@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Renderer/DrawStream.hpp"
+#include "Module_LegacyRenderer/DrawStream.hpp"
 
 namespace BetterThanNothing
 {

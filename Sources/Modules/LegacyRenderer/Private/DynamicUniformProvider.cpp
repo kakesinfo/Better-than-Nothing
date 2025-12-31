@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Renderer/DynamicUniformProvider.hpp"
-#include "Module_Renderer/Data/DynamicUniformData.hpp"
+#include "Module_LegacyRenderer/DynamicUniformProvider.hpp"
+#include "Module_LegacyRenderer/Data/DynamicUniformData.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Vulkan/Manager/BufferManager.hpp>
