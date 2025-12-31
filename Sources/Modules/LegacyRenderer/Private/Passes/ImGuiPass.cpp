@@ -16,11 +16,11 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Renderer/Passes/ImGuiPass.hpp"
+#include "Module_LegacyRenderer/Passes/ImGuiPass.hpp"
 
+#include "Module_LegacyRenderer/RenderMetrics.hpp"
 #include "Module_Platform/Manager/WindowManager.hpp"
 #include "Module_Platform/Window.hpp"
-#include "Module_Renderer/RenderMetrics.hpp"
 #include "Module_Vulkan/VulkanCommandBuffer.hpp"
 #include "Module_Vulkan/VulkanContext.hpp"
 #include "Module_Vulkan/VulkanDevice.hpp"

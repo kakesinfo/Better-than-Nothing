@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-project(Module_Renderer)
+project(Module_LegacyRenderer)
 
 file(GLOB_RECURSE PROJECT_SOURCES
     "Private/*.cpp"
@@ -24,7 +24,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Math
         Module_Data
         Module_Platform
-        Module_Vulkan
+        Module_LegacyVulkan
         SDL3::SDL3
         stb
         imgui

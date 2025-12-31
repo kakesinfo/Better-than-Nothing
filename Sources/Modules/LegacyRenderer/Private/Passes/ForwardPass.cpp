@@ -16,9 +16,9 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Renderer/Passes/ForwardPass.hpp"
+#include "Module_LegacyRenderer/Passes/ForwardPass.hpp"
 
-#include "Module_Renderer/DrawStream.hpp"
+#include "Module_LegacyRenderer/DrawStream.hpp"
 #include "Module_Vulkan/VulkanCommandBuffer.hpp"
 #include "Module_Vulkan/VulkanCommandBufferContext.hpp"
 #include "Module_Vulkan/VulkanContext.hpp"

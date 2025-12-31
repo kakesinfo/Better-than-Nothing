@@ -16,10 +16,10 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Renderer/RenderCache.hpp"
-#include "Module_Renderer/Data/ShaderData.hpp"
-#include "Module_Renderer/Resources/ShaderLoader.hpp"
-#include "Module_Renderer/Resources/TextureLoader.hpp"
+#include "Module_LegacyRenderer/RenderCache.hpp"
+#include "Module_LegacyRenderer/Data/ShaderData.hpp"
+#include "Module_LegacyRenderer/Resources/ShaderLoader.hpp"
+#include "Module_LegacyRenderer/Resources/TextureLoader.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/MeshData.hpp>

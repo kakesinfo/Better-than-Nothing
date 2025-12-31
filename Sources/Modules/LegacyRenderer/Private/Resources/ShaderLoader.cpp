@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Renderer/Resources/ShaderLoader.hpp"
-#include "Module_Renderer/Data/ShaderData.hpp"
+#include "Module_LegacyRenderer/Resources/ShaderLoader.hpp"
+#include "Module_LegacyRenderer/Data/ShaderData.hpp"
 
 #include <Module_Base/Logger.hpp>
 

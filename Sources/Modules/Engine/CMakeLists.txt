@@ -25,9 +25,9 @@ target_link_libraries(${PROJECT_NAME}
         Module_Base
         Module_Math
         Module_Data
-        Module_Renderer
+        Module_LegacyRenderer
         Module_Platform
-        Module_Vulkan
+        Module_LegacyVulkan
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
