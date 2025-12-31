@@ -18,17 +18,17 @@
 
 #include <module_vulkan.hpp>
 
-#include "Module_Renderer/Renderer.hpp"
+#include "Module_LegacyRenderer/Renderer.hpp"
 
 #include "Module_Data/Graphics/CameraData.hpp"
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
-#include "Module_Renderer/Data/DynamicUniformData.hpp"
-#include "Module_Renderer/Data/GlobalUniformData.hpp"
-#include "Module_Renderer/Data/ShaderData.hpp"
-#include "Module_Renderer/DynamicUniformProvider.hpp"
-#include "Module_Renderer/GlobalUniformProvider.hpp"
-#include "Module_Renderer/RenderCache.hpp"
-#include "Module_Renderer/RenderList.hpp"
+#include "Module_LegacyRenderer/Data/DynamicUniformData.hpp"
+#include "Module_LegacyRenderer/Data/GlobalUniformData.hpp"
+#include "Module_LegacyRenderer/Data/ShaderData.hpp"
+#include "Module_LegacyRenderer/DynamicUniformProvider.hpp"
+#include "Module_LegacyRenderer/GlobalUniformProvider.hpp"
+#include "Module_LegacyRenderer/RenderCache.hpp"
+#include "Module_LegacyRenderer/RenderList.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
@@ -37,11 +37,11 @@
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 
-#include "Module_Renderer/DrawStream.hpp"
-#include "Module_Renderer/Passes/ForwardPass.hpp"
-#include "Module_Renderer/Passes/ImGuiPass.hpp"
-#include "Module_Renderer/Passes/RenderGraph.hpp"
-#include "Module_Renderer/RenderMetrics.hpp"
+#include "Module_LegacyRenderer/DrawStream.hpp"
+#include "Module_LegacyRenderer/Passes/ForwardPass.hpp"
+#include "Module_LegacyRenderer/Passes/ImGuiPass.hpp"
+#include "Module_LegacyRenderer/Passes/RenderGraph.hpp"
+#include "Module_LegacyRenderer/RenderMetrics.hpp"
 
 namespace BetterThanNothing
 {
