@@ -32,8 +32,8 @@ add_subdirectory("Sources/Modules/Base")
 add_subdirectory("Sources/Modules/Math")
 add_subdirectory("Sources/Modules/Data")
 add_subdirectory("Sources/Modules/Platform")
-add_subdirectory("Sources/Modules/Vulkan")
-add_subdirectory("Sources/Modules/Renderer")
+add_subdirectory("Sources/Modules/LegacyVulkan")
+add_subdirectory("Sources/Modules/LegacyRenderer")
 add_subdirectory("Sources/Modules/Engine")
 
 # ==================================================================================================

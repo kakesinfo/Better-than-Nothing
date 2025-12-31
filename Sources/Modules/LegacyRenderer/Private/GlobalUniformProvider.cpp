@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Renderer/GlobalUniformProvider.hpp"
-#include "Module_Renderer/Data/GlobalUniformData.hpp"
+#include "Module_LegacyRenderer/GlobalUniformProvider.hpp"
+#include "Module_LegacyRenderer/Data/GlobalUniformData.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Vulkan/Manager/BufferManager.hpp>

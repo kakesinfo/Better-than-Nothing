@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Renderer/RenderList.hpp"
-#include "Module_Renderer/RenderCache.hpp"
+#include "Module_LegacyRenderer/RenderList.hpp"
+#include "Module_LegacyRenderer/RenderCache.hpp"
 
 #include <Module_Data/Graphics/MeshData.hpp>
 #include <Module_Data/Graphics/ModelData.hpp>

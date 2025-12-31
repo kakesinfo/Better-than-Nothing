@@ -1,4 +1,4 @@
-#include "Module_Renderer/Resources/TextureLoader.hpp"
+#include "Module_LegacyRenderer/Resources/TextureLoader.hpp"
 #include <module_vulkan.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
