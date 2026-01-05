@@ -4,9 +4,17 @@ Everything is in the title, it is a better-than-nothing Game Engine.
 ### 🚀 Features
 
  - Support for Linux.
- - Support for Vulkan.
- - Using C++20 features.
+ - Use C++23 and Vulkan 1.4 features.
+ - In-house GLM wrapper (Vector2, Vector3, Quaternion, Matrix4)
  - In-house JIT shader compilation.
+ - Blinn-Phong forward rendering with:
+   - Colored directional light
+   - Multiple colored point lights (SSBO)
+   - Accurate energy conservation
+   - Reinhard tone mapping with exposure
+   - Gamma correction
+ - Render hundreds of models and textures
+ - Display real-time metrics using ImGui
 
 ### 🧠 Road map
 
