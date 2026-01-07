@@ -29,9 +29,9 @@
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
 #include <Module_LegacyRenderer/Camera.hpp>
+#include <Module_LegacyRenderer/LegacyRenderer.hpp>
 #include <Module_LegacyRenderer/RenderCache.hpp>
 #include <Module_LegacyRenderer/RenderList.hpp>
-#include <Module_LegacyRenderer/Renderer.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
@@ -57,10 +57,10 @@ namespace BetterThanNothing
 
 		m_renderCache = std::make_unique<RenderCache>(m_context.get());
 		m_renderList = std::make_unique<RenderList>(m_renderCache.get());
-		m_renderer = std::make_unique<Renderer>(m_context.get());
+		m_legacyRenderer = std::make_unique<LegacyRenderer>(m_context.get());
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
 
-		m_renderer->AddPipeline(
+		m_legacyRenderer->AddPipeline(
 			[&](VulkanPipelineBuilder* builder) {
 				builder->SetName("main");
 				builder->AddVertexShader("main/main.vert");
@@ -126,7 +126,7 @@ namespace BetterThanNothing
 		cameraData.position = m_camera->GetPosition();
 		cameraData.exposure = 0.5f;
 
-		m_renderer->RenderFrame(m_renderList.get(), cameraData);
+		m_legacyRenderer->RenderFrame(m_renderList.get(), cameraData);
 	}
 
 	void Engine::Run() const

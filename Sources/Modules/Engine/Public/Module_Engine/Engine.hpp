@@ -24,7 +24,7 @@ namespace BetterThanNothing
 {
 	class RenderCache;
 	class RenderList;
-	class Renderer;
+	class LegacyRenderer;
 	class Camera;
 
 	struct VulkanContext;
@@ -46,7 +46,7 @@ namespace BetterThanNothing
 		std::unique_ptr<VulkanContext> m_context;
 		std::unique_ptr<RenderCache>   m_renderCache;
 		std::unique_ptr<RenderList>	   m_renderList;
-		std::unique_ptr<Renderer>	   m_renderer;
+		std::unique_ptr<LegacyRenderer>	   m_legacyRenderer;
 		std::unique_ptr<Camera>		   m_camera;
 
 		IEngineApplication* m_application;

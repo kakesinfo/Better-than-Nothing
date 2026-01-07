@@ -46,11 +46,11 @@ namespace BetterThanNothing
 	struct CameraData;
 	struct DirectionalLightData;
 
-	class Renderer final
+	class LegacyRenderer final
 	{
 	public:
-		explicit Renderer(VulkanContext* context);
-		~Renderer();
+		explicit LegacyRenderer(VulkanContext* context);
+		~LegacyRenderer();
 
 		void RenderFrame(const RenderList* renderList, const CameraData& camera);
 
