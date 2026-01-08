@@ -41,7 +41,10 @@ namespace BetterThanNothing
 	struct VulkanContext;
 	struct MeshGpuData;
 	struct TextureGpuData;
+	struct ShaderGpuData;
 	class TextureLoader;
+	class ShaderLoader;
+	enum class EShaderType;
 
 	class ResourceManager
 	{
@@ -56,19 +59,24 @@ namespace BetterThanNothing
 		ResourceId LoadMesh(const MeshData& mesh);
 		ResourceId LoadTexture(const std::string& path);
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
+		ResourceId LoadShader(const std::string& path, EShaderType type);
 
 		MeshGpuData*	GetMeshGpuData(ResourceId id);
 		TextureGpuData* GetTextureGpuData(ResourceId id);
 		ModelResource*	GetModel(ResourceId id);
+		ShaderGpuData*	GetShader(ResourceId id);
 
 	private:
 		VulkanContext*													m_context;
 		std::unique_ptr<TextureLoader>									m_textureLoader;
+		std::unique_ptr<ShaderLoader>									m_shaderLoader;
 		std::unordered_map<ResourceId, std::unique_ptr<MeshGpuData>>	m_meshes;
 		std::unordered_map<ResourceId, std::unique_ptr<TextureGpuData>> m_textures;
+		std::unordered_map<ResourceId, std::unique_ptr<ShaderGpuData>>	m_shaders;
 		std::unordered_map<ResourceId, ModelResource>					m_models;
 		std::unordered_map<std::string, ResourceId>						m_texturesLUT;
 		std::unordered_map<std::string, ResourceId>						m_modelsLUT;
+		std::unordered_map<std::string, ResourceId>						m_shadersLUT;
 		std::vector<ResourceId>											m_freeIds;
 	};
 }

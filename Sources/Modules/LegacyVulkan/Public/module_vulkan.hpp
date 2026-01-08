@@ -47,7 +47,6 @@
 #include "Module_Vulkan/VulkanVertexBuffer.hpp"
 
 #include "Module_Vulkan/EVulkanBufferingMode.hpp"
-#include "Module_Vulkan/EVulkanShaderType.hpp"
 #include "Module_Vulkan/VertexInputDescription.hpp"
 
 #include "Module_Vulkan/Data/ShaderGpuData.hpp"

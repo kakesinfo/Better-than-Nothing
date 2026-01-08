@@ -36,15 +36,15 @@ namespace BetterThanNothing
 
 	struct RenderListItem
 	{
-		ResourceId meshId;
-		ResourceId textureId;
-		Matrix4			transform;
+		ResourceId meshId{};
+		ResourceId textureId{};
+		Matrix4	   transform;
 	};
 
 	class RenderList
 	{
 	public:
-		explicit RenderList(RenderCache* renderCache, ResourceManager* resourceManager) : m_renderCache(renderCache), m_resourceManager(resourceManager) {}
+		explicit RenderList(ResourceManager* resourceManager) : m_resourceManager(resourceManager) {}
 		~RenderList() = default;
 
 		void SubmitModel(const std::string& modelPath, const Matrix4& transform, bool preTransform = false);
@@ -57,13 +57,11 @@ namespace BetterThanNothing
 		void SetDirectionalLight(const DirectionalLightData& data);
 		void AddPointLight(const PointLightData& data);
 
-		[[nodiscard]]
-		RenderListItem Get(std::uint32_t index) const;
-
-		const DirectionalLightData&		   GetDirectionalLight() const;
-		std::uint32_t					   GetPointLightCount() const;
-		const std::vector<PointLightData>& GetPointLights() const;
-		const PointLightData&			   GetPointLight(std::uint32_t index) const;
+		[[nodiscard]] RenderListItem					 Get(std::uint32_t index) const;
+		[[nodiscard]] const DirectionalLightData&		 GetDirectionalLight() const;
+		[[nodiscard]] std::uint32_t						 GetPointLightCount() const;
+		[[nodiscard]] const std::vector<PointLightData>& GetPointLights() const;
+		[[nodiscard]] const PointLightData&				 GetPointLight(std::uint32_t index) const;
 
 		void Clear();
 
@@ -71,7 +69,6 @@ namespace BetterThanNothing
 		[[nodiscard]] bool			IsEmpty() const;
 
 	private:
-		RenderCache*				m_renderCache;
 		ResourceManager*			m_resourceManager;
 		std::vector<RenderListItem> m_list;
 

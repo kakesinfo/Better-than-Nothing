@@ -18,6 +18,7 @@
 
 #include "ResourceManager/Loader/ShaderLoader.hpp"
 
+#include <Module_Base/EShaderType.hpp>
 #include <Module_Base/Logger.hpp>
 #include <fstream>
 #include <module_vulkan.hpp>
@@ -78,13 +79,13 @@ namespace BetterThanNothing
 		return buffer;
 	}
 
-	glslang_stage_t ShaderLoader::GetShaderStage(const EVulkanShaderType type)
+	glslang_stage_t ShaderLoader::GetShaderStage(const EShaderType type)
 	{
 		switch (type)
 		{
-			case EVulkanShaderType::Vertex:
+			case EShaderType::Vertex:
 				return GLSLANG_STAGE_VERTEX;
-			case EVulkanShaderType::Fragment:
+			case EShaderType::Fragment:
 				return GLSLANG_STAGE_FRAGMENT;
 			default:
 				throw std::runtime_error("Invalid shader type");
@@ -131,33 +132,6 @@ namespace BetterThanNothing
 
 		if (glslang_program_SPIRV_get_messages(program))
 			Logger::Log<WARNING>("Shader warnings: {}", glslang_program_SPIRV_get_messages(program));
-
-		// {
-		// 	const uint32 *spirvCode = glslang_program_SPIRV_get_ptr(program);
-		// 	const size_t spirvSize = glslang_program_SPIRV_get_size(program);
-		//
-		// 	const spirv_cross::Compiler compiler(spirvCode, spirvSize);
-		// 	const spirv_cross::ShaderResources shaderResources = compiler.get_shader_resources();
-		//
-		// 	if (!shaderResources.stage_inputs.empty()) {
-		// 		for (const auto &resource: shaderResources.stage_inputs)
-		// 			LOG_INFO("Stage input: " << resource.name);
-		// 	}
-		//
-		// 	if (!shaderResources.stage_outputs.empty()) {
-		// 		for (const auto &resource: shaderResources.stage_outputs)
-		// 			LOG_INFO("Stage output: " << resource.name);
-		// 	}
-		//
-		// 	if (!shaderResources.uniform_buffers.empty())
-		// 		LOG_INFO("Uniform buffers: " << shaderResources.uniform_buffers.size());
-		//
-		// 	if (!shaderResources.storage_buffers.empty())
-		// 		LOG_INFO("Storage buffers: " << shaderResources.storage_buffers.size());
-		//
-		// 	if (!shaderResources.sampled_images.empty())
-		// 		LOG_INFO("Sampled images: " << shaderResources.sampled_images.size());
-		// }
 
 		return program;
 	}

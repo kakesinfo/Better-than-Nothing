@@ -21,8 +21,8 @@
 #include <Module_Base/EKey.hpp>
 #include <Module_Engine/Engine.hpp>
 
-#include "ResourceManager/ResourceManager.hpp"
 #include "Module_Math/Matrix4.hpp"
+#include "ResourceManager/ResourceManager.hpp"
 
 #include <Module_Data/Graphics/CameraData.hpp>
 #include <Module_Data/Graphics/DirectionalLightData.hpp>
@@ -31,7 +31,6 @@
 #include <Module_Engine/UpdateContext.hpp>
 #include <Module_LegacyRenderer/Camera.hpp>
 #include <Module_LegacyRenderer/LegacyRenderer.hpp>
-#include <Module_LegacyRenderer/RenderCache.hpp>
 #include <Module_LegacyRenderer/RenderList.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
@@ -53,22 +52,19 @@ namespace BetterThanNothing
 		m_context = std::make_unique<VulkanContext>();
 		m_context->vkSettings.bufferingMode = EVulkanBufferingMode::DoubleBuffering;
 		m_context->vkSettings.enableValidationLayers = true;
-		m_context->vkSettings.shadersFolderPath = "../../../Assets/Shaders/";
 		m_context->vkSettings.enableVSync = true;
 
-		m_renderCache = std::make_unique<RenderCache>(m_context.get());
 		m_resourceManager = std::make_unique<ResourceManager>(m_context.get());
-		m_renderList = std::make_unique<RenderList>(m_renderCache.get(), m_resourceManager.get());
+		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 		m_legacyRenderer = std::make_unique<LegacyRenderer>(m_context.get(), m_resourceManager.get());
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
 
-		m_legacyRenderer->AddPipeline(
-			[&](VulkanPipelineBuilder* builder) {
-				builder->SetName("main");
-				builder->AddVertexShader("main/main.vert");
-				builder->AddFragmentShader("main/main.frag");
-			},
-			m_renderCache.get()); // TODO: remove add pipeline from Renderer
+		m_legacyRenderer->AddPipeline([&](VulkanPipelineBuilder* builder) {
+			builder->SetPath("../../../Assets/Shaders/");
+			builder->SetName("main");
+			builder->AddVertexShader("main/main.vert");
+			builder->AddFragmentShader("main/main.frag");
+		});
 
 		DirectionalLightData directionalLight{};
 		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();
@@ -83,28 +79,28 @@ namespace BetterThanNothing
 		float kIntensity = 10.0f;
 
 		PointLightData redLight{};
-		redLight.color      = Vector3(1.0f, 0.0f, 0.0f);
-		redLight.position   = Vector3(15.0f, 0.0f, 5.0f);
-		redLight.constant   = kConstant;
-		redLight.linear     = kLinear;
-		redLight.quadratic  = kQuadratic;
-		redLight.intensity  = kIntensity;
+		redLight.color = Vector3(1.0f, 0.0f, 0.0f);
+		redLight.position = Vector3(15.0f, 0.0f, 5.0f);
+		redLight.constant = kConstant;
+		redLight.linear = kLinear;
+		redLight.quadratic = kQuadratic;
+		redLight.intensity = kIntensity;
 
 		PointLightData greenLight{};
-		greenLight.color      = Vector3(0.0f, 1.0f, 0.0f);
-		greenLight.position   = Vector3(0.0f, 0.0f, -5.0f);
-		greenLight.constant   = kConstant;
-		greenLight.linear     = kLinear;
-		greenLight.quadratic  = kQuadratic;
-		greenLight.intensity  = kIntensity;
+		greenLight.color = Vector3(0.0f, 1.0f, 0.0f);
+		greenLight.position = Vector3(0.0f, 0.0f, -5.0f);
+		greenLight.constant = kConstant;
+		greenLight.linear = kLinear;
+		greenLight.quadratic = kQuadratic;
+		greenLight.intensity = kIntensity;
 
 		PointLightData blueLight{};
-		blueLight.color      = Vector3(0.0f, 0.0f, 1.0f);
-		blueLight.position   = Vector3(-10.0f, 0.0f, 5.0f);
-		blueLight.constant   = kConstant;
-		blueLight.linear     = kLinear;
-		blueLight.quadratic  = kQuadratic;
-		blueLight.intensity  = kIntensity;
+		blueLight.color = Vector3(0.0f, 0.0f, 1.0f);
+		blueLight.position = Vector3(-10.0f, 0.0f, 5.0f);
+		blueLight.constant = kConstant;
+		blueLight.linear = kLinear;
+		blueLight.quadratic = kQuadratic;
+		blueLight.intensity = kIntensity;
 
 		m_renderList->AddPointLight(redLight);
 		m_renderList->AddPointLight(greenLight);

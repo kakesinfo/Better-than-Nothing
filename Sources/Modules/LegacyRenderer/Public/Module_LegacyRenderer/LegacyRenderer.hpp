@@ -75,7 +75,7 @@ namespace BetterThanNothing
 		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();
 
 	public:
-		void AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback, RenderCache* renderCache);
+		void AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback);
 
 	private:
 		VulkanContext*							m_context = nullptr;
