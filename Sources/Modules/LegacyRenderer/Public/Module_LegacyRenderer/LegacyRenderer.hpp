@@ -46,10 +46,12 @@ namespace BetterThanNothing
 	struct CameraData;
 	struct DirectionalLightData;
 
+	class ResourceManager;
+
 	class LegacyRenderer final
 	{
 	public:
-		explicit LegacyRenderer(VulkanContext* context);
+		explicit LegacyRenderer(VulkanContext* context, ResourceManager* resourceManager);
 		~LegacyRenderer();
 
 		void RenderFrame(const RenderList* renderList, const CameraData& camera);
@@ -65,7 +67,8 @@ namespace BetterThanNothing
 		void CreatePointLightBuffers(std::uint32_t maxLights) const;
 		void CreatePointLightDescriptorSets(std::uint32_t maxLights);
 
-		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, std::uint32_t imageIndex) const;
+		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera,
+								 std::uint32_t imageIndex) const;
 		void DrawPointLights(const RenderList* renderList) const;
 
 		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
@@ -75,16 +78,13 @@ namespace BetterThanNothing
 		void AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback, RenderCache* renderCache);
 
 	private:
-		VulkanContext* m_context = nullptr;
-
-		std::vector<VulkanFrame> m_frames;
-		std::uint32_t			 m_currentFrame = 0;
-
-		std::unique_ptr<BufferManager> m_bufferFactory = nullptr;
-
+		VulkanContext*							m_context = nullptr;
+		ResourceManager*						m_resourceManager = nullptr;
+		std::vector<VulkanFrame>				m_frames;
+		std::uint32_t							m_currentFrame = 0;
+		std::unique_ptr<BufferManager>			m_bufferFactory = nullptr;
 		std::unique_ptr<GlobalUniformProvider>	m_globalUniformProvider = nullptr;
 		std::unique_ptr<DynamicUniformProvider> m_dynamicUniformProvider = nullptr;
-
-		std::unique_ptr<RenderGraph> m_renderGraph = nullptr;
+		std::unique_ptr<RenderGraph>			m_renderGraph = nullptr;
 	};
 }

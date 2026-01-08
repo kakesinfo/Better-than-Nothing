@@ -21,33 +21,37 @@
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Data/Graphics/PointLightData.hpp"
 #include <Module_Math/Matrix4.hpp>
+#include <ResourceManager/ResourceId.hpp>
 
 namespace BetterThanNothing
 {
-	struct ModelData;
 	struct MeshGpuData;
 	struct TextureGpuData;
 	struct MeshData;
+	struct ModelResource;
 
 	class Matrix4;
 	class RenderCache;
+	class ResourceManager;
 
 	struct RenderListItem
 	{
-		MeshGpuData*	meshGpuData;
-		TextureGpuData* textureGpuData;
+		ResourceId meshId;
+		ResourceId textureId;
 		Matrix4			transform;
 	};
 
 	class RenderList
 	{
 	public:
-		explicit RenderList(RenderCache* renderCache) : m_renderCache(renderCache) {}
+		explicit RenderList(RenderCache* renderCache, ResourceManager* resourceManager) : m_renderCache(renderCache), m_resourceManager(resourceManager) {}
 		~RenderList() = default;
 
-		void Submit(const ModelData* model, const Matrix4& transform, const std::string& texturePath);
-		void Submit(const ModelData* model, const Matrix4& transform);
-		void Submit(const MeshData* mesh, const Matrix4& transform);
+		void SubmitModel(const std::string& modelPath, const Matrix4& transform, bool preTransform = false);
+		void SubmitModel(const ModelResource* modelResource, const Matrix4& transform);
+		void SubmitModel(ResourceId modelId, const Matrix4& transform);
+		void SubmitMesh(const MeshData& mesh, const Matrix4& transform);
+		void SubmitMesh(ResourceId meshId, ResourceId textureId, const Matrix4& transform);
 		void Submit(const RenderListItem& item);
 
 		void SetDirectionalLight(const DirectionalLightData& data);
@@ -56,10 +60,10 @@ namespace BetterThanNothing
 		[[nodiscard]]
 		RenderListItem Get(std::uint32_t index) const;
 
-		const DirectionalLightData& GetDirectionalLight() const;
-		std::uint32_t GetPointLightCount() const;
+		const DirectionalLightData&		   GetDirectionalLight() const;
+		std::uint32_t					   GetPointLightCount() const;
 		const std::vector<PointLightData>& GetPointLights() const;
-		const PointLightData& GetPointLight(std::uint32_t index) const;
+		const PointLightData&			   GetPointLight(std::uint32_t index) const;
 
 		void Clear();
 
@@ -68,6 +72,7 @@ namespace BetterThanNothing
 
 	private:
 		RenderCache*				m_renderCache;
+		ResourceManager*			m_resourceManager;
 		std::vector<RenderListItem> m_list;
 
 		std::optional<DirectionalLightData> m_directionalLight;

@@ -18,13 +18,23 @@
 
 #pragma once
 
+#include <Module_Vulkan/VulkanDescriptorSet.hpp>
+#include <Module_Vulkan/VulkanImage.hpp>
+#include <Module_Vulkan/VulkanImageView.hpp>
+#include <Module_Vulkan/VulkanSampler.hpp>
+
 namespace BetterThanNothing
 {
-	struct ModelData;
-
-	class ModelLoader
+	struct TextureGpuData
 	{
-	public:
-		static ModelData Load(const std::string& path, bool preTransform = true);
+		std::int32_t						 width;
+		std::int32_t						 height;
+		std::int32_t						 channels;
+		std::int32_t						 size;
+		std::uint32_t						 mipLevels;
+		std::unique_ptr<VulkanImage>		 image;
+		std::unique_ptr<VulkanImageView>	 imageView;
+		std::unique_ptr<VulkanSampler>		 sampler;
+		std::unique_ptr<VulkanDescriptorSet> descriptorSet;
 	};
 }

@@ -16,11 +16,10 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_LegacyRenderer/Resources/ShaderLoader.hpp"
-#include "Module_LegacyRenderer/Data/ShaderData.hpp"
+#include "ResourceManager/Loader/ShaderLoader.hpp"
 
 #include <Module_Base/Logger.hpp>
-
+#include <fstream>
 #include <module_vulkan.hpp>
 
 namespace BetterThanNothing

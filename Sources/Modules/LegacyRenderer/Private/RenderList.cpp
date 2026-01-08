@@ -17,42 +17,38 @@
  */
 
 #include "Module_LegacyRenderer/RenderList.hpp"
-#include "Module_LegacyRenderer/RenderCache.hpp"
+#include "ResourceManager/ResourceManager.hpp"
 
 #include <Module_Data/Graphics/MeshData.hpp>
-#include <Module_Data/Graphics/ModelData.hpp>
-#include <Module_Data/Graphics/TextureData.hpp>
 
 namespace BetterThanNothing
 {
-
-	void RenderList::Submit(const ModelData* model, const Matrix4& transform, const std::string& texturePath)
+	void RenderList::SubmitModel(const std::string& modelPath, const Matrix4& transform, const bool preTransform)
 	{
-		for (const MeshData& mesh : model->meshes)
-		{
-			MeshData texturedMesh = mesh;
-			texturedMesh.texturePath = texturePath;
-			Submit(&texturedMesh, transform);
-		}
+		SubmitModel(m_resourceManager->LoadModel(modelPath, preTransform), transform);
 	}
 
-	void RenderList::Submit(const ModelData* model, const Matrix4& transform)
+	void RenderList::SubmitModel(const ResourceId modelId, const Matrix4& transform)
 	{
-		for (const MeshData& mesh : model->meshes)
-		{
-			Submit(&mesh, transform);
-		}
+		SubmitModel(m_resourceManager->GetModel(modelId), transform);
 	}
 
-	void RenderList::Submit(const MeshData* mesh, const Matrix4& transform)
+	void RenderList::SubmitModel(const ModelResource* modelResource, const Matrix4& transform)
 	{
-		RenderListItem item{};
+		for (const auto& [meshId, textureId] : modelResource->meshes)
+			SubmitMesh(meshId, textureId, transform);
+	}
 
-		item.meshGpuData = m_renderCache->GetOrCreateMeshGpuData(mesh);
-		item.textureGpuData = m_renderCache->GetOrCreateTextureGpuData({mesh->texturePath});
-		item.transform = transform;
+	void RenderList::SubmitMesh(const MeshData& mesh, const Matrix4& transform)
+	{
+		const ResourceId meshId = m_resourceManager->LoadMesh(mesh);
+		const ResourceId textureId = m_resourceManager->LoadTexture(mesh.texturePath);
+		SubmitMesh(meshId, textureId, transform);
+	}
 
-		Submit(item);
+	void RenderList::SubmitMesh(ResourceId meshId, ResourceId textureId, const Matrix4& transform)
+	{
+		Submit({.meshId = meshId, .textureId = textureId, .transform = transform});
 	}
 
 	void RenderList::Submit(const RenderListItem& item)

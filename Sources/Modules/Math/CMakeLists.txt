@@ -43,21 +43,7 @@ install(TARGETS ${PROJECT_NAME}
 
 enable_testing()
 
-include(FetchContent)
-
-set(FETCH_ARGS "")
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
-    # Cette option n'existe qu'à partir de la version 3.24
-    list(APPEND FETCH_ARGS DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
-endif()
-
-FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-        ${FETCH_ARGS}
-)
-
-FetchContent_MakeAvailable(googletest)
+find_package(GTest REQUIRED)
 
 file(GLOB TEST_SOURCES "Tests/*.cpp")
 

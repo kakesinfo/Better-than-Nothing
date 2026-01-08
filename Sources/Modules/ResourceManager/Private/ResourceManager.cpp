@@ -16,19 +16,47 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Engine/ModelLoader.hpp"
+#include "ResourceManager/ResourceManager.hpp"
+#include "ResourceManager/Loader/TextureLoader.hpp"
+#include "ResourceManager/MeshGpuData.hpp"
+#include "ResourceManager/TextureGpuData.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION
+#include <future>
 #include <tiny_obj_loader.h>
 
 #include <Module_Base/Logger.hpp>
-#include <Module_Data/Graphics/ModelData.hpp>
+#include <Module_Data/Graphics/VertexData.hpp>
+#include <Module_Vulkan/Manager/BufferManager.hpp>
+#include <Module_Vulkan/VulkanContext.hpp>
 
 namespace BetterThanNothing
 {
-	ModelData ModelLoader::Load(const std::string& path, bool preTransform)
+	ResourceManager::ResourceManager(VulkanContext* context) : m_context(context)
 	{
-		ModelData model;
+		m_textureLoader = std::make_unique<TextureLoader>(context);
+	}
+
+	ResourceManager::~ResourceManager() = default;
+
+	ResourceId ResourceManager::GenerateUniqueResourceId()
+	{
+		static ResourceId lastResourceId = 0;
+
+		if (!m_freeIds.empty())
+		{
+			const auto resourceId = m_freeIds.back();
+			m_freeIds.pop_back();
+			return resourceId;
+		}
+
+		return ++lastResourceId;
+	}
+
+	ResourceId ResourceManager::LoadModel(const std::string& path, bool preTransform)
+	{
+		if (const auto it = m_modelsLUT.find(path); it != m_modelsLUT.end())
+			return it->second;
 
 		tinyobj::attrib_t				 attrib;
 		std::vector<tinyobj::shape_t>	 shapes;
@@ -52,23 +80,24 @@ namespace BetterThanNothing
 		float maxY = std::numeric_limits<float>::lowest();
 		float maxZ = std::numeric_limits<float>::lowest();
 
+		std::vector<MeshData> loadedMeshes;
 		for (const auto& shape : shapes)
 		{
-			MeshData														  mesh;
+			MeshData														  currentMesh;
 			std::unordered_map<VertexData, uint32_t, VertexHash, VertexEqual> uniqueVertices{};
 
 			if (!shape.mesh.material_ids.empty())
 			{
-				mesh.materialId = shape.mesh.material_ids[0];
+				const int materialId = shape.mesh.material_ids[0];
 
-				if (mesh.materialId >= 0 && mesh.materialId < materials.size())
+				if (materialId >= 0 && materialId < materials.size())
 				{
-					const auto& material = materials[mesh.materialId];
+					const auto& material = materials[materialId];
 
 					if (!material.diffuse_texname.empty())
 					{
 						std::filesystem::path texPath = parentFolder / material.diffuse_texname;
-						mesh.texturePath = texPath.string();
+						currentMesh.texturePath = texPath.string();
 					}
 				}
 			}
@@ -125,7 +154,7 @@ namespace BetterThanNothing
 
 				if (!uniqueVertices.contains(vertex))
 				{
-					uniqueVertices[vertex] = static_cast<uint32_t>(mesh.vertices.size());
+					uniqueVertices[vertex] = static_cast<uint32_t>(currentMesh.vertices.size());
 
 					if (vertex.position.GetX() < minX)
 						minX = vertex.position.GetX();
@@ -134,31 +163,111 @@ namespace BetterThanNothing
 					if (vertex.position.GetZ() < minZ)
 						minZ = vertex.position.GetZ();
 
-					if (vertex.position.GetZ() > maxX)
+					if (vertex.position.GetX() > maxX)
 						maxX = vertex.position.GetX();
 					if (vertex.position.GetY() > maxY)
 						maxY = vertex.position.GetY();
 					if (vertex.position.GetZ() > maxZ)
 						maxZ = vertex.position.GetZ();
 
-					mesh.vertices.push_back(vertex);
+					currentMesh.vertices.push_back(vertex);
 				}
 
-				mesh.indices.push_back(uniqueVertices[vertex]);
+				currentMesh.indices.push_back(uniqueVertices[vertex]);
 			}
-			model.meshes.push_back(mesh);
+
+			loadedMeshes.push_back(currentMesh);
 		}
 
 		float centerX = (minX + maxX) / 2.0f;
 		float centerY = (minY + maxY) / 2.0f;
 		float centerZ = (minZ + maxZ) / 2.0f;
 
-		for (auto& mesh : model.meshes)
+		ModelResource model;
+		for (auto& mesh : loadedMeshes)
 		{
 			for (auto& vert : mesh.vertices)
 				vert.position -= {centerX, centerY, centerZ};
+
+			MeshResource meshResource{};
+			meshResource.id = LoadMesh(mesh);
+			meshResource.textureId = LoadTexture(mesh.texturePath);
+
+			model.meshes.push_back(meshResource);
 		}
 
-		return model;
+		model.id = GenerateUniqueResourceId();
+		m_modelsLUT[path] = model.id;
+		m_models[model.id] = model;
+
+		return model.id;
+	}
+
+	ResourceId ResourceManager::LoadMesh(const MeshData& mesh)
+	{
+		auto meshId = GenerateUniqueResourceId();
+		auto meshGpuData = std::make_unique<MeshGpuData>();
+
+		if (mesh.vertices.empty() || mesh.indices.empty())
+			throw std::runtime_error("Mesh has no vertices or indices!");
+
+		const std::uint32_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
+		const void*			vertexBufferData = mesh.vertices.data();
+		meshGpuData->vertexBuffer = BufferManager::CreateVertexBuffer(vertexBufferData, vertexBufferSize);
+		meshGpuData->vertexCount = static_cast<std::uint32_t>(mesh.vertices.size());
+
+		const std::uint32_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
+		const void*			indexBufferData = mesh.indices.data();
+		meshGpuData->indexBuffer = BufferManager::CreateIndexBuffer(indexBufferData, indexBufferSize);
+		meshGpuData->indexCount = static_cast<std::uint32_t>(mesh.indices.size());
+
+		m_meshes[meshId] = std::move(meshGpuData);
+
+		Logger::Log<DEBUG>("MeshGpuData created and cached for Mesh ID: {}", meshId);
+
+		return meshId;
+	}
+
+	ResourceId ResourceManager::LoadTexture(const std::string& path)
+	{
+		std::string texturePath = path;
+		if (texturePath.empty())
+			texturePath = "../../../Assets/Textures/default_texture.png";
+
+		if (const auto it = m_texturesLUT.find(texturePath); it != m_texturesLUT.end())
+			return it->second;
+
+		const auto textureId = GenerateUniqueResourceId();
+
+		m_textures[textureId] = m_textureLoader->Load(texturePath);
+		m_texturesLUT[texturePath] = textureId;
+
+		Logger::Log<DEBUG>("TextureGpuData created and cached for Texture: {}", texturePath);
+
+		return textureId;
+	}
+
+	MeshGpuData* ResourceManager::GetMeshGpuData(ResourceId id)
+	{
+		if (!m_meshes.contains(id))
+			return nullptr;
+
+		return m_meshes[id].get();
+	}
+
+	TextureGpuData* ResourceManager::GetTextureGpuData(ResourceId id)
+	{
+		if (!m_textures.contains(id))
+			return nullptr;
+
+		return m_textures[id].get();
+	}
+
+	ModelResource* ResourceManager::GetModel(ResourceId id)
+	{
+		if (!m_models.contains(id))
+			return nullptr;
+
+		return &m_models[id];
 	}
 }

@@ -37,6 +37,7 @@ apt-get update && apt-get install -y \
     spirv-tools \
     libglm-dev \
     python3 \
+    libgtest-dev \
     doxygen \
     doxygen-gui \
     doxygen-doc \

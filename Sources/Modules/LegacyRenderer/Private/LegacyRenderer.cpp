@@ -24,11 +24,15 @@
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_LegacyRenderer/Data/DynamicUniformData.hpp"
 #include "Module_LegacyRenderer/Data/GlobalUniformData.hpp"
-#include "Module_LegacyRenderer/Data/ShaderData.hpp"
+#include "Module_LegacyRenderer/DrawStream.hpp"
 #include "Module_LegacyRenderer/DynamicUniformProvider.hpp"
 #include "Module_LegacyRenderer/GlobalUniformProvider.hpp"
+#include "Module_LegacyRenderer/Passes/ForwardPass.hpp"
+#include "Module_LegacyRenderer/Passes/ImGuiPass.hpp"
+#include "Module_LegacyRenderer/Passes/RenderGraph.hpp"
 #include "Module_LegacyRenderer/RenderCache.hpp"
 #include "Module_LegacyRenderer/RenderList.hpp"
+#include "Module_LegacyRenderer/RenderMetrics.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
@@ -37,15 +41,14 @@
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 
-#include "Module_LegacyRenderer/DrawStream.hpp"
-#include "Module_LegacyRenderer/Passes/ForwardPass.hpp"
-#include "Module_LegacyRenderer/Passes/ImGuiPass.hpp"
-#include "Module_LegacyRenderer/Passes/RenderGraph.hpp"
-#include "Module_LegacyRenderer/RenderMetrics.hpp"
+#include <ResourceManager/ResourceManager.hpp>
+#include <ResourceManager/MeshGpuData.hpp>
+#include <ResourceManager/ResourceManager.hpp>
+#include <ResourceManager/TextureGpuData.hpp>
 
 namespace BetterThanNothing
 {
-	LegacyRenderer::LegacyRenderer(VulkanContext* context) : m_context(context)
+	LegacyRenderer::LegacyRenderer(VulkanContext* context, ResourceManager* resourceManager) : m_context(context), m_resourceManager(resourceManager)
 	{
 		BufferManager::Initialize(m_context);
 
@@ -179,8 +182,8 @@ namespace BetterThanNothing
 		m_currentFrame = (m_currentFrame + 1) % m_context->vkFrames.size();
 	}
 
-	void LegacyRenderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera,
-									   const std ::uint32_t imageIndex) const
+	void LegacyRenderer::RecordCommandBuffer(const RenderList* renderList,
+											 const CameraData& camera, const std ::uint32_t imageIndex) const
 	{
 		const auto& currentFrame = m_context->vkFrames[m_currentFrame];
 
@@ -205,7 +208,13 @@ namespace BetterThanNothing
 		DrawStream drawStream;
 		for (std::uint32_t i = 0; i < renderList->Size(); i++)
 		{
-			const auto& [meshGpuData, textureGpuData, transform] = renderList->Get(i);
+			const auto& [meshId, textureId, transform] = renderList->Get(i);
+
+			const auto meshGpuData = m_resourceManager->GetMeshGpuData(meshId);
+			const auto textureGpuData = m_resourceManager->GetTextureGpuData(textureId);
+
+			if (!meshGpuData || !textureGpuData)
+				continue;
 
 			const auto dynamicUniform = m_dynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
 			dynamicUniform->model = transform;
@@ -466,7 +475,8 @@ namespace BetterThanNothing
 							 m_context->vkPointLightDescriptorSets.size());
 	}
 
-	void LegacyRenderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback, RenderCache* renderCache)
+	void LegacyRenderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback,
+									 RenderCache*										renderCache)
 	{
 		VulkanPipelineBuilder builder;
 		callback(&builder);
@@ -479,7 +489,7 @@ namespace BetterThanNothing
 		for (auto& [shaderPath, shaderType] : params.shadersInfos)
 		{
 			const std::string	 fullShaderPath = m_context->vkSettings.shadersFolderPath + shaderPath;
-			const ShaderGpuData* shaderGpuData = renderCache->GetOrCreateShaderGpuData({shaderType, fullShaderPath});
+			const ShaderGpuData* shaderGpuData = renderCache->GetOrCreateShaderGpuData(shaderType, fullShaderPath);
 			shaderModules.push_back(shaderGpuData);
 		}
 

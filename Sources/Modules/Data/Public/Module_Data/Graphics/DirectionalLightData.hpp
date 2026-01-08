@@ -26,6 +26,6 @@ namespace BetterThanNothing
 	{
 		Vector3 revDirection;
 		Vector3 color;
-		float intensity;
+		float	intensity;
 	};
 }

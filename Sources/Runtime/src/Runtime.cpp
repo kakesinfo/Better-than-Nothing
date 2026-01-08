@@ -18,29 +18,31 @@
 
 #include "Runtime.hpp"
 
+#include "Module_Base/Logger.hpp"
+#include "Module_Engine/MeshBuilder.hpp"
 #include "Module_Engine/MeshFactory.hpp"
 
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
-#include <Module_Data/Graphics/ModelData.hpp>
 #include <Module_Engine/EntryPoint.hpp>
-#include <Module_Engine/ModelLoader.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
 #include <Module_Math/Matrix4.hpp>
 #include <Module_Math/Vector2.hpp>
 #include <Module_Math/Vector3.hpp>
 
+#include <memory>
+
 namespace BetterThanNothing
 {
+	Matrix4 m_transform[2];
+
 	void Runtime::OnEnable()
 	{
-		m_planeModel = ModelLoader::Load("../../../Assets/Models/sponza/sponza.obj");
-		m_planeTransform = Matrix4::Identity.Translate(0.0f, 0.0f, 0.0f).Scale(0.01);
+		Logger::SetLogLevel(DEBUG);
 
-		m_robotTransform = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
-		m_robotFuture = std::async(std::launch::async,
-								   []() { return ModelLoader::Load("../../../Assets/Models/robot/robot.obj"); });
+		m_transform[0] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f).Scale(0.01f);
+		m_transform[1] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
 	}
 
 	void Runtime::OnUpdate(const UpdateContext* ctx)
@@ -72,26 +74,16 @@ namespace BetterThanNothing
 
 		ctx->MoveCamera(deltaPos);
 
-		m_robotTransform = m_robotTransform.Rotate(20.0f * deltaTime, Vector3::Up);
-
-		SyncModels();
+		m_transform[1] = m_transform[1].Rotate(20.0f * deltaTime, Vector3::Up);
 	}
 
 	void Runtime::OnRender(const RenderContext* ctx)
 	{
-		if (m_robotModel.has_value())
-			ctx->Submit(&m_robotModel.value(), m_robotTransform, "../../../Assets/Models/robot/robot.png");
-
-		ctx->Submit(&m_planeModel, m_planeTransform);
+		ctx->SubmitModel("../../../Assets/Models/sponza/sponza.obj", m_transform[0], true);
+		ctx->SubmitModel("../../../Assets/Models/robot/robot.obj", m_transform[1]);
 	}
 
 	void Runtime::OnDisable() {}
-
-	void Runtime::SyncModels()
-	{
-		if (m_robotFuture.valid() && m_robotFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-			m_robotModel = m_robotFuture.get();
-	}
 
 	std::unique_ptr<IEngineApplication> CreateEngineApplication()
 	{
