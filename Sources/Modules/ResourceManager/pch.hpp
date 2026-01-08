@@ -18,25 +18,18 @@
 
 #pragma once
 
-namespace BetterThanNothing
-{
-	class VulkanImage;
-	class VulkanImageView;
-	class VulkanSampler;
-	class VulkanDescriptorSet;
+#include <chrono>
+#include <cstdint>
+#include <cstddef>
+#include <filesystem>
+#include <string>
+#include <unordered_map>
+#include <functional>
 
-	struct TextureGpuData
-	{
-		std::int32_t  width;
-		std::int32_t  height;
-		std::int32_t  channels;
-		std::int32_t  size;
-		std::uint32_t mipLevels;
+#include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
-		std::unique_ptr<VulkanImage>	 image;
-		std::unique_ptr<VulkanImageView> imageView;
-		std::unique_ptr<VulkanSampler>	 sampler;
-
-		std::unique_ptr<VulkanDescriptorSet> descriptorSet;
-	};
-}
+#include <glslang/Include/glslang_c_interface.h>
+#include <glslang/Include/glslang_c_shader_types.h>
+#include <glslang/Public/resource_limits_c.h>
+#include <spirv_cross/spirv_cross.hpp>

@@ -28,6 +28,6 @@ namespace BetterThanNothing
 		Matrix4 view;
 		Matrix4 projection;
 		Vector3 position;
-		float exposure;
+		float	exposure;
 	};
 }

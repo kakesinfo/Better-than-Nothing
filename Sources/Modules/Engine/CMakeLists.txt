@@ -16,8 +16,6 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE Private
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ../../../ThirdParty/tinyobjloader)
-
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")
 
 target_link_libraries(${PROJECT_NAME}
@@ -28,6 +26,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_LegacyRenderer
         Module_Platform
         Module_LegacyVulkan
+        Module_ResourceManager
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

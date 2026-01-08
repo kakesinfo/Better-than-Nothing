@@ -24,9 +24,14 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 	struct ShaderGpuData;
-	struct ShaderData;
 	class VulkanShaderModule;
 	enum class EVulkanShaderType;
+
+	struct ShaderData
+	{
+		EVulkanShaderType type;
+		std::string		  filePath;
+	};
 
 	class ShaderLoader final : public ResourceLoader<ShaderData, ShaderGpuData>
 	{

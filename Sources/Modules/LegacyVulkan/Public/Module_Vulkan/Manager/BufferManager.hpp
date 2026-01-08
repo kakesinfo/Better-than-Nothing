@@ -18,12 +18,14 @@
 
 #pragma once
 
+#include <Module_Vulkan/VulkanIndexBuffer.hpp>
+#include <Module_Vulkan/VulkanVertexBuffer.hpp>
+#include <Module_Vulkan/VulkanStorageBuffer.hpp>
+#include <Module_Vulkan/VulkanUniformBuffer.hpp>
+
 namespace BetterThanNothing
 {
 	struct VulkanContext;
-	class VulkanVertexBuffer;
-	class VulkanIndexBuffer;
-	class VulkanUniformBuffer;
 
 	class BufferManager
 	{

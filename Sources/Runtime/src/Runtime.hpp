@@ -19,15 +19,11 @@
 #pragma once
 
 #include "Module_Engine/IEngineApplication.hpp"
-#include <Module_Data/Graphics/ModelData.hpp>
-#include <Module_Math/Matrix4.hpp>
 
 namespace BetterThanNothing
 {
 	class UpdateContext;
 	class RenderContext;
-
-	class Matrix4;
 
 	class Runtime final : public IEngineApplication
 	{
@@ -38,15 +34,5 @@ namespace BetterThanNothing
 		void OnUpdate(const UpdateContext* ctx) override;
 		void OnRender(const RenderContext* ctx) override;
 		void OnDisable() override;
-
-		void SyncModels();
-
-	private:
-		std::future<ModelData>	 m_robotFuture;
-		std::optional<ModelData> m_robotModel;
-		Matrix4					 m_robotTransform;
-
-		ModelData m_planeModel;
-		Matrix4	  m_planeTransform;
 	};
 };

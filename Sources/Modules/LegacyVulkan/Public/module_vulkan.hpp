@@ -50,9 +50,6 @@
 #include "Module_Vulkan/EVulkanShaderType.hpp"
 #include "Module_Vulkan/VertexInputDescription.hpp"
 
-#include "Module_Vulkan/Data/MaterialGpuData.hpp"
-#include "Module_Vulkan/Data/MeshGpuData.hpp"
 #include "Module_Vulkan/Data/ShaderGpuData.hpp"
-#include "Module_Vulkan/Data/TextureGpuData.hpp"
 
 #include "Module_Vulkan/Manager/BufferManager.hpp"

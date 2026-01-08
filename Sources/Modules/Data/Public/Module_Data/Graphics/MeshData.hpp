@@ -27,14 +27,6 @@ namespace BetterThanNothing
 	{
 		std::vector<VertexData>	   vertices;
 		std::vector<std::uint32_t> indices;
-
-		std::uint32_t materialId;
-		std::string	  texturePath;
-
-		std::uint64_t id = 0; // TODO: move to loader
-		explicit MeshData() : materialId(-1), id(s_globalIdCounter++) {}
-
-	private:
-		inline static std::uint64_t s_globalIdCounter = 0;
+		std::string				   texturePath;
 	};
 }

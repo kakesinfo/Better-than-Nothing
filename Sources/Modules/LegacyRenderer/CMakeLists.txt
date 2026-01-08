@@ -24,6 +24,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Math
         Module_Data
         Module_Platform
+        Module_ResourceManager
         Module_LegacyVulkan
         SDL3::SDL3
         stb

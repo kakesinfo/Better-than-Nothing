@@ -17,13 +17,9 @@
  */
 
 #include "Module_LegacyRenderer/RenderCache.hpp"
-#include "Module_LegacyRenderer/Data/ShaderData.hpp"
-#include "Module_LegacyRenderer/Resources/ShaderLoader.hpp"
-#include "Module_LegacyRenderer/Resources/TextureLoader.hpp"
+#include <ResourceManager/Loader/ShaderLoader.hpp>
 
 #include <Module_Base/Logger.hpp>
-#include <Module_Data/Graphics/MeshData.hpp>
-#include <Module_Data/Graphics/TextureData.hpp>
 
 #include <module_vulkan.hpp>
 
@@ -31,67 +27,21 @@ namespace BetterThanNothing
 {
 	RenderCache::RenderCache(VulkanContext* context) : m_context(context)
 	{
-		m_textureLoader = std::make_unique<TextureLoader>(context);
 		m_shaderLoader = std::make_unique<ShaderLoader>(context);
 	}
 
 	RenderCache::~RenderCache() = default;
 
-	MeshGpuData* RenderCache::GetOrCreateMeshGpuData(const MeshData* mesh)
+	ShaderGpuData* RenderCache::GetOrCreateShaderGpuData(EVulkanShaderType type, const std::string& filePath)
 	{
-		const auto it = m_meshCache.find(mesh->id);
-		if (it != m_meshCache.end())
-			return it->second.get();
-
-		auto meshGpuData = std::make_unique<MeshGpuData>();
-
-		if (mesh->vertices.empty() || mesh->indices.empty())
-			throw std::runtime_error("Mesh has no vertices or indices!");
-
-		const std::uint32_t vertexBufferSize = sizeof(mesh->vertices[0]) * mesh->vertices.size();
-		const void*			vertexBufferData = mesh->vertices.data();
-		meshGpuData->vertexBuffer = BufferManager::CreateVertexBuffer(vertexBufferData, vertexBufferSize);
-		meshGpuData->vertexCount = static_cast<std::uint32_t>(mesh->vertices.size());
-
-		const std::uint32_t indexBufferSize = sizeof(mesh->indices[0]) * mesh->indices.size();
-		const void*			indexBufferData = mesh->indices.data();
-		meshGpuData->indexBuffer = BufferManager::CreateIndexBuffer(indexBufferData, indexBufferSize);
-		meshGpuData->indexCount = static_cast<std::uint32_t>(mesh->indices.size());
-
-		m_meshCache[mesh->id] = std::move(meshGpuData);
-
-		Logger::Log<DEBUG>("MeshGpuData created and cached for Mesh ID: {}", mesh->id);
-
-		return m_meshCache[mesh->id].get();
-	}
-
-	TextureGpuData* RenderCache::GetOrCreateTextureGpuData(const TextureData& textureData)
-	{
-		std::string filePath = textureData.filePath;
-		if (filePath.empty())
-			filePath = "../../../Assets/Textures/default_texture.png";
-
-		const auto it = m_textureCache.find(filePath);
-		if (it != m_textureCache.end())
-			return it->second.get();
-
-		m_textureCache[filePath] = m_textureLoader->Load(filePath);
-
-		Logger::Log<DEBUG>("TextureGpuData created and cached for Texture: {}", filePath);
-
-		return m_textureCache[filePath].get();
-	}
-
-	ShaderGpuData* RenderCache::GetOrCreateShaderGpuData(const ShaderData& shaderData)
-	{
-		const auto it = m_shaderCache.find(shaderData.filePath);
+		const auto it = m_shaderCache.find(filePath);
 		if (it != m_shaderCache.end())
 			return it->second.get();
 
-		m_shaderCache[shaderData.filePath] = m_shaderLoader->Load(shaderData);
+		m_shaderCache[filePath] = m_shaderLoader->Load({type, filePath});
 
-		Logger::Log<DEBUG>("ShaderGpuData created and cached for Shader: {}", shaderData.filePath);
+		Logger::Log<DEBUG>("ShaderGpuData created and cached for Shader: {}", filePath);
 
-		return m_shaderCache[shaderData.filePath].get();
+		return m_shaderCache[filePath].get();
 	}
 }

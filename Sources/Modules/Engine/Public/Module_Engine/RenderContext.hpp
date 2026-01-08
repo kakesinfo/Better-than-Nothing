@@ -18,10 +18,12 @@
 
 #pragma once
 
+#include "ResourceManager/ResourceId.hpp"
+#include "ResourceManager/ResourceManager.hpp"
+
 namespace BetterThanNothing
 {
 	class RenderList;
-	struct ModelData;
 	class Matrix4;
 
 	class RenderContext
@@ -30,8 +32,11 @@ namespace BetterThanNothing
 		explicit RenderContext(RenderList* renderList) : m_renderList(renderList) {}
 		~RenderContext() = default;
 
-		void Submit(const ModelData* model, const Matrix4& transform) const;
-		void Submit(const ModelData* model, const Matrix4& transform, const std::string& texturePath) const;
+		void SubmitModel(const std::string& modelPath, const Matrix4& transform, bool preTransform = true) const;
+		void SubmitModel(const ModelResource* modelResource, const Matrix4& transform) const;
+		void SubmitModel(ResourceId modelId, const Matrix4& transform) const;
+		void SubmitMesh(const MeshData& mesh, const Matrix4& transform) const;
+		void SubmitMesh(ResourceId meshId, ResourceId textureId, const Matrix4& transform) const;
 
 	private:
 		RenderList* m_renderList;

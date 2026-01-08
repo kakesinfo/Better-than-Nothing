@@ -21,6 +21,7 @@
 #include <Module_Base/EKey.hpp>
 #include <Module_Engine/Engine.hpp>
 
+#include "ResourceManager/ResourceManager.hpp"
 #include "Module_Math/Matrix4.hpp"
 
 #include <Module_Data/Graphics/CameraData.hpp>
@@ -56,8 +57,9 @@ namespace BetterThanNothing
 		m_context->vkSettings.enableVSync = true;
 
 		m_renderCache = std::make_unique<RenderCache>(m_context.get());
-		m_renderList = std::make_unique<RenderList>(m_renderCache.get());
-		m_legacyRenderer = std::make_unique<LegacyRenderer>(m_context.get());
+		m_resourceManager = std::make_unique<ResourceManager>(m_context.get());
+		m_renderList = std::make_unique<RenderList>(m_renderCache.get(), m_resourceManager.get());
+		m_legacyRenderer = std::make_unique<LegacyRenderer>(m_context.get(), m_resourceManager.get());
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
 
 		m_legacyRenderer->AddPipeline(
