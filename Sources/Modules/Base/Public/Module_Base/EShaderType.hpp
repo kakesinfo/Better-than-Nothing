@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	enum class EVulkanShaderType
+	enum class EShaderType
 	{
 		Vertex,
 		Fragment

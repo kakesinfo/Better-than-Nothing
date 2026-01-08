@@ -47,8 +47,6 @@ namespace BetterThanNothing
 														 VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 														 VK_EXT_MEMORY_BUDGET_EXTENSION_NAME};
 
-			std::string shadersFolderPath;
-
 			union
 			{
 				EVulkanBufferingMode bufferingMode = EVulkanBufferingMode::None;

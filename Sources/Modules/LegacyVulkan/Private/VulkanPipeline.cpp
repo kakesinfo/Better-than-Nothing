@@ -191,17 +191,23 @@ namespace BetterThanNothing
 		return m_pipelineLayout;
 	}
 
-	VkShaderStageFlagBits VulkanPipeline::GetShaderStageTypeByShaderType(const EVulkanShaderType type)
+	VkShaderStageFlagBits VulkanPipeline::GetShaderStageTypeByShaderType(const EShaderType type)
 	{
 		switch (type)
 		{
-			case EVulkanShaderType::Vertex:
+			case EShaderType::Vertex:
 				return VK_SHADER_STAGE_VERTEX_BIT;
-			case EVulkanShaderType::Fragment:
+			case EShaderType::Fragment:
 				return VK_SHADER_STAGE_FRAGMENT_BIT;
 			default:
 				throw std::runtime_error("Invalid shader type");
 		}
+	}
+
+	VulkanPipelineBuilder& VulkanPipelineBuilder::SetPath(const char* path)
+	{
+		m_params.path = path;
+		return *this;
 	}
 
 	VulkanPipelineBuilder& VulkanPipelineBuilder::SetName(const char* name)
@@ -211,7 +217,7 @@ namespace BetterThanNothing
 	}
 
 	VulkanPipelineBuilder& VulkanPipelineBuilder::AddShader(const std::string&		shaderPath,
-															const EVulkanShaderType shaderType)
+															const EShaderType shaderType)
 	{
 		VulkanPipelineShaderInfo shaderInfo;
 		shaderInfo.shaderPath = shaderPath;
@@ -219,10 +225,10 @@ namespace BetterThanNothing
 
 		m_params.shadersInfos.push_back(shaderInfo);
 
-		if (shaderType == EVulkanShaderType::Vertex)
+		if (shaderType == EShaderType::Vertex)
 			m_hasVertexShader = true;
 
-		if (shaderType == EVulkanShaderType::Fragment)
+		if (shaderType == EShaderType::Fragment)
 			m_hasFragmentShader = true;
 
 		return *this;
@@ -230,12 +236,12 @@ namespace BetterThanNothing
 
 	VulkanPipelineBuilder& VulkanPipelineBuilder::AddVertexShader(const std::string& shaderPath)
 	{
-		return AddShader(shaderPath, EVulkanShaderType::Vertex);
+		return AddShader(shaderPath, EShaderType::Vertex);
 	}
 
 	VulkanPipelineBuilder& VulkanPipelineBuilder::AddFragmentShader(const std::string& shaderPath)
 	{
-		return AddShader(shaderPath, EVulkanShaderType::Fragment);
+		return AddShader(shaderPath, EShaderType::Fragment);
 	}
 
 	VulkanPipelineBuilder& VulkanPipelineBuilder::AddColorAttachment(VkFormat format)

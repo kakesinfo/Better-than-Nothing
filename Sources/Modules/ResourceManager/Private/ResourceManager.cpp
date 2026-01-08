@@ -17,17 +17,21 @@
  */
 
 #include "ResourceManager/ResourceManager.hpp"
+#include "ResourceManager/Loader/ShaderLoader.hpp"
 #include "ResourceManager/Loader/TextureLoader.hpp"
 #include "ResourceManager/MeshGpuData.hpp"
 #include "ResourceManager/TextureGpuData.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION
+
 #include <future>
 #include <tiny_obj_loader.h>
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
+#include <Module_Vulkan/Data/ShaderGpuData.hpp>
 #include <Module_Vulkan/Manager/BufferManager.hpp>
+#include <Module_Vulkan/VulkanShaderModule.hpp>
 #include <Module_Vulkan/VulkanContext.hpp>
 
 namespace BetterThanNothing
@@ -35,6 +39,7 @@ namespace BetterThanNothing
 	ResourceManager::ResourceManager(VulkanContext* context) : m_context(context)
 	{
 		m_textureLoader = std::make_unique<TextureLoader>(context);
+		m_shaderLoader = std::make_unique<ShaderLoader>(context);
 	}
 
 	ResourceManager::~ResourceManager() = default;
@@ -247,6 +252,21 @@ namespace BetterThanNothing
 		return textureId;
 	}
 
+	ResourceId ResourceManager::LoadShader(const std::string& path, EShaderType type)
+	{
+		if (const auto it = m_shadersLUT.find(path); it != m_shadersLUT.end())
+			return it->second;
+
+		const auto shaderId = GenerateUniqueResourceId();
+
+		m_shaders[shaderId] = m_shaderLoader->Load({type, path});
+		m_shadersLUT[path] = shaderId;
+
+		Logger::Log<DEBUG>("ShaderGpuData created and cached for Shader: {}", path);
+
+		return shaderId;
+	}
+
 	MeshGpuData* ResourceManager::GetMeshGpuData(ResourceId id)
 	{
 		if (!m_meshes.contains(id))
@@ -255,7 +275,7 @@ namespace BetterThanNothing
 		return m_meshes[id].get();
 	}
 
-	TextureGpuData* ResourceManager::GetTextureGpuData(ResourceId id)
+	TextureGpuData* ResourceManager::GetTextureGpuData(const ResourceId id)
 	{
 		if (!m_textures.contains(id))
 			return nullptr;
@@ -263,11 +283,19 @@ namespace BetterThanNothing
 		return m_textures[id].get();
 	}
 
-	ModelResource* ResourceManager::GetModel(ResourceId id)
+	ModelResource* ResourceManager::GetModel(const ResourceId id)
 	{
 		if (!m_models.contains(id))
 			return nullptr;
 
 		return &m_models[id];
+	}
+
+	ShaderGpuData* ResourceManager::GetShader(const ResourceId id)
+	{
+		if (!m_shaders.contains(id))
+			return nullptr;
+
+		return m_shaders[id].get();
 	}
 }

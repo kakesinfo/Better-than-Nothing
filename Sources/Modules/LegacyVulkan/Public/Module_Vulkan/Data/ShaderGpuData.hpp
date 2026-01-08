@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "../EVulkanShaderType.hpp"
+#include "Module_Base/EShaderType.hpp"
 
 namespace BetterThanNothing
 {
@@ -26,7 +26,7 @@ namespace BetterThanNothing
 
 	struct ShaderGpuData
 	{
-		EVulkanShaderType					type{};
+		EShaderType					type{};
 		std::unique_ptr<VulkanShaderModule> shaderModule = VK_NULL_HANDLE;
 	};
 };

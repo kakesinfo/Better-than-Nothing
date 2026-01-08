@@ -30,7 +30,6 @@
 #include "Module_LegacyRenderer/Passes/ForwardPass.hpp"
 #include "Module_LegacyRenderer/Passes/ImGuiPass.hpp"
 #include "Module_LegacyRenderer/Passes/RenderGraph.hpp"
-#include "Module_LegacyRenderer/RenderCache.hpp"
 #include "Module_LegacyRenderer/RenderList.hpp"
 #include "Module_LegacyRenderer/RenderMetrics.hpp"
 
@@ -43,7 +42,6 @@
 
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/MeshGpuData.hpp>
-#include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/TextureGpuData.hpp>
 
 namespace BetterThanNothing
@@ -475,8 +473,7 @@ namespace BetterThanNothing
 							 m_context->vkPointLightDescriptorSets.size());
 	}
 
-	void LegacyRenderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback,
-									 RenderCache*										renderCache)
+	void LegacyRenderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback)
 	{
 		VulkanPipelineBuilder builder;
 		callback(&builder);
@@ -488,8 +485,8 @@ namespace BetterThanNothing
 
 		for (auto& [shaderPath, shaderType] : params.shadersInfos)
 		{
-			const std::string	 fullShaderPath = m_context->vkSettings.shadersFolderPath + shaderPath;
-			const ShaderGpuData* shaderGpuData = renderCache->GetOrCreateShaderGpuData(shaderType, fullShaderPath);
+			const ResourceId shaderId = m_resourceManager->LoadShader(params.path + shaderPath, shaderType);
+			const ShaderGpuData* shaderGpuData = m_resourceManager->GetShader(shaderId);
 			shaderModules.push_back(shaderGpuData);
 		}
 

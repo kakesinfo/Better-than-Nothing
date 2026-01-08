@@ -25,12 +25,12 @@ namespace BetterThanNothing
 	struct VulkanContext;
 	struct ShaderGpuData;
 	class VulkanShaderModule;
-	enum class EVulkanShaderType;
+	enum class EShaderType;
 
 	struct ShaderData
 	{
-		EVulkanShaderType type;
-		std::string		  filePath;
+		EShaderType type;
+		std::string filePath;
 	};
 
 	class ShaderLoader final : public ResourceLoader<ShaderData, ShaderGpuData>
@@ -43,7 +43,7 @@ namespace BetterThanNothing
 
 	private:
 		static std::vector<char>			ReadFile(const std::string& filename);
-		static glslang_stage_t				GetShaderStage(EVulkanShaderType type);
+		static glslang_stage_t				GetShaderStage(EShaderType type);
 		static glslang_program_t*			GetShaderProgram(const std::vector<char>& source, glslang_stage_t stage);
 		std::unique_ptr<VulkanShaderModule> GetShaderModule(glslang_program_t* program) const;
 	};

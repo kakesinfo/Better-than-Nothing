@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "EVulkanShaderType.hpp"
+#include "Module_Base/EShaderType.hpp"
 
 namespace BetterThanNothing
 {
@@ -28,12 +28,13 @@ namespace BetterThanNothing
 
 	struct VulkanPipelineShaderInfo
 	{
-		std::string		  shaderPath;
-		EVulkanShaderType shaderType;
+		std::string shaderPath;
+		EShaderType shaderType;
 	};
 
 	struct VulkanPipelineParams
 	{
+		const char*							  path;
 		const char*							  name;
 		std::vector<VulkanPipelineShaderInfo> shadersInfos;
 
@@ -56,7 +57,7 @@ namespace BetterThanNothing
 		VkPipelineLayout GetLayout() const;
 
 	private:
-		static VkShaderStageFlagBits GetShaderStageTypeByShaderType(EVulkanShaderType type);
+		static VkShaderStageFlagBits GetShaderStageTypeByShaderType(EShaderType type);
 
 		VulkanContext*		 m_context = nullptr;
 		VulkanPipelineParams m_params;
@@ -67,18 +68,13 @@ namespace BetterThanNothing
 
 	class VulkanPipelineBuilder final
 	{
-	private:
-		VulkanPipelineParams m_params{};
-
-		bool m_hasVertexShader = false;
-		bool m_hasFragmentShader = false;
-
 	public:
 		explicit VulkanPipelineBuilder() = default;
 		~VulkanPipelineBuilder() = default;
 
+		VulkanPipelineBuilder& SetPath(const char* path);
 		VulkanPipelineBuilder& SetName(const char* name);
-		VulkanPipelineBuilder& AddShader(const std::string& shaderPath, EVulkanShaderType shaderType);
+		VulkanPipelineBuilder& AddShader(const std::string& shaderPath, EShaderType shaderType);
 		VulkanPipelineBuilder& AddVertexShader(const std::string& shaderPath);
 		VulkanPipelineBuilder& AddFragmentShader(const std::string& shaderPath);
 
@@ -88,5 +84,11 @@ namespace BetterThanNothing
 
 		[[nodiscard]]
 		VulkanPipelineParams& GetBuildParams();
+
+	private:
+		VulkanPipelineParams m_params{};
+
+		bool m_hasVertexShader = false;
+		bool m_hasFragmentShader = false;
 	};
 }; // BetterThanNothing
