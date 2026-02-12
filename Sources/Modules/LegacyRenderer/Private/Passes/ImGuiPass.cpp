@@ -21,15 +21,15 @@
 #include "Module_LegacyRenderer/RenderMetrics.hpp"
 #include "Module_Platform/Manager/WindowManager.hpp"
 #include "Module_Platform/Window.hpp"
-#include "Module_Vulkan/VulkanCommandBuffer.hpp"
-#include "Module_Vulkan/VulkanContext.hpp"
-#include "Module_Vulkan/VulkanDevice.hpp"
-#include "Module_Vulkan/VulkanImageView.hpp"
-#include "Module_Vulkan/VulkanInstance.hpp"
-#include "Module_Vulkan/VulkanQueue.hpp"
-#include "Module_Vulkan/VulkanSwapChain.hpp"
+#include "RenderingApi/VulkanCommandBuffer.hpp"
+#include "RenderingApi/VulkanContext.hpp"
+#include "RenderingApi/VulkanDevice.hpp"
+#include "RenderingApi/VulkanImageView.hpp"
+#include "RenderingApi/VulkanInstance.hpp"
+#include "RenderingApi/VulkanQueue.hpp"
+#include "RenderingApi/VulkanSwapChain.hpp"
 
-#include <Module_Vulkan/VulkanCommandBufferContext.hpp>
+#include <RenderingApi/VulkanCommandBufferContext.hpp>
 
 namespace BetterThanNothing
 {

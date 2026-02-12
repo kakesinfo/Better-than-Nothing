@@ -29,10 +29,10 @@
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
-#include <Module_Vulkan/Data/ShaderGpuData.hpp>
-#include <Module_Vulkan/Manager/BufferManager.hpp>
-#include <Module_Vulkan/VulkanShaderModule.hpp>
-#include <Module_Vulkan/VulkanContext.hpp>
+#include <RenderingApi/Data/ShaderGpuData.hpp>
+#include <RenderingApi/Manager/BufferManager.hpp>
+#include <RenderingApi/VulkanShaderModule.hpp>
+#include <RenderingApi/VulkanContext.hpp>
 
 namespace BetterThanNothing
 {

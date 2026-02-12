@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <module_vulkan.hpp>
+#include <RenderingApi.hpp>
 
 #include <Module_Base/EKey.hpp>
 #include <Module_Engine/Engine.hpp>
@@ -35,7 +35,7 @@
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-#include <Module_Vulkan/VulkanContext.hpp>
+#include <RenderingApi/VulkanContext.hpp>
 
 #include "Module_LegacyRenderer/RenderMetrics.hpp"
 

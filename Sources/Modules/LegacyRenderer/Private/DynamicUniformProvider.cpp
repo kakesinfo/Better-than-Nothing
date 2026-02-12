@@ -20,9 +20,9 @@
 #include "Module_LegacyRenderer/Data/DynamicUniformData.hpp"
 
 #include <Module_Base/Logger.hpp>
-#include <Module_Vulkan/Manager/BufferManager.hpp>
-#include <Module_Vulkan/VulkanContext.hpp>
-#include <Module_Vulkan/VulkanDevice.hpp>
+#include <RenderingApi/Manager/BufferManager.hpp>
+#include <RenderingApi/VulkanContext.hpp>
+#include <RenderingApi/VulkanDevice.hpp>
 
 namespace BetterThanNothing
 {
