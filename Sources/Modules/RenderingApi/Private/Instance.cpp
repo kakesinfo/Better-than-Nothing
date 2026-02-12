@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	Instance::Instance(InstanceCreateInfo  createInfo) : m_createInfo(std::move(createInfo))
+	Instance::Instance(InstanceCreateInfo createInfo) : m_createInfo(std::move(createInfo))
 	{
 		const bool validationLayersAvailable = CheckValidationLayerSupport();
 		const bool validationLayersEnabled = m_createInfo.enableValidation;
@@ -110,10 +110,7 @@ namespace BetterThanNothing
 		return extensions;
 	}
 
-	VKAPI_ATTR VkBool32 VKAPI_CALL Instance::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT	   messageSeverity,
-														   VkDebugUtilsMessageTypeFlagsEXT			   messageType,
-														   const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
-														   void* userData) noexcept
+	VKAPI_ATTR VkBool32 VKAPI_CALL Instance::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData) noexcept
 	{
 		(void)messageType;
 		(void)userData;
@@ -135,12 +132,8 @@ namespace BetterThanNothing
 		createInfo->sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo->pNext = nullptr;
 		createInfo->flags = 0;
-		createInfo->messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-									  VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-									  VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		createInfo->messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-								  VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-								  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		createInfo->messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		createInfo->messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo->pfnUserCallback = DebugCallback;
 		createInfo->pUserData = nullptr;
 	}
@@ -178,13 +171,9 @@ namespace BetterThanNothing
 		}
 	}
 
-	VkResult Instance::CreateDebugUtilsMessengerEXT(VkInstance								  instance,
-													const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-													const VkAllocationCallbacks*			  allocator,
-													VkDebugUtilsMessengerEXT*				  debugMessenger) noexcept
+	VkResult Instance::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* debugMessenger) noexcept
 	{
-		const auto function = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
-			vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
+		const auto function = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
 
 		if (function == nullptr)
 			return VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -192,11 +181,9 @@ namespace BetterThanNothing
 		return function(instance, createInfo, allocator, debugMessenger);
 	}
 
-	void Instance::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-												 const VkAllocationCallbacks* allocator) noexcept
+	void Instance::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* allocator) noexcept
 	{
-		const auto function = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
-			vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
+		const auto function = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
 
 		if (function != nullptr)
 			function(instance, debugMessenger, allocator);

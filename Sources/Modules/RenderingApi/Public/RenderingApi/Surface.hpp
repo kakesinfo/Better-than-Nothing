@@ -20,12 +20,18 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	class Instance;
+
+	struct SurfaceCreateInfo
+	{
+		void*	  window;
+		Instance* instance;
+	};
 
 	class Surface
 	{
 	public:
-		explicit Surface(VulkanContext* context);
+		explicit Surface(const SurfaceCreateInfo& createInfo);
 		~Surface();
 
 		Surface(const Surface&) = delete;
@@ -33,11 +39,12 @@ namespace BetterThanNothing
 		Surface(Surface&& other) = delete;
 		Surface& operator=(Surface&& other) = delete;
 
-		[[nodiscard]]
-		VkSurfaceKHR Handle() const;
+		[[nodiscard]] static std::unique_ptr<Surface> Create(const SurfaceCreateInfo& createInfo);
+
+		[[nodiscard]] VkSurfaceKHR Handle() const;
 
 	private:
-		VulkanContext* m_context = nullptr;
-		VkSurfaceKHR   m_surface = VK_NULL_HANDLE;
+		SurfaceCreateInfo m_createInfo;
+		VkSurfaceKHR	  m_surface = VK_NULL_HANDLE;
 	};
 };
