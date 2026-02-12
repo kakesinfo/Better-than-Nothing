@@ -17,7 +17,7 @@
  */
 
 #include "Module_Engine/RenderContext.hpp"
-#include "Module_LegacyRenderer/RenderList.hpp"
+#include "Renderer/RenderList.hpp"
 
 namespace BetterThanNothing
 {

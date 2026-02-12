@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-project(Module_LegacyRenderer)
+project(Module_Renderer)
 
 file(GLOB_RECURSE PROJECT_SOURCES
     "Private/*.cpp"

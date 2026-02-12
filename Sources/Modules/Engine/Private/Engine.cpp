@@ -30,14 +30,14 @@
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
-#include <Module_LegacyRenderer/Camera.hpp>
-#include <Module_LegacyRenderer/LegacyRenderer.hpp>
-#include <Module_LegacyRenderer/RenderList.hpp>
+#include <Renderer/Camera.hpp>
+#include <Renderer/LegacyRenderer.hpp>
+#include <Renderer/RenderList.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 
-#include "Module_LegacyRenderer/RenderMetrics.hpp"
+#include "Renderer/RenderMetrics.hpp"
 
 namespace BetterThanNothing
 {
