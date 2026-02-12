@@ -129,21 +129,12 @@ namespace BetterThanNothing
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
 		createInfo.pEnabledFeatures = &deviceFeatures;
 		createInfo.pNext = &dynamicRenderingFeatures;
+		createInfo.enabledLayerCount = 0;
+		createInfo.ppEnabledLayerNames = nullptr;
 
 		const auto& deviceExtensions = m_context->vkSettings.deviceExtensions;
 		createInfo.enabledExtensionCount = static_cast<std::uint32_t>(deviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-		if (m_context->vkSettings.enableValidationLayers)
-		{
-			const auto& validationLayers = m_context->vkSettings.validationLayers;
-			createInfo.enabledLayerCount = static_cast<std::uint32_t>(validationLayers.size());
-			createInfo.ppEnabledLayerNames = validationLayers.data();
-		}
-		else
-		{
-			createInfo.enabledLayerCount = 0;
-		}
 
 		if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_logicalDevice) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create logical device");

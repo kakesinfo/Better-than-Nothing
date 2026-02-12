@@ -51,9 +51,9 @@ namespace BetterThanNothing
 		BufferManager::Initialize(m_context);
 
 		Logger::Log<INFO>("Buffering mode: {}", m_context->vkSettings.maxFramesInFlight);
-		Logger::Log<INFO>("VSync: {}", m_context->vkSettings.enableVSync ? "enabled" : "disabled");
+		Logger::Log<INFO>("VSync: {}", m_context->vkSettings.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
 
-		m_context->vkInstance = std::make_unique<Instance>(m_context);
+		m_context->vkInstance = Instance::Create({ .enableValidation = true });
 		m_context->vkSurface = std::make_unique<Surface>(m_context);
 		m_context->vkDevice = std::make_unique<Device>(m_context);
 		m_context->vkMemoryAllocator = std::make_unique<Allocator>(m_context);
