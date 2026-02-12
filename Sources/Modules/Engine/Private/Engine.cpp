@@ -24,18 +24,18 @@
 #include "Module_Math/Matrix4.hpp"
 #include "ResourceManager/ResourceManager.hpp"
 
-#include <RenderingApi/Old/VulkanContext.hpp>
 #include <Module_Data/Graphics/CameraData.hpp>
 #include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
-#include <Renderer/Camera.hpp>
-#include <Renderer/LegacyRenderer.hpp>
-#include <Renderer/RenderList.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
+#include <Renderer/Camera.hpp>
+#include <Renderer/RenderList.hpp>
+#include <Renderer/Renderer.hpp>
+#include <RenderingApi/Old/VulkanContext.hpp>
 
 #include "Renderer/RenderMetrics.hpp"
 
@@ -55,7 +55,7 @@ namespace BetterThanNothing
 
 		m_resourceManager = std::make_unique<ResourceManager>(m_context.get());
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
-		m_legacyRenderer = std::make_unique<LegacyRenderer>(m_context.get(), m_resourceManager.get());
+		m_legacyRenderer = std::make_unique<Renderer>(m_context.get(), m_resourceManager.get());
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
 
 		m_legacyRenderer->AddPipeline([&](VulkanPipelineBuilder* builder) {
