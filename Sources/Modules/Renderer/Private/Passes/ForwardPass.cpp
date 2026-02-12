@@ -16,12 +16,12 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_LegacyRenderer/Passes/ForwardPass.hpp"
+#include "Renderer/Passes/ForwardPass.hpp"
 
 #include "RenderingApi/Old/VulkanCommandBufferContext.hpp"
 #include "RenderingApi/Old/VulkanContext.hpp"
 #include "RenderingApi/Old/VulkanImageView.hpp"
-#include "Module_LegacyRenderer/DrawStream.hpp"
+#include "Renderer/DrawStream.hpp"
 #include "RenderingApi/CommandBuffer.hpp"
 #include "RenderingApi/SwapChain.hpp"
 

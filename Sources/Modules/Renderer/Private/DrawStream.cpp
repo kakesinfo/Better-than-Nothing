@@ -16,19 +16,30 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_LegacyRenderer/Passes/RenderGraph.hpp"
-#include "Module_LegacyRenderer/DrawStream.hpp"
+#include "Renderer/DrawStream.hpp"
 
 namespace BetterThanNothing
 {
-	RenderGraph::RenderGraph(VulkanContext* context) : m_context(context) {}
-	RenderGraph::~RenderGraph() = default;
+	DrawStream::DrawStream() = default;
+	DrawStream::~DrawStream() = default;
 
-	void RenderGraph::Execute(const RenderPassContext& context, const DrawStream& drawStream) const
+	void DrawStream::Draw(const DrawCommand& command)
 	{
-		for (const auto& renderPass : m_renderPasses)
-		{
-			renderPass->Execute(context, drawStream);
-		}
+		m_commands.push_back(command);
+	}
+
+	DrawCommand& DrawStream::operator[](const std::uint32_t index)
+	{
+		return m_commands.at(index);
+	}
+
+	const DrawCommand& DrawStream::operator[](const std::uint32_t index) const
+	{
+		return m_commands.at(index);
+	}
+
+	std::uint32_t DrawStream::Size() const
+	{
+		return m_commands.size();
 	}
 }

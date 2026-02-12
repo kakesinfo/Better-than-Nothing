@@ -16,30 +16,23 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_LegacyRenderer/DrawStream.hpp"
+#include "Renderer/GlobalUniformProvider.hpp"
+#include "Renderer/Data/GlobalUniformData.hpp"
+
+#include <RenderingApi/Old/VulkanContext.hpp>
+#include <Module_Base/Logger.hpp>
+#include <RenderingApi/Manager/BufferManager.hpp>
 
 namespace BetterThanNothing
 {
-	DrawStream::DrawStream() = default;
-	DrawStream::~DrawStream() = default;
-
-	void DrawStream::Draw(const DrawCommand& command)
+	GlobalUniformProvider::GlobalUniformProvider(VulkanContext* context) : m_context(context)
 	{
-		m_commands.push_back(command);
-	}
+		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
+		for (std::uint32_t i = 0; i < count; i++)
+		{
+			m_context->vkFrames[i].globalUniformBuffer = BufferManager::CreateUniformBuffer<GlobalUniformData>();
+		}
 
-	DrawCommand& DrawStream::operator[](const std::uint32_t index)
-	{
-		return m_commands.at(index);
-	}
-
-	const DrawCommand& DrawStream::operator[](const std::uint32_t index) const
-	{
-		return m_commands.at(index);
-	}
-
-	std::uint32_t DrawStream::Size() const
-	{
-		return m_commands.size();
+		Logger::Log<SUCCESS>("Vulkan global uniforms: ok (count: {})", count);
 	}
 }

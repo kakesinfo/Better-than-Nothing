@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_LegacyRenderer/Camera.hpp"
+#include "Renderer/Camera.hpp"
 
 #include "Module_Math/Matrix4.hpp"
 #include "Module_Math/Quaternion.hpp"

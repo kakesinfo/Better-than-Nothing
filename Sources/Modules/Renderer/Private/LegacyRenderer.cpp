@@ -18,20 +18,20 @@
 
 #include <RenderingApi.hpp>
 
-#include "Module_LegacyRenderer/LegacyRenderer.hpp"
+#include "Renderer/LegacyRenderer.hpp"
 
 #include "Module_Data/Graphics/CameraData.hpp"
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
-#include "Module_LegacyRenderer/Data/DynamicUniformData.hpp"
-#include "Module_LegacyRenderer/Data/GlobalUniformData.hpp"
-#include "Module_LegacyRenderer/DrawStream.hpp"
-#include "Module_LegacyRenderer/DynamicUniformProvider.hpp"
-#include "Module_LegacyRenderer/GlobalUniformProvider.hpp"
-#include "Module_LegacyRenderer/Passes/ForwardPass.hpp"
-#include "Module_LegacyRenderer/Passes/ImGuiPass.hpp"
-#include "Module_LegacyRenderer/Passes/RenderGraph.hpp"
-#include "Module_LegacyRenderer/RenderList.hpp"
-#include "Module_LegacyRenderer/RenderMetrics.hpp"
+#include "Renderer/Data/DynamicUniformData.hpp"
+#include "Renderer/Data/GlobalUniformData.hpp"
+#include "Renderer/DrawStream.hpp"
+#include "Renderer/DynamicUniformProvider.hpp"
+#include "Renderer/GlobalUniformProvider.hpp"
+#include "Renderer/Passes/ForwardPass.hpp"
+#include "Renderer/Passes/ImGuiPass.hpp"
+#include "Renderer/Passes/RenderGraph.hpp"
+#include "Renderer/RenderList.hpp"
+#include "Renderer/RenderMetrics.hpp"
 
 #include <RenderingApi/Old/VertexInputDescription.hpp>
 #include <Module_Base/Logger.hpp>

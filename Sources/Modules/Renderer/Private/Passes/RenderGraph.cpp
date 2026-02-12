@@ -16,23 +16,19 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_LegacyRenderer/GlobalUniformProvider.hpp"
-#include "Module_LegacyRenderer/Data/GlobalUniformData.hpp"
-
-#include <RenderingApi/Old/VulkanContext.hpp>
-#include <Module_Base/Logger.hpp>
-#include <RenderingApi/Manager/BufferManager.hpp>
+#include "Renderer/Passes/RenderGraph.hpp"
+#include "Renderer/DrawStream.hpp"
 
 namespace BetterThanNothing
 {
-	GlobalUniformProvider::GlobalUniformProvider(VulkanContext* context) : m_context(context)
-	{
-		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
-		for (std::uint32_t i = 0; i < count; i++)
-		{
-			m_context->vkFrames[i].globalUniformBuffer = BufferManager::CreateUniformBuffer<GlobalUniformData>();
-		}
+	RenderGraph::RenderGraph(VulkanContext* context) : m_context(context) {}
+	RenderGraph::~RenderGraph() = default;
 
-		Logger::Log<SUCCESS>("Vulkan global uniforms: ok (count: {})", count);
+	void RenderGraph::Execute(const RenderPassContext& context, const DrawStream& drawStream) const
+	{
+		for (const auto& renderPass : m_renderPasses)
+		{
+			renderPass->Execute(context, drawStream);
+		}
 	}
 }

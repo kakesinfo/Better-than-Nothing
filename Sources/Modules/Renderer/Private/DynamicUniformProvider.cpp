@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_LegacyRenderer/DynamicUniformProvider.hpp"
-#include "Module_LegacyRenderer/Data/DynamicUniformData.hpp"
+#include "Renderer/DynamicUniformProvider.hpp"
+#include "Renderer/Data/DynamicUniformData.hpp"
 
 #include <RenderingApi/Old/VulkanContext.hpp>
 #include <Module_Base/Logger.hpp>
