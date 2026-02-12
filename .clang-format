@@ -6,7 +6,7 @@ BasedOnStyle: LLVM
 UseTab: Always
 IndentWidth: 4
 TabWidth: 4
-ColumnLimit: 120
+ColumnLimit: 140
 
 NamespaceIndentation: All
 IndentCaseLabels: true
@@ -33,8 +33,6 @@ AccessModifierOffset: -4
 
 BinPackArguments: true
 
-AlignAfterOpenBracket: Align
-
 AllowAllArgumentsOnNextLine: false
 AllowShortFunctionsOnASingleLine: Inline
 
@@ -46,6 +44,14 @@ BreakConstructorInitializers: BeforeColon
 AlwaysBreakTemplateDeclarations: Yes
 FixNamespaceComments: false
 Cpp11BracedListStyle: true
+AlignAfterOpenBracket: BlockIndent
+AlwaysBreakAfterReturnType: None
+BreakAfterAttributes: Never
+BinPackParameters: true
+
+PenaltyReturnTypeOnItsOwnLine: 10000
+PenaltyBreakBeforeFirstCallParameter: 10000
+PenaltyExcessCharacter: 0
 
 AlignConsecutiveDeclarations:
     Enabled: true

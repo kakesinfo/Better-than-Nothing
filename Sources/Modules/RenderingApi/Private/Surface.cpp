@@ -25,25 +25,26 @@
 
 namespace BetterThanNothing
 {
-	Surface::Surface(VulkanContext* context) : m_context(context)
+	Surface::Surface(const SurfaceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
-		auto& window = WindowManager::GetWindow();
+		auto window = static_cast<SDL_Window*>(m_createInfo.window);
 
-		if (!SDL_Vulkan_CreateSurface(window->Handle(), m_context->vkInstance->Handle(), nullptr, &m_surface))
+		if (!SDL_Vulkan_CreateSurface(window, m_createInfo.instance->Handle(), nullptr, &m_surface))
 			throw std::runtime_error(std::format("Failed to create Vulkan surface: {}", SDL_GetError()));
-
-		Logger::Log<SUCCESS>("Vulkan surface: ok");
 	}
 
 	Surface::~Surface()
 	{
-		vkDestroySurfaceKHR(m_context->vkInstance->Handle(), m_surface, nullptr);
+		vkDestroySurfaceKHR(m_createInfo.instance->Handle(), m_surface, nullptr);
+	}
+
+	std::unique_ptr<Surface> Surface::Create(const SurfaceCreateInfo& createInfo)
+	{
+		return std::make_unique<Surface>(createInfo);
 	}
 
 	VkSurfaceKHR Surface::Handle() const
 	{
-		if (m_surface == VK_NULL_HANDLE)
-			throw std::runtime_error("CVulkanSurface::Handle() Vulkan surface is not initialized");
 		return m_surface;
 	}
 };

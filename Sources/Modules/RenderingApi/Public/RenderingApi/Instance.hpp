@@ -30,7 +30,7 @@ namespace BetterThanNothing
 	class Instance
 	{
 	public:
-		explicit Instance(InstanceCreateInfo  createInfo);
+		explicit Instance(InstanceCreateInfo createInfo);
 		~Instance();
 
 		Instance(const Instance&) = delete;
@@ -44,22 +44,14 @@ namespace BetterThanNothing
 		[[nodiscard]] bool					   CheckValidationLayerSupport() const noexcept;
 		[[nodiscard]] std::vector<const char*> GetRequiredExtensions() const noexcept;
 
-		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT		messageSeverity,
-															VkDebugUtilsMessageTypeFlagsEXT				messageType,
-															const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
-															void* userData) noexcept;
+		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData) noexcept;
 
 		static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept;
-		void CreateDebugMessenger();
-		void DestroyDebugMessenger() const;
+		void		CreateDebugMessenger();
+		void		DestroyDebugMessenger() const;
 
-		[[nodiscard]] static VkResult CreateDebugUtilsMessengerEXT(VkInstance								 instance,
-																   const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-																   const VkAllocationCallbacks*				 allocator,
-																   VkDebugUtilsMessengerEXT* debugMessenger) noexcept;
-
-		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-												  const VkAllocationCallbacks* allocator) noexcept;
+		[[nodiscard]] static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* debugMessenger) noexcept;
+		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* allocator) noexcept;
 
 	public:
 		[[nodiscard]] std::uint32_t GetApiVersion() const noexcept;

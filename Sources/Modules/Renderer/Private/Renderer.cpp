@@ -33,15 +33,15 @@
 #include "Renderer/RenderList.hpp"
 #include "Renderer/RenderMetrics.hpp"
 
-#include <RenderingApi/Old/VertexInputDescription.hpp>
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
+#include <RenderingApi/Old/VertexInputDescription.hpp>
 
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 
-#include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/MeshGpuData.hpp>
+#include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/TextureGpuData.hpp>
 
 namespace BetterThanNothing
@@ -53,15 +53,14 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Buffering mode: {}", m_context->vkSettings.maxFramesInFlight);
 		Logger::Log<INFO>("VSync: {}", m_context->vkSettings.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
 
-		m_context->vkInstance = Instance::Create({ .enableValidation = true });
-		m_context->vkSurface = std::make_unique<Surface>(m_context);
+		m_context->vkInstance = Instance::Create({.enableValidation = true});
+		m_context->vkSurface = Surface::Create({WindowManager::GetWindow()->Handle(), m_context->vkInstance.get()});
 		m_context->vkDevice = std::make_unique<Device>(m_context);
 		m_context->vkMemoryAllocator = std::make_unique<Allocator>(m_context);
 
 		Logger::Log<INFO>("Vendor: {}", m_context->vkDevice->GetVendorName());
 		Logger::Log<INFO>("Device: {}", m_context->vkDevice->GetDeviceName());
 		Logger::Log<INFO>("API Version: {}", m_context->vkDevice->GetApiVersion());
-
 		Logger::Log<INFO>("Anisotropy: {}x", m_context->vkDevice->GetMaxAnisotropy());
 		Logger::Log<INFO>("Msaa: {}x", static_cast<std::uint32_t>(m_context->vkDevice->GetMaxMsaaSamples()));
 
@@ -114,9 +113,8 @@ namespace BetterThanNothing
 		const auto swapchain = m_context->vkSwapChain->Handle();
 
 		std::uint32_t  imageIndex;
-		const VkResult acquireResult = vkAcquireNextImageKHR(
-			device, swapchain, UINT64_MAX, m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle(),
-			VK_NULL_HANDLE, &imageIndex);
+		const VkResult acquireResult =
+			vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, m_context->vkFrames[m_currentFrame].imageAvailableSemaphore->Handle(), VK_NULL_HANDLE, &imageIndex);
 
 		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
 		{
@@ -152,8 +150,7 @@ namespace BetterThanNothing
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		auto graphicsQueue = m_context->vkGraphicsQueue->Handle();
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->vkFrames[m_currentFrame].inFlightFence->Handle()) !=
-			VK_SUCCESS)
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->vkFrames[m_currentFrame].inFlightFence->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
 		VkPresentInfoKHR presentInfo{};
@@ -180,8 +177,7 @@ namespace BetterThanNothing
 		m_currentFrame = (m_currentFrame + 1) % m_context->vkFrames.size();
 	}
 
-	void Renderer::RecordCommandBuffer(const RenderList* renderList,
-											 const CameraData& camera, const std ::uint32_t imageIndex) const
+	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const std ::uint32_t imageIndex) const
 	{
 		const auto& currentFrame = m_context->vkFrames[m_currentFrame];
 
@@ -328,12 +324,9 @@ namespace BetterThanNothing
 		auto pointLightBinding = {pointLightLayoutBinding};
 
 		m_context->vkGlobalDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(globalBindings, m_context);
-		m_context->vkDynamicDescriptorSetLayout =
-			std::make_unique<VulkanDescriptorSetLayout>(dynamicBindings, m_context);
-		m_context->vkSamplerDescriptorSetLayout =
-			std::make_unique<VulkanDescriptorSetLayout>(samplerBindings, m_context);
-		m_context->vkPointLightDescriptorLayout =
-			std::make_unique<VulkanDescriptorSetLayout>(pointLightBinding, m_context);
+		m_context->vkDynamicDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(dynamicBindings, m_context);
+		m_context->vkSamplerDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(samplerBindings, m_context);
+		m_context->vkPointLightDescriptorLayout = std::make_unique<VulkanDescriptorSetLayout>(pointLightBinding, m_context);
 
 		Logger::Log<SUCCESS>("Vulkan descriptor set layout: ok");
 	}
@@ -371,8 +364,7 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
 		{
-			m_context->vkGlobalDescriptorSets[i] =
-				std::make_unique<VulkanDescriptorSet>(m_context->vkGlobalDescriptorSetLayout, m_context);
+			m_context->vkGlobalDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkGlobalDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo globalInfo{};
 			globalInfo.buffer = m_context->vkFrames[i].globalUniformBuffer->Handle();
@@ -402,8 +394,7 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
 		{
-			m_context->vkDynamicDescriptorSets[i] =
-				std::make_unique<VulkanDescriptorSet>(m_context->vkDynamicDescriptorSetLayout, m_context);
+			m_context->vkDynamicDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkDynamicDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo dynamicInfo{};
 			dynamicInfo.buffer = m_context->vkFrames[i].dynamicUniformBuffer->Handle();
@@ -423,8 +414,7 @@ namespace BetterThanNothing
 			vkUpdateDescriptorSets(m_context->vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
 		}
 
-		Logger::Log<SUCCESS>("Vulkan dynamic descriptor sets: ok (count: {})",
-							 m_context->vkDynamicDescriptorSets.size());
+		Logger::Log<SUCCESS>("Vulkan dynamic descriptor sets: ok (count: {})", m_context->vkDynamicDescriptorSets.size());
 	}
 
 	void Renderer::CreatePointLightBuffers(std::uint32_t maxLights) const
@@ -448,8 +438,7 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
 		{
-			m_context->vkPointLightDescriptorSets[i] =
-				std::make_unique<VulkanDescriptorSet>(m_context->vkPointLightDescriptorLayout, m_context);
+			m_context->vkPointLightDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkPointLightDescriptorLayout, m_context);
 
 			VkDescriptorBufferInfo dynamicInfo{};
 			dynamicInfo.buffer = m_context->vkFrames[i].pointLightBuffer->Handle();
@@ -469,8 +458,7 @@ namespace BetterThanNothing
 			vkUpdateDescriptorSets(m_context->vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
 		}
 
-		Logger::Log<SUCCESS>("Point light descriptor sets: ok (count: {})",
-							 m_context->vkPointLightDescriptorSets.size());
+		Logger::Log<SUCCESS>("Point light descriptor sets: ok (count: {})", m_context->vkPointLightDescriptorSets.size());
 	}
 
 	void Renderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback)
@@ -485,7 +473,7 @@ namespace BetterThanNothing
 
 		for (auto& [shaderPath, shaderType] : params.shadersInfos)
 		{
-			const ResourceId shaderId = m_resourceManager->LoadShader(params.path + shaderPath, shaderType);
+			const ResourceId	 shaderId = m_resourceManager->LoadShader(params.path + shaderPath, shaderType);
 			const ShaderGpuData* shaderGpuData = m_resourceManager->GetShader(shaderId);
 			shaderModules.push_back(shaderGpuData);
 		}
@@ -494,8 +482,7 @@ namespace BetterThanNothing
 		vertexInputDescription.bindings = {GetVertexBindingDescription()};
 		vertexInputDescription.attributes = GetVertexAttributeDescriptions();
 
-		m_context->vkPipeline =
-			std::make_unique<Pipeline>(params, vertexInputDescription, shaderModules, m_context);
+		m_context->vkPipeline = std::make_unique<Pipeline>(params, vertexInputDescription, shaderModules, m_context);
 	}
 
 	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()
