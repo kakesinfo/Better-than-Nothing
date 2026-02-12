@@ -20,9 +20,9 @@
 
 namespace BetterThanNothing
 {
-	VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer commandBuffer) : m_commandBuffer(commandBuffer) {}
+	CommandBuffer::CommandBuffer(VkCommandBuffer commandBuffer) : m_commandBuffer(commandBuffer) {}
 
-	void VulkanCommandBuffer::Reset() const
+	void CommandBuffer::Reset() const
 	{
 		if (m_isRecording)
 			throw std::runtime_error("Command buffer is recording");
@@ -31,7 +31,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to reset command buffer!");
 	}
 
-	VulkanCommandBufferContext VulkanCommandBuffer::BeginRecording(const VkCommandBufferUsageFlags flags)
+	VulkanCommandBufferContext CommandBuffer::BeginRecording(const VkCommandBufferUsageFlags flags)
 	{
 		if (m_isRecording)
 			throw std::runtime_error("Command buffer is already recording");
@@ -48,7 +48,7 @@ namespace BetterThanNothing
 		return VulkanCommandBufferContext(m_commandBuffer);
 	}
 
-	void VulkanCommandBuffer::EndRecording()
+	void CommandBuffer::EndRecording()
 	{
 		if (!m_isRecording)
 			throw std::runtime_error("Command buffer is not recording");
@@ -59,7 +59,7 @@ namespace BetterThanNothing
 		m_isRecording = false;
 	}
 
-	void VulkanCommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, std::uint32_t bufferSize) const
+	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, std::uint32_t bufferSize) const
 	{
 		VkBufferCopy copyRegion{};
 		copyRegion.size = bufferSize;
@@ -67,7 +67,7 @@ namespace BetterThanNothing
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 	}
 
-	void VulkanCommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,
+	void CommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,
 													VkImageLayout newLayout, std::uint32_t mipLevels) const
 	{
 		VkImageMemoryBarrier barrier{};
@@ -133,7 +133,7 @@ namespace BetterThanNothing
 		vkCmdPipelineBarrier(m_commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void VulkanCommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, std::uint32_t width,
+	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, std::uint32_t width,
 												std::uint32_t height) const
 	{
 		VkBufferImageCopy region{};
@@ -152,7 +152,7 @@ namespace BetterThanNothing
 		vkCmdCopyBufferToImage(m_commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 	}
 
-	void VulkanCommandBuffer::PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+	void CommandBuffer::PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
 											  VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount,
 											  const VkMemoryBarrier*	   memoryBarriers,
 											  std::uint32_t				   bufferMemoryBarrierCount,
@@ -165,14 +165,14 @@ namespace BetterThanNothing
 							 imageMemoryBarriers);
 	}
 
-	void VulkanCommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
+	void CommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
 										VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter) const
 	{
 		vkCmdBlitImage(m_commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 1, blit, filter);
 	}
 
 	void
-	VulkanCommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<VulkanCommandBuffer>&)>& callback,
+	CommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CommandBuffer>&)>& callback,
 											VulkanContext*													  context)
 	{
 		const auto device = context->vkDevice->Handle();
@@ -188,7 +188,7 @@ namespace BetterThanNothing
 		VkCommandBuffer vkCommandBuffer;
 		vkAllocateCommandBuffers(device, &allocInfo, &vkCommandBuffer);
 
-		auto commandBuffer = std::make_unique<VulkanCommandBuffer>(vkCommandBuffer);
+		auto commandBuffer = std::make_unique<CommandBuffer>(vkCommandBuffer);
 
 		commandBuffer->BeginRecording(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 		callback(commandBuffer);
@@ -205,12 +205,12 @@ namespace BetterThanNothing
 		vkFreeCommandBuffers(device, commandPool, 1, &vkCommandBuffer);
 	}
 
-	bool VulkanCommandBuffer::HasStencilComponent(VkFormat format)
+	bool CommandBuffer::HasStencilComponent(VkFormat format)
 	{
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
 
-	VkCommandBuffer VulkanCommandBuffer::Handle() const
+	VkCommandBuffer CommandBuffer::Handle() const
 	{
 		return m_commandBuffer;
 	}

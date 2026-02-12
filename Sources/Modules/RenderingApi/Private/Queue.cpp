@@ -16,25 +16,14 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "RenderingApi.hpp"
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	Queue::Queue(VkQueue queue) : m_queue(queue) {}
 
-	class VulkanDescriptorPool
+	VkQueue Queue::Handle() const
 	{
-	public:
-		explicit VulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, VulkanContext* context);
-
-		~VulkanDescriptorPool();
-
-		VkDescriptorPool Handle() const;
-
-	private:
-		static std::uint32_t CalculateMaxSets(const std::vector<VkDescriptorPoolSize>& poolSizes);
-
-		VulkanContext*	 m_context = nullptr;
-		VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
-	};
-} // BetterThanNothing
+		return m_queue;
+	}
+}

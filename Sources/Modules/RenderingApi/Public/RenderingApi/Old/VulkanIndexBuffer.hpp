@@ -18,26 +18,15 @@
 
 #pragma once
 
+#include "VulkanBuffer.hpp"
+
 namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanSurface
+	class VulkanIndexBuffer : public VulkanBuffer
 	{
 	public:
-		explicit VulkanSurface(VulkanContext* context);
-		~VulkanSurface();
-
-		VulkanSurface(const VulkanSurface&) = delete;
-		VulkanSurface& operator=(const VulkanSurface&) = delete;
-		VulkanSurface(VulkanSurface&& other) = delete;
-		VulkanSurface& operator=(VulkanSurface&& other) = delete;
-
-		[[nodiscard]]
-		VkSurfaceKHR Handle() const;
-
-	private:
-		VulkanContext* m_context = nullptr;
-		VkSurfaceKHR   m_surface = VK_NULL_HANDLE;
+		VulkanIndexBuffer(VulkanContext* context, VkDeviceSize size, const void* data = nullptr);
 	};
-};
+}

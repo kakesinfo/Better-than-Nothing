@@ -26,16 +26,16 @@ namespace BetterThanNothing
 	class VulkanCommandBufferContext;
 	struct VulkanContext;
 
-	class VulkanCommandBuffer
+	class CommandBuffer
 	{
 	public:
-		explicit VulkanCommandBuffer(VkCommandBuffer commandBuffer);
-		~VulkanCommandBuffer() = default;
+		explicit CommandBuffer(VkCommandBuffer commandBuffer);
+		~CommandBuffer() = default;
 
-		VulkanCommandBuffer(const VulkanCommandBuffer&) = delete;
-		VulkanCommandBuffer& operator=(const VulkanCommandBuffer&) = delete;
-		VulkanCommandBuffer(VulkanCommandBuffer&& other) = delete;
-		VulkanCommandBuffer& operator=(VulkanCommandBuffer&& other) = delete;
+		CommandBuffer(const CommandBuffer&) = delete;
+		CommandBuffer& operator=(const CommandBuffer&) = delete;
+		CommandBuffer(CommandBuffer&& other) = delete;
+		CommandBuffer& operator=(CommandBuffer&& other) = delete;
 
 		void					   Reset() const;
 		VulkanCommandBufferContext BeginRecording(VkCommandBufferUsageFlags flags = 0);
@@ -55,7 +55,7 @@ namespace BetterThanNothing
 		void BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout,
 					   const VkImageBlit* blit, VkFilter filter) const;
 
-		static void SingleTimeCommands(const std::function<void(std::unique_ptr<VulkanCommandBuffer>&)>& callback,
+		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CommandBuffer>&)>& callback,
 									   VulkanContext*													 context);
 
 	private:

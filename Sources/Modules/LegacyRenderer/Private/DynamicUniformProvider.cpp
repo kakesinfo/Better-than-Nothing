@@ -19,10 +19,10 @@
 #include "Module_LegacyRenderer/DynamicUniformProvider.hpp"
 #include "Module_LegacyRenderer/Data/DynamicUniformData.hpp"
 
+#include <RenderingApi/Old/VulkanContext.hpp>
 #include <Module_Base/Logger.hpp>
+#include <RenderingApi/Device.hpp>
 #include <RenderingApi/Manager/BufferManager.hpp>
-#include <RenderingApi/VulkanContext.hpp>
-#include <RenderingApi/VulkanDevice.hpp>
 
 namespace BetterThanNothing
 {

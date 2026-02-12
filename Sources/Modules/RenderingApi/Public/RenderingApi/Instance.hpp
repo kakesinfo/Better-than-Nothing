@@ -22,16 +22,16 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanInstance
+	class Instance
 	{
 	public:
-		explicit VulkanInstance(VulkanContext* context);
-		~VulkanInstance();
+		explicit Instance(VulkanContext* context);
+		~Instance();
 
-		VulkanInstance(const VulkanInstance&) = delete;
-		VulkanInstance& operator=(const VulkanInstance&) = delete;
-		VulkanInstance(VulkanInstance&& other) = delete;
-		VulkanInstance& operator=(VulkanInstance&& other) = delete;
+		Instance(const Instance&) = delete;
+		Instance& operator=(const Instance&) = delete;
+		Instance(Instance&& other) = delete;
+		Instance& operator=(Instance&& other) = delete;
 
 		[[nodiscard]]
 		VkInstance Handle() const;

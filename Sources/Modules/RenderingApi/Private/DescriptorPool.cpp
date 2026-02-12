@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanDescriptorPool::VulkanDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes,
+	DescriptorPool::DescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes,
 											   VulkanContext*							context)
 		: m_context(context)
 	{
@@ -34,18 +34,18 @@ namespace BetterThanNothing
 			throw std::runtime_error("Failed to create descriptor pool");
 	}
 
-	VulkanDescriptorPool::~VulkanDescriptorPool()
+	DescriptorPool::~DescriptorPool()
 	{
 		if (m_descriptorPool != VK_NULL_HANDLE)
 			vkDestroyDescriptorPool(m_context->vkDevice->Handle(), m_descriptorPool, nullptr);
 	}
 
-	VkDescriptorPool VulkanDescriptorPool::Handle() const
+	VkDescriptorPool DescriptorPool::Handle() const
 	{
 		return m_descriptorPool;
 	}
 
-	std::uint32_t VulkanDescriptorPool::CalculateMaxSets(const std::vector<VkDescriptorPoolSize>& poolSizes)
+	std::uint32_t DescriptorPool::CalculateMaxSets(const std::vector<VkDescriptorPoolSize>& poolSizes)
 	{
 		std::uint32_t totalDescriptors = 0;
 		for (const auto& [_, descriptorCount] : poolSizes)

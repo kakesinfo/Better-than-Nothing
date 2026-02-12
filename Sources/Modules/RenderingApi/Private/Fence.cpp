@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanFence::VulkanFence(VulkanContext* context) : m_context(context)
+	Fence::Fence(VulkanContext* context) : m_context(context)
 	{
 		VkFenceCreateInfo fenceInfo{};
 		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -31,7 +31,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to create fence!");
 	}
 
-	VulkanFence::~VulkanFence()
+	Fence::~Fence()
 	{
 		if (m_fence != VK_NULL_HANDLE)
 		{
@@ -40,19 +40,19 @@ namespace BetterThanNothing
 		}
 	}
 
-	void VulkanFence::Wait() const
+	void Fence::Wait() const
 	{
 		auto device = m_context->vkDevice->Handle();
 		vkWaitForFences(device, 1, &m_fence, VK_TRUE, UINT64_MAX);
 	}
 
-	void VulkanFence::Reset() const
+	void Fence::Reset() const
 	{
 		auto device = m_context->vkDevice->Handle();
 		vkResetFences(device, 1, &m_fence);
 	}
 
-	VkFence VulkanFence::Handle() const
+	VkFence Fence::Handle() const
 	{
 		return m_fence;
 	}

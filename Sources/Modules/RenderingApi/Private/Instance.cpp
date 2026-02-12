@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanInstance::VulkanInstance(VulkanContext* context) : m_context(context)
+	Instance::Instance(VulkanContext* context) : m_context(context)
 	{
 		bool validationLayersEnabled = context->vkSettings.enableValidationLayers;
 		bool validationLayersAvailable = CheckValidationLayerSupport();
@@ -75,13 +75,13 @@ namespace BetterThanNothing
 		CreateDebugMessenger();
 	}
 
-	VulkanInstance::~VulkanInstance()
+	Instance::~Instance()
 	{
 		DestroyDebugMessenger();
 		vkDestroyInstance(m_instance, nullptr);
 	}
 
-	std::vector<const char*> VulkanInstance::GetRequiredExtensions() const noexcept
+	std::vector<const char*> Instance::GetRequiredExtensions() const noexcept
 	{
 		std::uint32_t	   sdlExtensionCount = 0;
 		const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
@@ -94,7 +94,7 @@ namespace BetterThanNothing
 		return extensions;
 	}
 
-	bool VulkanInstance::CheckValidationLayerSupport() const noexcept
+	bool Instance::CheckValidationLayerSupport() const noexcept
 	{
 		std::uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -111,7 +111,7 @@ namespace BetterThanNothing
 		});
 	}
 
-	VKAPI_ATTR VkBool32 VKAPI_CALL VulkanInstance::DebugCallback(
+	VKAPI_ATTR VkBool32 VKAPI_CALL Instance::DebugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 		const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData) noexcept
 	{
@@ -130,7 +130,7 @@ namespace BetterThanNothing
 		return VK_FALSE;
 	}
 
-	void VulkanInstance::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept
+	void Instance::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept
 	{
 		createInfo->sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo->pNext = nullptr;
@@ -145,7 +145,7 @@ namespace BetterThanNothing
 		createInfo->pUserData = m_context;
 	}
 
-	void VulkanInstance::CreateDebugMessenger()
+	void Instance::CreateDebugMessenger()
 	{
 		if (m_instance == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan instance is not initialized");
@@ -164,7 +164,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Debug Messenger: ok");
 	}
 
-	void VulkanInstance::DestroyDebugMessenger()
+	void Instance::DestroyDebugMessenger()
 	{
 		if (m_instance == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan instance is not initialized");
@@ -178,7 +178,7 @@ namespace BetterThanNothing
 		}
 	}
 
-	VkResult VulkanInstance::CreateDebugUtilsMessengerEXT(VkInstance								instance,
+	VkResult Instance::CreateDebugUtilsMessengerEXT(VkInstance								instance,
 														  const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
 														  const VkAllocationCallbacks*				allocator,
 														  VkDebugUtilsMessengerEXT* debugMessenger) noexcept
@@ -192,7 +192,7 @@ namespace BetterThanNothing
 		return function(instance, createInfo, allocator, debugMessenger);
 	}
 
-	void VulkanInstance::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
+	void Instance::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
 													   const VkAllocationCallbacks* allocator) noexcept
 	{
 		auto function =
@@ -204,7 +204,7 @@ namespace BetterThanNothing
 		}
 	}
 
-	VkInstance VulkanInstance::Handle() const
+	VkInstance Instance::Handle() const
 	{
 		if (m_instance == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan instance is not initialized");

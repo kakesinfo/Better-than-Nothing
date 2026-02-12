@@ -22,14 +22,13 @@ namespace BetterThanNothing
 {
 	class Window;
 
-	class VulkanSwapChain;
-	class VulkanRenderPass;
-	class VulkanCommandPool;
-	class VulkanCommandBuffer;
-	class VulkanPipeline;
+	class SwapChain;
+	class CommandPool;
+	class CommandBuffer;
+	class Pipeline;
 	class VulkanPipelineBuilder;
-	class VulkanSemaphore;
-	class VulkanFence;
+	class Semaphore;
+	class Fence;
 
 	class RenderList;
 	class RenderCache;

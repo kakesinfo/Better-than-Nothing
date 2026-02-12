@@ -24,16 +24,16 @@ namespace BetterThanNothing
 	class VulkanImage;
 	class VulkanImageView;
 
-	class VulkanSwapChain
+	class SwapChain
 	{
 	public:
-		explicit VulkanSwapChain(VulkanContext* context);
-		~VulkanSwapChain();
+		explicit SwapChain(VulkanContext* context);
+		~SwapChain();
 
-		VulkanSwapChain(const VulkanSwapChain&) = delete;
-		VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
-		VulkanSwapChain(VulkanSwapChain&& other) = delete;
-		VulkanSwapChain& operator=(VulkanSwapChain&& other) = delete;
+		SwapChain(const SwapChain&) = delete;
+		SwapChain& operator=(const SwapChain&) = delete;
+		SwapChain(SwapChain&& other) = delete;
+		SwapChain& operator=(SwapChain&& other) = delete;
 
 		void CreateImages();
 		void CreateImageViews();

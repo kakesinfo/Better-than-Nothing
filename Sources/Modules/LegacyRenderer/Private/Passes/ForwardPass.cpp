@@ -18,12 +18,12 @@
 
 #include "Module_LegacyRenderer/Passes/ForwardPass.hpp"
 
+#include "RenderingApi/Old/VulkanCommandBufferContext.hpp"
+#include "RenderingApi/Old/VulkanContext.hpp"
+#include "RenderingApi/Old/VulkanImageView.hpp"
 #include "Module_LegacyRenderer/DrawStream.hpp"
-#include "RenderingApi/VulkanCommandBuffer.hpp"
-#include "RenderingApi/VulkanCommandBufferContext.hpp"
-#include "RenderingApi/VulkanContext.hpp"
-#include "RenderingApi/VulkanImageView.hpp"
-#include "RenderingApi/VulkanSwapChain.hpp"
+#include "RenderingApi/CommandBuffer.hpp"
+#include "RenderingApi/SwapChain.hpp"
 
 namespace BetterThanNothing
 {

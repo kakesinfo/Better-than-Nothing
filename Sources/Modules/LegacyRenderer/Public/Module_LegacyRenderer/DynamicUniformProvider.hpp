@@ -18,9 +18,9 @@
 
 #pragma once
 
-#include <RenderingApi/VulkanContext.hpp>
-#include <RenderingApi/VulkanFrame.hpp>
-#include <RenderingApi/VulkanUniformBuffer.hpp>
+#include <RenderingApi/Old/VulkanContext.hpp>
+#include <RenderingApi/Old/VulkanFrame.hpp>
+#include <RenderingApi/Old/VulkanUniformBuffer.hpp>
 
 namespace BetterThanNothing
 {

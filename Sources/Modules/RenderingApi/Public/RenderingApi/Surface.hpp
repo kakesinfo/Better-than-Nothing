@@ -22,17 +22,22 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanSemaphore
+	class Surface
 	{
 	public:
-		explicit VulkanSemaphore(VulkanContext* context);
-		~VulkanSemaphore();
+		explicit Surface(VulkanContext* context);
+		~Surface();
+
+		Surface(const Surface&) = delete;
+		Surface& operator=(const Surface&) = delete;
+		Surface(Surface&& other) = delete;
+		Surface& operator=(Surface&& other) = delete;
 
 		[[nodiscard]]
-		VkSemaphore Handle() const;
+		VkSurfaceKHR Handle() const;
 
 	private:
 		VulkanContext* m_context = nullptr;
-		VkSemaphore	   m_semaphore = VK_NULL_HANDLE;
+		VkSurfaceKHR   m_surface = VK_NULL_HANDLE;
 	};
-}
+};

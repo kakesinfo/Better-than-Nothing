@@ -33,9 +33,9 @@
 #include "Module_LegacyRenderer/RenderList.hpp"
 #include "Module_LegacyRenderer/RenderMetrics.hpp"
 
+#include <RenderingApi/Old/VertexInputDescription.hpp>
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
-#include <RenderingApi/VertexInputDescription.hpp>
 
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
@@ -53,10 +53,10 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Buffering mode: {}", m_context->vkSettings.maxFramesInFlight);
 		Logger::Log<INFO>("VSync: {}", m_context->vkSettings.enableVSync ? "enabled" : "disabled");
 
-		m_context->vkInstance = std::make_unique<VulkanInstance>(m_context);
-		m_context->vkSurface = std::make_unique<VulkanSurface>(m_context);
-		m_context->vkDevice = std::make_unique<VulkanDevice>(m_context);
-		m_context->vkMemoryAllocator = std::make_unique<VulkanMemoryAllocator>(m_context);
+		m_context->vkInstance = std::make_unique<Instance>(m_context);
+		m_context->vkSurface = std::make_unique<Surface>(m_context);
+		m_context->vkDevice = std::make_unique<Device>(m_context);
+		m_context->vkMemoryAllocator = std::make_unique<Allocator>(m_context);
 
 		Logger::Log<INFO>("Vendor: {}", m_context->vkDevice->GetVendorName());
 		Logger::Log<INFO>("Device: {}", m_context->vkDevice->GetDeviceName());
@@ -65,9 +65,9 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Anisotropy: {}x", m_context->vkDevice->GetMaxAnisotropy());
 		Logger::Log<INFO>("Msaa: {}x", static_cast<std::uint32_t>(m_context->vkDevice->GetMaxMsaaSamples()));
 
-		m_context->vkCommandPool = std::make_unique<VulkanCommandPool>(m_context);
+		m_context->vkCommandPool = std::make_unique<CommandPool>(m_context);
 
-		m_context->vkSwapChain = std::make_unique<VulkanSwapChain>(m_context);
+		m_context->vkSwapChain = std::make_unique<SwapChain>(m_context);
 		m_context->vkSwapChain->CreateImages();
 		m_context->vkSwapChain->CreateImageViews();
 		m_context->vkSwapChain->CreateColorResources();
@@ -271,7 +271,7 @@ namespace BetterThanNothing
 			if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS)
 				throw std::runtime_error("failed to allocate command buffers!");
 
-			m_context->vkFrames[i].commandBuffer = std::make_unique<VulkanCommandBuffer>(commandBuffer);
+			m_context->vkFrames[i].commandBuffer = std::make_unique<CommandBuffer>(commandBuffer);
 		}
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
@@ -284,9 +284,9 @@ namespace BetterThanNothing
 		for (std::uint32_t i = 0; i < count; i++)
 		{
 			auto& frame = m_context->vkFrames[i];
-			frame.imageAvailableSemaphore = std::make_unique<VulkanSemaphore>(m_context);
-			frame.renderFinishedSemaphore = std::make_unique<VulkanSemaphore>(m_context);
-			frame.inFlightFence = std::make_unique<VulkanFence>(m_context);
+			frame.imageAvailableSemaphore = std::make_unique<Semaphore>(m_context);
+			frame.renderFinishedSemaphore = std::make_unique<Semaphore>(m_context);
+			frame.inFlightFence = std::make_unique<Fence>(m_context);
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok (count: {})", count);
@@ -360,7 +360,7 @@ namespace BetterThanNothing
 
 		std::vector poolSizes = {globalPoolSize, dynamicPoolSize, samplerPoolSize, pointLightPoolSize};
 
-		m_context->vkDescriptorPool = std::make_unique<VulkanDescriptorPool>(poolSizes, m_context);
+		m_context->vkDescriptorPool = std::make_unique<DescriptorPool>(poolSizes, m_context);
 
 		Logger::Log<SUCCESS>("Vulkan descriptor pool: ok");
 	}
@@ -495,7 +495,7 @@ namespace BetterThanNothing
 		vertexInputDescription.attributes = GetVertexAttributeDescriptions();
 
 		m_context->vkPipeline =
-			std::make_unique<VulkanPipeline>(params, vertexInputDescription, shaderModules, m_context);
+			std::make_unique<Pipeline>(params, vertexInputDescription, shaderModules, m_context);
 	}
 
 	VkVertexInputBindingDescription LegacyRenderer::GetVertexBindingDescription()

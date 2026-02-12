@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanMemoryAllocator::VulkanMemoryAllocator(VulkanContext* context)
+	Allocator::Allocator(VulkanContext* context)
 	{
 		VmaVulkanFunctions vulkanFunctions = {};
 		vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
@@ -42,46 +42,46 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan memory allocator (Vma): ok");
 	}
 
-	VkResult VulkanMemoryAllocator::CreateBuffer(const VkBufferCreateInfo*		bufferCreateInfo,
+	VkResult Allocator::CreateBuffer(const VkBufferCreateInfo*		bufferCreateInfo,
 												 const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer,
 												 VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
 	{
 		return vmaCreateBuffer(m_allocator, bufferCreateInfo, allocCreateInfo, buffer, allocation, allocationInfo);
 	}
 
-	void VulkanMemoryAllocator::DestroyBuffer(VkBuffer buffer, VmaAllocation allocation) const
+	void Allocator::DestroyBuffer(VkBuffer buffer, VmaAllocation allocation) const
 	{
 		vmaDestroyBuffer(m_allocator, buffer, allocation);
 	}
 
-	VkResult VulkanMemoryAllocator::CreateImage(const VkImageCreateInfo*	   imageCreateInfo,
+	VkResult Allocator::CreateImage(const VkImageCreateInfo*	   imageCreateInfo,
 												const VmaAllocationCreateInfo* allocCreateInfo, VkImage* image,
 												VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
 	{
 		return vmaCreateImage(m_allocator, imageCreateInfo, allocCreateInfo, image, allocation, allocationInfo);
 	}
 
-	void VulkanMemoryAllocator::DestroyImage(VkImage image, VmaAllocation allocation) const
+	void Allocator::DestroyImage(VkImage image, VmaAllocation allocation) const
 	{
 		vmaDestroyImage(m_allocator, image, allocation);
 	}
 
-	VkResult VulkanMemoryAllocator::MapMemory(VmaAllocation allocation, void** data) const
+	VkResult Allocator::MapMemory(VmaAllocation allocation, void** data) const
 	{
 		return vmaMapMemory(m_allocator, allocation, data);
 	}
 
-	void VulkanMemoryAllocator::UnmapMemory(VmaAllocation allocation) const
+	void Allocator::UnmapMemory(VmaAllocation allocation) const
 	{
 		return vmaUnmapMemory(m_allocator, allocation);
 	}
 
-	VulkanMemoryAllocator::~VulkanMemoryAllocator()
+	Allocator::~Allocator()
 	{
 		vmaDestroyAllocator(m_allocator);
 	}
 
-	VmaAllocator VulkanMemoryAllocator::Handle() const
+	VmaAllocator Allocator::Handle() const
 	{
 		return m_allocator;
 	}

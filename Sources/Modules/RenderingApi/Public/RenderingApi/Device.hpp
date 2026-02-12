@@ -37,16 +37,16 @@ namespace BetterThanNothing
 		std::vector<VkPresentModeKHR>	presentModes;
 	};
 
-	class VulkanDevice
+	class Device
 	{
 	public:
-		explicit VulkanDevice(VulkanContext* context);
-		~VulkanDevice();
+		explicit Device(VulkanContext* context);
+		~Device();
 
-		VulkanDevice(const VulkanDevice&) = delete;
-		VulkanDevice& operator=(const VulkanDevice&) = delete;
-		VulkanDevice(VulkanDevice&& other) = delete;
-		VulkanDevice& operator=(VulkanDevice&& other) = delete;
+		Device(const Device&) = delete;
+		Device& operator=(const Device&) = delete;
+		Device(Device&& other) = delete;
+		Device& operator=(Device&& other) = delete;
 
 		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
 									 VkFormatFeatureFlags features) const;

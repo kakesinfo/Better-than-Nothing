@@ -17,25 +17,25 @@
  */
 
 #include "RenderingApi.hpp"
-
 #include <Module_Base/Logger.hpp>
+#include <set>
 
 namespace BetterThanNothing
 {
-	VulkanDevice::VulkanDevice(VulkanContext* context) : m_context(context)
+	Device::Device(VulkanContext* context) : m_context(context)
 	{
 		PickPhysicalDevice();
 		GetPhysicalDeviceProperties();
 		CreateLogicalDevice();
 	}
 
-	VulkanDevice::~VulkanDevice()
+	Device::~Device()
 	{
 		if (m_logicalDevice != VK_NULL_HANDLE)
 			vkDestroyDevice(m_logicalDevice, nullptr);
 	}
 
-	void VulkanDevice::PickPhysicalDevice()
+	void Device::PickPhysicalDevice()
 	{
 		const auto vkInstance = m_context->vkInstance->Handle();
 
@@ -53,7 +53,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan physical device: ok");
 	}
 
-	void VulkanDevice::GetPhysicalDeviceProperties()
+	void Device::GetPhysicalDeviceProperties()
 	{
 		VkPhysicalDeviceProperties deviceProperties;
 		vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProperties);
@@ -94,7 +94,7 @@ namespace BetterThanNothing
 			m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
 	}
 
-	void VulkanDevice::CreateLogicalDevice()
+	void Device::CreateLogicalDevice()
 	{
 		QueueFamilyIndices indices = FindQueueFamilies(m_physicalDevice);
 		if (!indices.IsComplete())
@@ -152,18 +152,18 @@ namespace BetterThanNothing
 
 		VkQueue graphicsQueue;
 		vkGetDeviceQueue(m_logicalDevice, indices.graphicsFamily.value(), 0, &graphicsQueue);
-		m_context->vkGraphicsQueue = std::make_unique<VulkanQueue>(graphicsQueue);
+		m_context->vkGraphicsQueue = std::make_unique<Queue>(graphicsQueue);
 
 		Logger::Log<SUCCESS>("Vulkan graphics queue: ok");
 
 		VkQueue presentQueue;
 		vkGetDeviceQueue(m_logicalDevice, indices.presentFamily.value(), 0, &presentQueue);
-		m_context->vkPresentQueue = std::make_unique<VulkanQueue>(presentQueue);
+		m_context->vkPresentQueue = std::make_unique<Queue>(presentQueue);
 
 		Logger::Log<SUCCESS>("Vulkan presentation queue: ok");
 	}
 
-	VkFormat VulkanDevice::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
+	VkFormat Device::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
 											   VkFormatFeatureFlags features) const
 	{
 		for (const VkFormat format : candidates)
@@ -181,7 +181,7 @@ namespace BetterThanNothing
 		throw std::runtime_error("Failed to find supported format");
 	}
 
-	VkPhysicalDevice VulkanDevice::FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const
+	VkPhysicalDevice Device::FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const
 	{
 		for (const auto& device : devices)
 		{
@@ -191,7 +191,7 @@ namespace BetterThanNothing
 		throw std::runtime_error("Failed to find a suitable GPU");
 	}
 
-	bool VulkanDevice::IsDeviceSuitable(VkPhysicalDevice device) const noexcept
+	bool Device::IsDeviceSuitable(VkPhysicalDevice device) const noexcept
 	{
 		const QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(device);
 
@@ -212,7 +212,7 @@ namespace BetterThanNothing
 			   supportedFeatures.samplerAnisotropy;
 	}
 
-	bool VulkanDevice::CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept
+	bool Device::CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept
 	{
 		auto deviceExtensions = m_context->vkSettings.deviceExtensions;
 
@@ -232,7 +232,7 @@ namespace BetterThanNothing
 		return requiredExtensions.empty();
 	}
 
-	QueueFamilyIndices VulkanDevice::FindQueueFamilies(VkPhysicalDevice device) const
+	QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice device) const
 	{
 		auto vkSurface = m_context->vkSurface->Handle();
 
@@ -266,17 +266,17 @@ namespace BetterThanNothing
 		return indices;
 	}
 
-	QueueFamilyIndices VulkanDevice::GetQueueFamilies() const
+	QueueFamilyIndices Device::GetQueueFamilies() const
 	{
 		return FindQueueFamilies(m_physicalDevice);
 	}
 
-	void VulkanDevice::WaitIdle() const
+	void Device::WaitIdle() const
 	{
 		vkDeviceWaitIdle(m_logicalDevice);
 	}
 
-	SwapChainSupportDetails VulkanDevice::QuerySwapChainSupport(VkPhysicalDevice device) const
+	SwapChainSupportDetails Device::QuerySwapChainSupport(VkPhysicalDevice device) const
 	{
 		const auto surface = m_context->vkSurface->Handle();
 
@@ -304,12 +304,12 @@ namespace BetterThanNothing
 		return details;
 	}
 
-	SwapChainSupportDetails VulkanDevice::GetSwapChainSupport() const
+	SwapChainSupportDetails Device::GetSwapChainSupport() const
 	{
 		return QuerySwapChainSupport(m_physicalDevice);
 	}
 
-	std::string VulkanDevice::GetVendorById(const std::uint32_t vendorId) const
+	std::string Device::GetVendorById(const std::uint32_t vendorId) const
 	{
 		if (vendorId == 0x1002)
 			return "AMD";
@@ -326,46 +326,46 @@ namespace BetterThanNothing
 		return "Unknown";
 	}
 
-	VkPhysicalDevice VulkanDevice::PhysicalHandle() const
+	VkPhysicalDevice Device::PhysicalHandle() const
 	{
 		if (m_physicalDevice == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan physical device is not initialized");
 		return m_physicalDevice;
 	}
 
-	VkDevice VulkanDevice::Handle() const
+	VkDevice Device::Handle() const
 	{
 		if (m_logicalDevice == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan logical device is not initialized");
 		return m_logicalDevice;
 	}
 
-	std::string VulkanDevice::GetVendorName() const
+	std::string Device::GetVendorName() const
 	{
 		return m_vendorName;
 	}
 
-	std::string VulkanDevice::GetDeviceName() const
+	std::string Device::GetDeviceName() const
 	{
 		return m_deviceName;
 	}
 
-	std::string VulkanDevice::GetApiVersion() const
+	std::string Device::GetApiVersion() const
 	{
 		return m_apiVersion;
 	}
 
-	std::uint32_t VulkanDevice::GetMinUniformBufferOffsetAlignment() const
+	std::uint32_t Device::GetMinUniformBufferOffsetAlignment() const
 	{
 		return m_minUniformBufferOffsetAlignment;
 	}
 
-	float VulkanDevice::GetMaxAnisotropy() const
+	float Device::GetMaxAnisotropy() const
 	{
 		return m_maxAnisotropy;
 	}
 
-	VkSampleCountFlagBits VulkanDevice::GetMaxMsaaSamples() const
+	VkSampleCountFlagBits Device::GetMaxMsaaSamples() const
 	{
 		return m_maxMsaaSamples;
 	}

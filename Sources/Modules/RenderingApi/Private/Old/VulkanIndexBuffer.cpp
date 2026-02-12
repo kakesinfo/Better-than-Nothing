@@ -16,17 +16,23 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include "RenderingApi/VulkanBuffer.hpp"
+#include "RenderingApi.hpp"
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
-
-	class VulkanIndexBuffer : public VulkanBuffer
+	VulkanIndexBuffer::VulkanIndexBuffer(VulkanContext* context, VkDeviceSize size, const void* data)
+		: VulkanBuffer(context, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+					   VMA_MEMORY_USAGE_GPU_ONLY, 0)
 	{
-	public:
-		VulkanIndexBuffer(VulkanContext* context, VkDeviceSize size, const void* data = nullptr);
-	};
+		if (data)
+		{
+			const VulkanStagingBuffer stagingBuffer(context, size, data);
+
+			CommandBuffer::SingleTimeCommands(
+				[&](const std::unique_ptr<CommandBuffer>& commandBuffer) {
+					commandBuffer->CopyBuffer(stagingBuffer.Handle(), m_buffer, size);
+				},
+				context);
+		}
+	}
 }

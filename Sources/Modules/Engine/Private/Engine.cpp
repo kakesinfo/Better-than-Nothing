@@ -24,6 +24,7 @@
 #include "Module_Math/Matrix4.hpp"
 #include "ResourceManager/ResourceManager.hpp"
 
+#include <RenderingApi/Old/VulkanContext.hpp>
 #include <Module_Data/Graphics/CameraData.hpp>
 #include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
@@ -35,7 +36,6 @@
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-#include <RenderingApi/VulkanContext.hpp>
 
 #include "Module_LegacyRenderer/RenderMetrics.hpp"
 
