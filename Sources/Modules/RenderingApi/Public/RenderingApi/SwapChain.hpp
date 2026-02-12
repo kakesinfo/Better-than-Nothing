@@ -50,7 +50,7 @@ namespace BetterThanNothing
 		VkSurfaceFormatKHR ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 
 		[[nodiscard]]
-		VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+		VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, EVulkanBufferingMode bufferingMode);
 
 		[[nodiscard]]
 		VkExtent2D ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);

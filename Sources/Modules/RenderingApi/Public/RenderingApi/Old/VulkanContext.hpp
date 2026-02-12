@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "../EVulkanBufferingMode.hpp"
+#include "EVulkanBufferingMode.hpp"
 
 namespace BetterThanNothing
 {
@@ -49,7 +49,7 @@ namespace BetterThanNothing
 
 			union
 			{
-				EVulkanBufferingMode bufferingMode = EVulkanBufferingMode::None;
+				EVulkanBufferingMode bufferingMode = EVulkanBufferingMode::Double;
 				std::uint32_t		 maxFramesInFlight;
 			};
 
