@@ -50,7 +50,6 @@ namespace BetterThanNothing
 		InputManager::Initialize();
 
 		m_context = std::make_unique<VulkanContext>();
-		m_context->vkSettings.bufferingMode = EVulkanBufferingMode::DoubleBuffering;
 		m_context->vkSettings.enableValidationLayers = true;
 		m_context->vkSettings.enableVSync = true;
 

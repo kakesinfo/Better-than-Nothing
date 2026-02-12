@@ -40,7 +40,7 @@ namespace BetterThanNothing
 		auto swapChainSupport = m_context->vkDevice->GetSwapChainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode = ChoosePresentMode(swapChainSupport.presentModes);
+		VkPresentModeKHR   presentMode = ChoosePresentMode(swapChainSupport.presentModes, m_context->vkSettings.bufferingMode);
 		VkExtent2D		   extent = ChooseExtent(swapChainSupport.capabilities);
 
 		std::uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -215,14 +215,31 @@ namespace BetterThanNothing
 		return availableFormats[0];
 	}
 
-	VkPresentModeKHR SwapChain::ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+	VkPresentModeKHR SwapChain::ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes,
+												  const EVulkanBufferingMode bufferingMode)
 	{
-		for (const auto& availablePresentMode : availablePresentModes)
+		VkPresentModeKHR targetMode;
+
+		switch (bufferingMode)
 		{
-			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) // TripleBuffering buffering
-				return availablePresentMode;
+			case EVulkanBufferingMode::Triple:
+				targetMode = VK_PRESENT_MODE_MAILBOX_KHR;
+				break;
+			case EVulkanBufferingMode::Immediate:
+				targetMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+				break;
+			case EVulkanBufferingMode::Double:
+			default:
+				return VK_PRESENT_MODE_FIFO_KHR;
 		}
-		return VK_PRESENT_MODE_FIFO_KHR; // V-Sync
+
+		for (const auto& availableMode : availablePresentModes)
+		{
+			if (availableMode == targetMode)
+				return targetMode;
+		}
+
+		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 
 	VkExtent2D SwapChain::ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities)

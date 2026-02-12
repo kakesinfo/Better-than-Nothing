@@ -20,10 +20,21 @@
 
 namespace BetterThanNothing
 {
-	enum class EVulkanBufferingMode
+	enum class EVulkanBufferingMode : std::uint8_t
 	{
-		None = 0,
-		DoubleBuffering = 2,
-		TripleBuffering = 3
+		/**
+		 * VSync OFF (Tearing, minimal latency)
+		 */
+		Immediate = 0,
+
+		/**
+		 * VSync ON (Classic FIFO double buffering, no tearing)
+		 */
+		Double = 2,
+
+		/**
+		 * "Mailbox" (No tearing, low latency, GPU heats more)
+		 */
+		Triple = 3
 	};
 }
