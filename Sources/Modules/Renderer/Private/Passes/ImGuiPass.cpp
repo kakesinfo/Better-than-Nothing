@@ -74,7 +74,7 @@ namespace BetterThanNothing
 		pipelineInfo.depthAttachmentFormat = m_context->vkSwapChain->GetDepthFormat();
 
 		ImGui_ImplVulkan_InitInfo initInfo = {};
-		initInfo.ApiVersion = m_context->vkSettings.apiVersion;
+		initInfo.ApiVersion = m_context->vkInstance->GetApiVersion();
 		initInfo.Instance = m_context->vkInstance->Handle();
 		initInfo.PhysicalDevice = m_context->vkDevice->PhysicalHandle();
 		initInfo.Device = m_context->vkDevice->Handle();

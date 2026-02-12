@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "EVulkanBufferingMode.hpp"
+#include "../../../../Base/Public/Module_Base/EBufferingMode.hpp"
 
 namespace BetterThanNothing
 {
@@ -39,21 +39,15 @@ namespace BetterThanNothing
 	{
 		struct
 		{
-			std::uint32_t apiVersion = VK_API_VERSION_1_3;
-
-			bool					 enableValidationLayers = false;
-			std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
 			std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 														 VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 														 VK_EXT_MEMORY_BUDGET_EXTENSION_NAME};
 
 			union
 			{
-				EVulkanBufferingMode bufferingMode = EVulkanBufferingMode::Double;
-				std::uint32_t		 maxFramesInFlight;
+				EBufferingMode bufferingMode = EBufferingMode::Double;
+				std::uint32_t  maxFramesInFlight;
 			};
-
-			bool enableVSync = true;
 		} vkSettings;
 
 		std::unique_ptr<Instance>	 vkInstance;

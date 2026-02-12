@@ -30,7 +30,7 @@ namespace BetterThanNothing
 
 		VmaAllocatorCreateInfo allocatorCreateInfo = {};
 		allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT; // Ext: VK_EXT_memory_budget
-		allocatorCreateInfo.vulkanApiVersion = context->vkSettings.apiVersion;
+		allocatorCreateInfo.vulkanApiVersion = context->vkInstance->GetApiVersion();
 		allocatorCreateInfo.physicalDevice = context->vkDevice->PhysicalHandle();
 		allocatorCreateInfo.device = context->vkDevice->Handle();
 		allocatorCreateInfo.instance = context->vkInstance->Handle();

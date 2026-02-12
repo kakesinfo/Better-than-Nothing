@@ -22,29 +22,28 @@
 
 namespace BetterThanNothing
 {
-	Instance::Instance(VulkanContext* context) : m_context(context)
+	Instance::Instance(InstanceCreateInfo  createInfo) : m_createInfo(std::move(createInfo))
 	{
-		bool validationLayersEnabled = context->vkSettings.enableValidationLayers;
-		bool validationLayersAvailable = CheckValidationLayerSupport();
+		const bool validationLayersAvailable = CheckValidationLayerSupport();
+		const bool validationLayersEnabled = m_createInfo.enableValidation;
 
 		if (validationLayersEnabled && !validationLayersAvailable)
 			Logger::Log<WARNING>("Validation layers are enabled but not available on this system");
 
-		validationLayersEnabled &= validationLayersAvailable;
-		context->vkSettings.enableValidationLayers = validationLayersEnabled;
+		m_enableValidationLayers = validationLayersEnabled & validationLayersAvailable;
 
 		VkApplicationInfo appInfo{};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.apiVersion = context->vkSettings.apiVersion;
+		appInfo.apiVersion = m_createInfo.apiVersion;
 
-		VkInstanceCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		createInfo.pApplicationInfo = &appInfo;
+		VkInstanceCreateInfo vkCreateInfo{};
+		vkCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		vkCreateInfo.pApplicationInfo = &appInfo;
 
 		// Prepare extensions
 		const auto extensions = GetRequiredExtensions();
-		createInfo.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
-		createInfo.ppEnabledExtensionNames = extensions.data();
+		vkCreateInfo.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+		vkCreateInfo.ppEnabledExtensionNames = extensions.data();
 
 		// Prepare validation layers
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
@@ -52,23 +51,20 @@ namespace BetterThanNothing
 		{
 			PopulateDebugMessengerCreateInfo(&debugCreateInfo);
 
-			const auto& validationLayers = m_context->vkSettings.validationLayers;
-			createInfo.enabledLayerCount = static_cast<std::uint32_t>(validationLayers.size());
-			createInfo.ppEnabledLayerNames = validationLayers.data();
+			const auto& validationLayers = m_createInfo.validationLayers;
+			vkCreateInfo.enabledLayerCount = static_cast<std::uint32_t>(validationLayers.size());
+			vkCreateInfo.ppEnabledLayerNames = validationLayers.data();
 
-			createInfo.pNext = &debugCreateInfo;
+			vkCreateInfo.pNext = &debugCreateInfo;
 		}
 		else
 		{
-			createInfo.enabledLayerCount = 0;
-			createInfo.pNext = nullptr;
+			vkCreateInfo.enabledLayerCount = 0;
+			vkCreateInfo.pNext = nullptr;
 		}
 
-		// Create instance
-		if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS)
-		{
+		if (vkCreateInstance(&vkCreateInfo, nullptr, &m_instance) != VK_SUCCESS)
 			throw std::runtime_error("failed to create instance!");
-		}
 
 		Logger::Log<SUCCESS>("Vulkan instance: ok");
 
@@ -81,17 +77,9 @@ namespace BetterThanNothing
 		vkDestroyInstance(m_instance, nullptr);
 	}
 
-	std::vector<const char*> Instance::GetRequiredExtensions() const noexcept
+	std::unique_ptr<Instance> Instance::Create(const InstanceCreateInfo& createInfo)
 	{
-		std::uint32_t	   sdlExtensionCount = 0;
-		const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
-
-		std::vector extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
-
-		if (m_context->vkSettings.enableValidationLayers)
-			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-		return extensions;
+		return std::make_unique<Instance>(createInfo);
 	}
 
 	bool Instance::CheckValidationLayerSupport() const noexcept
@@ -102,18 +90,30 @@ namespace BetterThanNothing
 		std::vector<VkLayerProperties> availableLayers(layerCount);
 		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-		const auto validationLayers = m_context->vkSettings.validationLayers;
-
-		return std::ranges::any_of(availableLayers, [validationLayers](const VkLayerProperties& layerProperties) {
-			return std::ranges::any_of(validationLayers, [&layerProperties](const char* layerName) {
-				return layerProperties.layerName == std::string_view(layerName);
+		return std::ranges::all_of(m_createInfo.validationLayers, [&availableLayers](const char* layerName) {
+			return std::ranges::any_of(availableLayers, [layerName](const VkLayerProperties& layerProperties) {
+				return std::string_view(layerProperties.layerName) == layerName;
 			});
 		});
 	}
 
-	VKAPI_ATTR VkBool32 VKAPI_CALL Instance::DebugCallback(
-		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
-		const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData) noexcept
+	std::vector<const char*> Instance::GetRequiredExtensions() const noexcept
+	{
+		std::uint32_t	   sdlExtensionCount = 0;
+		const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
+
+		std::vector extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
+
+		if (m_createInfo.enableValidation)
+			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+		return extensions;
+	}
+
+	VKAPI_ATTR VkBool32 VKAPI_CALL Instance::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT	   messageSeverity,
+														   VkDebugUtilsMessageTypeFlagsEXT			   messageType,
+														   const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+														   void* userData) noexcept
 	{
 		(void)messageType;
 		(void)userData;
@@ -142,7 +142,7 @@ namespace BetterThanNothing
 								  VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 								  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo->pfnUserCallback = DebugCallback;
-		createInfo->pUserData = m_context;
+		createInfo->pUserData = nullptr;
 	}
 
 	void Instance::CreateDebugMessenger()
@@ -150,7 +150,7 @@ namespace BetterThanNothing
 		if (m_instance == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan instance is not initialized");
 
-		if (!m_context->vkSettings.enableValidationLayers)
+		if (!m_enableValidationLayers)
 			return;
 
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
@@ -164,12 +164,12 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Debug Messenger: ok");
 	}
 
-	void Instance::DestroyDebugMessenger()
+	void Instance::DestroyDebugMessenger() const
 	{
 		if (m_instance == VK_NULL_HANDLE)
 			throw std::runtime_error("Vulkan instance is not initialized");
 
-		if (!m_context->vkSettings.enableValidationLayers)
+		if (!m_enableValidationLayers)
 			return;
 
 		if (m_debugMessenger != VK_NULL_HANDLE)
@@ -178,13 +178,13 @@ namespace BetterThanNothing
 		}
 	}
 
-	VkResult Instance::CreateDebugUtilsMessengerEXT(VkInstance								instance,
-														  const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-														  const VkAllocationCallbacks*				allocator,
-														  VkDebugUtilsMessengerEXT* debugMessenger) noexcept
+	VkResult Instance::CreateDebugUtilsMessengerEXT(VkInstance								  instance,
+													const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
+													const VkAllocationCallbacks*			  allocator,
+													VkDebugUtilsMessengerEXT*				  debugMessenger) noexcept
 	{
-		auto function =
-			(PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+		const auto function = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+			vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
 
 		if (function == nullptr)
 			return VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -193,15 +193,23 @@ namespace BetterThanNothing
 	}
 
 	void Instance::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-													   const VkAllocationCallbacks* allocator) noexcept
+												 const VkAllocationCallbacks* allocator) noexcept
 	{
-		auto function =
-			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+		const auto function = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+			vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
 
 		if (function != nullptr)
-		{
 			function(instance, debugMessenger, allocator);
-		}
+	}
+
+	std::uint32_t Instance::GetApiVersion() const noexcept
+	{
+		return m_createInfo.apiVersion;
+	}
+
+	bool Instance::IsValidationEnabled() const noexcept
+	{
+		return m_enableValidationLayers;
 	}
 
 	VkInstance Instance::Handle() const

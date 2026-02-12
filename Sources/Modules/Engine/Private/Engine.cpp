@@ -50,9 +50,6 @@ namespace BetterThanNothing
 		InputManager::Initialize();
 
 		m_context = std::make_unique<VulkanContext>();
-		m_context->vkSettings.enableValidationLayers = true;
-		m_context->vkSettings.enableVSync = true;
-
 		m_resourceManager = std::make_unique<ResourceManager>(m_context.get());
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 		m_legacyRenderer = std::make_unique<Renderer>(m_context.get(), m_resourceManager.get());

@@ -46,7 +46,7 @@
 #include "RenderingApi/Old/VulkanStorageBuffer.hpp"
 #include "RenderingApi/Old/VulkanVertexBuffer.hpp"
 
-#include "EVulkanBufferingMode.hpp"
+#include "Module_Base/EBufferingMode.hpp"
 #include "RenderingApi/Old/VertexInputDescription.hpp"
 
 #include "RenderingApi/Data/ShaderGpuData.hpp"

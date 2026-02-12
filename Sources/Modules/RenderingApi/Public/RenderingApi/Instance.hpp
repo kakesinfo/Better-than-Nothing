@@ -20,12 +20,17 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	struct InstanceCreateInfo
+	{
+		bool					 enableValidation = true;
+		std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+		std::uint32_t			 apiVersion = VK_API_VERSION_1_3;
+	};
 
 	class Instance
 	{
 	public:
-		explicit Instance(VulkanContext* context);
+		explicit Instance(InstanceCreateInfo  createInfo);
 		~Instance();
 
 		Instance(const Instance&) = delete;
@@ -33,33 +38,39 @@ namespace BetterThanNothing
 		Instance(Instance&& other) = delete;
 		Instance& operator=(Instance&& other) = delete;
 
-		[[nodiscard]]
-		VkInstance Handle() const;
+		[[nodiscard]] static std::unique_ptr<Instance> Create(const InstanceCreateInfo& createInfo);
 
 	private:
-		bool CheckValidationLayerSupport() const noexcept;
-
-		[[nodiscard]]
-		std::vector<const char*> GetRequiredExtensions() const noexcept;
+		[[nodiscard]] bool					   CheckValidationLayerSupport() const noexcept;
+		[[nodiscard]] std::vector<const char*> GetRequiredExtensions() const noexcept;
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT		messageSeverity,
 															VkDebugUtilsMessageTypeFlagsEXT				messageType,
 															const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
 															void* userData) noexcept;
 
-		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept;
+		static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept;
 		void CreateDebugMessenger();
-		void DestroyDebugMessenger();
+		void DestroyDebugMessenger() const;
 
-		VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-											  const VkAllocationCallbacks* allocator,
-											  VkDebugUtilsMessengerEXT*	   debugMessenger) noexcept;
+		[[nodiscard]] static VkResult CreateDebugUtilsMessengerEXT(VkInstance								 instance,
+																   const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
+																   const VkAllocationCallbacks*				 allocator,
+																   VkDebugUtilsMessengerEXT* debugMessenger) noexcept;
 
-		void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-										   const VkAllocationCallbacks* allocator) noexcept;
+		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
+												  const VkAllocationCallbacks* allocator) noexcept;
 
-		VulkanContext*			 m_context = nullptr;
+	public:
+		[[nodiscard]] std::uint32_t GetApiVersion() const noexcept;
+		[[nodiscard]] bool			IsValidationEnabled() const noexcept;
+		[[nodiscard]] VkInstance	Handle() const;
+
+	private:
+		InstanceCreateInfo		 m_createInfo;
 		VkInstance				 m_instance = VK_NULL_HANDLE;
 		VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
+
+		bool m_enableValidationLayers = false;
 	};
 };

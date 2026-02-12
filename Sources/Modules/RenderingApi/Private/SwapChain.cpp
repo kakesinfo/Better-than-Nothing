@@ -216,19 +216,19 @@ namespace BetterThanNothing
 	}
 
 	VkPresentModeKHR SwapChain::ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes,
-												  const EVulkanBufferingMode bufferingMode)
+												  const EBufferingMode bufferingMode)
 	{
 		VkPresentModeKHR targetMode;
 
 		switch (bufferingMode)
 		{
-			case EVulkanBufferingMode::Triple:
+			case EBufferingMode::Triple:
 				targetMode = VK_PRESENT_MODE_MAILBOX_KHR;
 				break;
-			case EVulkanBufferingMode::Immediate:
+			case EBufferingMode::Immediate:
 				targetMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 				break;
-			case EVulkanBufferingMode::Double:
+			case EBufferingMode::Double:
 			default:
 				return VK_PRESENT_MODE_FIFO_KHR;
 		}
