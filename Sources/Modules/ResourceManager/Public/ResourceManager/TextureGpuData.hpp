@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include <Module_Vulkan/VulkanDescriptorSet.hpp>
-#include <Module_Vulkan/VulkanImage.hpp>
-#include <Module_Vulkan/VulkanImageView.hpp>
-#include <Module_Vulkan/VulkanSampler.hpp>
+#include <RenderingApi/VulkanDescriptorSet.hpp>
+#include <RenderingApi/VulkanImage.hpp>
+#include <RenderingApi/VulkanImageView.hpp>
+#include <RenderingApi/VulkanSampler.hpp>
 
 namespace BetterThanNothing
 {

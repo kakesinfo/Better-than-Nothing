@@ -29,7 +29,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Base
         Module_Math
         Module_Data
-        Module_LegacyVulkan
+        Module_RenderingApi
         stb
     PUBLIC
         glslang

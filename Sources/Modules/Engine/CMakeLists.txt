@@ -25,7 +25,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Data
         Module_LegacyRenderer
         Module_Platform
-        Module_LegacyVulkan
+        Module_RenderingApi
         Module_ResourceManager
 )
 

@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <module_vulkan.hpp>
+#include <RenderingApi.hpp>
 
 #include "Module_LegacyRenderer/LegacyRenderer.hpp"
 
@@ -35,7 +35,7 @@
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
-#include <Module_Vulkan/VertexInputDescription.hpp>
+#include <RenderingApi/VertexInputDescription.hpp>
 
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>

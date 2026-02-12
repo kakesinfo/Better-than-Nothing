@@ -20,8 +20,8 @@
 #include "Module_LegacyRenderer/Data/GlobalUniformData.hpp"
 
 #include <Module_Base/Logger.hpp>
-#include <Module_Vulkan/Manager/BufferManager.hpp>
-#include <Module_Vulkan/VulkanContext.hpp>
+#include <RenderingApi/Manager/BufferManager.hpp>
+#include <RenderingApi/VulkanContext.hpp>
 
 namespace BetterThanNothing
 {

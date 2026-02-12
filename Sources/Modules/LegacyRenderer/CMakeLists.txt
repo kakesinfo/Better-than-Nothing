@@ -25,7 +25,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Data
         Module_Platform
         Module_ResourceManager
-        Module_LegacyVulkan
+        Module_RenderingApi
         SDL3::SDL3
         stb
         imgui

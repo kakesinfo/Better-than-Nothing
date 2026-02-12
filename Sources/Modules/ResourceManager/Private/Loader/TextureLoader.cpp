@@ -1,6 +1,6 @@
 #include "ResourceManager/Loader/TextureLoader.hpp"
 #include "ResourceManager/TextureGpuData.hpp"
-#include <module_vulkan.hpp>
+#include <RenderingApi.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
