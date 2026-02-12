@@ -47,11 +47,11 @@ namespace BetterThanNothing
 
 	class ResourceManager;
 
-	class LegacyRenderer final
+	class Renderer final
 	{
 	public:
-		explicit LegacyRenderer(VulkanContext* context, ResourceManager* resourceManager);
-		~LegacyRenderer();
+		explicit Renderer(VulkanContext* context, ResourceManager* resourceManager);
+		~Renderer();
 
 		void RenderFrame(const RenderList* renderList, const CameraData& camera);
 

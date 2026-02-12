@@ -18,7 +18,7 @@
 
 #include <RenderingApi.hpp>
 
-#include "Renderer/LegacyRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 #include "Module_Data/Graphics/CameraData.hpp"
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
@@ -46,7 +46,7 @@
 
 namespace BetterThanNothing
 {
-	LegacyRenderer::LegacyRenderer(VulkanContext* context, ResourceManager* resourceManager) : m_context(context), m_resourceManager(resourceManager)
+	Renderer::Renderer(VulkanContext* context, ResourceManager* resourceManager) : m_context(context), m_resourceManager(resourceManager)
 	{
 		BufferManager::Initialize(m_context);
 
@@ -97,13 +97,13 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Renderer: initialized successfully");
 	}
 
-	LegacyRenderer::~LegacyRenderer()
+	Renderer::~Renderer()
 	{
 		m_context->vkDevice->WaitIdle();
 		BufferManager::Shutdown();
 	}
 
-	void LegacyRenderer::RenderFrame(const RenderList* renderList, const CameraData& camera)
+	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera)
 	{
 		if (!m_context->vkPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
@@ -180,7 +180,7 @@ namespace BetterThanNothing
 		m_currentFrame = (m_currentFrame + 1) % m_context->vkFrames.size();
 	}
 
-	void LegacyRenderer::RecordCommandBuffer(const RenderList* renderList,
+	void Renderer::RecordCommandBuffer(const RenderList* renderList,
 											 const CameraData& camera, const std ::uint32_t imageIndex) const
 	{
 		const auto& currentFrame = m_context->vkFrames[m_currentFrame];
@@ -243,7 +243,7 @@ namespace BetterThanNothing
 		currentFrame.commandBuffer->EndRecording();
 	}
 
-	void LegacyRenderer::DrawPointLights(const RenderList* renderList) const
+	void Renderer::DrawPointLights(const RenderList* renderList) const
 	{
 		const std::uint32_t count = renderList->GetPointLightCount();
 
@@ -254,7 +254,7 @@ namespace BetterThanNothing
 		std::memcpy(dstData, renderList->GetPointLights().data(), count * sizeof(PointLightData));
 	}
 
-	void LegacyRenderer::CreateCommandBuffers() const
+	void Renderer::CreateCommandBuffers() const
 	{
 		const auto			device = m_context->vkDevice->Handle();
 		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
@@ -277,7 +277,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
 	}
 
-	void LegacyRenderer::CreateSyncObjects()
+	void Renderer::CreateSyncObjects()
 	{
 		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
 
@@ -292,7 +292,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok (count: {})", count);
 	}
 
-	void LegacyRenderer::CreateDescriptorSetLayout()
+	void Renderer::CreateDescriptorSetLayout()
 	{
 		VkDescriptorSetLayoutBinding globalUniformLayoutBinding{};
 		globalUniformLayoutBinding.binding = 0;
@@ -338,7 +338,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan descriptor set layout: ok");
 	}
 
-	void LegacyRenderer::CreateDescriptorPool()
+	void Renderer::CreateDescriptorPool()
 	{
 		const std::uint32_t frames = m_context->vkSettings.maxFramesInFlight;
 
@@ -365,7 +365,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan descriptor pool: ok");
 	}
 
-	void LegacyRenderer::CreateGlobalDescriptorSets()
+	void Renderer::CreateGlobalDescriptorSets()
 	{
 		m_context->vkGlobalDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
 
@@ -396,7 +396,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan global descriptor sets: ok (count: {})", m_context->vkGlobalDescriptorSets.size());
 	}
 
-	void LegacyRenderer::CreateDynamicDescriptorSets()
+	void Renderer::CreateDynamicDescriptorSets()
 	{
 		m_context->vkDynamicDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
 
@@ -427,7 +427,7 @@ namespace BetterThanNothing
 							 m_context->vkDynamicDescriptorSets.size());
 	}
 
-	void LegacyRenderer::CreatePointLightBuffers(std::uint32_t maxLights) const
+	void Renderer::CreatePointLightBuffers(std::uint32_t maxLights) const
 	{
 		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
 		const std::uint32_t bufferSize = maxLights * sizeof(PointLightData);
@@ -440,7 +440,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Point light buffers: ok (count: {})", count);
 	}
 
-	void LegacyRenderer::CreatePointLightDescriptorSets(std::uint32_t maxLights)
+	void Renderer::CreatePointLightDescriptorSets(std::uint32_t maxLights)
 	{
 		m_context->vkPointLightDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
 
@@ -473,7 +473,7 @@ namespace BetterThanNothing
 							 m_context->vkPointLightDescriptorSets.size());
 	}
 
-	void LegacyRenderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback)
+	void Renderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback)
 	{
 		VulkanPipelineBuilder builder;
 		callback(&builder);
@@ -498,7 +498,7 @@ namespace BetterThanNothing
 			std::make_unique<Pipeline>(params, vertexInputDescription, shaderModules, m_context);
 	}
 
-	VkVertexInputBindingDescription LegacyRenderer::GetVertexBindingDescription()
+	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()
 	{
 		VkVertexInputBindingDescription bindingDescription{};
 		bindingDescription.binding = 0;
@@ -507,7 +507,7 @@ namespace BetterThanNothing
 		return bindingDescription;
 	}
 
-	std::vector<VkVertexInputAttributeDescription> LegacyRenderer::GetVertexAttributeDescriptions()
+	std::vector<VkVertexInputAttributeDescription> Renderer::GetVertexAttributeDescriptions()
 	{
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions(4);
 
