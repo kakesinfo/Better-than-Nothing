@@ -16,14 +16,14 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingApi/VertexInputDescription.hpp"
+#include "../Public/RenderingApi/Old/VertexInputDescription.hpp"
 #include "RenderingApi.hpp"
 
 #include <Module_Base/Logger.hpp>
 
 namespace BetterThanNothing
 {
-	VulkanPipeline::VulkanPipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription,
+	Pipeline::Pipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription,
 								   const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
 		: m_context(context), m_params(std::move(params))
 	{
@@ -172,7 +172,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan graphics pipeline: ok");
 	}
 
-	VulkanPipeline::~VulkanPipeline()
+	Pipeline::~Pipeline()
 	{
 		if (m_pipelineLayout != VK_NULL_HANDLE)
 			vkDestroyPipelineLayout(m_context->vkDevice->Handle(), m_pipelineLayout, nullptr);
@@ -181,17 +181,17 @@ namespace BetterThanNothing
 			vkDestroyPipeline(m_context->vkDevice->Handle(), m_pipeline, nullptr);
 	}
 
-	VkPipeline VulkanPipeline::Handle() const
+	VkPipeline Pipeline::Handle() const
 	{
 		return m_pipeline;
 	}
 
-	VkPipelineLayout VulkanPipeline::GetLayout() const
+	VkPipelineLayout Pipeline::GetLayout() const
 	{
 		return m_pipelineLayout;
 	}
 
-	VkShaderStageFlagBits VulkanPipeline::GetShaderStageTypeByShaderType(const EShaderType type)
+	VkShaderStageFlagBits Pipeline::GetShaderStageTypeByShaderType(const EShaderType type)
 	{
 		switch (type)
 		{

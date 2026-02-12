@@ -24,11 +24,11 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanMemoryAllocator
+	class Allocator
 	{
 	public:
-		explicit VulkanMemoryAllocator(VulkanContext* context);
-		~VulkanMemoryAllocator();
+		explicit Allocator(VulkanContext* context);
+		~Allocator();
 
 		VkResult CreateBuffer(const VkBufferCreateInfo*		 bufferCreateInfo,
 							  const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer,

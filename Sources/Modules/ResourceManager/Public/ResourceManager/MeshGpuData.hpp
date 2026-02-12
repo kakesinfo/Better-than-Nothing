@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <RenderingApi/VulkanIndexBuffer.hpp>
-#include <RenderingApi/VulkanVertexBuffer.hpp>
+#include <RenderingApi/Old/VulkanIndexBuffer.hpp>
+#include <RenderingApi/Old/VulkanVertexBuffer.hpp>
 
 namespace BetterThanNothing
 {

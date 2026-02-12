@@ -22,20 +22,22 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanFence
+	class CommandPool
 	{
 	public:
-		explicit VulkanFence(VulkanContext* context);
-		~VulkanFence();
+		explicit CommandPool(VulkanContext* context);
+		~CommandPool();
 
-		void Wait() const;
-		void Reset() const;
+		CommandPool(const CommandPool&) = delete;
+		CommandPool& operator=(const CommandPool&) = delete;
+		CommandPool(CommandPool&& other) = delete;
+		CommandPool& operator=(CommandPool&& other) = delete;
 
 		[[nodiscard]]
-		VkFence Handle() const;
+		VkCommandPool Handle() const;
 
 	private:
 		VulkanContext* m_context = nullptr;
-		VkFence		   m_fence = VK_NULL_HANDLE;
+		VkCommandPool  m_commandPool = VK_NULL_HANDLE;
 	};
 }

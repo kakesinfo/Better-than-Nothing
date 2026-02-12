@@ -20,16 +20,16 @@
 
 namespace BetterThanNothing
 {
-	class VulkanQueue
+	class Queue
 	{
 	public:
-		explicit VulkanQueue(VkQueue queue);
-		~VulkanQueue() = default;
+		explicit Queue(VkQueue queue);
+		~Queue() = default;
 
-		VulkanQueue(const VulkanQueue&) = delete;
-		VulkanQueue& operator=(const VulkanQueue&) = delete;
-		VulkanQueue(VulkanQueue&& other) = delete;
-		VulkanQueue& operator=(VulkanQueue&& other) = delete;
+		Queue(const Queue&) = delete;
+		Queue& operator=(const Queue&) = delete;
+		Queue(Queue&& other) = delete;
+		Queue& operator=(Queue&& other) = delete;
 
 		[[nodiscard]]
 		VkQueue Handle() const;

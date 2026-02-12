@@ -20,28 +20,19 @@
 
 namespace BetterThanNothing
 {
-	VulkanSemaphore::VulkanSemaphore(VulkanContext* context) : m_context(context)
+	VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext* context, VkDeviceSize size, const void* data)
+		: VulkanBuffer(context, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+					   VMA_MEMORY_USAGE_GPU_ONLY, 0)
 	{
-		VkSemaphoreCreateInfo semaphoreInfo{};
-		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		semaphoreInfo.flags = 0;
-
-		auto device = m_context->vkDevice->Handle();
-		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_semaphore) != VK_SUCCESS)
-			throw std::runtime_error("failed to create semaphore!");
-	}
-
-	VulkanSemaphore::~VulkanSemaphore()
-	{
-		if (m_semaphore != VK_NULL_HANDLE)
+		if (data)
 		{
-			auto device = m_context->vkDevice->Handle();
-			vkDestroySemaphore(device, m_semaphore, nullptr);
-		}
-	}
+			const VulkanStagingBuffer stagingBuffer(context, size, data);
 
-	VkSemaphore VulkanSemaphore::Handle() const
-	{
-		return m_semaphore;
+			CommandBuffer::SingleTimeCommands(
+				[&](const std::unique_ptr<CommandBuffer>& commandBuffer) {
+					commandBuffer->CopyBuffer(stagingBuffer.Handle(), m_buffer, size);
+				},
+				context);
+		}
 	}
 }

@@ -18,18 +18,18 @@
 
 #include "Module_LegacyRenderer/Passes/ImGuiPass.hpp"
 
+#include "RenderingApi/Old/VulkanContext.hpp"
+#include "RenderingApi/Old/VulkanImageView.hpp"
 #include "Module_LegacyRenderer/RenderMetrics.hpp"
 #include "Module_Platform/Manager/WindowManager.hpp"
 #include "Module_Platform/Window.hpp"
-#include "RenderingApi/VulkanCommandBuffer.hpp"
-#include "RenderingApi/VulkanContext.hpp"
-#include "RenderingApi/VulkanDevice.hpp"
-#include "RenderingApi/VulkanImageView.hpp"
-#include "RenderingApi/VulkanInstance.hpp"
-#include "RenderingApi/VulkanQueue.hpp"
-#include "RenderingApi/VulkanSwapChain.hpp"
+#include "RenderingApi/CommandBuffer.hpp"
+#include "RenderingApi/Device.hpp"
+#include "RenderingApi/Instance.hpp"
+#include "RenderingApi/Queue.hpp"
+#include "RenderingApi/SwapChain.hpp"
 
-#include <RenderingApi/VulkanCommandBufferContext.hpp>
+#include <RenderingApi/Old/VulkanCommandBufferContext.hpp>
 
 namespace BetterThanNothing
 {

@@ -18,21 +18,21 @@
 
 #pragma once
 
-#include "EVulkanBufferingMode.hpp"
+#include "../EVulkanBufferingMode.hpp"
 
 namespace BetterThanNothing
 {
-	class VulkanInstance;
-	class VulkanSurface;
-	class VulkanDevice;
-	class VulkanQueue;
-	class VulkanMemoryAllocator;
-	class VulkanSwapChain;
-	class VulkanCommandPool;
+	class Instance;
+	class Surface;
+	class Device;
+	class Queue;
+	class Allocator;
+	class SwapChain;
+	class CommandPool;
 	class VulkanDescriptorSetLayout;
-	class VulkanDescriptorPool;
+	class DescriptorPool;
 	class VulkanDescriptorSet;
-	class VulkanPipeline;
+	class Pipeline;
 	struct VulkanFrame;
 
 	struct VulkanContext
@@ -56,19 +56,19 @@ namespace BetterThanNothing
 			bool enableVSync = true;
 		} vkSettings;
 
-		std::unique_ptr<VulkanInstance>		   vkInstance;
-		std::unique_ptr<VulkanSurface>		   vkSurface;
-		std::unique_ptr<VulkanDevice>		   vkDevice;
-		std::unique_ptr<VulkanQueue>		   vkGraphicsQueue;
-		std::unique_ptr<VulkanQueue>		   vkPresentQueue;
-		std::unique_ptr<VulkanMemoryAllocator> vkMemoryAllocator;
-		std::unique_ptr<VulkanSwapChain>	   vkSwapChain;
-		std::unique_ptr<VulkanCommandPool>	   vkCommandPool;
-		std::unique_ptr<VulkanPipeline>		   vkPipeline;
+		std::unique_ptr<Instance>	 vkInstance;
+		std::unique_ptr<Surface>	 vkSurface;
+		std::unique_ptr<Device>		 vkDevice;
+		std::unique_ptr<Queue>		 vkGraphicsQueue;
+		std::unique_ptr<Queue>		 vkPresentQueue;
+		std::unique_ptr<Allocator>	 vkMemoryAllocator;
+		std::unique_ptr<SwapChain>	 vkSwapChain;
+		std::unique_ptr<CommandPool> vkCommandPool;
+		std::unique_ptr<Pipeline>	 vkPipeline;
 
 		std::vector<VulkanFrame> vkFrames;
 
-		std::unique_ptr<VulkanDescriptorPool> vkDescriptorPool;
+		std::unique_ptr<DescriptorPool> vkDescriptorPool;
 
 		std::unique_ptr<VulkanDescriptorSetLayout>		  vkGlobalDescriptorSetLayout;
 		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkGlobalDescriptorSets;

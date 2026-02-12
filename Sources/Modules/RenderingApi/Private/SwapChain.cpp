@@ -24,18 +24,18 @@
 
 namespace BetterThanNothing
 {
-	VulkanSwapChain::VulkanSwapChain(VulkanContext* context) : m_context(context)
+	SwapChain::SwapChain(VulkanContext* context) : m_context(context)
 	{
 		CreateSwapchain();
 		Logger::Log<SUCCESS>("Vulkan swap chain: ok");
 	}
 
-	VulkanSwapChain::~VulkanSwapChain()
+	SwapChain::~SwapChain()
 	{
 		CleanupSwapchain();
 	}
 
-	void VulkanSwapChain::CreateSwapchain()
+	void SwapChain::CreateSwapchain()
 	{
 		auto swapChainSupport = m_context->vkDevice->GetSwapChainSupport();
 
@@ -90,7 +90,7 @@ namespace BetterThanNothing
 		m_extent = extent;
 	}
 
-	void VulkanSwapChain::CreateImages()
+	void SwapChain::CreateImages()
 	{
 		auto device = m_context->vkDevice->Handle();
 
@@ -101,7 +101,7 @@ namespace BetterThanNothing
 		vkGetSwapchainImagesKHR(device, m_swapChain, &finalImageCount, m_images.data());
 	}
 
-	void VulkanSwapChain::CreateImageViews()
+	void SwapChain::CreateImageViews()
 	{
 		const std::uint32_t imageCount = m_images.size();
 
@@ -112,7 +112,7 @@ namespace BetterThanNothing
 																   VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
-	void VulkanSwapChain::CreateDepthResources()
+	void SwapChain::CreateDepthResources()
 	{
 		m_depthFormat =
 			ChooseDepthFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT});
@@ -136,15 +136,15 @@ namespace BetterThanNothing
 		m_depthImageView = std::make_unique<VulkanImageView>(m_context, m_depthImage->Handle(), m_depthFormat,
 															 VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-		VulkanCommandBuffer::SingleTimeCommands(
-			[&](const std::unique_ptr<VulkanCommandBuffer>& commandBuffer) {
+		CommandBuffer::SingleTimeCommands(
+			[&](const std::unique_ptr<CommandBuffer>& commandBuffer) {
 				commandBuffer->TransitionImageLayout(m_depthImage->Handle(), m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED,
 													 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 			},
 			m_context);
 	}
 
-	void VulkanSwapChain::CreateColorResources()
+	void SwapChain::CreateColorResources()
 	{
 		VkFormat colorFormat = m_imageFormat;
 
@@ -168,7 +168,7 @@ namespace BetterThanNothing
 															 VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
-	void VulkanSwapChain::RecreateSwapchain()
+	void SwapChain::RecreateSwapchain()
 	{
 		auto& pWindow = WindowManager::GetWindow();
 		auto [width, height] = pWindow->GetFramebufferSize();
@@ -191,7 +191,7 @@ namespace BetterThanNothing
 		CreateDepthResources();
 	}
 
-	void VulkanSwapChain::CleanupSwapchain()
+	void SwapChain::CleanupSwapchain()
 	{
 		m_depthImageView.reset();
 		m_depthImage.reset();
@@ -202,7 +202,7 @@ namespace BetterThanNothing
 		vkDestroySwapchainKHR(m_context->vkDevice->Handle(), m_swapChain, nullptr);
 	}
 
-	VkSurfaceFormatKHR VulkanSwapChain::ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+	VkSurfaceFormatKHR SwapChain::ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
 	{
 		for (const auto& surfaceFormat : availableFormats)
 		{
@@ -215,7 +215,7 @@ namespace BetterThanNothing
 		return availableFormats[0];
 	}
 
-	VkPresentModeKHR VulkanSwapChain::ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+	VkPresentModeKHR SwapChain::ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
 	{
 		for (const auto& availablePresentMode : availablePresentModes)
 		{
@@ -225,7 +225,7 @@ namespace BetterThanNothing
 		return VK_PRESENT_MODE_FIFO_KHR; // V-Sync
 	}
 
-	VkExtent2D VulkanSwapChain::ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+	VkExtent2D SwapChain::ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 	{
 		if (capabilities.currentExtent.width != std::numeric_limits<std::uint32_t>::max())
 			return capabilities.currentExtent;
@@ -240,93 +240,93 @@ namespace BetterThanNothing
 		return actualExtent;
 	}
 
-	VkFormat VulkanSwapChain::ChooseDepthFormat(const std::vector<VkFormat>& candidates)
+	VkFormat SwapChain::ChooseDepthFormat(const std::vector<VkFormat>& candidates)
 	{
 		return m_context->vkDevice->FindSupportedFormat(candidates, VK_IMAGE_TILING_OPTIMAL,
 														VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 	}
 
-	VkExtent2D VulkanSwapChain::GetExtent() const
+	VkExtent2D SwapChain::GetExtent() const
 	{
 		return m_extent;
 	}
 
-	std::uint32_t VulkanSwapChain::GetWidth() const
+	std::uint32_t SwapChain::GetWidth() const
 	{
 		return m_extent.width;
 	}
 
-	std::uint32_t VulkanSwapChain::GetHeight() const
+	std::uint32_t SwapChain::GetHeight() const
 	{
 		return m_extent.height;
 	}
 
-	float VulkanSwapChain::GetAspectRatio() const
+	float SwapChain::GetAspectRatio() const
 	{
 		return static_cast<float>(m_extent.width) / static_cast<float>(m_extent.height);
 	}
 
-	VkSwapchainKHR VulkanSwapChain::Handle() const
+	VkSwapchainKHR SwapChain::Handle() const
 	{
 		return m_swapChain;
 	}
 
-	std::uint32_t VulkanSwapChain::GetImageCount() const
+	std::uint32_t SwapChain::GetImageCount() const
 	{
 		return m_images.size();
 	}
 
-	VkFormat VulkanSwapChain::GetImageFormat() const
+	VkFormat SwapChain::GetImageFormat() const
 	{
 		return m_imageFormat;
 	}
 
-	VulkanImageView* VulkanSwapChain::GetImageView(std::uint32_t index) const
+	VulkanImageView* SwapChain::GetImageView(std::uint32_t index) const
 	{
 		if (index >= m_imageViews.size())
 			throw std::runtime_error("Image view index out of range");
 		return m_imageViews.at(index).get();
 	}
 
-	VkImage VulkanSwapChain::GetImage(std::uint32_t index) const
+	VkImage SwapChain::GetImage(std::uint32_t index) const
 	{
 		if (index >= m_images.size())
 			throw std::runtime_error("Image index out of range");
 		return m_images.at(index);
 	}
 
-	VkFormat VulkanSwapChain::GetDepthFormat() const
+	VkFormat SwapChain::GetDepthFormat() const
 	{
 		return m_depthFormat;
 	}
 
-	VulkanImageView* VulkanSwapChain::GetDepthImageView() const
+	VulkanImageView* SwapChain::GetDepthImageView() const
 	{
 		if (!m_depthImageView)
 			throw std::runtime_error("Depth image view not created");
 		return m_depthImageView.get();
 	}
 
-	VulkanImage* VulkanSwapChain::GetDepthImage() const
+	VulkanImage* SwapChain::GetDepthImage() const
 	{
 		if (!m_depthImage)
 			throw std::runtime_error("Depth image not created");
 		return m_depthImage.get();
 	}
 
-	VkFormat VulkanSwapChain::GetColorFormat() const
+	VkFormat SwapChain::GetColorFormat() const
 	{
 		return m_imageFormat;
 	}
 
-	VulkanImageView* VulkanSwapChain::GetColorImageView() const
+	VulkanImageView* SwapChain::GetColorImageView() const
 	{
 		if (!m_colorImageView)
 			throw std::runtime_error("Color image view not created");
 		return m_colorImageView.get();
 	}
 
-	VulkanImage* VulkanSwapChain::GetColorImage() const
+	VulkanImage* SwapChain::GetColorImage() const
 	{
 		if (!m_colorImage)
 			throw std::runtime_error("Color image not created");

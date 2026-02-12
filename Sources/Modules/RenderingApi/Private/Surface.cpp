@@ -25,7 +25,7 @@
 
 namespace BetterThanNothing
 {
-	VulkanSurface::VulkanSurface(VulkanContext* context) : m_context(context)
+	Surface::Surface(VulkanContext* context) : m_context(context)
 	{
 		auto& window = WindowManager::GetWindow();
 
@@ -35,12 +35,12 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan surface: ok");
 	}
 
-	VulkanSurface::~VulkanSurface()
+	Surface::~Surface()
 	{
 		vkDestroySurfaceKHR(m_context->vkInstance->Handle(), m_surface, nullptr);
 	}
 
-	VkSurfaceKHR VulkanSurface::Handle() const
+	VkSurfaceKHR Surface::Handle() const
 	{
 		if (m_surface == VK_NULL_HANDLE)
 			throw std::runtime_error("CVulkanSurface::Handle() Vulkan surface is not initialized");

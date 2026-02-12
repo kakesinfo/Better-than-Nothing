@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include <RenderingApi/VulkanIndexBuffer.hpp>
-#include <RenderingApi/VulkanVertexBuffer.hpp>
-#include <RenderingApi/VulkanStorageBuffer.hpp>
-#include <RenderingApi/VulkanUniformBuffer.hpp>
+#include <RenderingApi/Old/VulkanIndexBuffer.hpp>
+#include <RenderingApi/Old/VulkanUniformBuffer.hpp>
+#include <RenderingApi/Old/VulkanVertexBuffer.hpp>
+#include <RenderingApi/Old/VulkanStorageBuffer.hpp>
 
 namespace BetterThanNothing
 {

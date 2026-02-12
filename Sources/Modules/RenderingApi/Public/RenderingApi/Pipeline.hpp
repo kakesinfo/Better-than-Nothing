@@ -43,12 +43,12 @@ namespace BetterThanNothing
 		VkFormat			  stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 	};
 
-	class VulkanPipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
+	class Pipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit VulkanPipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription,
+		explicit Pipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription,
 								const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context);
-		~VulkanPipeline();
+		~Pipeline();
 
 		[[nodiscard]]
 		VkPipeline Handle() const;
