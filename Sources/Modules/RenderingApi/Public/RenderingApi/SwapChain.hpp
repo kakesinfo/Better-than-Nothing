@@ -20,14 +20,26 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
-	class VulkanImage;
-	class VulkanImageView;
+	class Instance;
+	class Surface;
+	class Device;
+
+	struct SwapChainCreateInfo
+	{
+		Surface*	   surface;
+		Device*		   device;
+		Allocator*	   allocator;
+		CommandPool*   commandPool;
+		Queue*		   graphicsQueue;
+		std::uint32_t  width;
+		std::uint32_t  height;
+		EBufferingMode bufferingMode = EBufferingMode::Double;
+	};
 
 	class SwapChain
 	{
 	public:
-		explicit SwapChain(VulkanContext* context);
+		explicit SwapChain(const SwapChainCreateInfo& createInfo);
 		~SwapChain();
 
 		SwapChain(const SwapChain&) = delete;
@@ -35,65 +47,54 @@ namespace BetterThanNothing
 		SwapChain(SwapChain&& other) = delete;
 		SwapChain& operator=(SwapChain&& other) = delete;
 
+		[[nodiscard]] static std::unique_ptr<SwapChain> Create(const SwapChainCreateInfo& createInfo);
+
+	private:
+		void CreateSwapChain(std::uint32_t width, std::uint32_t height);
 		void CreateImages();
-		void CreateImageViews();
+		void CleanupSwapChain();
+
+		[[nodiscard]] static VkSurfaceFormatKHR ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+		[[nodiscard]] static VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, EBufferingMode bufferingMode);
+		[[nodiscard]] static VkExtent2D ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities, std::uint32_t width, std::uint32_t height);
+		[[nodiscard]] static std::uint32_t ChooseImageCount(const VkSurfaceCapabilitiesKHR& capabilities, const VkPresentModeKHR& presentMode);
+		[[nodiscard]] VkFormat ChooseDepthFormat(const std::vector<VkFormat>& candidates) const;
+
+	public:
 		void CreateDepthResources();
 		void CreateColorResources();
 
-		void RecreateSwapchain();
+		void RecreateSwapChain(std::uint32_t newWidth, std::uint32_t newHeight);
 
-	private:
-		void CreateSwapchain();
-		void CleanupSwapchain();
-
-		[[nodiscard]]
-		VkSurfaceFormatKHR ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-
-		[[nodiscard]]
-		VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, EBufferingMode bufferingMode);
-
-		[[nodiscard]]
-		VkExtent2D ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-		[[nodiscard]]
-		VkFormat ChooseDepthFormat(const std::vector<VkFormat>& candidates);
-
-	public:
-		[[nodiscard]] VkExtent2D	GetExtent() const;
-		[[nodiscard]] std::uint32_t GetWidth() const;
-		[[nodiscard]] std::uint32_t GetHeight() const;
-		[[nodiscard]] float			GetAspectRatio() const;
-
+		[[nodiscard]] VkExtent2D	 GetExtent() const;
+		[[nodiscard]] std::uint32_t	 GetWidth() const;
+		[[nodiscard]] std::uint32_t	 GetHeight() const;
+		[[nodiscard]] float			 GetAspectRatio() const;
+		[[nodiscard]] std::uint32_t	 GetImageCount() const;
+		[[nodiscard]] VkFormat		 GetImageFormat() const;
+		[[nodiscard]] VkImage		 GetImage(std::uint32_t index) const;
+		[[nodiscard]] VkImageView	 GetImageView(std::uint32_t index) const;
+		[[nodiscard]] VkFormat		 GetDepthFormat() const;
+		[[nodiscard]] VkImage		 GetDepthImage() const;
+		[[nodiscard]] VkImageView	 GetDepthImageView() const;
+		[[nodiscard]] VkFormat		 GetColorFormat() const;
+		[[nodiscard]] VkImage		 GetColorImage() const;
+		[[nodiscard]] VkImageView	 GetColorImageView() const;
 		[[nodiscard]] VkSwapchainKHR Handle() const;
 
-		[[nodiscard]] std::uint32_t	   GetImageCount() const;
-		[[nodiscard]] VkFormat		   GetImageFormat() const;
-		[[nodiscard]] VulkanImageView* GetImageView(std::uint32_t index) const;
-		[[nodiscard]] VkImage		   GetImage(std::uint32_t index) const;
-
-		[[nodiscard]] VkFormat		   GetDepthFormat() const;
-		[[nodiscard]] VulkanImageView* GetDepthImageView() const;
-		[[nodiscard]] VulkanImage*	   GetDepthImage() const;
-
-		[[nodiscard]] VkFormat		   GetColorFormat() const;
-		[[nodiscard]] VulkanImageView* GetColorImageView() const;
-		[[nodiscard]] VulkanImage*	   GetColorImage() const;
-
 	private:
-		VulkanContext* m_context = nullptr;
-
-		VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
-		VkFormat	   m_imageFormat;
-		VkExtent2D	   m_extent;
-
-		std::vector<VkImage>						  m_images;
-		std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
-
-		std::unique_ptr<VulkanImage>	 m_depthImage;
-		std::unique_ptr<VulkanImageView> m_depthImageView;
-		VkFormat						 m_depthFormat;
-
-		std::unique_ptr<VulkanImage>	 m_colorImage; // For multisampling
-		std::unique_ptr<VulkanImageView> m_colorImageView;
+		const SwapChainCreateInfo m_createInfo;
+		VkSwapchainKHR			  m_swapChain = VK_NULL_HANDLE;
+		VkExtent2D				  m_extent{};
+		VkFormat				  m_imageFormat = VK_FORMAT_UNDEFINED;
+		std::vector<VkImage>	  m_images;
+		std::vector<VkImageView>  m_imageViews;
+		VkImage					  m_depthImage = VK_NULL_HANDLE;
+		VkImageView				  m_depthImageView = VK_NULL_HANDLE;
+		VkFormat				  m_depthFormat = VK_FORMAT_UNDEFINED;
+		VmaAllocation			  m_depthAllocation = VK_NULL_HANDLE;
+		VkImage					  m_colorImage = VK_NULL_HANDLE; // For multisampling
+		VkImageView				  m_colorImageView = VK_NULL_HANDLE;
+		VmaAllocation			  m_colorAllocation = VK_NULL_HANDLE;
 	};
 };

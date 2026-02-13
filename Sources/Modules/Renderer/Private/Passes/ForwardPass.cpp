@@ -43,7 +43,7 @@ namespace BetterThanNothing
 			barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.image = m_context->vkSwapChain->GetImage(context.imageIndex);
+			barrier.image = m_context->swapChain->GetImage(context.imageIndex);
 			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			barrier.subresourceRange.baseMipLevel = 0;
 			barrier.subresourceRange.levelCount = 1;
@@ -57,18 +57,18 @@ namespace BetterThanNothing
 
 		VkRenderingAttachmentInfo colorAttachment{};
 		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = m_context->vkSwapChain->GetColorImageView()->Handle();
+		colorAttachment.imageView = m_context->swapChain->GetColorImageView();
 		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		colorAttachment.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
 		colorAttachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorAttachment.resolveImageView = m_context->vkSwapChain->GetImageView(context.imageIndex)->Handle();
+		colorAttachment.resolveImageView = m_context->swapChain->GetImageView(context.imageIndex);
 		colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkRenderingAttachmentInfo depthAttachment{};
 		depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		depthAttachment.imageView = m_context->vkSwapChain->GetDepthImageView()->Handle();
+		depthAttachment.imageView = m_context->swapChain->GetDepthImageView();
 		depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -77,7 +77,7 @@ namespace BetterThanNothing
 
 		VkRenderingInfo renderingInfo{};
 		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.renderArea = {{0, 0}, m_context->vkSwapChain->GetExtent()};
+		renderingInfo.renderArea = {{0, 0}, m_context->swapChain->GetExtent()};
 		renderingInfo.layerCount = 1;
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAttachment;
@@ -88,15 +88,15 @@ namespace BetterThanNothing
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(m_context->vkSwapChain->GetExtent().width);
-		viewport.height = static_cast<float>(m_context->vkSwapChain->GetExtent().height);
+		viewport.width = static_cast<float>(m_context->swapChain->GetExtent().width);
+		viewport.height = static_cast<float>(m_context->swapChain->GetExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 		commandBuffer->SetViewport(&viewport);
 
 		VkRect2D scissor{};
 		scissor.offset = {0, 0};
-		scissor.extent = m_context->vkSwapChain->GetExtent();
+		scissor.extent = m_context->swapChain->GetExtent();
 		commandBuffer->SetScissor(&scissor);
 
 		VkPipeline lastPipeline = VK_NULL_HANDLE;

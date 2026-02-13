@@ -65,13 +65,13 @@ namespace BetterThanNothing
 
 		ImGui_ImplSDL3_InitForVulkan(WindowManager::GetWindow()->Handle());
 
-		const std::vector formats = {m_context->vkSwapChain->GetImageFormat()};
+		const std::vector formats = {m_context->swapChain->GetImageFormat()};
 
 		VkPipelineRenderingCreateInfoKHR pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 		pipelineInfo.colorAttachmentCount = static_cast<uint32_t>(formats.size());
 		pipelineInfo.pColorAttachmentFormats = formats.data();
-		pipelineInfo.depthAttachmentFormat = m_context->vkSwapChain->GetDepthFormat();
+		pipelineInfo.depthAttachmentFormat = m_context->swapChain->GetDepthFormat();
 
 		ImGui_ImplVulkan_InitInfo initInfo = {};
 		initInfo.ApiVersion = m_context->vkInstance->GetApiVersion();
@@ -80,9 +80,9 @@ namespace BetterThanNothing
 		initInfo.Device = m_context->vkDevice->Handle();
 		initInfo.Queue = m_context->vkGraphicsQueue->Handle();
 		initInfo.DescriptorPool = m_imguiPool;
-		initInfo.MinImageCount = m_context->vkSwapChain->GetImageCount();
-		initInfo.ImageCount = m_context->vkSwapChain->GetImageCount();
-		initInfo.ImageCount = m_context->vkSwapChain->GetImageCount();
+		initInfo.MinImageCount = m_context->swapChain->GetImageCount();
+		initInfo.ImageCount = m_context->swapChain->GetImageCount();
+		initInfo.ImageCount = m_context->swapChain->GetImageCount();
 		// Note: Stencil format can be added if needed
 		initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 		initInfo.PipelineInfoMain.PipelineRenderingCreateInfo = pipelineInfo;
@@ -140,14 +140,14 @@ namespace BetterThanNothing
 
 		VkRenderingAttachmentInfo colorAttachment = {};
 		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = m_context->vkSwapChain->GetImageView(context.imageIndex)->Handle();
+		colorAttachment.imageView = m_context->swapChain->GetImageView(context.imageIndex);
 		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
 		VkRenderingInfo renderingInfo = {};
 		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.renderArea = {{0, 0}, m_context->vkSwapChain->GetExtent()};
+		renderingInfo.renderArea = {{0, 0}, m_context->swapChain->GetExtent()};
 		renderingInfo.layerCount = 1;
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAttachment;
@@ -168,7 +168,7 @@ namespace BetterThanNothing
 			presentationBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			presentationBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			presentationBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			presentationBarrier.image = m_context->vkSwapChain->GetImage(context.imageIndex);
+			presentationBarrier.image = m_context->swapChain->GetImage(context.imageIndex);
 			presentationBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			presentationBarrier.subresourceRange.baseMipLevel = 0;
 			presentationBarrier.subresourceRange.levelCount = 1;

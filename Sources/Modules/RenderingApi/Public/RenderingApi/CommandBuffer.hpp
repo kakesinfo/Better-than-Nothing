@@ -26,6 +26,10 @@ namespace BetterThanNothing
 	class VulkanCommandBufferContext;
 	struct VulkanContext;
 
+	class Device;
+	class CommandPool;
+	class Queue;
+
 	class CommandBuffer
 	{
 	public:
@@ -57,6 +61,10 @@ namespace BetterThanNothing
 
 		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CommandBuffer>&)>& callback,
 									   VulkanContext*													 context);
+
+
+		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CommandBuffer>&)>& callback,
+									   Device* device, CommandPool* commandPool, Queue* graphicsQueue);
 
 	private:
 		static bool HasStencilComponent(VkFormat format);
