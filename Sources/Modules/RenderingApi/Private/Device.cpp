@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	Device::Device(VulkanContext* context) : m_context(context)
+		Device::Device(const DeviceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
 		PickPhysicalDevice();
 		GetPhysicalDeviceProperties();
@@ -31,22 +31,25 @@ namespace BetterThanNothing
 
 	Device::~Device()
 	{
-		if (m_logicalDevice != VK_NULL_HANDLE)
-			vkDestroyDevice(m_logicalDevice, nullptr);
+		if (m_device != VK_NULL_HANDLE)
+			vkDestroyDevice(m_device, nullptr);
+	}
+
+	std::unique_ptr<Device> Device::Create(const DeviceCreateInfo& createInfo)
+	{
+		return std::make_unique<Device>(createInfo);
 	}
 
 	void Device::PickPhysicalDevice()
 	{
-		const auto vkInstance = m_context->vkInstance->Handle();
-
 		std::uint32_t deviceCount = 0;
-		vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr);
+		vkEnumeratePhysicalDevices(m_createInfo.instance->Handle(), &deviceCount, nullptr);
 
 		if (deviceCount == 0)
 			throw std::runtime_error("Failed to find GPUs with Vulkan support");
 
 		std::vector<VkPhysicalDevice> devices(deviceCount);
-		vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data());
+		vkEnumeratePhysicalDevices(m_createInfo.instance->Handle(), &deviceCount, devices.data());
 
 		m_physicalDevice = FindSuitableDevice(devices);
 
@@ -63,48 +66,28 @@ namespace BetterThanNothing
 		m_apiVersion = std::to_string(deviceProperties.apiVersion);
 		m_minUniformBufferOffsetAlignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
 		m_maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
+		m_maxTexture2DSize = deviceProperties.limits.maxImageDimension2D;
+		m_maxTexture3DSize = deviceProperties.limits.maxImageDimension3D;
+		m_maxTextureCubeSize = deviceProperties.limits.maxImageDimensionCube;
 
-		VkSampleCountFlags counts =
-			deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
-		if (counts & VK_SAMPLE_COUNT_64_BIT)
-		{
-			m_maxMsaaSamples = VK_SAMPLE_COUNT_64_BIT;
-		}
-		else if (counts & VK_SAMPLE_COUNT_32_BIT)
-		{
-			m_maxMsaaSamples = VK_SAMPLE_COUNT_32_BIT;
-		}
-		else if (counts & VK_SAMPLE_COUNT_16_BIT)
-		{
-			m_maxMsaaSamples = VK_SAMPLE_COUNT_16_BIT;
-		}
-		else if (counts & VK_SAMPLE_COUNT_8_BIT)
-		{
-			m_maxMsaaSamples = VK_SAMPLE_COUNT_8_BIT;
-		}
-		else if (counts & VK_SAMPLE_COUNT_4_BIT)
-		{
-			m_maxMsaaSamples = VK_SAMPLE_COUNT_4_BIT;
-		}
-		else if (counts & VK_SAMPLE_COUNT_2_BIT)
-		{
-			m_maxMsaaSamples = VK_SAMPLE_COUNT_2_BIT;
-		}
-		else
-			m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
+		const VkSampleCountFlags counts = deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
+
+		m_maxMsaaSamples = (counts > 0) ? static_cast<VkSampleCountFlagBits>(std::bit_floor(counts)) : VK_SAMPLE_COUNT_1_BIT;
 	}
 
 	void Device::CreateLogicalDevice()
 	{
-		QueueFamilyIndices indices = FindQueueFamilies(m_physicalDevice);
-		if (!indices.IsComplete())
+		if (m_device != VK_NULL_HANDLE)
+			throw std::runtime_error("Vulkan physical device already created");
+
+		m_queueFamilyIndices = FindQueueFamilies(m_physicalDevice);
+		if (!m_queueFamilyIndices.IsComplete())
 			throw std::runtime_error("Failed to find queue families");
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+		std::set uniqueQueueFamilies = {m_queueFamilyIndices.graphicsFamily.value(), m_queueFamilyIndices.presentFamily.value()};
 
 		float queuePriority = 1.0f;
-
 		for (std::uint32_t queueFamily : uniqueQueueFamilies)
 		{
 			VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -132,30 +115,41 @@ namespace BetterThanNothing
 		createInfo.enabledLayerCount = 0;
 		createInfo.ppEnabledLayerNames = nullptr;
 
-		const auto& deviceExtensions = m_context->vkSettings.deviceExtensions;
+		const auto& deviceExtensions = m_createInfo.deviceExtensions;
 		createInfo.enabledExtensionCount = static_cast<std::uint32_t>(deviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-		if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_logicalDevice) != VK_SUCCESS)
+		if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create logical device");
 
 		Logger::Log<SUCCESS>("Vulkan logical device: ok");
+	}
+
+	std::unique_ptr<Queue> Device::CreateGraphicsQueue() const
+	{
+		const std::uint32_t familyIndex = m_queueFamilyIndices.graphicsFamily.value();
 
 		VkQueue graphicsQueue;
-		vkGetDeviceQueue(m_logicalDevice, indices.graphicsFamily.value(), 0, &graphicsQueue);
-		m_context->vkGraphicsQueue = std::make_unique<Queue>(graphicsQueue);
+		vkGetDeviceQueue(m_device, familyIndex, 0, &graphicsQueue);
 
 		Logger::Log<SUCCESS>("Vulkan graphics queue: ok");
 
-		VkQueue presentQueue;
-		vkGetDeviceQueue(m_logicalDevice, indices.presentFamily.value(), 0, &presentQueue);
-		m_context->vkPresentQueue = std::make_unique<Queue>(presentQueue);
-
-		Logger::Log<SUCCESS>("Vulkan presentation queue: ok");
+		return Queue::Create({graphicsQueue, familyIndex});
 	}
 
-	VkFormat Device::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
-											   VkFormatFeatureFlags features) const
+	std::unique_ptr<Queue> Device::CreatePresentQueue() const
+	{
+		const std::uint32_t familyIndex = m_queueFamilyIndices.presentFamily.value();
+
+		VkQueue presentQueue;
+		vkGetDeviceQueue(m_device, familyIndex, 0, &presentQueue);
+
+		Logger::Log<SUCCESS>("Vulkan present queue: ok");
+
+		return Queue::Create({presentQueue, familyIndex});
+	}
+
+	VkFormat Device::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
 	{
 		for (const VkFormat format : candidates)
 		{
@@ -172,40 +166,42 @@ namespace BetterThanNothing
 		throw std::runtime_error("Failed to find supported format");
 	}
 
-	VkPhysicalDevice Device::FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const
+	bool Device::IsSupportedFormatFeature(VkFormat format, VkFormatFeatureFlags features) const
 	{
-		for (const auto& device : devices)
-		{
-			if (IsDeviceSuitable(device))
-				return device;
-		}
-		throw std::runtime_error("Failed to find a suitable GPU");
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &props);
+
+		return props.optimalTilingFeatures & features;
 	}
 
-	bool Device::IsDeviceSuitable(VkPhysicalDevice device) const noexcept
+	void Device::WaitIdle() const
 	{
-		const QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(device);
+		vkDeviceWaitIdle(m_device);
+	}
 
-		const bool queueFamiliesSupported = queueFamilyIndices.IsComplete();
-		const bool extensionsSupported = CheckDeviceExtensionSupport(device);
-		bool	   swapchainSupported = false;
+	VkResult Device::CreateImageView(const VkImageViewCreateInfo& createInfo, VkImageView* imageView) const
+	{
+		return vkCreateImageView(m_device, &createInfo, nullptr, imageView);
+	}
 
-		if (extensionsSupported)
-		{
-			auto swapChainSupport = QuerySwapChainSupport(device);
-			swapchainSupported = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-		}
+	void Device::DestroyImageView(VkImageView imageView) const
+	{
+		vkDestroyImageView(m_device, imageView, nullptr);
+	}
 
-		VkPhysicalDeviceFeatures supportedFeatures;
-		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+	VkResult Device::CreateSampler(const VkSamplerCreateInfo& samplerCreateInfo, VkSampler* sampler) const
+	{
+		return vkCreateSampler(m_device, &samplerCreateInfo, nullptr, sampler);
+	}
 
-		return queueFamiliesSupported && extensionsSupported && swapchainSupported &&
-			   supportedFeatures.samplerAnisotropy;
+	void Device::DestroySampler(VkSampler sampler) const
+	{
+		vkDestroySampler(m_device, sampler, nullptr);
 	}
 
 	bool Device::CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept
 	{
-		auto deviceExtensions = m_context->vkSettings.deviceExtensions;
+		auto deviceExtensions = m_createInfo.deviceExtensions;
 
 		std::uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -215,9 +211,9 @@ namespace BetterThanNothing
 
 		std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
-		for (const auto& extension : availableExtensions)
+		for (const auto& [extensionName, _] : availableExtensions)
 		{
-			requiredExtensions.erase(extension.extensionName);
+			requiredExtensions.erase(extensionName);
 		}
 
 		return requiredExtensions.empty();
@@ -225,8 +221,6 @@ namespace BetterThanNothing
 
 	QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice device) const
 	{
-		auto vkSurface = m_context->vkSurface->Handle();
-
 		std::uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
@@ -244,7 +238,7 @@ namespace BetterThanNothing
 
 			// Check if the queue family supports present queue
 			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, vkSurface, &presentSupport);
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_createInfo.surface->Handle(), &presentSupport);
 			if (presentSupport)
 				indices.presentFamily = i;
 
@@ -257,19 +251,9 @@ namespace BetterThanNothing
 		return indices;
 	}
 
-	QueueFamilyIndices Device::GetQueueFamilies() const
-	{
-		return FindQueueFamilies(m_physicalDevice);
-	}
-
-	void Device::WaitIdle() const
-	{
-		vkDeviceWaitIdle(m_logicalDevice);
-	}
-
 	SwapChainSupportDetails Device::QuerySwapChainSupport(VkPhysicalDevice device) const
 	{
-		const auto surface = m_context->vkSurface->Handle();
+		const auto surface = m_createInfo.surface->Handle();
 
 		SwapChainSupportDetails details;
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -295,12 +279,37 @@ namespace BetterThanNothing
 		return details;
 	}
 
-	SwapChainSupportDetails Device::GetSwapChainSupport() const
+	bool Device::IsDeviceSuitable(VkPhysicalDevice device) const noexcept
 	{
-		return QuerySwapChainSupport(m_physicalDevice);
+		const QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(device);
+
+		const bool queueFamiliesSupported = queueFamilyIndices.IsComplete();
+		const bool extensionsSupported = CheckDeviceExtensionSupport(device);
+		bool	   swapchainSupported = false;
+
+		if (extensionsSupported)
+		{
+			auto swapChainSupport = QuerySwapChainSupport(device);
+			swapchainSupported = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+		}
+
+		VkPhysicalDeviceFeatures supportedFeatures;
+		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+		return queueFamiliesSupported && extensionsSupported && swapchainSupported && supportedFeatures.samplerAnisotropy;
 	}
 
-	std::string Device::GetVendorById(const std::uint32_t vendorId) const
+	VkPhysicalDevice Device::FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const
+	{
+		for (const auto& device : devices)
+		{
+			if (IsDeviceSuitable(device))
+				return device;
+		}
+		throw std::runtime_error("Failed to find a suitable GPU");
+	}
+
+	std::string Device::GetVendorById(std::uint32_t vendorId)
 	{
 		if (vendorId == 0x1002)
 			return "AMD";
@@ -317,18 +326,14 @@ namespace BetterThanNothing
 		return "Unknown";
 	}
 
-	VkPhysicalDevice Device::PhysicalHandle() const
+	SwapChainSupportDetails Device::GetSwapChainSupport() const
 	{
-		if (m_physicalDevice == VK_NULL_HANDLE)
-			throw std::runtime_error("Vulkan physical device is not initialized");
-		return m_physicalDevice;
+		return QuerySwapChainSupport(m_physicalDevice);
 	}
 
-	VkDevice Device::Handle() const
+	QueueFamilyIndices Device::GetQueueFamilyIndices() const
 	{
-		if (m_logicalDevice == VK_NULL_HANDLE)
-			throw std::runtime_error("Vulkan logical device is not initialized");
-		return m_logicalDevice;
+		return m_queueFamilyIndices;
 	}
 
 	std::string Device::GetVendorName() const
@@ -351,13 +356,38 @@ namespace BetterThanNothing
 		return m_minUniformBufferOffsetAlignment;
 	}
 
+	VkSampleCountFlagBits Device::GetMaxMsaaSamples() const
+	{
+		return m_maxMsaaSamples;
+	}
+
 	float Device::GetMaxAnisotropy() const
 	{
 		return m_maxAnisotropy;
 	}
 
-	VkSampleCountFlagBits Device::GetMaxMsaaSamples() const
+	std::uint32_t Device::GetMaxTexture2DSize() const
 	{
-		return m_maxMsaaSamples;
+		return m_maxTexture2DSize;
+	}
+
+	std::uint32_t Device::GetMaxTexture3DSize() const
+	{
+		return m_maxTexture3DSize;
+	}
+
+	std::uint32_t Device::GetMaxTextureCubeSize() const
+	{
+		return m_maxTextureCubeSize;
+	}
+
+	VkDevice Device::Handle() const
+	{
+		return m_device;
+	}
+
+	VkPhysicalDevice Device::PhysicalHandle() const
+	{
+		return m_physicalDevice;
 	}
 }

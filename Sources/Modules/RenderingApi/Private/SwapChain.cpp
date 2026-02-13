@@ -58,7 +58,7 @@ namespace BetterThanNothing
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		QueueFamilyIndices indices = m_context->vkDevice->GetQueueFamilies();
+		QueueFamilyIndices indices = m_context->vkDevice->GetQueueFamilyIndices();
 		std::uint32_t	   queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
 		if (indices.graphicsFamily != indices.presentFamily)

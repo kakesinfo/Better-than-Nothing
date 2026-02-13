@@ -20,10 +20,44 @@
 
 namespace BetterThanNothing
 {
-	Queue::Queue(VkQueue queue) : m_queue(queue) {}
+	Queue::Queue(const QueueCreateInfo& createInfo) : m_createInfo(createInfo) {}
+	Queue::~Queue() = default;
+
+	std::unique_ptr<Queue> Queue::Create(const QueueCreateInfo& createInfo)
+	{
+		return std::make_unique<Queue>(createInfo);
+	}
+
+	VkResult Queue::Submit(const uint32_t submitCount, const VkSubmitInfo* submits, VkFence fence) const
+	{
+		std::lock_guard lock(m_mutex);
+		return vkQueueSubmit(m_createInfo.handle, submitCount, submits, fence);
+	}
+
+	VkResult Queue::Present(const VkPresentInfoKHR* presentInfo) const
+	{
+		std::lock_guard lock(m_mutex);
+		return vkQueuePresentKHR(m_createInfo.handle, presentInfo);
+	}
+
+	VkResult Queue::WaitIdle() const
+	{
+		std::lock_guard lock(m_mutex);
+		return vkQueueWaitIdle(m_createInfo.handle);
+	}
+
+	std::uint32_t Queue::GetFamilyIndex() const
+	{
+		return m_createInfo.familyIndex;
+	}
+
+	float Queue::GetPriority() const
+	{
+		return m_createInfo.priority;
+	}
 
 	VkQueue Queue::Handle() const
 	{
-		return m_queue;
+		return m_createInfo.handle;
 	}
 }

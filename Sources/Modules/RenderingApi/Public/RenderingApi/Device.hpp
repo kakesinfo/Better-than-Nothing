@@ -20,14 +20,16 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	class Instance;
+	class Surface;
+	class Queue;
 
 	struct QueueFamilyIndices
 	{
 		std::optional<std::uint32_t> graphicsFamily;
 		std::optional<std::uint32_t> presentFamily;
 
-		bool IsComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
+		[[nodiscard]] bool IsComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
 	};
 
 	struct SwapChainSupportDetails
@@ -37,10 +39,18 @@ namespace BetterThanNothing
 		std::vector<VkPresentModeKHR>	presentModes;
 	};
 
+	struct DeviceCreateInfo
+	{
+		Instance* instance;
+		Surface*  surface;
+
+		std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME};
+	};
+
 	class Device
 	{
 	public:
-		explicit Device(VulkanContext* context);
+		explicit Device(const DeviceCreateInfo& createInfo);
 		~Device();
 
 		Device(const Device&) = delete;
@@ -48,65 +58,63 @@ namespace BetterThanNothing
 		Device(Device&& other) = delete;
 		Device& operator=(Device&& other) = delete;
 
-		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
-									 VkFormatFeatureFlags features) const;
-
-		[[nodiscard]]
-		VkPhysicalDevice PhysicalHandle() const;
-
-		[[nodiscard]]
-		VkDevice Handle() const;
-
-		[[nodiscard]]
-		std::string GetVendorName() const;
-
-		[[nodiscard]]
-		std::string GetDeviceName() const;
-
-		[[nodiscard]]
-		std::string GetApiVersion() const;
-
-		[[nodiscard]]
-		std::uint32_t GetMinUniformBufferOffsetAlignment() const;
-
-		[[nodiscard]]
-		float GetMaxAnisotropy() const;
-
-		[[nodiscard]]
-		VkSampleCountFlagBits GetMaxMsaaSamples() const;
-
-		[[nodiscard]]
-		SwapChainSupportDetails GetSwapChainSupport() const;
-
-		[[nodiscard]]
-		QueueFamilyIndices GetQueueFamilies() const;
-
-		void WaitIdle() const;
+		[[nodiscard]] static std::unique_ptr<Device> Create(const DeviceCreateInfo& createInfo);
 
 	private:
-		VkPhysicalDevice		FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const;
-		bool					IsDeviceSuitable(VkPhysicalDevice device) const noexcept;
-		bool					CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept;
-		QueueFamilyIndices		FindQueueFamilies(VkPhysicalDevice device) const;
-		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
-
-		[[nodiscard]]
-		std::string GetVendorById(std::uint32_t vendorId) const;
-
 		void PickPhysicalDevice();
 		void GetPhysicalDeviceProperties();
 		void CreateLogicalDevice();
 
-		VulkanContext* m_context = nullptr;
+	public:
+		[[nodiscard]] std::unique_ptr<Queue> CreateGraphicsQueue() const;
+		[[nodiscard]] std::unique_ptr<Queue> CreatePresentQueue() const;
 
-		VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
-		VkDevice		 m_logicalDevice = VK_NULL_HANDLE;
+		void WaitIdle() const;
 
+		VkResult CreateImageView(const VkImageViewCreateInfo& createInfo, VkImageView* imageView) const;
+		void	 DestroyImageView(VkImageView imageView) const;
+		VkResult CreateSampler(const VkSamplerCreateInfo& samplerCreateInfo, VkSampler* sampler) const;
+		void	 DestroySampler(VkSampler sampler) const;
+
+		[[nodiscard]] VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
+		[[nodiscard]] bool IsSupportedFormatFeature(VkFormat format, VkFormatFeatureFlags features) const;
+
+	private:
+		bool								  CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept;
+		[[nodiscard]] QueueFamilyIndices	  FindQueueFamilies(VkPhysicalDevice device) const;
+		[[nodiscard]] SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
+		bool								  IsDeviceSuitable(VkPhysicalDevice device) const noexcept;
+		[[nodiscard]] VkPhysicalDevice		  FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const;
+		[[nodiscard]] static std::string	  GetVendorById(std::uint32_t vendorId);
+
+	public:
+		[[nodiscard]] SwapChainSupportDetails GetSwapChainSupport() const;
+		[[nodiscard]] QueueFamilyIndices	  GetQueueFamilyIndices() const;
+		[[nodiscard]] std::string			  GetVendorName() const;
+		[[nodiscard]] std::string			  GetDeviceName() const;
+		[[nodiscard]] std::string			  GetApiVersion() const;
+		[[nodiscard]] std::uint32_t			  GetMinUniformBufferOffsetAlignment() const;
+		[[nodiscard]] VkSampleCountFlagBits	  GetMaxMsaaSamples() const;
+		[[nodiscard]] float					  GetMaxAnisotropy() const;
+		[[nodiscard]] std::uint32_t			  GetMaxTexture2DSize() const;
+		[[nodiscard]] std::uint32_t			  GetMaxTexture3DSize() const;
+		[[nodiscard]] std::uint32_t			  GetMaxTextureCubeSize() const;
+		[[nodiscard]] VkDevice				  Handle() const;
+		[[nodiscard]] VkPhysicalDevice		  PhysicalHandle() const;
+
+	private:
+		DeviceCreateInfo	  m_createInfo;
+		VkDevice			  m_device = VK_NULL_HANDLE;
+		VkPhysicalDevice	  m_physicalDevice = VK_NULL_HANDLE;
+		QueueFamilyIndices	  m_queueFamilyIndices;
 		std::string			  m_vendorName;
 		std::string			  m_deviceName;
 		std::string			  m_apiVersion;
 		std::uint32_t		  m_minUniformBufferOffsetAlignment = 0;
 		VkSampleCountFlagBits m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
 		float				  m_maxAnisotropy = 1;
+		std::uint32_t		  m_maxTexture2DSize = 0;
+		std::uint32_t		  m_maxTexture3DSize = 0;
+		std::uint32_t		  m_maxTextureCubeSize = 0;
 	};
 };

@@ -25,7 +25,7 @@ namespace BetterThanNothing
 	CommandPool::CommandPool(VulkanContext* context) : m_context(context)
 	{
 		auto device = m_context->vkDevice->Handle();
-		auto queueFamilyIndices = m_context->vkDevice->GetQueueFamilies();
+		auto queueFamilyIndices = m_context->vkDevice->GetQueueFamilyIndices();
 
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
