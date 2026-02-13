@@ -116,7 +116,7 @@ namespace BetterThanNothing
 
 		CameraData cameraData{};
 		cameraData.view = m_camera->GetViewMatrix();
-		cameraData.projection = m_camera->GetProjectionMatrix(m_context->vkSwapChain->GetAspectRatio());
+		cameraData.projection = m_camera->GetProjectionMatrix(m_context->swapChain->GetAspectRatio());
 		cameraData.position = m_camera->GetPosition();
 		cameraData.exposure = 0.5f;
 

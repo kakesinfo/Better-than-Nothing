@@ -56,7 +56,7 @@ namespace BetterThanNothing
 		std::unique_ptr<Queue>		 vkGraphicsQueue;
 		std::unique_ptr<Queue>		 vkPresentQueue;
 		std::unique_ptr<Allocator>	 allocator;
-		std::unique_ptr<SwapChain>	 vkSwapChain;
+		std::unique_ptr<SwapChain>	 swapChain;
 		std::unique_ptr<CommandPool> commandPool;
 		std::unique_ptr<Pipeline>	 vkPipeline;
 

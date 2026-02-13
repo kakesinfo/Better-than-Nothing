@@ -48,6 +48,8 @@ namespace BetterThanNothing
 {
 	Renderer::Renderer(VulkanContext* context, ResourceManager* resourceManager) : m_context(context), m_resourceManager(resourceManager)
 	{
+		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
+
 		BufferManager::Initialize(m_context);
 
 		Logger::Log<INFO>("Buffering mode: {}", m_context->vkSettings.maxFramesInFlight);
@@ -68,11 +70,16 @@ namespace BetterThanNothing
 
 		m_context->commandPool = CommandPool::Create({m_context->vkDevice.get(), m_context->vkGraphicsQueue.get()});
 
-		m_context->vkSwapChain = std::make_unique<SwapChain>(m_context);
-		m_context->vkSwapChain->CreateImages();
-		m_context->vkSwapChain->CreateImageViews();
-		m_context->vkSwapChain->CreateColorResources();
-		m_context->vkSwapChain->CreateDepthResources();
+		m_context->swapChain = SwapChain::Create({
+			m_context->vkSurface.get(),
+			m_context->vkDevice.get(),
+			m_context->allocator.get(),
+			m_context->commandPool.get(),
+			m_context->vkGraphicsQueue.get(),
+			windowWidth,
+			windowHeight,
+			m_context->vkSettings.bufferingMode,
+		});
 
 		m_context->vkFrames.resize(m_context->vkSettings.maxFramesInFlight);
 
@@ -112,7 +119,7 @@ namespace BetterThanNothing
 		m_context->vkFrames[m_currentFrame].inFlightFence->Wait();
 
 		const auto device = m_context->vkDevice->Handle();
-		const auto swapchain = m_context->vkSwapChain->Handle();
+		const auto swapchain = m_context->swapChain->Handle();
 
 		std::uint32_t  imageIndex;
 		const VkResult acquireResult =
@@ -120,7 +127,8 @@ namespace BetterThanNothing
 
 		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
 		{
-			m_context->vkSwapChain->RecreateSwapchain();
+			const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
+			m_context->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 			return;
 		}
 
@@ -170,8 +178,9 @@ namespace BetterThanNothing
 		auto& window = WindowManager::GetWindow();
 		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || window->IsResized())
 		{
+			const auto [windowWidth, windowHeight] = window->GetFramebufferSize();
 			window->SetResized(false);
-			m_context->vkSwapChain->RecreateSwapchain();
+			m_context->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 		}
 		else if (presentResult != VK_SUCCESS)
 			throw std::runtime_error("failed to present swap chain image!");

@@ -82,11 +82,11 @@ namespace BetterThanNothing
 
 		// Fallback: If no color attachment format is defined, we take the one from the Swapchain
 		if (m_params.colorAttachmentFormats.empty())
-			m_params.colorAttachmentFormats.push_back(m_context->vkSwapChain->GetImageFormat());
+			m_params.colorAttachmentFormats.push_back(m_context->swapChain->GetImageFormat());
 
 		// Fallback: If no depth attachment format is defined, we take the one from the Swapchain
 		if (m_params.depthAttachmentFormat == VK_FORMAT_UNDEFINED)
-			m_params.depthAttachmentFormat = m_context->vkSwapChain->GetDepthFormat();
+			m_params.depthAttachmentFormat = m_context->swapChain->GetDepthFormat();
 
 		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
 		pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
