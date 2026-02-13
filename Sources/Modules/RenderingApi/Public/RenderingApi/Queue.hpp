@@ -20,21 +20,36 @@
 
 namespace BetterThanNothing
 {
+	struct QueueCreateInfo
+	{
+		VkQueue	 handle = VK_NULL_HANDLE;
+		uint32_t familyIndex = 0;
+		float	 priority = 1.0f;
+	};
+
 	class Queue
 	{
 	public:
-		explicit Queue(VkQueue queue);
-		~Queue() = default;
+		explicit Queue(const QueueCreateInfo& createInfo);
+		~Queue();
 
 		Queue(const Queue&) = delete;
 		Queue& operator=(const Queue&) = delete;
-		Queue(Queue&& other) = delete;
-		Queue& operator=(Queue&& other) = delete;
+		Queue(Queue&&) = delete;
+		Queue& operator=(Queue&&) = delete;
 
-		[[nodiscard]]
-		VkQueue Handle() const;
+		static std::unique_ptr<Queue> Create(const QueueCreateInfo& createInfo);
+
+		VkResult Submit(uint32_t submitCount, const VkSubmitInfo* submits, VkFence fence) const;
+		VkResult Present(const VkPresentInfoKHR* presentInfo) const;
+		VkResult WaitIdle() const;
+
+		[[nodiscard]] std::uint32_t GetFamilyIndex() const;
+		[[nodiscard]] float			GetPriority() const;
+		[[nodiscard]] VkQueue		Handle() const;
 
 	private:
-		VkQueue m_queue = VK_NULL_HANDLE;
+		QueueCreateInfo	   m_createInfo;
+		mutable std::mutex m_mutex{};
 	};
 }
