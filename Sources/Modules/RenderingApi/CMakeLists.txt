@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Vulkan REQUIRED)
 
-file(GLOB_RECURSE PROJECT_SOURCES
+file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
     "Private/*.cpp"
     "Private/*.hpp"
     "Public/*.hpp"

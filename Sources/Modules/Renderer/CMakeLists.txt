@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 
 project(Module_Renderer)
 
-file(GLOB_RECURSE PROJECT_SOURCES
+file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
     "Private/*.cpp"
     "Private/*.hpp"
     "Public/*.hpp"

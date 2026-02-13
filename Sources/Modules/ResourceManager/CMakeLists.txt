@@ -6,7 +6,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(Module_ResourceManager)
 
-file(GLOB_RECURSE PROJECT_SOURCES
+file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
     "Private/*.cpp"
     "Private/*.hpp"
     "Public/*.hpp"
