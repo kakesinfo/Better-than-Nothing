@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-	Allocator::Allocator(VulkanContext* context)
+	Allocator::Allocator(const AllocatorCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
 		VmaVulkanFunctions vulkanFunctions = {};
 		vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
@@ -30,10 +30,10 @@ namespace BetterThanNothing
 
 		VmaAllocatorCreateInfo allocatorCreateInfo = {};
 		allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT; // Ext: VK_EXT_memory_budget
-		allocatorCreateInfo.vulkanApiVersion = context->vkInstance->GetApiVersion();
-		allocatorCreateInfo.physicalDevice = context->vkDevice->PhysicalHandle();
-		allocatorCreateInfo.device = context->vkDevice->Handle();
-		allocatorCreateInfo.instance = context->vkInstance->Handle();
+		allocatorCreateInfo.vulkanApiVersion = m_createInfo.instance->GetApiVersion();
+		allocatorCreateInfo.instance = m_createInfo.instance->Handle();
+		allocatorCreateInfo.device = m_createInfo.device->Handle();
+		allocatorCreateInfo.physicalDevice = m_createInfo.device->PhysicalHandle();
 		allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
 		if (vmaCreateAllocator(&allocatorCreateInfo, &m_allocator) != VK_SUCCESS)
@@ -42,9 +42,18 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan memory allocator (Vma): ok");
 	}
 
-	VkResult Allocator::CreateBuffer(const VkBufferCreateInfo*		bufferCreateInfo,
-												 const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer,
-												 VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
+	Allocator::~Allocator()
+	{
+		if (m_allocator != VK_NULL_HANDLE)
+			vmaDestroyAllocator(m_allocator);
+	}
+
+	std::unique_ptr<Allocator> Allocator::Create(const AllocatorCreateInfo& createInfo)
+	{
+		return std::make_unique<Allocator>(createInfo);
+	}
+
+	VkResult Allocator::CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
 	{
 		return vmaCreateBuffer(m_allocator, bufferCreateInfo, allocCreateInfo, buffer, allocation, allocationInfo);
 	}
@@ -54,9 +63,7 @@ namespace BetterThanNothing
 		vmaDestroyBuffer(m_allocator, buffer, allocation);
 	}
 
-	VkResult Allocator::CreateImage(const VkImageCreateInfo*	   imageCreateInfo,
-												const VmaAllocationCreateInfo* allocCreateInfo, VkImage* image,
-												VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
+	VkResult Allocator::CreateImage(const VkImageCreateInfo* imageCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
 	{
 		return vmaCreateImage(m_allocator, imageCreateInfo, allocCreateInfo, image, allocation, allocationInfo);
 	}
@@ -73,12 +80,12 @@ namespace BetterThanNothing
 
 	void Allocator::UnmapMemory(VmaAllocation allocation) const
 	{
-		return vmaUnmapMemory(m_allocator, allocation);
+		vmaUnmapMemory(m_allocator, allocation);
 	}
 
-	Allocator::~Allocator()
+	void Allocator::FlushAllocation(VmaAllocation allocation, VkDeviceSize offset, VkDeviceSize size) const
 	{
-		vmaDestroyAllocator(m_allocator);
+		vmaFlushAllocation(m_allocator, allocation, offset, size);
 	}
 
 	VmaAllocator Allocator::Handle() const
