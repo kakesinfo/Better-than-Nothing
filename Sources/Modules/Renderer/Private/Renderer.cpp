@@ -66,7 +66,7 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Anisotropy: {}x", m_context->vkDevice->GetMaxAnisotropy());
 		Logger::Log<INFO>("Msaa: {}x", static_cast<std::uint32_t>(m_context->vkDevice->GetMaxMsaaSamples()));
 
-		m_context->vkCommandPool = std::make_unique<CommandPool>(m_context);
+		m_context->commandPool = CommandPool::Create({m_context->vkDevice.get(), m_context->vkGraphicsQueue.get()});
 
 		m_context->vkSwapChain = std::make_unique<SwapChain>(m_context);
 		m_context->vkSwapChain->CreateImages();
@@ -259,7 +259,7 @@ namespace BetterThanNothing
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = m_context->vkCommandPool->Handle();
+		allocInfo.commandPool = m_context->commandPool->Handle();
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocInfo.commandBufferCount = 1;
 

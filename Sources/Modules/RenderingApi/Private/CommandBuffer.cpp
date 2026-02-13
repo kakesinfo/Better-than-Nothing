@@ -176,7 +176,7 @@ namespace BetterThanNothing
 											VulkanContext*													  context)
 	{
 		const auto device = context->vkDevice->Handle();
-		const auto commandPool = context->vkCommandPool->Handle();
+		const auto commandPool = context->commandPool->Handle();
 		const auto graphicsQueue = context->vkGraphicsQueue->Handle();
 
 		VkCommandBufferAllocateInfo allocInfo{};
