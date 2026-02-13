@@ -22,25 +22,27 @@
 
 namespace BetterThanNothing
 {
-	CommandPool::CommandPool(VulkanContext* context) : m_context(context)
+	CommandPool::CommandPool(const CommandPoolCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
-		auto device = m_context->vkDevice->Handle();
-		auto queueFamilyIndices = m_context->vkDevice->GetQueueFamilyIndices();
-
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+		poolInfo.queueFamilyIndex = m_createInfo.queue->GetFamilyIndex();
 
-		if (vkCreateCommandPool(device, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS)
+		if (vkCreateCommandPool(m_createInfo.device->Handle(), &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS)
 			throw std::runtime_error("failed to create command pool!");
 
-		Logger::Log<SUCCESS>("Vulkan command pool: ok");
+		Logger::Log<SUCCESS>("Vulkan command pool (queueFamilyIndex: {}): ok", m_createInfo.queue->GetFamilyIndex());
 	}
 
 	CommandPool::~CommandPool()
 	{
-		vkDestroyCommandPool(m_context->vkDevice->Handle(), m_commandPool, nullptr);
+		vkDestroyCommandPool(m_createInfo.device->Handle(), m_commandPool, nullptr);
+	}
+
+	std::unique_ptr<CommandPool> CommandPool::Create(const CommandPoolCreateInfo& createInfo)
+	{
+		return std::make_unique<CommandPool>(createInfo);
 	}
 
 	VkCommandPool CommandPool::Handle() const

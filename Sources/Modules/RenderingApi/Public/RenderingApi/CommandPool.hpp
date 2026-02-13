@@ -20,12 +20,19 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	class Device;
+	class Queue;
+
+	struct CommandPoolCreateInfo
+	{
+		Device* device;
+		Queue*	queue;
+	};
 
 	class CommandPool
 	{
 	public:
-		explicit CommandPool(VulkanContext* context);
+		explicit CommandPool(const CommandPoolCreateInfo& createInfo);
 		~CommandPool();
 
 		CommandPool(const CommandPool&) = delete;
@@ -33,11 +40,11 @@ namespace BetterThanNothing
 		CommandPool(CommandPool&& other) = delete;
 		CommandPool& operator=(CommandPool&& other) = delete;
 
-		[[nodiscard]]
-		VkCommandPool Handle() const;
+		[[nodiscard]] static std::unique_ptr<CommandPool> Create(const CommandPoolCreateInfo& createInfo);
+		[[nodiscard]] VkCommandPool						  Handle() const;
 
 	private:
-		VulkanContext* m_context = nullptr;
-		VkCommandPool  m_commandPool = VK_NULL_HANDLE;
+		CommandPoolCreateInfo m_createInfo;
+		VkCommandPool		  m_commandPool = VK_NULL_HANDLE;
 	};
 }
