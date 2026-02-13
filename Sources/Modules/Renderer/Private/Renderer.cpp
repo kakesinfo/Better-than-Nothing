@@ -116,7 +116,7 @@ namespace BetterThanNothing
 		if (!m_context->vkPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
 
-		m_context->vkFrames[m_currentFrame].inFlightFence->Wait();
+		m_context->vkFrames[m_currentFrame].inFlightFences->Wait();
 
 		const auto device = m_context->vkDevice->Handle();
 		const auto swapchain = m_context->swapChain->Handle();
@@ -135,7 +135,7 @@ namespace BetterThanNothing
 		if (acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR)
 			throw std::runtime_error("failed to acquire swap chain image!");
 
-		m_context->vkFrames[m_currentFrame].inFlightFence->Reset();
+		m_context->vkFrames[m_currentFrame].inFlightFences->Reset();
 		m_context->vkFrames[m_currentFrame].commandBuffer->Reset();
 
 		RecordCommandBuffer(renderList, camera, imageIndex);
@@ -160,7 +160,7 @@ namespace BetterThanNothing
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		auto graphicsQueue = m_context->vkGraphicsQueue->Handle();
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->vkFrames[m_currentFrame].inFlightFence->Handle()) != VK_SUCCESS)
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->vkFrames[m_currentFrame].inFlightFences->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
 		VkPresentInfoKHR presentInfo{};
@@ -291,9 +291,9 @@ namespace BetterThanNothing
 		for (std::uint32_t i = 0; i < count; i++)
 		{
 			auto& frame = m_context->vkFrames[i];
-			frame.imageAvailableSemaphore = std::make_unique<Semaphore>(m_context);
-			frame.renderFinishedSemaphore = std::make_unique<Semaphore>(m_context);
-			frame.inFlightFence = std::make_unique<Fence>(m_context);
+			frame.imageAvailableSemaphore = Semaphore::Create({m_context->vkDevice.get()});
+			frame.renderFinishedSemaphore = Semaphore::Create({m_context->vkDevice.get()});
+			frame.inFlightFences = Fence::Create({m_context->vkDevice.get(), true});
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok (count: {})", count);

@@ -20,22 +20,34 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	class Device;
+
+	struct FenceCreateInfo
+	{
+		Device* device;
+		bool	isSignaled = false;
+	};
 
 	class Fence
 	{
 	public:
-		explicit Fence(VulkanContext* context);
+		explicit Fence(const FenceCreateInfo& createInfo);
 		~Fence();
 
-		void Wait() const;
-		void Reset() const;
+		Fence(const Fence&) = delete;
+		Fence& operator=(const Fence&) = delete;
+		Fence(Fence&& other) = delete;
+		Fence& operator=(Fence&& other) = delete;
 
-		[[nodiscard]]
-		VkFence Handle() const;
+		static std::unique_ptr<Fence> Create(const FenceCreateInfo& createInfo);
+
+		void Wait() const;
+		void Reset();
+
+		[[nodiscard]] VkFence Handle() const;
 
 	private:
-		VulkanContext* m_context = nullptr;
-		VkFence		   m_fence = VK_NULL_HANDLE;
+		Device*			m_device;
+		VkFence			m_fence = VK_NULL_HANDLE;
 	};
 }
