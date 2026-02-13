@@ -34,7 +34,7 @@ namespace BetterThanNothing
 		allocCreateInfo.usage = memoryUsage;
 		allocCreateInfo.flags = vmaFlags;
 
-		if (m_context->vkMemoryAllocator->CreateBuffer(&bufferInfo, &allocCreateInfo, &m_buffer, &m_allocation,
+		if (m_context->allocator->CreateBuffer(&bufferInfo, &allocCreateInfo, &m_buffer, &m_allocation,
 													   &m_allocInfo) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create Vulkan buffer.");
 	}
@@ -42,7 +42,7 @@ namespace BetterThanNothing
 	VulkanBuffer::~VulkanBuffer()
 	{
 		if (m_buffer && m_allocation)
-			m_context->vkMemoryAllocator->DestroyBuffer(m_buffer, m_allocation);
+			m_context->allocator->DestroyBuffer(m_buffer, m_allocation);
 	}
 
 	void VulkanBuffer::Write(const void* data, const VkDeviceSize size, const VkDeviceSize offset,

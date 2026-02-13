@@ -22,30 +22,40 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	class Instance;
+	class Device;
+
+	struct AllocatorCreateInfo
+	{
+		Instance* instance;
+		Device*	  device;
+	};
 
 	class Allocator
 	{
 	public:
-		explicit Allocator(VulkanContext* context);
+		explicit Allocator(const AllocatorCreateInfo& createInfo);
 		~Allocator();
 
-		VkResult CreateBuffer(const VkBufferCreateInfo*		 bufferCreateInfo,
-							  const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer,
-							  VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
-		void	 DestroyBuffer(VkBuffer buffer, VmaAllocation allocation) const;
+		Allocator(const Allocator&) = delete;
+		Allocator& operator=(const Allocator&) = delete;
+		Allocator(Allocator&& other) = delete;
+		Allocator& operator=(Allocator&& other) = delete;
 
-		VkResult CreateImage(const VkImageCreateInfo* imageCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo,
-							 VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
-		void	 DestroyImage(VkImage image, VmaAllocation allocation) const;
+		[[nodiscard]] static std::unique_ptr<Allocator> Create(const AllocatorCreateInfo& createInfo);
 
-		VkResult MapMemory(VmaAllocation allocation, void** data) const;
-		void	 UnmapMemory(VmaAllocation allocation) const;
+		[[nodiscard]] VkResult CreateBuffer(const VkBufferCreateInfo* bufferCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		void DestroyBuffer(VkBuffer buffer, VmaAllocation allocation) const;
+		[[nodiscard]] VkResult CreateImage(const VkImageCreateInfo* imageCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+		void				   DestroyImage(VkImage image, VmaAllocation allocation) const;
+		[[nodiscard]] VkResult MapMemory(VmaAllocation allocation, void** data) const;
+		void				   UnmapMemory(VmaAllocation allocation) const;
+		void				   FlushAllocation(VmaAllocation allocation, VkDeviceSize offset, VkDeviceSize size) const;
 
-		[[nodiscard]]
-		VmaAllocator Handle() const;
+		[[nodiscard]] VmaAllocator Handle() const;
 
 	private:
-		VmaAllocator m_allocator = VK_NULL_HANDLE;
+		AllocatorCreateInfo m_createInfo;
+		VmaAllocator		m_allocator = VK_NULL_HANDLE;
 	};
 };

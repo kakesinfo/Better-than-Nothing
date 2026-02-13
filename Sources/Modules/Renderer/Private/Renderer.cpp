@@ -58,8 +58,7 @@ namespace BetterThanNothing
 		m_context->vkDevice = Device::Create({m_context->vkInstance.get(), m_context->vkSurface.get()});
 		m_context->vkGraphicsQueue = m_context->vkDevice->CreateGraphicsQueue();
 		m_context->vkPresentQueue = m_context->vkDevice->CreatePresentQueue();
-
-		m_context->vkMemoryAllocator = std::make_unique<Allocator>(m_context);
+		m_context->allocator = Allocator::Create({m_context->vkInstance.get(), m_context->vkDevice.get()});
 
 		Logger::Log<INFO>("Vendor: {}", m_context->vkDevice->GetVendorName());
 		Logger::Log<INFO>("Device: {}", m_context->vkDevice->GetDeviceName());
