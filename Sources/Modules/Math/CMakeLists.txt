@@ -41,23 +41,35 @@ install(TARGETS ${PROJECT_NAME}
 # Google Test configuration
 ####################################################################################################
 
-enable_testing()
+find_package(GTest QUIET)
 
-find_package(GTest REQUIRED)
+if(GTest_FOUND OR GTEST_FOUND)
+    enable_testing()
 
-file(GLOB TEST_SOURCES "Tests/*.cpp")
+    file(GLOB TEST_SOURCES "Tests/*.cpp")
 
-if(TEST_SOURCES)
-    add_executable(${PROJECT_NAME}_test ${TEST_SOURCES})
+    if(TEST_SOURCES)
+        add_executable(${PROJECT_NAME}_test ${TEST_SOURCES})
 
-    target_precompile_headers(${PROJECT_NAME}_test PRIVATE "pch.hpp")
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/pch.hpp")
+            target_precompile_headers(${PROJECT_NAME}_test PRIVATE "pch.hpp")
+        endif()
 
-    target_include_directories(${PROJECT_NAME}_test
-            PUBLIC Public
-            PRIVATE Private
-    )
+        target_include_directories(${PROJECT_NAME}_test
+                PUBLIC Public
+                PRIVATE Private
+        )
 
-    target_link_libraries(${PROJECT_NAME}_test PRIVATE ${PROJECT_NAME} GTest::gtest_main PUBLIC glm::glm)
+        target_link_libraries(${PROJECT_NAME}_test
+                PRIVATE
+                ${PROJECT_NAME}
+                GTest::gtest_main
+                GTest::gtest
+                glm::glm
+        )
 
-    add_test(NAME ${PROJECT_NAME}_test COMMAND ${PROJECT_NAME}_test)
+        add_test(NAME ${PROJECT_NAME}_test COMMAND ${PROJECT_NAME}_test)
+    endif()
+else()
+    message(STATUS "GTest not found")
 endif()
