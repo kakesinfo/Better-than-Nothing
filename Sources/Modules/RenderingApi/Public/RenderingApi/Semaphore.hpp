@@ -20,19 +20,30 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	class Device;
+
+	struct SemaphoreCreateInfo
+	{
+		Device* device;
+	};
 
 	class Semaphore
 	{
 	public:
-		explicit Semaphore(VulkanContext* context);
+		explicit Semaphore(const SemaphoreCreateInfo& createInfo);
 		~Semaphore();
 
-		[[nodiscard]]
-		VkSemaphore Handle() const;
+		Semaphore(const Semaphore&) = delete;
+		Semaphore& operator=(const Semaphore&) = delete;
+		Semaphore(Semaphore&& other) = delete;
+		Semaphore& operator=(Semaphore&& other) = delete;
+
+		static std::unique_ptr<Semaphore> Create(const SemaphoreCreateInfo& createInfo);
+
+		[[nodiscard]] VkSemaphore Handle() const;
 
 	private:
-		VulkanContext* m_context = nullptr;
-		VkSemaphore	   m_semaphore = VK_NULL_HANDLE;
+		Device*		m_device;
+		VkSemaphore m_semaphore = VK_NULL_HANDLE;
 	};
 }

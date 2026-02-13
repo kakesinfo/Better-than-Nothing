@@ -20,24 +20,24 @@
 
 namespace BetterThanNothing
 {
-	Semaphore::Semaphore(VulkanContext* context) : m_context(context)
+	Semaphore::Semaphore(const SemaphoreCreateInfo& createInfo): m_device(createInfo.device)
 	{
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		semaphoreInfo.flags = 0;
 
-		auto device = m_context->vkDevice->Handle();
-		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_semaphore) != VK_SUCCESS)
+		if (vkCreateSemaphore(m_device->Handle(), &semaphoreInfo, nullptr, &m_semaphore) != VK_SUCCESS)
 			throw std::runtime_error("failed to create semaphore!");
 	}
 
 	Semaphore::~Semaphore()
 	{
 		if (m_semaphore != VK_NULL_HANDLE)
-		{
-			auto device = m_context->vkDevice->Handle();
-			vkDestroySemaphore(device, m_semaphore, nullptr);
-		}
+			vkDestroySemaphore(m_device->Handle(), m_semaphore, nullptr);
+	}
+
+	std::unique_ptr<Semaphore> Semaphore::Create(const SemaphoreCreateInfo& createInfo)
+	{
+		return std::make_unique<Semaphore>(createInfo);
 	}
 
 	VkSemaphore Semaphore::Handle() const
