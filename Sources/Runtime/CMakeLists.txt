@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 
 project("Runtime")
 
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 	"src/*.cpp"
 	"src/*.hpp"
 )
