@@ -33,7 +33,7 @@ namespace BetterThanNothing
 		template <typename T>
 		T* Get(const std::uint32_t frameIndex, const std::uint32_t objectIndex) const
 		{
-			char* base = static_cast<char*>(m_context->vkFrames[frameIndex].dynamicUniformBuffer->GetData());
+			char* base = static_cast<char*>(m_context->frames[frameIndex].dynamicUniformBuffer->GetData());
 			return reinterpret_cast<T*>(base + objectIndex * m_uniformAlignment);
 		}
 

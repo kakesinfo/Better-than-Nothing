@@ -92,7 +92,7 @@ namespace BetterThanNothing
 									  std::int32_t texHeight, std::uint32_t mipLevels) const
 	{
 		VkFormatProperties formatProperties;
-		vkGetPhysicalDeviceFormatProperties(m_context->vkDevice->PhysicalHandle(), imageFormat, &formatProperties);
+		vkGetPhysicalDeviceFormatProperties(m_context->device->PhysicalHandle(), imageFormat, &formatProperties);
 
 		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 			throw std::runtime_error("texture image format does not support linear blitting!");
@@ -176,7 +176,7 @@ namespace BetterThanNothing
 		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.anisotropyEnable = VK_TRUE;
-		samplerInfo.maxAnisotropy = m_context->vkDevice->GetMaxAnisotropy();
+		samplerInfo.maxAnisotropy = m_context->device->GetMaxAnisotropy();
 		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 		samplerInfo.compareEnable = VK_FALSE;
@@ -208,7 +208,7 @@ namespace BetterThanNothing
 		descriptorWrite.descriptorCount = 1;
 		descriptorWrite.pImageInfo = &imageInfo;
 
-		vkUpdateDescriptorSets(m_context->vkDevice->Handle(), 1, &descriptorWrite, 0, nullptr);
+		vkUpdateDescriptorSets(m_context->device->Handle(), 1, &descriptorWrite, 0, nullptr);
 
 		return descriptorSet;
 	}

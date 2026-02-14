@@ -23,7 +23,7 @@ namespace BetterThanNothing
 	VulkanShaderModule::VulkanShaderModule(VulkanContext* vkContext, const VkShaderModuleCreateInfo* createInfo)
 		: m_vkContext(vkContext)
 	{
-		if (vkCreateShaderModule(m_vkContext->vkDevice->Handle(), createInfo, nullptr, &m_shaderModule) != VK_SUCCESS)
+		if (vkCreateShaderModule(m_vkContext->device->Handle(), createInfo, nullptr, &m_shaderModule) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create shader module!");
 		}
@@ -32,7 +32,7 @@ namespace BetterThanNothing
 	VulkanShaderModule::~VulkanShaderModule()
 	{
 		if (m_shaderModule)
-			vkDestroyShaderModule(m_vkContext->vkDevice->Handle(), m_shaderModule, nullptr);
+			vkDestroyShaderModule(m_vkContext->device->Handle(), m_shaderModule, nullptr);
 	}
 
 	VkShaderModule VulkanShaderModule::Handle() const

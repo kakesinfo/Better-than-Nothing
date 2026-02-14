@@ -30,7 +30,7 @@ namespace BetterThanNothing
 		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
 		for (std::uint32_t i = 0; i < count; i++)
 		{
-			m_context->vkFrames[i].globalUniformBuffer = BufferManager::CreateUniformBuffer<GlobalUniformData>();
+			m_context->frames[i].globalUniformBuffer = BufferManager::CreateUniformBuffer<GlobalUniformData>();
 		}
 
 		Logger::Log<SUCCESS>("Vulkan global uniforms: ok (count: {})", count);

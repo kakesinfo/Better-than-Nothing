@@ -36,7 +36,7 @@ namespace BetterThanNothing
 
 		for (std::uint32_t i = 0; i < count; i++)
 		{
-			m_context->vkFrames[i].dynamicUniformBuffer = BufferManager::CreateUniformBuffer(bufferSize);
+			m_context->frames[i].dynamicUniformBuffer = BufferManager::CreateUniformBuffer(bufferSize);
 		}
 
 		Logger::Log<SUCCESS>("Vulkan dynamic uniforms: ok (count: {})", count);
@@ -44,7 +44,7 @@ namespace BetterThanNothing
 
 	std::uint32_t DynamicUniformProvider::CalculateUniformAlignment() const
 	{
-		const std::uint32_t minUboAlignment = m_context->vkDevice->GetMinUniformBufferOffsetAlignment();
+		const std::uint32_t minUboAlignment = m_context->device->GetMinUniformBufferOffsetAlignment();
 
 		std::uint32_t dynamicAlignment = sizeof(DynamicUniformData);
 		if (minUboAlignment > 0)

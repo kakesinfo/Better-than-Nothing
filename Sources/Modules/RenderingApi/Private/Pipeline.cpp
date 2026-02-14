@@ -76,7 +76,7 @@ namespace BetterThanNothing
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.rasterizationSamples = m_context->vkDevice->GetMaxMsaaSamples();
+		multisampling.rasterizationSamples = m_context->device->GetMaxMsaaSamples();
 		multisampling.sampleShadingEnable = VK_TRUE;
 		multisampling.minSampleShading = 0.8f; // closer to one is better quality
 
@@ -142,7 +142,7 @@ namespace BetterThanNothing
 		pipelineLayoutInfo.pushConstantRangeCount = 0;	  // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-		if (vkCreatePipelineLayout(m_context->vkDevice->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) !=
+		if (vkCreatePipelineLayout(m_context->device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) !=
 			VK_SUCCESS)
 			throw std::runtime_error("Failed to create pipeline layout");
 
@@ -165,7 +165,7 @@ namespace BetterThanNothing
 		pipelineInfo.renderPass = VK_NULL_HANDLE; // m_context->vkRenderPass->Handle();
 		pipelineInfo.subpass = 0;
 
-		if (vkCreateGraphicsPipelines(m_context->vkDevice->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
+		if (vkCreateGraphicsPipelines(m_context->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
 									  &m_pipeline) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create graphics pipeline");
 
@@ -175,10 +175,10 @@ namespace BetterThanNothing
 	Pipeline::~Pipeline()
 	{
 		if (m_pipelineLayout != VK_NULL_HANDLE)
-			vkDestroyPipelineLayout(m_context->vkDevice->Handle(), m_pipelineLayout, nullptr);
+			vkDestroyPipelineLayout(m_context->device->Handle(), m_pipelineLayout, nullptr);
 
 		if (m_pipeline != VK_NULL_HANDLE)
-			vkDestroyPipeline(m_context->vkDevice->Handle(), m_pipeline, nullptr);
+			vkDestroyPipeline(m_context->device->Handle(), m_pipeline, nullptr);
 	}
 
 	VkPipeline Pipeline::Handle() const

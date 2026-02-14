@@ -159,9 +159,9 @@ namespace BetterThanNothing
 
 	void CommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CommandBuffer>&)>& callback, VulkanContext* context)
 	{
-		const auto device = context->vkDevice->Handle();
+		const auto device = context->device->Handle();
 		const auto commandPool = context->commandPool->Handle();
-		const auto graphicsQueue = context->vkGraphicsQueue->Handle();
+		const auto graphicsQueue = context->graphicsQueue->Handle();
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

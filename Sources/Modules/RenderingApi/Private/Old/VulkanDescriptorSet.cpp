@@ -32,7 +32,7 @@ namespace BetterThanNothing
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &handle;
 
-		if (vkAllocateDescriptorSets(m_context->vkDevice->Handle(), &allocInfo, &m_descriptorSet) != VK_SUCCESS)
+		if (vkAllocateDescriptorSets(m_context->device->Handle(), &allocInfo, &m_descriptorSet) != VK_SUCCESS)
 			throw std::runtime_error("Failed to allocate descriptor set");
 	}
 
