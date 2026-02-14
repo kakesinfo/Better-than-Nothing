@@ -31,7 +31,7 @@ namespace BetterThanNothing
 	{
 		m_uniformAlignment = CalculateUniformAlignment();
 
-		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
+		const std::uint32_t count = m_context->settings.maxFramesInFlight;
 		const std::uint32_t bufferSize = m_maxObjects * m_uniformAlignment;
 
 		for (std::uint32_t i = 0; i < count; i++)

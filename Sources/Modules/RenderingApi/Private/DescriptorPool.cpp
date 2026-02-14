@@ -16,28 +16,37 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingApi.hpp"
+#include "RenderingApi/DescriptorPool.hpp"
+#include "RenderingApi/Device.hpp"
+
+#include <Module_Base/Logger.hpp>
 
 namespace BetterThanNothing
 {
-	DescriptorPool::DescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes,
-											   VulkanContext*							context)
-		: m_context(context)
+	DescriptorPool::DescriptorPool(const DescriptorPoolCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = CalculateMaxSets(poolSizes); // 3 sets per frame (global + dynamic + sampler)
+		poolInfo.poolSizeCount = static_cast<uint32_t>(m_createInfo.poolSizes.size());
+		poolInfo.pPoolSizes = m_createInfo.poolSizes.data();
+		poolInfo.maxSets = m_createInfo.maxSets;
+		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-		if (vkCreateDescriptorPool(context->device->Handle(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS)
+		if (vkCreateDescriptorPool(m_createInfo.device->Handle(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create descriptor pool");
+
+		Logger::Log<INFO>("Vulkan descriptor pool: ok");
 	}
 
 	DescriptorPool::~DescriptorPool()
 	{
 		if (m_descriptorPool != VK_NULL_HANDLE)
-			vkDestroyDescriptorPool(m_context->device->Handle(), m_descriptorPool, nullptr);
+			vkDestroyDescriptorPool(m_createInfo.device->Handle(), m_descriptorPool, nullptr);
+	}
+
+	DescriptorPoolBuilder DescriptorPool::Builder(Device* device)
+	{
+		return DescriptorPoolBuilder(device);
 	}
 
 	VkDescriptorPool DescriptorPool::Handle() const
@@ -45,11 +54,22 @@ namespace BetterThanNothing
 		return m_descriptorPool;
 	}
 
-	std::uint32_t DescriptorPool::CalculateMaxSets(const std::vector<VkDescriptorPoolSize>& poolSizes)
+	DescriptorPoolBuilder::DescriptorPoolBuilder(Device* device) : m_device(device) {}
+
+	DescriptorPoolBuilder& DescriptorPoolBuilder::AddPoolSize(VkDescriptorType type, std::uint32_t count)
 	{
-		std::uint32_t totalDescriptors = 0;
-		for (const auto& [_, descriptorCount] : poolSizes)
-			totalDescriptors += descriptorCount;
-		return totalDescriptors;
+		m_poolSizes.emplace_back(type, count);
+		m_maxSets += count;
+		return *this;
+	}
+
+	std::unique_ptr<DescriptorPool> DescriptorPoolBuilder::Build() const
+	{
+		DescriptorPoolCreateInfo createInfo{};
+		createInfo.device = m_device;
+		createInfo.poolSizes = m_poolSizes;
+		createInfo.maxSets = m_maxSets;
+
+		return std::make_unique<DescriptorPool>(createInfo);
 	}
 }

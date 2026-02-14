@@ -48,7 +48,7 @@ namespace BetterThanNothing
 				EBufferingMode bufferingMode = EBufferingMode::Double;
 				std::uint32_t  maxFramesInFlight;
 			};
-		} vkSettings;
+		} settings;
 
 		std::unique_ptr<Instance>	 instance;
 		std::unique_ptr<Surface>	 surface;
@@ -62,7 +62,7 @@ namespace BetterThanNothing
 
 		std::vector<VulkanFrame> frames;
 
-		std::unique_ptr<DescriptorPool> vkDescriptorPool;
+		std::unique_ptr<DescriptorPool> descriptorPool;
 
 		std::unique_ptr<VulkanDescriptorSetLayout>		  vkGlobalDescriptorSetLayout;
 		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkGlobalDescriptorSets;

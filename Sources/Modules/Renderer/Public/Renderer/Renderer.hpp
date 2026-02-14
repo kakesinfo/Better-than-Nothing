@@ -59,7 +59,7 @@ namespace BetterThanNothing
 		void CreateCommandBuffers() const;
 		void CreateSyncObjects();
 		void CreateDescriptorSetLayout();
-		void CreateDescriptorPool();
+		void CreateDescriptorPool() const;
 		void CreateGlobalDescriptorSets();
 		void CreateDynamicDescriptorSets();
 

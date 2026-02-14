@@ -20,21 +20,49 @@
 
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	class Device;
+
+	class DescriptorPool;
+	class DescriptorPoolBuilder;
+
+	struct DescriptorPoolCreateInfo
+	{
+		Device*							  device;
+		std::vector<VkDescriptorPoolSize> poolSizes;
+		std::uint32_t					  maxSets;
+	};
 
 	class DescriptorPool
 	{
 	public:
-		explicit DescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, VulkanContext* context);
-
+		explicit DescriptorPool(const DescriptorPoolCreateInfo& createInfo);
 		~DescriptorPool();
 
-		VkDescriptorPool Handle() const;
+		DescriptorPool(const DescriptorPool&) = delete;
+		DescriptorPool& operator=(const DescriptorPool&) = delete;
+		DescriptorPool(DescriptorPool&& other) = delete;
+		DescriptorPool& operator=(DescriptorPool&& other) = delete;
+
+		[[nodiscard]] static DescriptorPoolBuilder Builder(Device* device);
+
+		[[nodiscard]] VkDescriptorPool Handle() const;
 
 	private:
-		static std::uint32_t CalculateMaxSets(const std::vector<VkDescriptorPoolSize>& poolSizes);
+		DescriptorPoolCreateInfo m_createInfo;
+		VkDescriptorPool		 m_descriptorPool = VK_NULL_HANDLE;
+	};
 
-		VulkanContext*	 m_context = nullptr;
-		VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
+	class DescriptorPoolBuilder
+	{
+	public:
+		explicit DescriptorPoolBuilder(Device* device);
+
+		[[nodiscard]] DescriptorPoolBuilder&		  AddPoolSize(VkDescriptorType type, std::uint32_t count);
+		[[nodiscard]] std::unique_ptr<DescriptorPool> Build() const;
+
+	private:
+		Device*							  m_device = nullptr;
+		std::vector<VkDescriptorPoolSize> m_poolSizes;
+		std::uint32_t					  m_maxSets = 0;
 	};
 } // BetterThanNothing

@@ -28,7 +28,7 @@ namespace BetterThanNothing
 
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = m_context->vkDescriptorPool->Handle();
+		allocInfo.descriptorPool = m_context->descriptorPool->Handle();
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &handle;
 
