@@ -52,8 +52,8 @@ namespace BetterThanNothing
 
 		BufferManager::Initialize(m_context);
 
-		Logger::Log<INFO>("Buffering mode: {}", m_context->vkSettings.maxFramesInFlight);
-		Logger::Log<INFO>("VSync: {}", m_context->vkSettings.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
+		Logger::Log<INFO>("Buffering mode: {}", m_context->settings.maxFramesInFlight);
+		Logger::Log<INFO>("VSync: {}", m_context->settings.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
 
 		m_context->instance = Instance::Create({.enableValidation = true});
 		m_context->surface = Surface::Create({WindowManager::GetWindow()->Handle(), m_context->instance.get()});
@@ -78,10 +78,10 @@ namespace BetterThanNothing
 			m_context->graphicsQueue.get(),
 			windowWidth,
 			windowHeight,
-			m_context->vkSettings.bufferingMode,
+			m_context->settings.bufferingMode,
 		});
 
-		m_context->frames.resize(m_context->vkSettings.maxFramesInFlight);
+		m_context->frames.resize(m_context->settings.maxFramesInFlight);
 
 		m_globalUniformProvider = std::make_unique<GlobalUniformProvider>(m_context);
 		m_dynamicUniformProvider = std::make_unique<DynamicUniformProvider>(m_context, 100000);
@@ -264,7 +264,7 @@ namespace BetterThanNothing
 	void Renderer::CreateCommandBuffers() const
 	{
 		const auto			device = m_context->device->Handle();
-		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
+		const std::uint32_t count = m_context->settings.maxFramesInFlight;
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -286,7 +286,7 @@ namespace BetterThanNothing
 
 	void Renderer::CreateSyncObjects()
 	{
-		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
+		const std::uint32_t count = m_context->settings.maxFramesInFlight;
 
 		for (std::uint32_t i = 0; i < count; i++)
 		{
@@ -342,38 +342,25 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan descriptor set layout: ok");
 	}
 
-	void Renderer::CreateDescriptorPool()
+	void Renderer::CreateDescriptorPool() const
 	{
-		const std::uint32_t frames = m_context->vkSettings.maxFramesInFlight;
+		const std::uint32_t maxFramesInFlight = m_context->settings.maxFramesInFlight;
 
-		VkDescriptorPoolSize globalPoolSize{};
-		globalPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		globalPoolSize.descriptorCount = frames; // 1 global UBO par frame
-
-		VkDescriptorPoolSize dynamicPoolSize{};
-		dynamicPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		dynamicPoolSize.descriptorCount = frames; // 1 dynamic UBO par frame
-
-		VkDescriptorPoolSize samplerPoolSize{};
-		samplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		samplerPoolSize.descriptorCount = 1000; // TODO: adjust based on expected number of textures
-
-		VkDescriptorPoolSize pointLightPoolSize{};
-		pointLightPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		pointLightPoolSize.descriptorCount = frames;
-
-		std::vector poolSizes = {globalPoolSize, dynamicPoolSize, samplerPoolSize, pointLightPoolSize};
-
-		m_context->vkDescriptorPool = std::make_unique<DescriptorPool>(poolSizes, m_context);
+		m_context->descriptorPool = DescriptorPool::Builder(m_context->device.get())
+										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight)
+										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, maxFramesInFlight)
+										.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
+										.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxFramesInFlight)
+										.Build();
 
 		Logger::Log<SUCCESS>("Vulkan descriptor pool: ok");
 	}
 
 	void Renderer::CreateGlobalDescriptorSets()
 	{
-		m_context->vkGlobalDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
+		m_context->vkGlobalDescriptorSets.resize(m_context->settings.maxFramesInFlight);
 
-		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
+		for (size_t i = 0; i < m_context->settings.maxFramesInFlight; i++)
 		{
 			m_context->vkGlobalDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkGlobalDescriptorSetLayout, m_context);
 
@@ -401,9 +388,9 @@ namespace BetterThanNothing
 
 	void Renderer::CreateDynamicDescriptorSets()
 	{
-		m_context->vkDynamicDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
+		m_context->vkDynamicDescriptorSets.resize(m_context->settings.maxFramesInFlight);
 
-		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
+		for (size_t i = 0; i < m_context->settings.maxFramesInFlight; i++)
 		{
 			m_context->vkDynamicDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkDynamicDescriptorSetLayout, m_context);
 
@@ -430,7 +417,7 @@ namespace BetterThanNothing
 
 	void Renderer::CreatePointLightBuffers(std::uint32_t maxLights) const
 	{
-		const std::uint32_t count = m_context->vkSettings.maxFramesInFlight;
+		const std::uint32_t count = m_context->settings.maxFramesInFlight;
 		const std::uint32_t bufferSize = maxLights * sizeof(PointLightData);
 
 		for (std::uint32_t i = 0; i < count; i++)
@@ -443,11 +430,11 @@ namespace BetterThanNothing
 
 	void Renderer::CreatePointLightDescriptorSets(std::uint32_t maxLights)
 	{
-		m_context->vkPointLightDescriptorSets.resize(m_context->vkSettings.maxFramesInFlight);
+		m_context->vkPointLightDescriptorSets.resize(m_context->settings.maxFramesInFlight);
 
 		const VkDeviceSize lightBufferSize = sizeof(PointLightData) * maxLights;
 
-		for (size_t i = 0; i < m_context->vkSettings.maxFramesInFlight; i++)
+		for (size_t i = 0; i < m_context->settings.maxFramesInFlight; i++)
 		{
 			m_context->vkPointLightDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkPointLightDescriptorLayout, m_context);
 
