@@ -33,7 +33,7 @@ namespace BetterThanNothing
 		template <typename T>
 		T* Get(const std::uint32_t frameIndex) const
 		{
-			return static_cast<T*>(m_context->vkFrames[frameIndex].globalUniformBuffer->GetData());
+			return static_cast<T*>(m_context->frames[frameIndex].globalUniformBuffer->GetData());
 		}
 
 	private:

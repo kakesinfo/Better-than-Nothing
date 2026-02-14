@@ -29,7 +29,7 @@ namespace BetterThanNothing
 		layoutInfo.bindingCount = static_cast<std::uint32_t>(layoutBindings.size());
 		layoutInfo.pBindings = layoutBindings.data();
 
-		if (vkCreateDescriptorSetLayout(context->vkDevice->Handle(), &layoutInfo, nullptr, &m_descriptorSetLayout) !=
+		if (vkCreateDescriptorSetLayout(context->device->Handle(), &layoutInfo, nullptr, &m_descriptorSetLayout) !=
 			VK_SUCCESS)
 			throw VulkanDescriptorSetLayoutError("Failed to create descriptor set layout!");
 	}
@@ -37,7 +37,7 @@ namespace BetterThanNothing
 	VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout()
 	{
 		if (m_descriptorSetLayout != VK_NULL_HANDLE)
-			vkDestroyDescriptorSetLayout(m_context->vkDevice->Handle(), m_descriptorSetLayout, nullptr);
+			vkDestroyDescriptorSetLayout(m_context->device->Handle(), m_descriptorSetLayout, nullptr);
 	}
 
 	VkDescriptorSetLayout VulkanDescriptorSetLayout::Handle() const

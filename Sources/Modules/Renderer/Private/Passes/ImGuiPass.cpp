@@ -54,7 +54,7 @@ namespace BetterThanNothing
 		pool_info.poolSizeCount = static_cast<uint32_t>(std::size(pool_sizes));
 		pool_info.pPoolSizes = pool_sizes;
 
-		if (vkCreateDescriptorPool(m_context->vkDevice->Handle(), &pool_info, nullptr, &m_imguiPool) != VK_SUCCESS)
+		if (vkCreateDescriptorPool(m_context->device->Handle(), &pool_info, nullptr, &m_imguiPool) != VK_SUCCESS)
 			throw std::runtime_error("failed to create ImGui descriptor pool!");
 
 		IMGUI_CHECKVERSION();
@@ -74,11 +74,11 @@ namespace BetterThanNothing
 		pipelineInfo.depthAttachmentFormat = m_context->swapChain->GetDepthFormat();
 
 		ImGui_ImplVulkan_InitInfo initInfo = {};
-		initInfo.ApiVersion = m_context->vkInstance->GetApiVersion();
-		initInfo.Instance = m_context->vkInstance->Handle();
-		initInfo.PhysicalDevice = m_context->vkDevice->PhysicalHandle();
-		initInfo.Device = m_context->vkDevice->Handle();
-		initInfo.Queue = m_context->vkGraphicsQueue->Handle();
+		initInfo.ApiVersion = m_context->instance->GetApiVersion();
+		initInfo.Instance = m_context->instance->Handle();
+		initInfo.PhysicalDevice = m_context->device->PhysicalHandle();
+		initInfo.Device = m_context->device->Handle();
+		initInfo.Queue = m_context->graphicsQueue->Handle();
 		initInfo.DescriptorPool = m_imguiPool;
 		initInfo.MinImageCount = m_context->swapChain->GetImageCount();
 		initInfo.ImageCount = m_context->swapChain->GetImageCount();
@@ -94,13 +94,13 @@ namespace BetterThanNothing
 
 	ImGuiPass::~ImGuiPass()
 	{
-		vkDeviceWaitIdle(m_context->vkDevice->Handle());
+		vkDeviceWaitIdle(m_context->device->Handle());
 
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplSDL3_Shutdown();
 		ImGui::DestroyContext();
 
-		vkDestroyDescriptorPool(m_context->vkDevice->Handle(), m_imguiPool, nullptr);
+		vkDestroyDescriptorPool(m_context->device->Handle(), m_imguiPool, nullptr);
 	}
 
 	void ImGuiPass::Execute(const RenderPassContext& context, const DrawStream& drawStream)

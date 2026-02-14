@@ -30,14 +30,14 @@ namespace BetterThanNothing
 		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = CalculateMaxSets(poolSizes); // 3 sets per frame (global + dynamic + sampler)
 
-		if (vkCreateDescriptorPool(context->vkDevice->Handle(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS)
+		if (vkCreateDescriptorPool(context->device->Handle(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create descriptor pool");
 	}
 
 	DescriptorPool::~DescriptorPool()
 	{
 		if (m_descriptorPool != VK_NULL_HANDLE)
-			vkDestroyDescriptorPool(m_context->vkDevice->Handle(), m_descriptorPool, nullptr);
+			vkDestroyDescriptorPool(m_context->device->Handle(), m_descriptorPool, nullptr);
 	}
 
 	VkDescriptorPool DescriptorPool::Handle() const

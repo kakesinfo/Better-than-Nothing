@@ -50,17 +50,17 @@ namespace BetterThanNothing
 			};
 		} vkSettings;
 
-		std::unique_ptr<Instance>	 vkInstance;
-		std::unique_ptr<Surface>	 vkSurface;
-		std::unique_ptr<Device>		 vkDevice;
-		std::unique_ptr<Queue>		 vkGraphicsQueue;
-		std::unique_ptr<Queue>		 vkPresentQueue;
+		std::unique_ptr<Instance>	 instance;
+		std::unique_ptr<Surface>	 surface;
+		std::unique_ptr<Device>		 device;
+		std::unique_ptr<Queue>		 graphicsQueue;
+		std::unique_ptr<Queue>		 presentQueue;
 		std::unique_ptr<Allocator>	 allocator;
 		std::unique_ptr<SwapChain>	 swapChain;
 		std::unique_ptr<CommandPool> commandPool;
-		std::unique_ptr<Pipeline>	 vkPipeline;
+		std::unique_ptr<Pipeline>	 defaultPipeline;
 
-		std::vector<VulkanFrame> vkFrames;
+		std::vector<VulkanFrame> frames;
 
 		std::unique_ptr<DescriptorPool> vkDescriptorPool;
 
