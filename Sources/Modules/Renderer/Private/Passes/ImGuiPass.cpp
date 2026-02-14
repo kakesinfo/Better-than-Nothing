@@ -18,14 +18,14 @@
 
 #include "Renderer/Passes/ImGuiPass.hpp"
 
-#include "RenderingApi/Old/VulkanContext.hpp"
-#include "RenderingApi/Old/VulkanImageView.hpp"
-#include "Renderer/RenderMetrics.hpp"
 #include "Module_Platform/Manager/WindowManager.hpp"
 #include "Module_Platform/Window.hpp"
+#include "Renderer/RenderMetrics.hpp"
 #include "RenderingApi/CommandBuffer.hpp"
 #include "RenderingApi/Device.hpp"
 #include "RenderingApi/Instance.hpp"
+#include "RenderingApi/Old/VulkanContext.hpp"
+#include "RenderingApi/Old/VulkanImageView.hpp"
 #include "RenderingApi/Queue.hpp"
 #include "RenderingApi/SwapChain.hpp"
 
@@ -35,17 +35,7 @@ namespace BetterThanNothing
 {
 	ImGuiPass::ImGuiPass(VulkanContext* context) : m_context(context)
 	{
-		const VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-												   {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-												   {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-												   {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-												   {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-												   {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-												   {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-												   {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-												   {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-												   {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-												   {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
+		const VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
 
 		VkDescriptorPoolCreateInfo pool_info = {};
 		pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -151,13 +141,12 @@ namespace BetterThanNothing
 		renderingInfo.layerCount = 1;
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAttachment;
-		// renderingInfo.pDepthAttachment = ... (Si besoin, sinon null)
 
-		commandBuffer->BeginRendering(&renderingInfo);
-
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer->Handle());
-
-		commandBuffer->EndRendering();
+		// clang-format off
+		commandBuffer->ExecuteRenderPass([&](CommandBuffer* cmd) {
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer->Handle());
+		}, renderingInfo);
+		// clang-format on
 
 		{
 			VkImageMemoryBarrier presentationBarrier{};
@@ -175,9 +164,7 @@ namespace BetterThanNothing
 			presentationBarrier.subresourceRange.baseArrayLayer = 0;
 			presentationBarrier.subresourceRange.layerCount = 1;
 
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-										   VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
-										   &presentationBarrier);
+			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
 		}
 	}
 }

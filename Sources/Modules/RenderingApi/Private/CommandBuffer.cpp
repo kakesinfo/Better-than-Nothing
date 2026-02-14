@@ -20,46 +20,138 @@
 
 namespace BetterThanNothing
 {
-	CommandBuffer::CommandBuffer(VkCommandBuffer commandBuffer) : m_commandBuffer(commandBuffer) {}
-
-	void CommandBuffer::Reset() const
+	CommandBuffer::CommandBuffer(const CommandBufferCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
-		if (m_isRecording)
-			throw std::runtime_error("Command buffer is recording");
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = m_createInfo.commandPool->Handle();
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = 1;
 
-		if (vkResetCommandBuffer(m_commandBuffer, 0) != VK_SUCCESS)
-			throw std::runtime_error("failed to reset command buffer!");
+		if (vkAllocateCommandBuffers(m_createInfo.device->Handle(), &allocInfo, &m_commandBuffer) != VK_SUCCESS)
+			throw std::runtime_error("failed to allocate command buffers!");
 	}
 
-	VulkanCommandBufferContext CommandBuffer::BeginRecording(const VkCommandBufferUsageFlags flags)
+	CommandBuffer::~CommandBuffer()
 	{
-		if (m_isRecording)
-			throw std::runtime_error("Command buffer is already recording");
+		if (m_commandBuffer != VK_NULL_HANDLE)
+			vkFreeCommandBuffers(m_createInfo.device->Handle(), m_createInfo.commandPool->Handle(), 1, &m_commandBuffer);
+	}
 
+	std::unique_ptr<CommandBuffer> CommandBuffer::Create(const CommandBufferCreateInfo& createInfo)
+	{
+		return std::make_unique<CommandBuffer>(createInfo);
+	}
+
+	void CommandBuffer::BeginRecording(const VkCommandBufferUsageFlags flags)
+	{
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = flags;
 
 		if (vkBeginCommandBuffer(m_commandBuffer, &beginInfo) != VK_SUCCESS)
 			throw std::runtime_error("failed to begin recording command buffer!");
-
-		m_isRecording = true;
-
-		return VulkanCommandBufferContext(m_commandBuffer);
 	}
 
 	void CommandBuffer::EndRecording()
 	{
-		if (!m_isRecording)
-			throw std::runtime_error("Command buffer is not recording");
-
 		if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS)
 			throw std::runtime_error("failed to record command buffer!");
-
-		m_isRecording = false;
 	}
 
-	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, std::uint32_t bufferSize) const
+	void CommandBuffer::ExecuteRenderPass(const std::function<void(CommandBuffer*)>& callback, const VkRenderingInfo& renderingInfo)
+	{
+		vkCmdBeginRendering(m_commandBuffer, &renderingInfo);
+
+		callback(this);
+
+		vkCmdEndRendering(m_commandBuffer);
+	}
+
+	void CommandBuffer::Reset()
+	{
+		if (vkResetCommandBuffer(m_commandBuffer, 0) != VK_SUCCESS)
+			throw std::runtime_error("failed to reset command buffer!");
+	}
+
+	void CommandBuffer::SetViewport(VkExtent2D extent, const float minDepth, const float maxDepth)
+	{
+		SetViewport(0, 0, extent, minDepth, maxDepth);
+	}
+
+	void CommandBuffer::SetViewport(const float x, const float y, VkExtent2D extent, const float minDepth, const float maxDepth)
+	{
+		SetViewport(x, y, static_cast<float>(extent.width), static_cast<float>(extent.height), minDepth, maxDepth);
+	}
+
+	void CommandBuffer::SetViewport(const float x, const float y, const float width, const float height, const float minDepth, const float maxDepth)
+	{
+		const VkViewport viewport = { .x = x, .y = y, .width = width, .height = height, .minDepth = minDepth, .maxDepth = maxDepth };
+		vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
+	}
+
+	void CommandBuffer::SetScissor(VkExtent2D extent)
+	{
+		SetScissor(0, 0, extent);
+	}
+
+	void CommandBuffer::SetScissor(const std::int32_t offsetX, const std::int32_t offsetY, VkExtent2D extent)
+	{
+		const VkRect2D scissor = { .offset = {offsetX, offsetY}, .extent = extent };
+		vkCmdSetScissor(m_commandBuffer, 0, 1, &scissor);
+	}
+
+	void CommandBuffer::BindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint)
+	{
+		vkCmdBindPipeline(m_commandBuffer, bindPoint, pipeline);
+	}
+
+	void CommandBuffer::BindVertexBuffers(std::uint32_t firstBinding, std::uint32_t bindingCount,
+													   const VkBuffer* buffers, const VkDeviceSize* offsets)
+	{
+		vkCmdBindVertexBuffers(m_commandBuffer, firstBinding, bindingCount, buffers, offsets);
+	}
+
+	void CommandBuffer::BindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
+	{
+		vkCmdBindIndexBuffer(m_commandBuffer, buffer, offset, indexType);
+	}
+
+	void CommandBuffer::BindDescriptorSets(const VkPipelineLayout layout, const std::uint32_t firstSet,
+														const std::uint32_t	   descriptorSetCount,
+														const VkDescriptorSet* descriptorSets,
+														const std::uint32_t	   dynamicOffsetCount,
+														const std::uint32_t*   dynamicOffsets)
+	{
+		BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet, descriptorSetCount, descriptorSets,
+						   dynamicOffsetCount, dynamicOffsets);
+	}
+
+	void CommandBuffer::BindDescriptorSets(const VkPipelineBindPoint pipelineBindPoint,
+														const VkPipelineLayout layout, const std::uint32_t firstSet,
+														const std::uint32_t	   descriptorSetCount,
+														const VkDescriptorSet* descriptorSets,
+														std::uint32_t		   dynamicOffsetCount,
+														const std::uint32_t*   dynamicOffsets)
+	{
+		vkCmdBindDescriptorSets(m_commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount,
+								descriptorSets, dynamicOffsetCount, dynamicOffsets);
+	}
+
+	void CommandBuffer::Draw(const std::uint32_t vertexCount, const std::uint32_t instanceCount,
+										  const std::uint32_t firstVertex, const std::uint32_t firstInstance)
+	{
+		vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+	}
+
+	void CommandBuffer::DrawIndexed(const std::uint32_t indexCount, const std::uint32_t instanceCount,
+												 const std::uint32_t firstIndex, const std::int32_t vertexOffset,
+												 const std::uint32_t firstInstance)
+	{
+		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	}
+
+	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, std::uint32_t bufferSize)
 	{
 		VkBufferCopy copyRegion{};
 		copyRegion.size = bufferSize;
@@ -67,7 +159,7 @@ namespace BetterThanNothing
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 	}
 
-	void CommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, std::uint32_t mipLevels) const
+	void CommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, std::uint32_t mipLevels)
 	{
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -89,7 +181,7 @@ namespace BetterThanNothing
 		{
 			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-			if (HasStencilComponent(format))
+			if (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT) // HasStencilComponent
 				barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
 		else
@@ -129,7 +221,7 @@ namespace BetterThanNothing
 		vkCmdPipelineBarrier(m_commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, std::uint32_t width, std::uint32_t height) const
+	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, std::uint32_t width, std::uint32_t height)
 	{
 		VkBufferImageCopy region{};
 		region.bufferOffset = 0;
@@ -152,59 +244,29 @@ namespace BetterThanNothing
 		vkCmdPipelineBarrier(m_commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, memoryBarriers, bufferMemoryBarrierCount, bufferMemoryBarriers, imageMemoryBarrierCount, imageMemoryBarriers);
 	}
 
-	void CommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter) const
+	void CommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter)
 	{
 		vkCmdBlitImage(m_commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 1, blit, filter);
 	}
 
-	void CommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CommandBuffer>&)>& callback, VulkanContext* context)
+	void CommandBuffer::PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, const std::uint32_t offset, const std::uint32_t size, const void* values)
 	{
-		const auto device = context->device->Handle();
-		const auto commandPool = context->commandPool->Handle();
-		const auto graphicsQueue = context->graphicsQueue->Handle();
-
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = commandPool;
-		allocInfo.commandBufferCount = 1;
-
-		VkCommandBuffer vkCommandBuffer;
-		vkAllocateCommandBuffers(device, &allocInfo, &vkCommandBuffer);
-
-		auto commandBuffer = std::make_unique<CommandBuffer>(vkCommandBuffer);
-
-		commandBuffer->BeginRecording(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		callback(commandBuffer);
-		commandBuffer->EndRecording();
-
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &vkCommandBuffer;
-
-		vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-		vkQueueWaitIdle(graphicsQueue);
-
-		vkFreeCommandBuffers(device, commandPool, 1, &vkCommandBuffer);
+		vkCmdPushConstants(m_commandBuffer, layout, stageFlags, offset, size, values);
 	}
 
 	void CommandBuffer::SingleTimeCommands(const std::function<void(std::unique_ptr<CommandBuffer>&)>& callback, Device* device, CommandPool* commandPool, Queue* graphicsQueue)
 	{
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = commandPool->Handle();
-		allocInfo.commandBufferCount = 1;
+		CommandBufferCreateInfo createInfo{};
+		createInfo.device = device;
+		createInfo.commandPool = commandPool;
 
-		VkCommandBuffer vkCommandBuffer;
-		vkAllocateCommandBuffers(device->Handle(), &allocInfo, &vkCommandBuffer);
-
-		auto commandBuffer = std::make_unique<CommandBuffer>(vkCommandBuffer);
+		auto commandBuffer = std::make_unique<CommandBuffer>(createInfo);
 
 		commandBuffer->BeginRecording(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 		callback(commandBuffer);
 		commandBuffer->EndRecording();
+
+		const auto vkCommandBuffer = commandBuffer->Handle();
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -213,13 +275,6 @@ namespace BetterThanNothing
 
 		vkQueueSubmit(graphicsQueue->Handle(), 1, &submitInfo, VK_NULL_HANDLE);
 		vkQueueWaitIdle(graphicsQueue->Handle());
-
-		vkFreeCommandBuffers(device->Handle(), commandPool->Handle(), 1, &vkCommandBuffer);
-	}
-
-	bool CommandBuffer::HasStencilComponent(VkFormat format)
-	{
-		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
 
 	VkCommandBuffer CommandBuffer::Handle() const

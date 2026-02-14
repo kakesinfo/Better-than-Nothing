@@ -18,11 +18,11 @@
 
 #include "Renderer/Passes/ForwardPass.hpp"
 
+#include "Renderer/DrawStream.hpp"
+#include "RenderingApi/CommandBuffer.hpp"
 #include "RenderingApi/Old/VulkanCommandBufferContext.hpp"
 #include "RenderingApi/Old/VulkanContext.hpp"
 #include "RenderingApi/Old/VulkanImageView.hpp"
-#include "Renderer/DrawStream.hpp"
-#include "RenderingApi/CommandBuffer.hpp"
 #include "RenderingApi/SwapChain.hpp"
 
 namespace BetterThanNothing
@@ -50,9 +50,7 @@ namespace BetterThanNothing
 			barrier.subresourceRange.baseArrayLayer = 0;
 			barrier.subresourceRange.layerCount = 1;
 
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-										   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1,
-										   &barrier);
+			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 		}
 
 		VkRenderingAttachmentInfo colorAttachment{};
@@ -83,61 +81,49 @@ namespace BetterThanNothing
 		renderingInfo.pColorAttachments = &colorAttachment;
 		renderingInfo.pDepthAttachment = &depthAttachment;
 
-		commandBuffer->BeginRendering(&renderingInfo);
+		commandBuffer->ExecuteRenderPass(
+			[&](CommandBuffer* cmd) {
+				cmd->SetViewport(0, 0, m_context->swapChain->GetExtent(), 0, 1);
+				cmd->SetScissor(0, 0, m_context->swapChain->GetExtent());
 
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(m_context->swapChain->GetExtent().width);
-		viewport.height = static_cast<float>(m_context->swapChain->GetExtent().height);
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		commandBuffer->SetViewport(&viewport);
+				VkPipeline lastPipeline = VK_NULL_HANDLE;
+				bool	   boundGlobalDescriptor = false;
+				bool	   boundPointLightDescriptor = false;
 
-		VkRect2D scissor{};
-		scissor.offset = {0, 0};
-		scissor.extent = m_context->swapChain->GetExtent();
-		commandBuffer->SetScissor(&scissor);
+				for (std::uint32_t i = 0; i < drawStream.Size(); i++)
+				{
+					const DrawCommand& drawCommand = drawStream[i];
 
-		VkPipeline lastPipeline = VK_NULL_HANDLE;
-		bool	   boundGlobalDescriptor = false;
-		bool	   boundPointLightDescriptor = false;
+					if (lastPipeline != drawCommand.pipeline)
+					{
+						commandBuffer->BindPipeline(drawCommand.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+						lastPipeline = drawCommand.pipeline;
+					}
 
-		for (std::uint32_t i = 0; i < drawStream.Size(); i++)
-		{
-			const DrawCommand& drawCommand = drawStream[i];
+					if (!boundGlobalDescriptor)
+					{
+						commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 0, 1, &drawCommand.globalDescriptorSet, 0, nullptr);
+						boundGlobalDescriptor = true;
+					}
 
-			if (lastPipeline != drawCommand.pipeline)
-			{
-				commandBuffer->BindPipeline(drawCommand.pipeline);
-				lastPipeline = drawCommand.pipeline;
-			}
+					if (!boundPointLightDescriptor)
+					{
+						commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 3, 1, &drawCommand.pointLightDescriptorSet, 0, nullptr);
+						boundPointLightDescriptor = true;
+					}
 
-			if (!boundGlobalDescriptor)
-			{
-				commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 0, 1, &drawCommand.globalDescriptorSet);
-				boundGlobalDescriptor = true;
-			}
+					commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 1, 1, &drawCommand.dynamicDescriptorSet, 1, &drawCommand.dynamicOffset);
+					commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 2, 1, &drawCommand.samplerDescriptorSet, 0, nullptr);
 
-			if (!boundPointLightDescriptor)
-			{
-				commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 3, 1, &drawCommand.pointLightDescriptorSet);
-				boundPointLightDescriptor = true;
-			}
+					const VkBuffer		   vertexBuffers[] = {drawCommand.vertexBuffer};
+					constexpr VkDeviceSize offsets[] = {0};
+					commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
+					commandBuffer->BindIndexBuffer(drawCommand.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-			commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 1, 1, &drawCommand.dynamicDescriptorSet, 1,
-											  &drawCommand.dynamicOffset);
-
-			commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 2, 1, &drawCommand.samplerDescriptorSet);
-
-			const VkBuffer		   vertexBuffers[] = {drawCommand.vertexBuffer};
-			constexpr VkDeviceSize offsets[] = {0};
-			commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-			commandBuffer->BindIndexBuffer(drawCommand.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-			commandBuffer->DrawIndexed(drawCommand.indexCount, 1, 0, 0, 0);
-		}
-
-		commandBuffer->EndRendering();
+					commandBuffer->DrawIndexed(drawCommand.indexCount, 1, 0, 0, 0);
+				}
+			},
+			renderingInfo
+		);
 	}
 }

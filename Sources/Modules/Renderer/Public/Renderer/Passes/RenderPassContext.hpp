@@ -20,12 +20,12 @@
 
 namespace BetterThanNothing
 {
-	class VulkanCommandBufferContext;
+	class CommandBuffer;
 
 	struct RenderPassContext
 	{
-		VulkanCommandBufferContext* commandBuffer;
-		std::uint32_t				imageIndex;
-		std::uint32_t				currentFrame;
+		CommandBuffer* commandBuffer;
+		std::uint32_t  imageIndex;
+		std::uint32_t  currentFrame;
 	};
 }

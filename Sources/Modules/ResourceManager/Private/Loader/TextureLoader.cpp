@@ -75,7 +75,7 @@ namespace BetterThanNothing
 				// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB,
 				// VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 			},
-			m_context);
+			m_context->device.get(), m_context->commandPool.get(), m_context->graphicsQueue.get());
 
 		CreateMipmaps(image->Handle(), VK_FORMAT_R8G8B8A8_UNORM, width, height, mipLevels);
 
@@ -163,7 +163,7 @@ namespace BetterThanNothing
 				commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
 											   0, nullptr, 0, nullptr, 1, &barrier);
 			},
-			m_context);
+			m_context->device.get(), m_context->commandPool.get(), m_context->graphicsQueue.get());
 	}
 
 	std::unique_ptr<VulkanSampler> TextureLoader::CreateTextureSampler(std::uint32_t mipLevels)
