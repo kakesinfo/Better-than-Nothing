@@ -192,7 +192,7 @@ namespace BetterThanNothing
 	{
 		const auto& currentFrame = m_context->frames[m_currentFrame];
 
-		auto cmdContext = currentFrame.commandBuffer->BeginRecording();
+		currentFrame.commandBuffer->BeginRecording();
 
 		auto directionalLight = renderList->GetDirectionalLight();
 
@@ -241,7 +241,7 @@ namespace BetterThanNothing
 		}
 
 		RenderPassContext renderPassContext{};
-		renderPassContext.commandBuffer = &cmdContext;
+		renderPassContext.commandBuffer = currentFrame.commandBuffer.get();
 		renderPassContext.imageIndex = imageIndex;
 		renderPassContext.currentFrame = m_currentFrame;
 
@@ -263,23 +263,10 @@ namespace BetterThanNothing
 
 	void Renderer::CreateCommandBuffers() const
 	{
-		const auto			device = m_context->device->Handle();
 		const std::uint32_t count = m_context->settings.maxFramesInFlight;
 
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = m_context->commandPool->Handle();
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = 1;
-
 		for (std::uint32_t i = 0; i < count; i++)
-		{
-			VkCommandBuffer commandBuffer;
-			if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS)
-				throw std::runtime_error("failed to allocate command buffers!");
-
-			m_context->frames[i].commandBuffer = std::make_unique<CommandBuffer>(commandBuffer);
-		}
+			m_context->frames[i].commandBuffer = CommandBuffer::Create({m_context->device.get(), m_context->commandPool.get()});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
 	}
@@ -302,31 +289,23 @@ namespace BetterThanNothing
 	void Renderer::CreateDescriptorSetLayout()
 	{
 		VkDescriptorSetLayoutBinding globalUniformLayoutBinding{};
-		globalUniformLayoutBinding.binding = 0;
 		globalUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		globalUniformLayoutBinding.descriptorCount = 1;
-		globalUniformLayoutBinding.pImmutableSamplers = nullptr;
 		globalUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutBinding dynamicUniformLayoutBinding{};
-		dynamicUniformLayoutBinding.binding = 0;
 		dynamicUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 		dynamicUniformLayoutBinding.descriptorCount = 1;
-		dynamicUniformLayoutBinding.pImmutableSamplers = nullptr;
 		dynamicUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-		samplerLayoutBinding.binding = 0;
 		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		samplerLayoutBinding.descriptorCount = 1;
-		samplerLayoutBinding.pImmutableSamplers = nullptr;
 		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutBinding pointLightLayoutBinding{};
-		pointLightLayoutBinding.binding = 0;
 		pointLightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		pointLightLayoutBinding.descriptorCount = 1;
-		pointLightLayoutBinding.pImmutableSamplers = nullptr;
 		pointLightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		auto globalBindings = {globalUniformLayoutBinding};
