@@ -32,7 +32,6 @@
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>
-#include <RenderingApi/Manager/BufferManager.hpp>
 
 namespace BetterThanNothing
 {
@@ -218,12 +217,12 @@ namespace BetterThanNothing
 
 		const std::uint32_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
 		const void*			vertexBufferData = mesh.vertices.data();
-		meshGpuData->vertexBuffer = BufferManager::CreateVertexBuffer(vertexBufferData, vertexBufferSize);
+		meshGpuData->vertexBuffer = std::make_unique<VulkanVertexBuffer>(m_context, vertexBufferSize, vertexBufferData);
 		meshGpuData->vertexCount = static_cast<std::uint32_t>(mesh.vertices.size());
 
 		const std::uint32_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
 		const void*			indexBufferData = mesh.indices.data();
-		meshGpuData->indexBuffer = BufferManager::CreateIndexBuffer(indexBufferData, indexBufferSize);
+		meshGpuData->indexBuffer = std::make_unique<VulkanIndexBuffer>(m_context, indexBufferSize, indexBufferData);
 		meshGpuData->indexCount = static_cast<std::uint32_t>(mesh.indices.size());
 
 		m_meshes[meshId] = std::move(meshGpuData);

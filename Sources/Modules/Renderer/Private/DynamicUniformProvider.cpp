@@ -22,7 +22,6 @@
 #include <RenderingApi/Old/VulkanContext.hpp>
 #include <Module_Base/Logger.hpp>
 #include <RenderingApi/Device.hpp>
-#include <RenderingApi/Manager/BufferManager.hpp>
 
 namespace BetterThanNothing
 {
@@ -36,7 +35,7 @@ namespace BetterThanNothing
 
 		for (std::uint32_t i = 0; i < count; i++)
 		{
-			m_context->frames[i].dynamicUniformBuffer = BufferManager::CreateUniformBuffer(bufferSize);
+			m_context->frames[i].dynamicUniformBuffer = std::make_unique<VulkanUniformBuffer>(m_context, bufferSize);
 		}
 
 		Logger::Log<SUCCESS>("Vulkan dynamic uniforms: ok (count: {})", count);

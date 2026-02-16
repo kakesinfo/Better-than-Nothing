@@ -50,8 +50,6 @@ namespace BetterThanNothing
 	{
 		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
 
-		BufferManager::Initialize(m_context);
-
 		Logger::Log<INFO>("Buffering mode: {}", m_context->settings.maxFramesInFlight);
 		Logger::Log<INFO>("VSync: {}", m_context->settings.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
 
@@ -108,7 +106,6 @@ namespace BetterThanNothing
 	Renderer::~Renderer()
 	{
 		m_context->device->WaitIdle();
-		BufferManager::Shutdown();
 	}
 
 	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera)
@@ -401,7 +398,7 @@ namespace BetterThanNothing
 
 		for (std::uint32_t i = 0; i < count; i++)
 		{
-			m_context->frames[i].pointLightBuffer = BufferManager::CreateStorageBuffer(bufferSize);
+			m_context->frames[i].pointLightBuffer = std::make_unique<VulkanStorageBuffer>(m_context, bufferSize);
 		}
 
 		Logger::Log<SUCCESS>("Point light buffers: ok (count: {})", count);
