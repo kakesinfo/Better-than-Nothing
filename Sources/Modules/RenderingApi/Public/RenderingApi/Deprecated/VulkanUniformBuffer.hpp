@@ -18,24 +18,30 @@
 
 #pragma once
 
+#include "VulkanBuffer.hpp"
+
 namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanSampler
+	/// @deprecated Will be replaced
+	class VulkanUniformBuffer final : public VulkanBuffer
 	{
 	public:
-		explicit VulkanSampler(VulkanContext* context, const VkSamplerCreateInfo* samplerCreateInfo);
-		~VulkanSampler();
+		VulkanUniformBuffer(VulkanContext* context, VkDeviceSize size);
 
-		VulkanSampler(const VulkanSampler&) = delete;
-		VulkanSampler& operator=(const VulkanSampler&) = delete;
+		template <typename T>
+		void Update(const T& uboData)
+		{
+			Write(&uboData, sizeof(T));
+		}
 
-		[[nodiscard]]
-		VkSampler Handle() const;
+		template <typename T>
+		void Update(const T& uboData, const std::uint32_t offset, const std::uint32_t alignment)
+		{
+			Write(&uboData, sizeof(T), offset, alignment);
+		}
 
-	private:
-		VulkanContext* m_context = nullptr;
-		VkSampler	   m_sampler = VK_NULL_HANDLE;
+		void* GetData() const;
 	};
 }

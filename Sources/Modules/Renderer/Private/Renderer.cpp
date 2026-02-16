@@ -35,7 +35,7 @@
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
-#include <RenderingApi/Old/VertexInputDescription.hpp>
+#include <RenderingApi/Deprecated/VertexInputDescription.hpp>
 
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>

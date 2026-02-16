@@ -25,6 +25,7 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
+	/// @deprecated Will be replaced by BufferHandle
 	class CVulkanBufferError final : public std::runtime_error
 	{
 	public:
