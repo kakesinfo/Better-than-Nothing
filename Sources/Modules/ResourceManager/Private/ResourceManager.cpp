@@ -27,11 +27,11 @@
 #include <future>
 #include <tiny_obj_loader.h>
 
-#include <RenderingApi/Old/VulkanContext.hpp>
-#include <RenderingApi/Old/VulkanShaderModule.hpp>
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>
+#include <RenderingApi/Deprecated/VulkanContext.hpp>
+#include <RenderingApi/Deprecated/VulkanShaderModule.hpp>
 
 namespace BetterThanNothing
 {
@@ -133,8 +133,7 @@ namespace BetterThanNothing
 
 				if (!attrib.texcoords.empty() && index.texcoord_index != -1)
 				{
-					vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0],
-								 1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
+					vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
 				}
 				else
 				{
@@ -148,8 +147,7 @@ namespace BetterThanNothing
 					auto yNormal = attrib.normals[3 * index.normal_index + 1];
 					auto zNormal = attrib.normals[3 * index.normal_index + 2];
 
-					vertex.normal =
-						preTransform ? Vector3{xNormal, yNormal, zNormal} : Vector3{xNormal, zNormal, -yNormal};
+					vertex.normal = preTransform ? Vector3{xNormal, yNormal, zNormal} : Vector3{xNormal, zNormal, -yNormal};
 				}
 				else
 				{

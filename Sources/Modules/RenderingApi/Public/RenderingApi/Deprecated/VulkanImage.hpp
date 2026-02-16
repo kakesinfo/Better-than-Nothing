@@ -18,17 +18,28 @@
 
 #pragma once
 
-#include "VulkanBuffer.hpp"
-
 namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanStorageBuffer : public VulkanBuffer
+	/// @deprecated Will be replaced by ImageHandle
+	class VulkanImage
 	{
 	public:
-		VulkanStorageBuffer(VulkanContext* context, VkDeviceSize size);
+		VulkanImage(VulkanContext* context, const VkImageCreateInfo* imageCreateInfo);
+		~VulkanImage();
 
-		void* GetMappedData() const;
+		VulkanImage(const VulkanImage&) = delete;
+		VulkanImage& operator=(const VulkanImage&) = delete;
+
+		[[nodiscard]]
+		VkImage Handle() const;
+
+	private:
+		VulkanContext* m_context;
+
+		VkImage			  m_image = VK_NULL_HANDLE;
+		VmaAllocation	  m_allocation = VK_NULL_HANDLE;
+		VmaAllocationInfo m_allocationInfo{};
 	};
 }

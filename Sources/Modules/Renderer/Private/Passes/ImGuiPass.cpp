@@ -22,14 +22,11 @@
 #include "Module_Platform/Window.hpp"
 #include "Renderer/RenderMetrics.hpp"
 #include "RenderingApi/CommandBuffer.hpp"
+#include "RenderingApi/Deprecated/VulkanContext.hpp"
 #include "RenderingApi/Device.hpp"
 #include "RenderingApi/Instance.hpp"
-#include "RenderingApi/Old/VulkanContext.hpp"
-#include "RenderingApi/Old/VulkanImageView.hpp"
 #include "RenderingApi/Queue.hpp"
 #include "RenderingApi/SwapChain.hpp"
-
-#include <RenderingApi/Old/VulkanCommandBufferContext.hpp>
 
 namespace BetterThanNothing
 {
@@ -71,7 +68,6 @@ namespace BetterThanNothing
 		initInfo.Queue = m_context->graphicsQueue->Handle();
 		initInfo.DescriptorPool = m_imguiPool;
 		initInfo.MinImageCount = m_context->swapChain->GetImageCount();
-		initInfo.ImageCount = m_context->swapChain->GetImageCount();
 		initInfo.ImageCount = m_context->swapChain->GetImageCount();
 		// Note: Stencil format can be added if needed
 		initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;

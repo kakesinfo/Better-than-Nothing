@@ -24,9 +24,10 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanIndexBuffer : public VulkanBuffer
+	/// @deprecated Will be replaced by BufferHandle
+	class VulkanVertexBuffer : public VulkanBuffer
 	{
 	public:
-		VulkanIndexBuffer(VulkanContext* context, VkDeviceSize size, const void* data = nullptr);
+		VulkanVertexBuffer(VulkanContext* context, VkDeviceSize size, const void* data = nullptr);
 	};
 }

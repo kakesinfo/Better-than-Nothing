@@ -22,23 +22,21 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 
-	class VulkanImage
+	/// @deprecated Will be replaced by SamplerHandle
+	class VulkanSampler
 	{
 	public:
-		VulkanImage(VulkanContext* context, const VkImageCreateInfo* imageCreateInfo);
-		~VulkanImage();
+		explicit VulkanSampler(VulkanContext* context, const VkSamplerCreateInfo* samplerCreateInfo);
+		~VulkanSampler();
 
-		VulkanImage(const VulkanImage&) = delete;
-		VulkanImage& operator=(const VulkanImage&) = delete;
+		VulkanSampler(const VulkanSampler&) = delete;
+		VulkanSampler& operator=(const VulkanSampler&) = delete;
 
 		[[nodiscard]]
-		VkImage Handle() const;
+		VkSampler Handle() const;
 
 	private:
-		VulkanContext* m_context;
-
-		VkImage			  m_image = VK_NULL_HANDLE;
-		VmaAllocation	  m_allocation = VK_NULL_HANDLE;
-		VmaAllocationInfo m_allocationInfo{};
+		VulkanContext* m_context = nullptr;
+		VkSampler	   m_sampler = VK_NULL_HANDLE;
 	};
 }

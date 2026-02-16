@@ -20,9 +20,7 @@
 
 #include "Renderer/DrawStream.hpp"
 #include "RenderingApi/CommandBuffer.hpp"
-#include "RenderingApi/Old/VulkanCommandBufferContext.hpp"
-#include "RenderingApi/Old/VulkanContext.hpp"
-#include "RenderingApi/Old/VulkanImageView.hpp"
+#include "RenderingApi/Deprecated/VulkanContext.hpp"
 #include "RenderingApi/SwapChain.hpp"
 
 namespace BetterThanNothing

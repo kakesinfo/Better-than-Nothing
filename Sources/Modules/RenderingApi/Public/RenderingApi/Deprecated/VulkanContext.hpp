@@ -35,6 +35,7 @@ namespace BetterThanNothing
 	class Pipeline;
 	struct VulkanFrame;
 
+	/// @deprecated Will be removed
 	struct VulkanContext
 	{
 		struct

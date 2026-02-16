@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../Public/RenderingApi/Old/VertexInputDescription.hpp"
+#include "RenderingApi/Deprecated/VertexInputDescription.hpp"
 #include "RenderingApi.hpp"
 
 #include <Module_Base/Logger.hpp>

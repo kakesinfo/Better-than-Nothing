@@ -35,7 +35,7 @@
 #include <Renderer/Camera.hpp>
 #include <Renderer/RenderList.hpp>
 #include <Renderer/Renderer.hpp>
-#include <RenderingApi/Old/VulkanContext.hpp>
+#include <RenderingApi/Deprecated/VulkanContext.hpp>
 
 #include "Renderer/RenderMetrics.hpp"
 

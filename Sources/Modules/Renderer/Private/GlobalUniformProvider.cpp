@@ -19,8 +19,8 @@
 #include "Renderer/GlobalUniformProvider.hpp"
 #include "Renderer/Data/GlobalUniformData.hpp"
 
-#include <RenderingApi/Old/VulkanContext.hpp>
 #include <Module_Base/Logger.hpp>
+#include <RenderingApi/Deprecated/VulkanContext.hpp>
 
 namespace BetterThanNothing
 {
