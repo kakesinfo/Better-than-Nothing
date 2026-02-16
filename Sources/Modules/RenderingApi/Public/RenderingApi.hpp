@@ -50,5 +50,3 @@
 #include "RenderingApi/Old/VertexInputDescription.hpp"
 
 #include "RenderingApi/Data/ShaderGpuData.hpp"
-
-#include "RenderingApi/Manager/BufferManager.hpp"

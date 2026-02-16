@@ -36,7 +36,6 @@ namespace BetterThanNothing
 
 	class GlobalUniformProvider;
 	class DynamicUniformProvider;
-	class BufferManager;
 	class Camera;
 
 	struct VulkanContext;
@@ -81,7 +80,6 @@ namespace BetterThanNothing
 		ResourceManager*						m_resourceManager = nullptr;
 		std::vector<VulkanFrame>				m_frames;
 		std::uint32_t							m_currentFrame = 0;
-		std::unique_ptr<BufferManager>			m_bufferFactory = nullptr;
 		std::unique_ptr<GlobalUniformProvider>	m_globalUniformProvider = nullptr;
 		std::unique_ptr<DynamicUniformProvider> m_dynamicUniformProvider = nullptr;
 		std::unique_ptr<RenderGraph>			m_renderGraph = nullptr;

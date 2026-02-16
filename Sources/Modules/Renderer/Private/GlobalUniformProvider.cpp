@@ -21,7 +21,6 @@
 
 #include <RenderingApi/Old/VulkanContext.hpp>
 #include <Module_Base/Logger.hpp>
-#include <RenderingApi/Manager/BufferManager.hpp>
 
 namespace BetterThanNothing
 {
@@ -30,7 +29,7 @@ namespace BetterThanNothing
 		const std::uint32_t count = m_context->settings.maxFramesInFlight;
 		for (std::uint32_t i = 0; i < count; i++)
 		{
-			m_context->frames[i].globalUniformBuffer = BufferManager::CreateUniformBuffer<GlobalUniformData>();
+			m_context->frames[i].globalUniformBuffer = std::make_unique<VulkanUniformBuffer>(m_context, sizeof(GlobalUniformData));
 		}
 
 		Logger::Log<SUCCESS>("Vulkan global uniforms: ok (count: {})", count);
