@@ -24,7 +24,7 @@ namespace BetterThanNothing
 	{
 		bool					 enableValidation = true;
 		std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
-		std::uint32_t			 apiVersion = VK_API_VERSION_1_3;
+		std::uint32_t			 apiVersion = VK_API_VERSION_1_4;
 	};
 
 	class Instance
