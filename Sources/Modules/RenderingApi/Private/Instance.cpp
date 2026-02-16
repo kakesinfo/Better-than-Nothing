@@ -19,6 +19,7 @@
 #include "RenderingApi.hpp"
 
 #include <Module_Base/Logger.hpp>
+#include <algorithm>
 
 namespace BetterThanNothing
 {
@@ -42,7 +43,7 @@ namespace BetterThanNothing
 
 		// Prepare extensions
 		const auto extensions = GetRequiredExtensions();
-		vkCreateInfo.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+		vkCreateInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 		vkCreateInfo.ppEnabledExtensionNames = extensions.data();
 
 		// Prepare validation layers
@@ -52,7 +53,7 @@ namespace BetterThanNothing
 			PopulateDebugMessengerCreateInfo(&debugCreateInfo);
 
 			const auto& validationLayers = m_createInfo.validationLayers;
-			vkCreateInfo.enabledLayerCount = static_cast<std::uint32_t>(validationLayers.size());
+			vkCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 			vkCreateInfo.ppEnabledLayerNames = validationLayers.data();
 
 			vkCreateInfo.pNext = &debugCreateInfo;
@@ -84,7 +85,7 @@ namespace BetterThanNothing
 
 	bool Instance::CheckValidationLayerSupport() const noexcept
 	{
-		std::uint32_t layerCount;
+		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
 		std::vector<VkLayerProperties> availableLayers(layerCount);
@@ -99,7 +100,7 @@ namespace BetterThanNothing
 
 	std::vector<const char*> Instance::GetRequiredExtensions() const noexcept
 	{
-		std::uint32_t	   sdlExtensionCount = 0;
+		uint32_t		   sdlExtensionCount = 0;
 		const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
 
 		std::vector extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
@@ -189,7 +190,7 @@ namespace BetterThanNothing
 			function(instance, debugMessenger, allocator);
 	}
 
-	std::uint32_t Instance::GetApiVersion() const noexcept
+	uint32_t Instance::GetApiVersion() const noexcept
 	{
 		return m_createInfo.apiVersion;
 	}

@@ -37,7 +37,7 @@ namespace BetterThanNothing
 		}
 
 		template <typename T>
-		void Update(const T& uboData, const std::uint32_t offset, const std::uint32_t alignment)
+		void Update(const T& uboData, const uint32_t offset, const uint32_t alignment)
 		{
 			Write(&uboData, sizeof(T), offset, alignment);
 		}

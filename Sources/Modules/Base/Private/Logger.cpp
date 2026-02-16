@@ -25,8 +25,8 @@
 
 namespace BetterThanNothing
 {
-	std::uint8_t Logger::s_currentLogLevel = INFO;
-	std::mutex	 Logger::s_printMutex{};
+	uint8_t	   Logger::s_currentLogLevel = INFO;
+	std::mutex Logger::s_printMutex{};
 
 	std::string Logger::GetTimestamp()
 	{
@@ -55,7 +55,7 @@ namespace BetterThanNothing
 		return s;
 	}
 
-	void Logger::Print(const std::uint8_t level, const std::source_location& location, const std::string_view message)
+	void Logger::Print(const uint8_t level, const std::source_location& location, const std::string_view message)
 	{
 		if (level < s_currentLogLevel)
 			return;

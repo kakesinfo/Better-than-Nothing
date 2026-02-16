@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <memory>
+
 namespace BetterThanNothing
 {
 	class UpdateContext;

@@ -31,7 +31,7 @@ namespace BetterThanNothing
 		~GlobalUniformProvider() = default;
 
 		template <typename T>
-		T* Get(const std::uint32_t frameIndex) const
+		T* Get(const uint32_t frameIndex) const
 		{
 			return static_cast<T*>(m_context->frames[frameIndex].globalUniformBuffer->GetData());
 		}

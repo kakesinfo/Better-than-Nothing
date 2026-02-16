@@ -22,7 +22,7 @@
 
 namespace BetterThanNothing
 {
-		Device::Device(const DeviceCreateInfo& createInfo) : m_createInfo(createInfo)
+	Device::Device(const DeviceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
 		PickPhysicalDevice();
 		GetPhysicalDeviceProperties();
@@ -42,7 +42,7 @@ namespace BetterThanNothing
 
 	void Device::PickPhysicalDevice()
 	{
-		std::uint32_t deviceCount = 0;
+		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(m_createInfo.instance->Handle(), &deviceCount, nullptr);
 
 		if (deviceCount == 0)
@@ -88,7 +88,7 @@ namespace BetterThanNothing
 		std::set uniqueQueueFamilies = {m_queueFamilyIndices.graphicsFamily.value(), m_queueFamilyIndices.presentFamily.value()};
 
 		float queuePriority = 1.0f;
-		for (std::uint32_t queueFamily : uniqueQueueFamilies)
+		for (uint32_t queueFamily : uniqueQueueFamilies)
 		{
 			VkDeviceQueueCreateInfo queueCreateInfo{};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -108,7 +108,7 @@ namespace BetterThanNothing
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		createInfo.queueCreateInfoCount = static_cast<std::uint32_t>(queueCreateInfos.size());
+		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
 		createInfo.pEnabledFeatures = &deviceFeatures;
 		createInfo.pNext = &dynamicRenderingFeatures;
@@ -116,7 +116,7 @@ namespace BetterThanNothing
 		createInfo.ppEnabledLayerNames = nullptr;
 
 		const auto& deviceExtensions = m_createInfo.deviceExtensions;
-		createInfo.enabledExtensionCount = static_cast<std::uint32_t>(deviceExtensions.size());
+		createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 		if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
@@ -127,7 +127,7 @@ namespace BetterThanNothing
 
 	std::unique_ptr<Queue> Device::CreateGraphicsQueue() const
 	{
-		const std::uint32_t familyIndex = m_queueFamilyIndices.graphicsFamily.value();
+		const uint32_t familyIndex = m_queueFamilyIndices.graphicsFamily.value();
 
 		VkQueue graphicsQueue;
 		vkGetDeviceQueue(m_device, familyIndex, 0, &graphicsQueue);
@@ -139,7 +139,7 @@ namespace BetterThanNothing
 
 	std::unique_ptr<Queue> Device::CreatePresentQueue() const
 	{
-		const std::uint32_t familyIndex = m_queueFamilyIndices.presentFamily.value();
+		const uint32_t familyIndex = m_queueFamilyIndices.presentFamily.value();
 
 		VkQueue presentQueue;
 		vkGetDeviceQueue(m_device, familyIndex, 0, &presentQueue);
@@ -203,7 +203,7 @@ namespace BetterThanNothing
 	{
 		auto deviceExtensions = m_createInfo.deviceExtensions;
 
-		std::uint32_t extensionCount;
+		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -221,7 +221,7 @@ namespace BetterThanNothing
 
 	QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice device) const
 	{
-		std::uint32_t queueFamilyCount = 0;
+		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
@@ -229,7 +229,7 @@ namespace BetterThanNothing
 
 		QueueFamilyIndices indices;
 
-		std::uint32_t i = 0;
+		uint32_t i = 0;
 		for (const auto& queueFamily : queueFamilies)
 		{
 			// Check if the queue family supports graphics queue
@@ -258,7 +258,7 @@ namespace BetterThanNothing
 		SwapChainSupportDetails details;
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
-		std::uint32_t formatCount;
+		uint32_t formatCount;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
 
 		if (formatCount != 0)
@@ -267,7 +267,7 @@ namespace BetterThanNothing
 			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
 		}
 
-		std::uint32_t presentModeCount;
+		uint32_t presentModeCount;
 		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 
 		if (presentModeCount != 0)
@@ -309,7 +309,7 @@ namespace BetterThanNothing
 		throw std::runtime_error("Failed to find a suitable GPU");
 	}
 
-	std::string Device::GetVendorById(std::uint32_t vendorId)
+	std::string Device::GetVendorById(uint32_t vendorId)
 	{
 		if (vendorId == 0x1002)
 			return "AMD";
@@ -351,7 +351,7 @@ namespace BetterThanNothing
 		return m_apiVersion;
 	}
 
-	std::uint32_t Device::GetMinUniformBufferOffsetAlignment() const
+	uint32_t Device::GetMinUniformBufferOffsetAlignment() const
 	{
 		return m_minUniformBufferOffsetAlignment;
 	}
@@ -366,17 +366,17 @@ namespace BetterThanNothing
 		return m_maxAnisotropy;
 	}
 
-	std::uint32_t Device::GetMaxTexture2DSize() const
+	uint32_t Device::GetMaxTexture2DSize() const
 	{
 		return m_maxTexture2DSize;
 	}
 
-	std::uint32_t Device::GetMaxTexture3DSize() const
+	uint32_t Device::GetMaxTexture3DSize() const
 	{
 		return m_maxTexture3DSize;
 	}
 
-	std::uint32_t Device::GetMaxTextureCubeSize() const
+	uint32_t Device::GetMaxTextureCubeSize() const
 	{
 		return m_maxTextureCubeSize;
 	}

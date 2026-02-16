@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <memory>
+#include <stdexcept>
+
 namespace BetterThanNothing
 {
 	class Window;
@@ -30,11 +33,11 @@ namespace BetterThanNothing
 
 	struct WindowManagerParams
 	{
-		std::string	  title;
-		std::uint32_t width = 0;
-		std::uint32_t height = 0;
-		bool		  fullscreen = false;
-		bool		  resizable = false;
+		std::string title;
+		uint32_t	width = 0;
+		uint32_t	height = 0;
+		bool		fullscreen = false;
+		bool		resizable = false;
 	};
 
 	class WindowManager

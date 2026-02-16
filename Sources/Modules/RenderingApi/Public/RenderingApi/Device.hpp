@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <optional>
+
 namespace BetterThanNothing
 {
 	class Instance;
@@ -26,8 +28,8 @@ namespace BetterThanNothing
 
 	struct QueueFamilyIndices
 	{
-		std::optional<std::uint32_t> graphicsFamily;
-		std::optional<std::uint32_t> presentFamily;
+		std::optional<uint32_t> graphicsFamily;
+		std::optional<uint32_t> presentFamily;
 
 		[[nodiscard]] bool IsComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
 	};
@@ -85,7 +87,7 @@ namespace BetterThanNothing
 		[[nodiscard]] SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 		bool								  IsDeviceSuitable(VkPhysicalDevice device) const noexcept;
 		[[nodiscard]] VkPhysicalDevice		  FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const;
-		[[nodiscard]] static std::string	  GetVendorById(std::uint32_t vendorId);
+		[[nodiscard]] static std::string	  GetVendorById(uint32_t vendorId);
 
 	public:
 		[[nodiscard]] SwapChainSupportDetails GetSwapChainSupport() const;
@@ -93,12 +95,12 @@ namespace BetterThanNothing
 		[[nodiscard]] std::string			  GetVendorName() const;
 		[[nodiscard]] std::string			  GetDeviceName() const;
 		[[nodiscard]] std::string			  GetApiVersion() const;
-		[[nodiscard]] std::uint32_t			  GetMinUniformBufferOffsetAlignment() const;
+		[[nodiscard]] uint32_t				  GetMinUniformBufferOffsetAlignment() const;
 		[[nodiscard]] VkSampleCountFlagBits	  GetMaxMsaaSamples() const;
 		[[nodiscard]] float					  GetMaxAnisotropy() const;
-		[[nodiscard]] std::uint32_t			  GetMaxTexture2DSize() const;
-		[[nodiscard]] std::uint32_t			  GetMaxTexture3DSize() const;
-		[[nodiscard]] std::uint32_t			  GetMaxTextureCubeSize() const;
+		[[nodiscard]] uint32_t				  GetMaxTexture2DSize() const;
+		[[nodiscard]] uint32_t				  GetMaxTexture3DSize() const;
+		[[nodiscard]] uint32_t				  GetMaxTextureCubeSize() const;
 		[[nodiscard]] VkDevice				  Handle() const;
 		[[nodiscard]] VkPhysicalDevice		  PhysicalHandle() const;
 
@@ -110,11 +112,11 @@ namespace BetterThanNothing
 		std::string			  m_vendorName;
 		std::string			  m_deviceName;
 		std::string			  m_apiVersion;
-		std::uint32_t		  m_minUniformBufferOffsetAlignment = 0;
+		uint32_t			  m_minUniformBufferOffsetAlignment = 0;
 		VkSampleCountFlagBits m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
 		float				  m_maxAnisotropy = 1;
-		std::uint32_t		  m_maxTexture2DSize = 0;
-		std::uint32_t		  m_maxTexture3DSize = 0;
-		std::uint32_t		  m_maxTextureCubeSize = 0;
+		uint32_t			  m_maxTexture2DSize = 0;
+		uint32_t			  m_maxTexture3DSize = 0;
+		uint32_t			  m_maxTextureCubeSize = 0;
 	};
 };

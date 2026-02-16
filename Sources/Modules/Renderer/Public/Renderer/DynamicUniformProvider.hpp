@@ -27,23 +27,23 @@ namespace BetterThanNothing
 	class DynamicUniformProvider
 	{
 	public:
-		explicit DynamicUniformProvider(VulkanContext* context, std::uint32_t maxObjects);
+		explicit DynamicUniformProvider(VulkanContext* context, uint32_t maxObjects);
 		~DynamicUniformProvider() = default;
 
 		template <typename T>
-		T* Get(const std::uint32_t frameIndex, const std::uint32_t objectIndex) const
+		T* Get(const uint32_t frameIndex, const uint32_t objectIndex) const
 		{
 			char* base = static_cast<char*>(m_context->frames[frameIndex].dynamicUniformBuffer->GetData());
 			return reinterpret_cast<T*>(base + objectIndex * m_uniformAlignment);
 		}
 
-		std::uint32_t GetOffset(const std::uint32_t objectIndex) const { return objectIndex * m_uniformAlignment; }
+		uint32_t GetOffset(const uint32_t objectIndex) const { return objectIndex * m_uniformAlignment; }
 
 	private:
-		std::uint32_t CalculateUniformAlignment() const;
+		uint32_t CalculateUniformAlignment() const;
 
 		VulkanContext* m_context = nullptr;
-		std::uint32_t  m_maxObjects;
-		std::uint32_t  m_uniformAlignment;
+		uint32_t	   m_maxObjects;
+		uint32_t	   m_uniformAlignment;
 	};
 };

@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <memory>
 #include <vma/vk_mem_alloc.h>
 
 namespace BetterThanNothing

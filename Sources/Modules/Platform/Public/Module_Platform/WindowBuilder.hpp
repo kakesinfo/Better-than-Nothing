@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <memory>
+#include <stdexcept>
+
 namespace BetterThanNothing
 {
 	class Window;
@@ -30,25 +33,25 @@ namespace BetterThanNothing
 
 	struct WindowBuilderParams
 	{
-		std::string	  title;
-		std::uint32_t width = 0;
-		std::uint32_t height = 0;
-		bool		  fullscreen = false;
-		bool		  resizable = false;
+		std::string title;
+		uint32_t	width = 0;
+		uint32_t	height = 0;
+		bool		fullscreen = false;
+		bool		resizable = false;
 	};
 
 	class WindowBuilder
 	{
 	public:
-		explicit WindowBuilder(const std::string& title, std::uint32_t width, std::uint32_t height);
+		explicit WindowBuilder(const std::string& title, uint32_t width, uint32_t height);
 		~WindowBuilder();
 
 		WindowBuilder& SetTitle(const std::string& title);
-		WindowBuilder& SetSize(std::uint32_t width, std::uint32_t height);
+		WindowBuilder& SetSize(uint32_t width, uint32_t height);
 		WindowBuilder& SeFullscreen(bool fullscreen);
 		WindowBuilder& SetResizable(bool resizable);
 
-		std::unique_ptr<Window> Build() const;
+		[[nodiscard]] std::unique_ptr<Window> Build() const;
 
 	private:
 		WindowBuilderParams m_windowParams{};

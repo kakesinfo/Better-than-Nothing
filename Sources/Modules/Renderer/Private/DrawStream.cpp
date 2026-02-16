@@ -28,17 +28,17 @@ namespace BetterThanNothing
 		m_commands.push_back(command);
 	}
 
-	DrawCommand& DrawStream::operator[](const std::uint32_t index)
+	DrawCommand& DrawStream::operator[](const uint32_t index)
 	{
 		return m_commands.at(index);
 	}
 
-	const DrawCommand& DrawStream::operator[](const std::uint32_t index) const
+	const DrawCommand& DrawStream::operator[](const uint32_t index) const
 	{
 		return m_commands.at(index);
 	}
 
-	std::uint32_t DrawStream::Size() const
+	uint32_t DrawStream::Size() const
 	{
 		return m_commands.size();
 	}

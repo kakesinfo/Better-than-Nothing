@@ -22,6 +22,7 @@
 #include "Module_Data/Graphics/PointLightData.hpp"
 #include <Module_Math/Matrix4.hpp>
 #include <ResourceManager/ResourceId.hpp>
+#include <optional>
 
 namespace BetterThanNothing
 {
@@ -57,16 +58,16 @@ namespace BetterThanNothing
 		void SetDirectionalLight(const DirectionalLightData& data);
 		void AddPointLight(const PointLightData& data);
 
-		[[nodiscard]] RenderListItem					 Get(std::uint32_t index) const;
+		[[nodiscard]] RenderListItem					 Get(uint32_t index) const;
 		[[nodiscard]] const DirectionalLightData&		 GetDirectionalLight() const;
-		[[nodiscard]] std::uint32_t						 GetPointLightCount() const;
+		[[nodiscard]] uint32_t							 GetPointLightCount() const;
 		[[nodiscard]] const std::vector<PointLightData>& GetPointLights() const;
-		[[nodiscard]] const PointLightData&				 GetPointLight(std::uint32_t index) const;
+		[[nodiscard]] const PointLightData&				 GetPointLight(uint32_t index) const;
 
 		void Clear();
 
-		[[nodiscard]] std::uint32_t Size() const;
-		[[nodiscard]] bool			IsEmpty() const;
+		[[nodiscard]] uint32_t Size() const;
+		[[nodiscard]] bool	   IsEmpty() const;
 
 	private:
 		ResourceManager*			m_resourceManager;

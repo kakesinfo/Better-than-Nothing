@@ -16,10 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <RenderingApi.hpp>
-
 #include "Renderer/Renderer.hpp"
-
 #include "Module_Data/Graphics/CameraData.hpp"
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Renderer/Data/DynamicUniformData.hpp"
@@ -32,17 +29,16 @@
 #include "Renderer/Passes/RenderGraph.hpp"
 #include "Renderer/RenderList.hpp"
 #include "Renderer/RenderMetrics.hpp"
-
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
-#include <RenderingApi/Deprecated/VertexInputDescription.hpp>
-
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-
+#include <RenderingApi.hpp>
+#include <RenderingApi/Deprecated/VertexInputDescription.hpp>
 #include <ResourceManager/MeshGpuData.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/TextureGpuData.hpp>
+#include <cstring>
 
 namespace BetterThanNothing
 {
@@ -64,7 +60,7 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Device: {}", m_context->device->GetDeviceName());
 		Logger::Log<INFO>("API Version: {}", m_context->device->GetApiVersion());
 		Logger::Log<INFO>("Anisotropy: {}x", m_context->device->GetMaxAnisotropy());
-		Logger::Log<INFO>("Msaa: {}x", static_cast<std::uint32_t>(m_context->device->GetMaxMsaaSamples()));
+		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_context->device->GetMaxMsaaSamples()));
 
 		m_context->commandPool = CommandPool::Create({m_context->device.get(), m_context->graphicsQueue.get()});
 
@@ -93,7 +89,7 @@ namespace BetterThanNothing
 		CreateGlobalDescriptorSets();
 		CreateDynamicDescriptorSets();
 
-		constexpr std::uint32_t MAX_LIGHT_COUNT = 1000;
+		constexpr uint32_t MAX_LIGHT_COUNT = 1000;
 		CreatePointLightBuffers(MAX_LIGHT_COUNT);
 		CreatePointLightDescriptorSets(MAX_LIGHT_COUNT);
 
@@ -118,7 +114,7 @@ namespace BetterThanNothing
 		const auto device = m_context->device->Handle();
 		const auto swapchain = m_context->swapChain->Handle();
 
-		std::uint32_t  imageIndex;
+		uint32_t	   imageIndex;
 		const VkResult acquireResult =
 			vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, m_context->frames[m_currentFrame].imageAvailableSemaphore->Handle(), VK_NULL_HANDLE, &imageIndex);
 
@@ -208,7 +204,7 @@ namespace BetterThanNothing
 		RenderMetrics::SetCameraCoordinates(camera.position.GetX(), camera.position.GetY(), camera.position.GetZ());
 
 		DrawStream drawStream;
-		for (std::uint32_t i = 0; i < renderList->Size(); i++)
+		for (uint32_t i = 0; i < renderList->Size(); i++)
 		{
 			const auto& [meshId, textureId, transform] = renderList->Get(i);
 
@@ -249,7 +245,7 @@ namespace BetterThanNothing
 
 	void Renderer::DrawPointLights(const RenderList* renderList) const
 	{
-		const std::uint32_t count = renderList->GetPointLightCount();
+		const uint32_t count = renderList->GetPointLightCount();
 
 		if (count == 0)
 			return;
@@ -260,9 +256,9 @@ namespace BetterThanNothing
 
 	void Renderer::CreateCommandBuffers() const
 	{
-		const std::uint32_t count = m_context->settings.maxFramesInFlight;
+		const uint32_t count = m_context->settings.maxFramesInFlight;
 
-		for (std::uint32_t i = 0; i < count; i++)
+		for (uint32_t i = 0; i < count; i++)
 			m_context->frames[i].commandBuffer = CommandBuffer::Create({m_context->device.get(), m_context->commandPool.get()});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
@@ -270,9 +266,9 @@ namespace BetterThanNothing
 
 	void Renderer::CreateSyncObjects()
 	{
-		const std::uint32_t count = m_context->settings.maxFramesInFlight;
+		const uint32_t count = m_context->settings.maxFramesInFlight;
 
-		for (std::uint32_t i = 0; i < count; i++)
+		for (uint32_t i = 0; i < count; i++)
 		{
 			auto& frame = m_context->frames[i];
 			frame.imageAvailableSemaphore = Semaphore::Create({m_context->device.get()});
@@ -320,7 +316,7 @@ namespace BetterThanNothing
 
 	void Renderer::CreateDescriptorPool() const
 	{
-		const std::uint32_t maxFramesInFlight = m_context->settings.maxFramesInFlight;
+		const uint32_t maxFramesInFlight = m_context->settings.maxFramesInFlight;
 
 		m_context->descriptorPool = DescriptorPool::Builder(m_context->device.get())
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight)
@@ -391,12 +387,12 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan dynamic descriptor sets: ok (count: {})", m_context->vkDynamicDescriptorSets.size());
 	}
 
-	void Renderer::CreatePointLightBuffers(std::uint32_t maxLights) const
+	void Renderer::CreatePointLightBuffers(uint32_t maxLights) const
 	{
-		const std::uint32_t count = m_context->settings.maxFramesInFlight;
-		const std::uint32_t bufferSize = maxLights * sizeof(PointLightData);
+		const uint32_t count = m_context->settings.maxFramesInFlight;
+		const uint32_t bufferSize = maxLights * sizeof(PointLightData);
 
-		for (std::uint32_t i = 0; i < count; i++)
+		for (uint32_t i = 0; i < count; i++)
 		{
 			m_context->frames[i].pointLightBuffer = std::make_unique<VulkanStorageBuffer>(m_context, bufferSize);
 		}
@@ -404,7 +400,7 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Point light buffers: ok (count: {})", count);
 	}
 
-	void Renderer::CreatePointLightDescriptorSets(std::uint32_t maxLights)
+	void Renderer::CreatePointLightDescriptorSets(uint32_t maxLights)
 	{
 		m_context->vkPointLightDescriptorSets.resize(m_context->settings.maxFramesInFlight);
 

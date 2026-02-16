@@ -24,14 +24,14 @@ namespace BetterThanNothing
 {
 	class Vector2;
 
-	enum class EKey : std::int16_t;
-	enum class EMouseButton : std::int16_t;
+	enum class EKey : int16_t;
+	enum class EMouseButton : int16_t;
 
 	struct InputManager
 	{
 	protected:
-		static constexpr std::int32_t KEYBOARD_KEY_COUNT = 1024;
-		static constexpr std::int32_t MOUSE_BUTTON_COUNT = 32;
+		static constexpr int32_t KEYBOARD_KEY_COUNT = 1024;
+		static constexpr int32_t MOUSE_BUTTON_COUNT = 32;
 
 		static EKeyAction m_keys[KEYBOARD_KEY_COUNT];
 
@@ -68,8 +68,8 @@ namespace BetterThanNothing
 		static float GetMouseScroll();
 
 		static bool IsKeyPressed(EKey key);
-		static bool IsKeyPressed(std::int16_t key);
+		static bool IsKeyPressed(int16_t key);
 		static bool IsMouseButtonPressed(EMouseButton button);
-		static bool IsMouseButtonPressed(std::int16_t button);
+		static bool IsMouseButtonPressed(int16_t button);
 	};
 };

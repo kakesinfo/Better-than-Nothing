@@ -22,6 +22,7 @@
 #include <Module_Base/EMouseButton.hpp>
 
 #include <SDL3/SDL.h>
+#include <string>
 
 namespace BetterThanNothing
 {
@@ -31,8 +32,8 @@ namespace BetterThanNothing
 
 		std::string m_title{};
 
-		std::uint32_t m_width = 0;
-		std::uint32_t m_height = 0;
+		uint32_t m_width = 0;
+		uint32_t m_height = 0;
 
 		bool m_fullscreen = false;
 		bool m_resizable = true;
@@ -41,35 +42,30 @@ namespace BetterThanNothing
 		bool m_shouldClose = false;
 
 	public:
-		explicit Window(std::string title, std::uint32_t width, std::uint32_t height, bool fullscreen = false,
-						bool resizable = false);
+		explicit Window(std::string title, uint32_t width, uint32_t height, bool fullscreen = false, bool resizable = false);
 		~Window();
 
-		[[nodiscard]]
-		SDL_Window* Handle() const;
+		[[nodiscard]] SDL_Window* Handle() const;
 
 		void PollEvents();
 
 		void Show() const;
 
-		[[nodiscard]]
-		bool ShouldClose() const;
+		[[nodiscard]] bool ShouldClose() const;
 
-		[[nodiscard]]
-		std::pair<std::uint32_t, std::uint32_t> GetFramebufferSize() const;
+		[[nodiscard]] std::pair<uint32_t, uint32_t> GetFramebufferSize() const;
 
-		[[nodiscard]]
-		bool IsResized() const;
-		void SetResized(bool resized);
+		[[nodiscard]] bool IsResized() const;
+		void			   SetResized(bool resized);
 
 	protected:
-		void SetWidth(std::uint32_t width);
-		void SetHeight(std::uint32_t height);
+		void SetWidth(uint32_t width);
+		void SetHeight(uint32_t height);
 
-		static void ResizeCallback(Window* window, std::int32_t width, std::int32_t height);
-		static void KeyCallback(std::int32_t key, EKeyAction action);
+		static void ResizeCallback(Window* window, int32_t width, int32_t height);
+		static void KeyCallback(int32_t key, EKeyAction action);
 		static void MouseCursorCallback(double xpos, double ypos);
 		static void MouseScrollCallback(double yoffset);
-		static void MouseButtonCallback(std::int32_t button, EMouseButtonAction action);
+		static void MouseButtonCallback(int32_t button, EMouseButtonAction action);
 	};
 };

@@ -44,9 +44,9 @@ namespace BetterThanNothing
 		VkResult Present(const VkPresentInfoKHR* presentInfo) const;
 		VkResult WaitIdle() const;
 
-		[[nodiscard]] std::uint32_t GetFamilyIndex() const;
-		[[nodiscard]] float			GetPriority() const;
-		[[nodiscard]] VkQueue		Handle() const;
+		[[nodiscard]] uint32_t GetFamilyIndex() const;
+		[[nodiscard]] float	   GetPriority() const;
+		[[nodiscard]] VkQueue  Handle() const;
 
 	private:
 		QueueCreateInfo	   m_createInfo;

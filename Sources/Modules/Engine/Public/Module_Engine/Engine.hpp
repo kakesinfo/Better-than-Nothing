@@ -47,7 +47,7 @@ namespace BetterThanNothing
 		std::unique_ptr<VulkanContext>	 m_context;
 		std::unique_ptr<ResourceManager> m_resourceManager;
 		std::unique_ptr<RenderList>		 m_renderList;
-		std::unique_ptr<Renderer>	 m_legacyRenderer;
+		std::unique_ptr<Renderer>		 m_legacyRenderer;
 		std::unique_ptr<Camera>			 m_camera;
 
 		IEngineApplication* m_application;

@@ -33,7 +33,7 @@ namespace BetterThanNothing
 
 	struct VertexHash
 	{
-		std::size_t operator()(VertexData const& v) const noexcept
+		size_t operator()(VertexData const& v) const noexcept
 		{
 			auto h = std::hash<float>{}(v.position.GetX());
 			h = h * 31 + std::hash<float>{}(v.position.GetY());

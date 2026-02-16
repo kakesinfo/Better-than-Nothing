@@ -24,7 +24,7 @@ namespace BetterThanNothing
 	{
 		bool					 enableValidation = true;
 		std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
-		std::uint32_t			 apiVersion = VK_API_VERSION_1_4;
+		uint32_t				 apiVersion = VK_API_VERSION_1_4;
 	};
 
 	class Instance
@@ -54,9 +54,9 @@ namespace BetterThanNothing
 		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* allocator) noexcept;
 
 	public:
-		[[nodiscard]] std::uint32_t GetApiVersion() const noexcept;
-		[[nodiscard]] bool			IsValidationEnabled() const noexcept;
-		[[nodiscard]] VkInstance	Handle() const;
+		[[nodiscard]] uint32_t	 GetApiVersion() const noexcept;
+		[[nodiscard]] bool		 IsValidationEnabled() const noexcept;
+		[[nodiscard]] VkInstance Handle() const;
 
 	private:
 		InstanceCreateInfo		 m_createInfo;

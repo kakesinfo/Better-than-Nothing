@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing
 {
-	enum class EBufferingMode : std::uint8_t
+	enum class EBufferingMode : uint8_t
 	{
 		/**
 		 * VSync OFF (Tearing, minimal latency)

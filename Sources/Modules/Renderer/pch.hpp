@@ -19,15 +19,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cstring>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>

@@ -46,10 +46,10 @@ namespace BetterThanNothing
 
 		void Draw(const DrawCommand& command);
 
-		DrawCommand&	   operator[](std::uint32_t index);
-		const DrawCommand& operator[](std::uint32_t index) const;
+		DrawCommand&	   operator[](uint32_t index);
+		const DrawCommand& operator[](uint32_t index) const;
 
-		[[nodiscard]] std::uint32_t Size() const;
+		[[nodiscard]] uint32_t Size() const;
 
 	private:
 		std::vector<DrawCommand> m_commands;

@@ -56,7 +56,7 @@ namespace BetterThanNothing
 
 	DescriptorPoolBuilder::DescriptorPoolBuilder(Device* device) : m_device(device) {}
 
-	DescriptorPoolBuilder& DescriptorPoolBuilder::AddPoolSize(VkDescriptorType type, std::uint32_t count)
+	DescriptorPoolBuilder& DescriptorPoolBuilder::AddPoolSize(VkDescriptorType type, uint32_t count)
 	{
 		m_poolSizes.emplace_back(type, count);
 		m_maxSets += count;

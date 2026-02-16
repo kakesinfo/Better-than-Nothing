@@ -27,11 +27,11 @@ namespace BetterThanNothing
 {
 	struct TextureGpuData
 	{
-		std::int32_t						 width;
-		std::int32_t						 height;
-		std::int32_t						 channels;
-		std::int32_t						 size;
-		std::uint32_t						 mipLevels;
+		int32_t								 width;
+		int32_t								 height;
+		int32_t								 channels;
+		int32_t								 size;
+		uint32_t							 mipLevels;
 		std::unique_ptr<VulkanImage>		 image;
 		std::unique_ptr<VulkanImageView>	 imageView;
 		std::unique_ptr<VulkanSampler>		 sampler;

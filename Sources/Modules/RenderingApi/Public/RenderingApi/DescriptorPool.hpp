@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 namespace BetterThanNothing
 {
 	class Device;
@@ -29,7 +32,7 @@ namespace BetterThanNothing
 	{
 		Device*							  device;
 		std::vector<VkDescriptorPoolSize> poolSizes;
-		std::uint32_t					  maxSets;
+		uint32_t						  maxSets;
 	};
 
 	class DescriptorPool
@@ -57,12 +60,12 @@ namespace BetterThanNothing
 	public:
 		explicit DescriptorPoolBuilder(Device* device);
 
-		[[nodiscard]] DescriptorPoolBuilder&		  AddPoolSize(VkDescriptorType type, std::uint32_t count);
+		[[nodiscard]] DescriptorPoolBuilder&		  AddPoolSize(VkDescriptorType type, uint32_t count);
 		[[nodiscard]] std::unique_ptr<DescriptorPool> Build() const;
 
 	private:
 		Device*							  m_device = nullptr;
 		std::vector<VkDescriptorPoolSize> m_poolSizes;
-		std::uint32_t					  m_maxSets = 0;
+		uint32_t						  m_maxSets = 0;
 	};
 } // BetterThanNothing

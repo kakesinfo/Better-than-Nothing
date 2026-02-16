@@ -46,7 +46,7 @@ namespace BetterThanNothing
 		return vkQueueWaitIdle(m_createInfo.handle);
 	}
 
-	std::uint32_t Queue::GetFamilyIndex() const
+	uint32_t Queue::GetFamilyIndex() const
 	{
 		return m_createInfo.familyIndex;
 	}

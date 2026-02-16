@@ -16,15 +16,14 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingApi/Deprecated/VertexInputDescription.hpp"
 #include "RenderingApi.hpp"
+#include "RenderingApi/Deprecated/VertexInputDescription.hpp"
 
 #include <Module_Base/Logger.hpp>
 
 namespace BetterThanNothing
 {
-	Pipeline::Pipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription,
-								   const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
+	Pipeline::Pipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
 		: m_context(context), m_params(std::move(params))
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
@@ -51,7 +50,7 @@ namespace BetterThanNothing
 
 		VkPipelineDynamicStateCreateInfo dynamicState{};
 		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicState.dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size());
+		dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 		dynamicState.pDynamicStates = dynamicStates.data();
 
 		VkPipelineViewportStateCreateInfo viewportState{};
@@ -90,14 +89,13 @@ namespace BetterThanNothing
 
 		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
 		pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-		pipelineRenderingInfo.colorAttachmentCount = static_cast<std::uint32_t>(m_params.colorAttachmentFormats.size());
+		pipelineRenderingInfo.colorAttachmentCount = static_cast<uint32_t>(m_params.colorAttachmentFormats.size());
 		pipelineRenderingInfo.pColorAttachmentFormats = m_params.colorAttachmentFormats.data();
 		pipelineRenderingInfo.depthAttachmentFormat = m_params.depthAttachmentFormat;
 		pipelineRenderingInfo.stencilAttachmentFormat = m_params.stencilAttachmentFormat;
 
 		VkPipelineColorBlendAttachmentState colorBlendState{};
-		colorBlendState.colorWriteMask =
-			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colorBlendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 		colorBlendState.blendEnable = VK_TRUE;
 		colorBlendState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		colorBlendState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -113,7 +111,7 @@ namespace BetterThanNothing
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
 		colorBlending.logicOp = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = static_cast<std::uint32_t>(blendAttachments.size());
+		colorBlending.attachmentCount = static_cast<uint32_t>(blendAttachments.size());
 		colorBlending.pAttachments = blendAttachments.data();
 
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
@@ -137,20 +135,19 @@ namespace BetterThanNothing
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = static_cast<std::uint32_t>(layouts.size());
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
 		pipelineLayoutInfo.pSetLayouts = layouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 0;	  // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-		if (vkCreatePipelineLayout(m_context->device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) !=
-			VK_SUCCESS)
+		if (vkCreatePipelineLayout(m_context->device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create pipeline layout");
 
 		Logger::Log<SUCCESS>("Vulkan pipeline layout: ok");
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderStages.size());
+		pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
 		pipelineInfo.pStages = shaderStages.data();
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -165,8 +162,7 @@ namespace BetterThanNothing
 		pipelineInfo.renderPass = VK_NULL_HANDLE; // m_context->vkRenderPass->Handle();
 		pipelineInfo.subpass = 0;
 
-		if (vkCreateGraphicsPipelines(m_context->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
-									  &m_pipeline) != VK_SUCCESS)
+		if (vkCreateGraphicsPipelines(m_context->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create graphics pipeline");
 
 		Logger::Log<SUCCESS>("Vulkan graphics pipeline: ok");
@@ -216,8 +212,7 @@ namespace BetterThanNothing
 		return *this;
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::AddShader(const std::string&		shaderPath,
-															const EShaderType shaderType)
+	VulkanPipelineBuilder& VulkanPipelineBuilder::AddShader(const std::string& shaderPath, const EShaderType shaderType)
 	{
 		VulkanPipelineShaderInfo shaderInfo;
 		shaderInfo.shaderPath = shaderPath;

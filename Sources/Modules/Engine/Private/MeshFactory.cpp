@@ -23,13 +23,13 @@ namespace BetterThanNothing
 {
 	MeshData MeshFactory::CreatePlane(const float size)
 	{
-		const auto	subdivisions = static_cast<std::int32_t>(size);
+		const auto	subdivisions = static_cast<int32_t>(size);
 		const float halfSize = size / 2.0f;
 
 		MeshBuilder builder;
-		for (std::int32_t x = 0; x < subdivisions; x++)
+		for (int32_t x = 0; x < subdivisions; x++)
 		{
-			for (std::int32_t z = 0; z < subdivisions; z++)
+			for (int32_t z = 0; z < subdivisions; z++)
 			{
 				const float posX = (static_cast<float>(x) / size) * size - halfSize;
 				const float posZ = (static_cast<float>(z) / size) * size - halfSize;
@@ -39,10 +39,10 @@ namespace BetterThanNothing
 
 				if (x < subdivisions - 1 && z < subdivisions - 1)
 				{
-					const std::uint32_t topLeft = x * subdivisions + z;
-					const std::uint32_t topRight = (x + 1) * subdivisions + z;
-					const std::uint32_t bottomLeft = x * subdivisions + (z + 1);
-					const std::uint32_t bottomRight = (x + 1) * subdivisions + (z + 1);
+					const uint32_t topLeft = x * subdivisions + z;
+					const uint32_t topRight = (x + 1) * subdivisions + z;
+					const uint32_t bottomLeft = x * subdivisions + (z + 1);
+					const uint32_t bottomRight = (x + 1) * subdivisions + (z + 1);
 
 					builder.AddIndices({topLeft, bottomLeft, topRight, topRight, bottomLeft, bottomRight});
 				}

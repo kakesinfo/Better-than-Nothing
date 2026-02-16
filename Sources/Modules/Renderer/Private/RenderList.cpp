@@ -66,7 +66,7 @@ namespace BetterThanNothing
 		m_pointLights.push_back(data);
 	}
 
-	RenderListItem RenderList::Get(const std::uint32_t index) const
+	RenderListItem RenderList::Get(const uint32_t index) const
 	{
 		return m_list[index];
 	}
@@ -78,7 +78,7 @@ namespace BetterThanNothing
 		return m_directionalLight.value();
 	}
 
-	std::uint32_t RenderList::GetPointLightCount() const
+	uint32_t RenderList::GetPointLightCount() const
 	{
 		return m_pointLights.size();
 	}
@@ -88,7 +88,7 @@ namespace BetterThanNothing
 		return m_pointLights;
 	}
 
-	const PointLightData& RenderList::GetPointLight(const std::uint32_t index) const
+	const PointLightData& RenderList::GetPointLight(const uint32_t index) const
 	{
 		return m_pointLights[index];
 	}
@@ -98,7 +98,7 @@ namespace BetterThanNothing
 		m_list.clear();
 	}
 
-	std::uint32_t RenderList::Size() const
+	uint32_t RenderList::Size() const
 	{
 		return m_list.size();
 	}

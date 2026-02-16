@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <vector>
+
+
 namespace BetterThanNothing
 {
 	struct VertexInputDescription
@@ -30,10 +33,10 @@ namespace BetterThanNothing
 			VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-			vertexInputInfo.vertexBindingDescriptionCount = static_cast<std::uint32_t>(bindings.size());
+			vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
 			vertexInputInfo.pVertexBindingDescriptions = bindings.data();
 
-			vertexInputInfo.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(attributes.size());
+			vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
 			vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
 
 			return vertexInputInfo;
