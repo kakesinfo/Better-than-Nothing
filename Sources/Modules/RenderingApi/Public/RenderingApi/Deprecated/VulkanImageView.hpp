@@ -27,7 +27,7 @@ namespace BetterThanNothing
 	{
 	public:
 		explicit VulkanImageView(VulkanContext* context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
-								 std::uint32_t mipLevels);
+								 uint32_t mipLevels);
 		~VulkanImageView();
 
 		VulkanImageView(const VulkanImageView&) = delete;

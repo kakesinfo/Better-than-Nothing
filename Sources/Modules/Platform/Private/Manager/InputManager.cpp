@@ -21,6 +21,7 @@
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Math/Vector2.hpp>
+#include <algorithm>
 
 namespace BetterThanNothing
 {
@@ -111,19 +112,19 @@ namespace BetterThanNothing
 
 	bool InputManager::IsKeyPressed(EKey key)
 	{
-		return IsKeyPressed(static_cast<std::int16_t>(key));
+		return IsKeyPressed(static_cast<int16_t>(key));
 	}
 
-	bool InputManager::IsKeyPressed(const std::int16_t key)
+	bool InputManager::IsKeyPressed(const int16_t key)
 	{
 		return m_keys[key] == EKeyAction::Pressed; // or repeat ?
 	}
 
 	bool InputManager::IsMouseButtonPressed(EMouseButton button)
 	{
-		return IsMouseButtonPressed(static_cast<std::int16_t>(button));
+		return IsMouseButtonPressed(static_cast<int16_t>(button));
 	}
-	bool InputManager::IsMouseButtonPressed(const std::int16_t button)
+	bool InputManager::IsMouseButtonPressed(const int16_t button)
 	{
 		return m_buttons[button] == EMouseButtonAction::Pressed; // or repeat ?
 	}

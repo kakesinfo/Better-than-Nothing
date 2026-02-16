@@ -88,7 +88,7 @@ namespace BetterThanNothing
 				bool	   boundGlobalDescriptor = false;
 				bool	   boundPointLightDescriptor = false;
 
-				for (std::uint32_t i = 0; i < drawStream.Size(); i++)
+				for (uint32_t i = 0; i < drawStream.Size(); i++)
 				{
 					const DrawCommand& drawCommand = drawStream[i];
 

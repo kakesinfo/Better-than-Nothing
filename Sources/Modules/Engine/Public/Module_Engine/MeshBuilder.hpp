@@ -36,8 +36,8 @@ namespace BetterThanNothing
 		void AddVertex(Vector3 position, Vector3 color, Vector2 uv, Vector3 normal);
 		void AddVertex(const VertexData& vertexData);
 
-		void AddIndices(const std::vector<std::uint32_t>& newIndices);
-		void AddIndex(std::uint32_t index);
+		void AddIndices(const std::vector<uint32_t>& newIndices);
+		void AddIndex(uint32_t index);
 
 		MeshData Build();
 

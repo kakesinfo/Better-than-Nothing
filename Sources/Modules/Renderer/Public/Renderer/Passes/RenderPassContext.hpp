@@ -25,7 +25,7 @@ namespace BetterThanNothing
 	struct RenderPassContext
 	{
 		CommandBuffer* commandBuffer;
-		std::uint32_t  imageIndex;
-		std::uint32_t  currentFrame;
+		uint32_t	   imageIndex;
+		uint32_t	   currentFrame;
 	};
 }

@@ -18,6 +18,8 @@
 
 #include "RenderingApi.hpp"
 
+#include <cstring>
+
 namespace BetterThanNothing
 {
 	VulkanBuffer::VulkanBuffer(VulkanContext* context, const VkDeviceSize size, const VkBufferUsageFlags usage,

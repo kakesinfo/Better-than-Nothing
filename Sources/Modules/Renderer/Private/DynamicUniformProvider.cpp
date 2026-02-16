@@ -25,15 +25,15 @@
 
 namespace BetterThanNothing
 {
-	DynamicUniformProvider::DynamicUniformProvider(VulkanContext* context, const std::uint32_t maxObjects)
+	DynamicUniformProvider::DynamicUniformProvider(VulkanContext* context, const uint32_t maxObjects)
 		: m_context(context), m_maxObjects(maxObjects)
 	{
 		m_uniformAlignment = CalculateUniformAlignment();
 
-		const std::uint32_t count = m_context->settings.maxFramesInFlight;
-		const std::uint32_t bufferSize = m_maxObjects * m_uniformAlignment;
+		const uint32_t count = m_context->settings.maxFramesInFlight;
+		const uint32_t bufferSize = m_maxObjects * m_uniformAlignment;
 
-		for (std::uint32_t i = 0; i < count; i++)
+		for (uint32_t i = 0; i < count; i++)
 		{
 			m_context->frames[i].dynamicUniformBuffer = std::make_unique<VulkanUniformBuffer>(m_context, bufferSize);
 		}
@@ -41,11 +41,11 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan dynamic uniforms: ok (count: {})", count);
 	}
 
-	std::uint32_t DynamicUniformProvider::CalculateUniformAlignment() const
+	uint32_t DynamicUniformProvider::CalculateUniformAlignment() const
 	{
-		const std::uint32_t minUboAlignment = m_context->device->GetMinUniformBufferOffsetAlignment();
+		const uint32_t minUboAlignment = m_context->device->GetMinUniformBufferOffsetAlignment();
 
-		std::uint32_t dynamicAlignment = sizeof(DynamicUniformData);
+		uint32_t dynamicAlignment = sizeof(DynamicUniformData);
 		if (minUboAlignment > 0)
 			dynamicAlignment = (dynamicAlignment + minUboAlignment - 1) & ~(minUboAlignment - 1);
 

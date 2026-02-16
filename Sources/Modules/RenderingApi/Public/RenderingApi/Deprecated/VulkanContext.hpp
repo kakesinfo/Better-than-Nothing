@@ -47,7 +47,7 @@ namespace BetterThanNothing
 			union
 			{
 				EBufferingMode bufferingMode = EBufferingMode::Double;
-				std::uint32_t  maxFramesInFlight;
+				uint32_t  maxFramesInFlight;
 			};
 		} settings;
 

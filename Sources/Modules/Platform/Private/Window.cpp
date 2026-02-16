@@ -26,8 +26,7 @@
 
 namespace BetterThanNothing
 {
-	Window::Window(std::string title, const std::uint32_t width, const std::uint32_t height, const bool fullscreen,
-				   const bool resizable)
+	Window::Window(std::string title, const uint32_t width, const uint32_t height, const bool fullscreen, const bool resizable)
 		: m_title(std::move(title)), m_width(width), m_height(height), m_fullscreen(fullscreen), m_resizable(resizable)
 	{
 		uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN;
@@ -112,7 +111,7 @@ namespace BetterThanNothing
 		return m_shouldClose;
 	}
 
-	std::pair<std::uint32_t, std::uint32_t> Window::GetFramebufferSize() const
+	std::pair<uint32_t, uint32_t> Window::GetFramebufferSize() const
 	{
 		int width, height;
 		SDL_GetWindowSizeInPixels(m_window, &width, &height);
@@ -129,24 +128,24 @@ namespace BetterThanNothing
 		m_resized = resized;
 	}
 
-	void Window::SetWidth(const std::uint32_t width)
+	void Window::SetWidth(const uint32_t width)
 	{
 		m_width = width;
 	}
 
-	void Window::SetHeight(const std::uint32_t height)
+	void Window::SetHeight(const uint32_t height)
 	{
 		m_height = height;
 	}
 
-	void Window::ResizeCallback(Window* window, const std::int32_t width, const std::int32_t height)
+	void Window::ResizeCallback(Window* window, const int32_t width, const int32_t height)
 	{
 		window->SetWidth(width);
 		window->SetHeight(height);
 		window->SetResized(true);
 	}
 
-	void Window::KeyCallback(const std::int32_t key, const EKeyAction action)
+	void Window::KeyCallback(const int32_t key, const EKeyAction action)
 	{
 		InputManager::UpdateKey(key, action);
 	}
@@ -161,7 +160,7 @@ namespace BetterThanNothing
 		InputManager::UpdateMouseScroll(yoffset);
 	}
 
-	void Window::MouseButtonCallback(const std::int32_t button, const EMouseButtonAction action)
+	void Window::MouseButtonCallback(const int32_t button, const EMouseButtonAction action)
 	{
 
 		InputManager::UpdateMouseButton(button, action);

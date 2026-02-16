@@ -18,11 +18,9 @@
 
 #pragma once
 
-#include <cstdint>
-
 namespace BetterThanNothing
 {
-	enum class EMouseButton : std::int16_t
+	enum class EMouseButton : int16_t
 	{
 		Left = 1,
 		Middle = 2,
@@ -31,7 +29,7 @@ namespace BetterThanNothing
 		Button5 = 5
 	};
 
-	enum class EMouseButtonAction : std::int16_t
+	enum class EMouseButtonAction : int16_t
 	{
 		Pressed = 0,
 		Released = 1,

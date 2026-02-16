@@ -31,8 +31,8 @@ namespace BetterThanNothing
 		Allocator*	   allocator;
 		CommandPool*   commandPool;
 		Queue*		   graphicsQueue;
-		std::uint32_t  width;
-		std::uint32_t  height;
+		uint32_t	   width;
+		uint32_t	   height;
 		EBufferingMode bufferingMode = EBufferingMode::Double;
 	};
 
@@ -50,30 +50,30 @@ namespace BetterThanNothing
 		[[nodiscard]] static std::unique_ptr<SwapChain> Create(const SwapChainCreateInfo& createInfo);
 
 	private:
-		void CreateSwapChain(std::uint32_t width, std::uint32_t height);
+		void CreateSwapChain(uint32_t width, uint32_t height);
 		void CreateImages();
 		void CleanupSwapChain();
 
 		[[nodiscard]] static VkSurfaceFormatKHR ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 		[[nodiscard]] static VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, EBufferingMode bufferingMode);
-		[[nodiscard]] static VkExtent2D ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities, std::uint32_t width, std::uint32_t height);
-		[[nodiscard]] static std::uint32_t ChooseImageCount(const VkSurfaceCapabilitiesKHR& capabilities, const VkPresentModeKHR& presentMode);
-		[[nodiscard]] VkFormat ChooseDepthFormat(const std::vector<VkFormat>& candidates) const;
+		[[nodiscard]] static VkExtent2D ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
+		[[nodiscard]] static uint32_t	ChooseImageCount(const VkSurfaceCapabilitiesKHR& capabilities, const VkPresentModeKHR& presentMode);
+		[[nodiscard]] VkFormat			ChooseDepthFormat(const std::vector<VkFormat>& candidates) const;
 
 	public:
 		void CreateDepthResources();
 		void CreateColorResources();
 
-		void RecreateSwapChain(std::uint32_t newWidth, std::uint32_t newHeight);
+		void RecreateSwapChain(uint32_t newWidth, uint32_t newHeight);
 
 		[[nodiscard]] VkExtent2D	 GetExtent() const;
-		[[nodiscard]] std::uint32_t	 GetWidth() const;
-		[[nodiscard]] std::uint32_t	 GetHeight() const;
+		[[nodiscard]] uint32_t		 GetWidth() const;
+		[[nodiscard]] uint32_t		 GetHeight() const;
 		[[nodiscard]] float			 GetAspectRatio() const;
-		[[nodiscard]] std::uint32_t	 GetImageCount() const;
+		[[nodiscard]] uint32_t		 GetImageCount() const;
 		[[nodiscard]] VkFormat		 GetImageFormat() const;
-		[[nodiscard]] VkImage		 GetImage(std::uint32_t index) const;
-		[[nodiscard]] VkImageView	 GetImageView(std::uint32_t index) const;
+		[[nodiscard]] VkImage		 GetImage(uint32_t index) const;
+		[[nodiscard]] VkImageView	 GetImageView(uint32_t index) const;
 		[[nodiscard]] VkFormat		 GetDepthFormat() const;
 		[[nodiscard]] VkImage		 GetDepthImage() const;
 		[[nodiscard]] VkImageView	 GetDepthImageView() const;

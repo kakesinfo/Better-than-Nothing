@@ -24,13 +24,13 @@ namespace BetterThanNothing
 {
 	struct RenderMetricsData
 	{
-		std::uint32_t frameCount = 0;
-		std::uint32_t drawCalls = 0;
-		std::uint32_t verticesRendered = 0;
-		std::uint64_t totalDrawCalls = 0;
-		std::uint64_t totalVerticesRendered = 0;
-		float		  frameTime = 0;
-		int			  fps = 0;
+		uint32_t frameCount = 0;
+		uint32_t drawCalls = 0;
+		uint32_t verticesRendered = 0;
+		uint64_t totalDrawCalls = 0;
+		uint64_t totalVerticesRendered = 0;
+		float	 frameTime = 0;
+		int		 fps = 0;
 
 		float cameraX;
 		float cameraY;
@@ -40,7 +40,7 @@ namespace BetterThanNothing
 	class RenderMetrics
 	{
 	public:
-		static void AddDrawCall(std::uint32_t vertexCount)
+		static void AddDrawCall(uint32_t vertexCount)
 		{
 			s_currentFrameMetrics.drawCalls++;
 			s_currentFrameMetrics.verticesRendered += vertexCount;

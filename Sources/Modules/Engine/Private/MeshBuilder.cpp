@@ -20,6 +20,8 @@
 #include "Module_Math/Vector2.hpp"
 #include "Module_Math/Vector3.hpp"
 
+#include <stdexcept>
+
 namespace BetterThanNothing
 {
 	void MeshBuilder::AddVertex(const float x, const float y, const float z, const float r, const float g,
@@ -39,12 +41,12 @@ namespace BetterThanNothing
 		meshData.vertices.push_back(vertexData);
 	}
 
-	void MeshBuilder::AddIndices(const std::vector<std::uint32_t>& newIndices)
+	void MeshBuilder::AddIndices(const std::vector<uint32_t>& newIndices)
 	{
 		meshData.indices.insert(meshData.indices.end(), newIndices.begin(), newIndices.end());
 	}
 
-	void MeshBuilder::AddIndex(const std::uint32_t index)
+	void MeshBuilder::AddIndex(const uint32_t index)
 	{
 		meshData.indices.push_back(index);
 	}

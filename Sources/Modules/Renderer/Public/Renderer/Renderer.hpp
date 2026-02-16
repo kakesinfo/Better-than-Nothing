@@ -62,11 +62,10 @@ namespace BetterThanNothing
 		void CreateGlobalDescriptorSets();
 		void CreateDynamicDescriptorSets();
 
-		void CreatePointLightBuffers(std::uint32_t maxLights) const;
-		void CreatePointLightDescriptorSets(std::uint32_t maxLights);
+		void CreatePointLightBuffers(uint32_t maxLights) const;
+		void CreatePointLightDescriptorSets(uint32_t maxLights);
 
-		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera,
-								 std::uint32_t imageIndex) const;
+		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, uint32_t imageIndex) const;
 		void DrawPointLights(const RenderList* renderList) const;
 
 		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
@@ -79,7 +78,7 @@ namespace BetterThanNothing
 		VulkanContext*							m_context = nullptr;
 		ResourceManager*						m_resourceManager = nullptr;
 		std::vector<VulkanFrame>				m_frames;
-		std::uint32_t							m_currentFrame = 0;
+		uint32_t								m_currentFrame = 0;
 		std::unique_ptr<GlobalUniformProvider>	m_globalUniformProvider = nullptr;
 		std::unique_ptr<DynamicUniformProvider> m_dynamicUniformProvider = nullptr;
 		std::unique_ptr<RenderGraph>			m_renderGraph = nullptr;

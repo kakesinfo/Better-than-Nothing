@@ -36,8 +36,12 @@
 #include <Renderer/RenderList.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingApi/Deprecated/VulkanContext.hpp>
+#include <RenderingApi/Pipeline.hpp>
 
 #include "Renderer/RenderMetrics.hpp"
+
+#include <chrono>
+#include <format>
 
 namespace BetterThanNothing
 {

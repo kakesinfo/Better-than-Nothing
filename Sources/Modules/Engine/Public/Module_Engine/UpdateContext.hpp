@@ -24,8 +24,8 @@ namespace BetterThanNothing
 	class Vector2;
 	class Vector3;
 
-	enum class EKey : std::int16_t;
-	enum class EMouseButton : std::int16_t;
+	enum class EKey : int16_t;
+	enum class EMouseButton : int16_t;
 
 	class UpdateContext
 	{

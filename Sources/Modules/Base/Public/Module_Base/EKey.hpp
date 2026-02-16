@@ -9,7 +9,7 @@
 
 namespace BetterThanNothing
 {
-	enum class EKey : std::int16_t
+	enum class EKey : int16_t
 	{
 		Unknown = 0,
 
@@ -81,7 +81,7 @@ namespace BetterThanNothing
 		LeftAlt = 226
 	};
 
-	enum class EKeyAction : std::int16_t
+	enum class EKeyAction : int16_t
 	{
 		Pressed = 0,
 		Released = 1

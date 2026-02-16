@@ -20,5 +20,5 @@
 
 namespace BetterThanNothing
 {
-	using ResourceId = std::uint64_t;
+	using ResourceId = uint64_t;
 }

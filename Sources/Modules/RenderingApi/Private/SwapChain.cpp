@@ -41,14 +41,14 @@ namespace BetterThanNothing
 		return std::make_unique<SwapChain>(createInfo);
 	}
 
-	void SwapChain::CreateSwapChain(const std::uint32_t width, const std::uint32_t height)
+	void SwapChain::CreateSwapChain(const uint32_t width, const uint32_t height)
 	{
 		auto swapChainSupport = m_createInfo.device->GetSwapChainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSurfaceFormat(swapChainSupport.formats);
 		VkPresentModeKHR   presentMode = ChoosePresentMode(swapChainSupport.presentModes, m_createInfo.bufferingMode);
 		VkExtent2D		   extent = ChooseExtent(swapChainSupport.capabilities, width, height);
-		std::uint32_t	   imageCount = ChooseImageCount(swapChainSupport.capabilities, presentMode);
+		uint32_t		   imageCount = ChooseImageCount(swapChainSupport.capabilities, presentMode);
 
 		VkSwapchainCreateInfoKHR createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -61,7 +61,7 @@ namespace BetterThanNothing
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 		QueueFamilyIndices indices = m_createInfo.device->GetQueueFamilyIndices();
-		std::uint32_t	   queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+		uint32_t		   queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
 		if (indices.graphicsFamily != indices.presentFamily)
 		{
@@ -96,7 +96,7 @@ namespace BetterThanNothing
 	{
 		auto device = m_createInfo.device->Handle();
 
-		std::uint32_t imageCount = 0;
+		uint32_t imageCount = 0;
 		vkGetSwapchainImagesKHR(device, m_swapChain, &imageCount, nullptr);
 
 		m_images.resize(imageCount);
@@ -211,7 +211,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("Cannot allocate depth image view");
 	}
 
-	void SwapChain::RecreateSwapChain(const std::uint32_t newWidth, const std::uint32_t newHeight)
+	void SwapChain::RecreateSwapChain(const uint32_t newWidth, const uint32_t newHeight)
 	{
 		m_createInfo.device->WaitIdle();
 
@@ -279,9 +279,9 @@ namespace BetterThanNothing
 		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 
-	VkExtent2D SwapChain::ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities, std::uint32_t width, std::uint32_t height)
+	VkExtent2D SwapChain::ChooseExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height)
 	{
-		if (capabilities.currentExtent.width != std::numeric_limits<std::uint32_t>::max())
+		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
 			return capabilities.currentExtent;
 
 		VkExtent2D actualExtent;
@@ -291,9 +291,9 @@ namespace BetterThanNothing
 		return actualExtent;
 	}
 
-	std::uint32_t SwapChain::ChooseImageCount(const VkSurfaceCapabilitiesKHR& capabilities, const VkPresentModeKHR& presentMode)
+	uint32_t SwapChain::ChooseImageCount(const VkSurfaceCapabilitiesKHR& capabilities, const VkPresentModeKHR& presentMode)
 	{
-		std::uint32_t imageCount = capabilities.minImageCount + 1;
+		uint32_t imageCount = capabilities.minImageCount + 1;
 
 		if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR && imageCount < 3)
 			imageCount = 3;
@@ -314,12 +314,12 @@ namespace BetterThanNothing
 		return m_extent;
 	}
 
-	std::uint32_t SwapChain::GetWidth() const
+	uint32_t SwapChain::GetWidth() const
 	{
 		return m_extent.width;
 	}
 
-	std::uint32_t SwapChain::GetHeight() const
+	uint32_t SwapChain::GetHeight() const
 	{
 		return m_extent.height;
 	}
@@ -329,7 +329,7 @@ namespace BetterThanNothing
 		return static_cast<float>(m_extent.width) / static_cast<float>(m_extent.height);
 	}
 
-	std::uint32_t SwapChain::GetImageCount() const
+	uint32_t SwapChain::GetImageCount() const
 	{
 		return m_images.size();
 	}
@@ -339,14 +339,14 @@ namespace BetterThanNothing
 		return m_imageFormat;
 	}
 
-	VkImage SwapChain::GetImage(std::uint32_t index) const
+	VkImage SwapChain::GetImage(uint32_t index) const
 	{
 		if (index >= m_images.size())
 			throw std::runtime_error("Image index out of range");
 		return m_images.at(index);
 	}
 
-	VkImageView SwapChain::GetImageView(std::uint32_t index) const
+	VkImageView SwapChain::GetImageView(uint32_t index) const
 	{
 		if (index >= m_imageViews.size())
 			throw std::runtime_error("Image view index out of range");

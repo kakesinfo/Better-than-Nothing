@@ -22,7 +22,7 @@
 namespace BetterThanNothing
 {
 
-	WindowBuilder::WindowBuilder(const std::string& title, const std::uint32_t width, const std::uint32_t height)
+	WindowBuilder::WindowBuilder(const std::string& title, const uint32_t width, const uint32_t height)
 	{
 		m_windowParams.title = title;
 		m_windowParams.width = width;
@@ -37,7 +37,7 @@ namespace BetterThanNothing
 		return *this;
 	}
 
-	WindowBuilder& WindowBuilder::SetSize(const std::uint32_t width, const std::uint32_t height)
+	WindowBuilder& WindowBuilder::SetSize(const uint32_t width, const uint32_t height)
 	{
 		m_windowParams.width = width;
 		m_windowParams.height = height;
@@ -64,7 +64,7 @@ namespace BetterThanNothing
 		if (m_windowParams.width == 0 || m_windowParams.height == 0)
 			throw WindowBuilderError("CWindow size is not set");
 
-		return std::make_unique<Window>(m_windowParams.title, m_windowParams.width, m_windowParams.height,
-										m_windowParams.fullscreen, m_windowParams.resizable);
+		return std::make_unique<
+			Window>(m_windowParams.title, m_windowParams.width, m_windowParams.height, m_windowParams.fullscreen, m_windowParams.resizable);
 	}
 }

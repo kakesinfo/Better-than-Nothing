@@ -86,7 +86,7 @@ namespace BetterThanNothing
 
 	void CommandBuffer::SetViewport(const float x, const float y, const float width, const float height, const float minDepth, const float maxDepth)
 	{
-		const VkViewport viewport = { .x = x, .y = y, .width = width, .height = height, .minDepth = minDepth, .maxDepth = maxDepth };
+		const VkViewport viewport = {.x = x, .y = y, .width = width, .height = height, .minDepth = minDepth, .maxDepth = maxDepth};
 		vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
 	}
 
@@ -95,9 +95,9 @@ namespace BetterThanNothing
 		SetScissor(0, 0, extent);
 	}
 
-	void CommandBuffer::SetScissor(const std::int32_t offsetX, const std::int32_t offsetY, VkExtent2D extent)
+	void CommandBuffer::SetScissor(const int32_t offsetX, const int32_t offsetY, VkExtent2D extent)
 	{
-		const VkRect2D scissor = { .offset = {offsetX, offsetY}, .extent = extent };
+		const VkRect2D scissor = {.offset = {offsetX, offsetY}, .extent = extent};
 		vkCmdSetScissor(m_commandBuffer, 0, 1, &scissor);
 	}
 
@@ -106,8 +106,7 @@ namespace BetterThanNothing
 		vkCmdBindPipeline(m_commandBuffer, bindPoint, pipeline);
 	}
 
-	void CommandBuffer::BindVertexBuffers(std::uint32_t firstBinding, std::uint32_t bindingCount,
-													   const VkBuffer* buffers, const VkDeviceSize* offsets)
+	void CommandBuffer::BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* buffers, const VkDeviceSize* offsets)
 	{
 		vkCmdBindVertexBuffers(m_commandBuffer, firstBinding, bindingCount, buffers, offsets);
 	}
@@ -117,41 +116,27 @@ namespace BetterThanNothing
 		vkCmdBindIndexBuffer(m_commandBuffer, buffer, offset, indexType);
 	}
 
-	void CommandBuffer::BindDescriptorSets(const VkPipelineLayout layout, const std::uint32_t firstSet,
-														const std::uint32_t	   descriptorSetCount,
-														const VkDescriptorSet* descriptorSets,
-														const std::uint32_t	   dynamicOffsetCount,
-														const std::uint32_t*   dynamicOffsets)
+	void CommandBuffer::BindDescriptorSets(const VkPipelineLayout layout, const uint32_t firstSet, const uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, const uint32_t dynamicOffsetCount, const uint32_t* dynamicOffsets)
 	{
-		BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet, descriptorSetCount, descriptorSets,
-						   dynamicOffsetCount, dynamicOffsets);
+		BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet, descriptorSetCount, descriptorSets, dynamicOffsetCount, dynamicOffsets);
 	}
 
-	void CommandBuffer::BindDescriptorSets(const VkPipelineBindPoint pipelineBindPoint,
-														const VkPipelineLayout layout, const std::uint32_t firstSet,
-														const std::uint32_t	   descriptorSetCount,
-														const VkDescriptorSet* descriptorSets,
-														std::uint32_t		   dynamicOffsetCount,
-														const std::uint32_t*   dynamicOffsets)
+	void CommandBuffer::BindDescriptorSets(const VkPipelineBindPoint pipelineBindPoint, const VkPipelineLayout layout, const uint32_t firstSet, const uint32_t descriptorSetCount, const VkDescriptorSet* descriptorSets, uint32_t dynamicOffsetCount, const uint32_t* dynamicOffsets)
 	{
-		vkCmdBindDescriptorSets(m_commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount,
-								descriptorSets, dynamicOffsetCount, dynamicOffsets);
+		vkCmdBindDescriptorSets(m_commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, descriptorSets, dynamicOffsetCount, dynamicOffsets);
 	}
 
-	void CommandBuffer::Draw(const std::uint32_t vertexCount, const std::uint32_t instanceCount,
-										  const std::uint32_t firstVertex, const std::uint32_t firstInstance)
+	void CommandBuffer::Draw(const uint32_t vertexCount, const uint32_t instanceCount, const uint32_t firstVertex, const uint32_t firstInstance)
 	{
 		vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 
-	void CommandBuffer::DrawIndexed(const std::uint32_t indexCount, const std::uint32_t instanceCount,
-												 const std::uint32_t firstIndex, const std::int32_t vertexOffset,
-												 const std::uint32_t firstInstance)
+	void CommandBuffer::DrawIndexed(const uint32_t indexCount, const uint32_t instanceCount, const uint32_t firstIndex, const int32_t vertexOffset, const uint32_t firstInstance)
 	{
 		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
-	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, std::uint32_t bufferSize)
+	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t bufferSize)
 	{
 		VkBufferCopy copyRegion{};
 		copyRegion.size = bufferSize;
@@ -159,7 +144,7 @@ namespace BetterThanNothing
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 	}
 
-	void CommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, std::uint32_t mipLevels)
+	void CommandBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
 	{
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -221,7 +206,7 @@ namespace BetterThanNothing
 		vkCmdPipelineBarrier(m_commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, std::uint32_t width, std::uint32_t height)
+	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
 	{
 		VkBufferImageCopy region{};
 		region.bufferOffset = 0;
@@ -239,7 +224,7 @@ namespace BetterThanNothing
 		vkCmdCopyBufferToImage(m_commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 	}
 
-	void CommandBuffer::PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, std::uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers, std::uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, std::uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const
+	void CommandBuffer::PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers, uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const
 	{
 		vkCmdPipelineBarrier(m_commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, memoryBarriers, bufferMemoryBarrierCount, bufferMemoryBarriers, imageMemoryBarrierCount, imageMemoryBarriers);
 	}
@@ -249,7 +234,7 @@ namespace BetterThanNothing
 		vkCmdBlitImage(m_commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 1, blit, filter);
 	}
 
-	void CommandBuffer::PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, const std::uint32_t offset, const std::uint32_t size, const void* values)
+	void CommandBuffer::PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, const uint32_t offset, const uint32_t size, const void* values)
 	{
 		vkCmdPushConstants(m_commandBuffer, layout, stageFlags, offset, size, values);
 	}

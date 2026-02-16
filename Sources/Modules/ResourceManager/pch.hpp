@@ -18,13 +18,7 @@
 
 #pragma once
 
-#include <chrono>
 #include <cstdint>
-#include <cstddef>
-#include <filesystem>
-#include <string>
-#include <unordered_map>
-#include <functional>
 
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.h>

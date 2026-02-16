@@ -19,6 +19,8 @@
 #pragma once
 
 #include "Module_Base/EShaderType.hpp"
+#include "RenderingApi/Deprecated/VulkanShaderModule.hpp"
+#include <memory>
 
 namespace BetterThanNothing
 {

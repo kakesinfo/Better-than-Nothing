@@ -26,8 +26,8 @@ namespace BetterThanNothing
 	struct MeshGpuData
 	{
 		std::unique_ptr<VulkanVertexBuffer> vertexBuffer;
-		std::uint32_t						vertexCount = 0;
+		uint32_t							vertexCount = 0;
 		std::unique_ptr<VulkanIndexBuffer>	indexBuffer;
-		std::uint32_t						indexCount = 0;
+		uint32_t							indexCount = 0;
 	};
 }

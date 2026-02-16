@@ -24,6 +24,7 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 
+#include <filesystem>
 #include <future>
 #include <tiny_obj_loader.h>
 
@@ -31,7 +32,6 @@
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>
 #include <RenderingApi/Deprecated/VulkanContext.hpp>
-#include <RenderingApi/Deprecated/VulkanShaderModule.hpp>
 
 namespace BetterThanNothing
 {
@@ -213,15 +213,15 @@ namespace BetterThanNothing
 		if (mesh.vertices.empty() || mesh.indices.empty())
 			throw std::runtime_error("Mesh has no vertices or indices!");
 
-		const std::uint32_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
-		const void*			vertexBufferData = mesh.vertices.data();
+		const uint32_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
+		const void*	   vertexBufferData = mesh.vertices.data();
 		meshGpuData->vertexBuffer = std::make_unique<VulkanVertexBuffer>(m_context, vertexBufferSize, vertexBufferData);
-		meshGpuData->vertexCount = static_cast<std::uint32_t>(mesh.vertices.size());
+		meshGpuData->vertexCount = static_cast<uint32_t>(mesh.vertices.size());
 
-		const std::uint32_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
-		const void*			indexBufferData = mesh.indices.data();
+		const uint32_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
+		const void*	   indexBufferData = mesh.indices.data();
 		meshGpuData->indexBuffer = std::make_unique<VulkanIndexBuffer>(m_context, indexBufferSize, indexBufferData);
-		meshGpuData->indexCount = static_cast<std::uint32_t>(mesh.indices.size());
+		meshGpuData->indexCount = static_cast<uint32_t>(mesh.indices.size());
 
 		m_meshes[meshId] = std::move(meshGpuData);
 

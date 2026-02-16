@@ -18,15 +18,7 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
-#include <cstring>
-#include <iostream>
-#include <optional>
-#include <set>
-#include <string>
-#include <vector>
-#include <memory>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>

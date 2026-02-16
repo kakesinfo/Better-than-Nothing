@@ -26,8 +26,8 @@ namespace BetterThanNothing
 {
 	GlobalUniformProvider::GlobalUniformProvider(VulkanContext* context) : m_context(context)
 	{
-		const std::uint32_t count = m_context->settings.maxFramesInFlight;
-		for (std::uint32_t i = 0; i < count; i++)
+		const uint32_t count = m_context->settings.maxFramesInFlight;
+		for (uint32_t i = 0; i < count; i++)
 		{
 			m_context->frames[i].globalUniformBuffer = std::make_unique<VulkanUniformBuffer>(m_context, sizeof(GlobalUniformData));
 		}
