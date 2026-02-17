@@ -19,10 +19,9 @@
 #include "Renderer/Renderer.hpp"
 #include "Module_Data/Graphics/CameraData.hpp"
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
-#include "Renderer/Data/DynamicUniformData.hpp"
-#include "Renderer/Data/GlobalUniformData.hpp"
+#include "Module_Data/Graphics/DynamicUniformData.hpp"
+#include "Module_Data/Graphics/GlobalUniformData.hpp"
 #include "Renderer/DrawStream.hpp"
-#include "Renderer/DynamicUniformProvider.hpp"
 #include "Renderer/GlobalUniformProvider.hpp"
 #include "Renderer/Passes/ForwardPass.hpp"
 #include "Renderer/Passes/ImGuiPass.hpp"
@@ -35,11 +34,11 @@
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>
 #include <RenderingApi/Deprecated/VertexInputDescription.hpp>
+#include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/MeshGpuData.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/TextureGpuData.hpp>
 #include <cstring>
-#include <RenderingDevice/RenderingDevice.hpp>
 
 namespace BetterThanNothing
 {
@@ -58,7 +57,6 @@ namespace BetterThanNothing
 		m_context->frames.resize(m_context->settings.maxFramesInFlight);
 
 		m_globalUniformProvider = std::make_unique<GlobalUniformProvider>(m_context);
-		m_dynamicUniformProvider = std::make_unique<DynamicUniformProvider>(m_context, 100000);
 
 		m_renderGraph = std::make_unique<RenderGraph>(m_context);
 		m_renderGraph->AddRenderPass<ForwardPass>();
@@ -67,7 +65,6 @@ namespace BetterThanNothing
 		CreateDescriptorSetLayout();
 		CreateDescriptorPool();
 		CreateGlobalDescriptorSets();
-		CreateDynamicDescriptorSets();
 
 		constexpr uint32_t MAX_LIGHT_COUNT = 1000;
 		CreatePointLightBuffers(MAX_LIGHT_COUNT);
@@ -194,9 +191,6 @@ namespace BetterThanNothing
 			if (!meshGpuData || !textureGpuData)
 				continue;
 
-			const auto dynamicUniform = m_dynamicUniformProvider->Get<DynamicUniformData>(m_currentFrame, i);
-			dynamicUniform->model = transform;
-
 			drawStream.Draw({
 				.pipeline = m_context->defaultPipeline->Handle(),
 				.pipelineLayout = m_context->defaultPipeline->GetLayout(),
@@ -204,8 +198,7 @@ namespace BetterThanNothing
 				.indexBuffer = meshGpuData->indexBuffer->Handle(),
 				.indexCount = meshGpuData->indexCount,
 				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
-				.dynamicDescriptorSet = m_context->vkDynamicDescriptorSets[m_currentFrame]->Handle(),
-				.dynamicOffset = m_dynamicUniformProvider->GetOffset(i),
+				.dynamicUniformData = { .model = transform },
 				.samplerDescriptorSet = textureGpuData->descriptorSet->Handle(),
 				.pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
 			});
@@ -266,11 +259,6 @@ namespace BetterThanNothing
 		globalUniformLayoutBinding.descriptorCount = 1;
 		globalUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding dynamicUniformLayoutBinding{};
-		dynamicUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		dynamicUniformLayoutBinding.descriptorCount = 1;
-		dynamicUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
 		VkDescriptorSetLayoutBinding samplerLayoutBinding{};
 		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		samplerLayoutBinding.descriptorCount = 1;
@@ -282,12 +270,10 @@ namespace BetterThanNothing
 		pointLightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		auto globalBindings = {globalUniformLayoutBinding};
-		auto dynamicBindings = {dynamicUniformLayoutBinding};
 		auto samplerBindings = {samplerLayoutBinding};
 		auto pointLightBinding = {pointLightLayoutBinding};
 
 		m_context->vkGlobalDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(globalBindings, m_context);
-		m_context->vkDynamicDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(dynamicBindings, m_context);
 		m_context->vkSamplerDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(samplerBindings, m_context);
 		m_context->vkPointLightDescriptorLayout = std::make_unique<VulkanDescriptorSetLayout>(pointLightBinding, m_context);
 
@@ -300,7 +286,6 @@ namespace BetterThanNothing
 
 		m_context->descriptorPool = DescriptorPool::Builder(m_context->device)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight)
-										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, maxFramesInFlight)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxFramesInFlight)
 										.Build();
@@ -338,34 +323,6 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan global descriptor sets: ok (count: {})", m_context->vkGlobalDescriptorSets.size());
 	}
 
-	void Renderer::CreateDynamicDescriptorSets()
-	{
-		m_context->vkDynamicDescriptorSets.resize(m_context->settings.maxFramesInFlight);
-
-		for (size_t i = 0; i < m_context->settings.maxFramesInFlight; i++)
-		{
-			m_context->vkDynamicDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkDynamicDescriptorSetLayout, m_context);
-
-			VkDescriptorBufferInfo dynamicInfo{};
-			dynamicInfo.buffer = m_context->frames[i].dynamicUniformBuffer->Handle();
-			dynamicInfo.offset = 0;
-			dynamicInfo.range = sizeof(DynamicUniformData);
-
-			const auto& descriptorSet = m_context->vkDynamicDescriptorSets[i]->Handle();
-
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = descriptorSet;
-			descriptorWrite.dstBinding = 0;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = &dynamicInfo;
-
-			vkUpdateDescriptorSets(m_context->device->Handle(), 1, &descriptorWrite, 0, nullptr);
-		}
-
-		Logger::Log<SUCCESS>("Vulkan dynamic descriptor sets: ok (count: {})", m_context->vkDynamicDescriptorSets.size());
-	}
 
 	void Renderer::CreatePointLightBuffers(uint32_t maxLights) const
 	{

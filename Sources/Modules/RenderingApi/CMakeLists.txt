@@ -24,6 +24,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Module_Base
+        Module_Data
         Module_Platform
         SDL3::SDL3
         Vulkan::Vulkan # Replace with https://github.com/zeux/volk

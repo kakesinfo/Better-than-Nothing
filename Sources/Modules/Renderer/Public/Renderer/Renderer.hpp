@@ -35,7 +35,6 @@ namespace BetterThanNothing
 	class RenderGraph;
 
 	class GlobalUniformProvider;
-	class DynamicUniformProvider;
 	class Camera;
 
 	struct VulkanContext;
@@ -46,6 +45,8 @@ namespace BetterThanNothing
 
 	class ResourceManager;
 	class RenderingDevice;
+
+	struct DynamicUniformsData;
 
 	class Renderer final
 	{
@@ -61,7 +62,6 @@ namespace BetterThanNothing
 		void CreateDescriptorSetLayout();
 		void CreateDescriptorPool() const;
 		void CreateGlobalDescriptorSets();
-		void CreateDynamicDescriptorSets();
 
 		void CreatePointLightBuffers(uint32_t maxLights) const;
 		void CreatePointLightDescriptorSets(uint32_t maxLights);
@@ -82,7 +82,6 @@ namespace BetterThanNothing
 		std::vector<VulkanFrame>				m_frames;
 		uint32_t								m_currentFrame = 0;
 		std::unique_ptr<GlobalUniformProvider>	m_globalUniformProvider = nullptr;
-		std::unique_ptr<DynamicUniformProvider> m_dynamicUniformProvider = nullptr;
 		std::unique_ptr<RenderGraph>			m_renderGraph = nullptr;
 	};
 }

@@ -64,9 +64,6 @@ namespace BetterThanNothing
 		std::unique_ptr<VulkanDescriptorSetLayout>		  vkGlobalDescriptorSetLayout;
 		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkGlobalDescriptorSets;
 
-		std::unique_ptr<VulkanDescriptorSetLayout>		  vkDynamicDescriptorSetLayout;
-		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkDynamicDescriptorSets;
-
 		std::unique_ptr<VulkanDescriptorSetLayout> vkSamplerDescriptorSetLayout;
 
 		std::unique_ptr<VulkanDescriptorSetLayout>		  vkPointLightDescriptorLayout;
