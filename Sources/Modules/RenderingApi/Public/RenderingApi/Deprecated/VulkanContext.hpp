@@ -40,11 +40,7 @@ namespace BetterThanNothing
 	{
 		struct
 		{
-			union
-			{
-				EBufferingMode bufferingMode = EBufferingMode::Double;
-				uint32_t	   maxFramesInFlight;
-			};
+			uint32_t	   maxFramesInFlight = 2;
 		} settings;
 
 		Instance*				  instance;

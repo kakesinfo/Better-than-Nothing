@@ -75,12 +75,9 @@ namespace BetterThanNothing
 		}
 
 		createInfo.preTransform = swapChainSupport.capabilities.currentTransform; // No transformation
-
-		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // No blending with other windows
-
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;			  // No blending with other windows
 		createInfo.presentMode = presentMode;
-		createInfo.clipped = VK_TRUE; // Clip obscured pixels
-
+		createInfo.clipped = VK_TRUE;			  // Clip obscured pixels
 		createInfo.oldSwapchain = VK_NULL_HANDLE; // For recreation
 
 		auto device = m_createInfo.device->Handle();
