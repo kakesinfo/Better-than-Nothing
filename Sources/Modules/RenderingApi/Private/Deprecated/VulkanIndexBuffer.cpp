@@ -32,7 +32,7 @@ namespace BetterThanNothing
 				[&](const std::unique_ptr<CommandBuffer>& commandBuffer) {
 					commandBuffer->CopyBuffer(stagingBuffer.Handle(), m_buffer, size);
 				},
-				context->device.get(), context->commandPool.get(), context->graphicsQueue.get());
+				context->device, context->commandPool, context->graphicsQueue);
 		}
 	}
 }

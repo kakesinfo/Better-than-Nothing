@@ -40,26 +40,22 @@ namespace BetterThanNothing
 	{
 		struct
 		{
-			std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-														 VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-														 VK_EXT_MEMORY_BUDGET_EXTENSION_NAME};
-
 			union
 			{
 				EBufferingMode bufferingMode = EBufferingMode::Double;
-				uint32_t  maxFramesInFlight;
+				uint32_t	   maxFramesInFlight;
 			};
 		} settings;
 
-		std::unique_ptr<Instance>	 instance;
-		std::unique_ptr<Surface>	 surface;
-		std::unique_ptr<Device>		 device;
-		std::unique_ptr<Queue>		 graphicsQueue;
-		std::unique_ptr<Queue>		 presentQueue;
-		std::unique_ptr<Allocator>	 allocator;
-		std::unique_ptr<SwapChain>	 swapChain;
-		std::unique_ptr<CommandPool> commandPool;
-		std::unique_ptr<Pipeline>	 defaultPipeline;
+		Instance*				  instance;
+		Surface*				  surface;
+		Device*					  device;
+		Queue*					  graphicsQueue;
+		Queue*					  presentQueue;
+		Allocator*				  allocator;
+		SwapChain*				  swapChain;
+		CommandPool*			  commandPool;
+		std::unique_ptr<Pipeline> defaultPipeline;
 
 		std::vector<VulkanFrame> frames;
 
