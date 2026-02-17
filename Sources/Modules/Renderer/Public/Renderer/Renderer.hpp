@@ -45,11 +45,12 @@ namespace BetterThanNothing
 	struct DirectionalLightData;
 
 	class ResourceManager;
+	class RenderingDevice;
 
 	class Renderer final
 	{
 	public:
-		explicit Renderer(VulkanContext* context, ResourceManager* resourceManager);
+		explicit Renderer(VulkanContext* context, ResourceManager* resourceManager, RenderingDevice* renderingDevice);
 		~Renderer();
 
 		void RenderFrame(const RenderList* renderList, const CameraData& camera);
@@ -77,6 +78,7 @@ namespace BetterThanNothing
 	private:
 		VulkanContext*							m_context = nullptr;
 		ResourceManager*						m_resourceManager = nullptr;
+		RenderingDevice*						m_renderingDevice = nullptr;
 		std::vector<VulkanFrame>				m_frames;
 		uint32_t								m_currentFrame = 0;
 		std::unique_ptr<GlobalUniformProvider>	m_globalUniformProvider = nullptr;

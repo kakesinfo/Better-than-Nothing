@@ -19,6 +19,7 @@
 #pragma once
 
 #include <optional>
+#include <vector>
 
 namespace BetterThanNothing
 {
@@ -46,7 +47,11 @@ namespace BetterThanNothing
 		Instance* instance;
 		Surface*  surface;
 
-		std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME};
+		std::vector<const char*> deviceExtensions = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
+			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+		};
 	};
 
 	class Device

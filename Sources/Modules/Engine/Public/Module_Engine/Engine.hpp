@@ -44,6 +44,7 @@ namespace BetterThanNothing
 		void Run() const;
 
 	private:
+		std::unique_ptr<RenderingDevice> m_renderingDevice;
 		std::unique_ptr<VulkanContext>	 m_context;
 		std::unique_ptr<ResourceManager> m_resourceManager;
 		std::unique_ptr<RenderList>		 m_renderList;

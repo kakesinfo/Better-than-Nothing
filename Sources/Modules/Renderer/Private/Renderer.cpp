@@ -39,41 +39,21 @@
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/TextureGpuData.hpp>
 #include <cstring>
+#include <RenderingDevice/RenderingDevice.hpp>
 
 namespace BetterThanNothing
 {
-	Renderer::Renderer(VulkanContext* context, ResourceManager* resourceManager) : m_context(context), m_resourceManager(resourceManager)
+	Renderer::Renderer(VulkanContext* context, ResourceManager* resourceManager, RenderingDevice* renderingDevice)
+	: m_context(context), m_resourceManager(resourceManager), m_renderingDevice(renderingDevice)
 	{
-		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
-
-		Logger::Log<INFO>("Buffering mode: {}", m_context->settings.maxFramesInFlight);
-		Logger::Log<INFO>("VSync: {}", m_context->settings.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
-
-		m_context->instance = Instance::Create({.enableValidation = true});
-		m_context->surface = Surface::Create({WindowManager::GetWindow()->Handle(), m_context->instance.get()});
-		m_context->device = Device::Create({m_context->instance.get(), m_context->surface.get()});
-		m_context->graphicsQueue = m_context->device->CreateGraphicsQueue();
-		m_context->presentQueue = m_context->device->CreatePresentQueue();
-		m_context->allocator = Allocator::Create({m_context->instance.get(), m_context->device.get()});
-
-		Logger::Log<INFO>("Vendor: {}", m_context->device->GetVendorName());
-		Logger::Log<INFO>("Device: {}", m_context->device->GetDeviceName());
-		Logger::Log<INFO>("API Version: {}", m_context->device->GetApiVersion());
-		Logger::Log<INFO>("Anisotropy: {}x", m_context->device->GetMaxAnisotropy());
-		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_context->device->GetMaxMsaaSamples()));
-
-		m_context->commandPool = CommandPool::Create({m_context->device.get(), m_context->graphicsQueue.get()});
-
-		m_context->swapChain = SwapChain::Create({
-			m_context->surface.get(),
-			m_context->device.get(),
-			m_context->allocator.get(),
-			m_context->commandPool.get(),
-			m_context->graphicsQueue.get(),
-			windowWidth,
-			windowHeight,
-			m_context->settings.bufferingMode,
-		});
+		m_context->instance = m_renderingDevice->GetInstance();
+		m_context->surface = m_renderingDevice->GetSurface();
+		m_context->device = m_renderingDevice->GetDevice();
+		m_context->graphicsQueue = m_renderingDevice->GetGraphicsQueue();
+		m_context->presentQueue = m_renderingDevice->GetPresentQueue();
+		m_context->allocator = m_renderingDevice->GetAllocator();
+		m_context->commandPool = m_renderingDevice->GetCommandPool();
+		m_context->swapChain = m_renderingDevice->GetSwapChain();
 
 		m_context->frames.resize(m_context->settings.maxFramesInFlight);
 
@@ -259,7 +239,7 @@ namespace BetterThanNothing
 		const uint32_t count = m_context->settings.maxFramesInFlight;
 
 		for (uint32_t i = 0; i < count; i++)
-			m_context->frames[i].commandBuffer = CommandBuffer::Create({m_context->device.get(), m_context->commandPool.get()});
+			m_context->frames[i].commandBuffer = CommandBuffer::Create({m_context->device, m_context->commandPool});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
 	}
@@ -271,9 +251,9 @@ namespace BetterThanNothing
 		for (uint32_t i = 0; i < count; i++)
 		{
 			auto& frame = m_context->frames[i];
-			frame.imageAvailableSemaphore = Semaphore::Create({m_context->device.get()});
-			frame.renderFinishedSemaphore = Semaphore::Create({m_context->device.get()});
-			frame.inFlightFences = Fence::Create({m_context->device.get(), true});
+			frame.imageAvailableSemaphore = Semaphore::Create({m_context->device});
+			frame.renderFinishedSemaphore = Semaphore::Create({m_context->device});
+			frame.inFlightFences = Fence::Create({m_context->device, true});
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok (count: {})", count);
@@ -318,7 +298,7 @@ namespace BetterThanNothing
 	{
 		const uint32_t maxFramesInFlight = m_context->settings.maxFramesInFlight;
 
-		m_context->descriptorPool = DescriptorPool::Builder(m_context->device.get())
+		m_context->descriptorPool = DescriptorPool::Builder(m_context->device)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, maxFramesInFlight)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
