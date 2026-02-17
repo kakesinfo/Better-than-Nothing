@@ -35,11 +35,7 @@ namespace BetterThanNothing
 
 	struct RenderingDeviceCreateInfo
 	{
-		union
-		{
-			EBufferingMode bufferingMode = EBufferingMode::Double;
-			uint32_t	   maxFramesInFlight;
-		};
+		EBufferingMode bufferingMode = EBufferingMode::Double;
 	};
 
 	class RenderingDevice
@@ -60,6 +56,7 @@ namespace BetterThanNothing
 		[[nodiscard]] CommandPool*	  GetCommandPool() const;
 		[[nodiscard]] DescriptorPool* GetDescriptorPool() const;
 		[[nodiscard]] Pipeline*		  GetDefaultPipeline() const;
+		[[nodiscard]] uint32_t		  GetMaxFramesInFlight() const;
 
 	private:
 		RenderingDeviceCreateInfo		m_createInfo;
@@ -73,5 +70,6 @@ namespace BetterThanNothing
 		std::unique_ptr<CommandPool>	m_commandPool;
 		std::unique_ptr<DescriptorPool> m_descriptorPool;
 		std::unique_ptr<Pipeline>		m_defaultPipeline;
+		uint32_t						m_maxFramesInFlight;
 	};
 };

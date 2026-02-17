@@ -38,8 +38,6 @@ namespace BetterThanNothing
 		const auto& window = WindowManager::GetWindow();
 		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
 
-		Logger::Log<INFO>("Buffering mode: {}", createInfo.maxFramesInFlight);
-		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
 
 		m_instance = Instance::Create({.enableValidation = true});
 		m_surface = Surface::Create({window->Handle(), m_instance.get()});
@@ -47,12 +45,6 @@ namespace BetterThanNothing
 		m_graphicsQueue = m_device->CreateGraphicsQueue();
 		m_presentQueue = m_device->CreatePresentQueue();
 		m_allocator = Allocator::Create({m_instance.get(), m_device.get()});
-
-		Logger::Log<INFO>("Vendor: {}", m_device->GetVendorName());
-		Logger::Log<INFO>("Device: {}", m_device->GetDeviceName());
-		Logger::Log<INFO>("API Version: {}", m_device->GetApiVersion());
-		Logger::Log<INFO>("Anisotropy: {}x", m_device->GetMaxAnisotropy());
-		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_device->GetMaxMsaaSamples()));
 
 		m_commandPool = CommandPool::Create({m_device.get(), m_graphicsQueue.get()});
 
@@ -66,6 +58,16 @@ namespace BetterThanNothing
 			windowHeight,
 			createInfo.bufferingMode,
 		});
+
+		m_maxFramesInFlight = m_swapChain->GetImageCount();
+
+		Logger::Log<INFO>("Vendor: {}", m_device->GetVendorName());
+		Logger::Log<INFO>("Device: {}", m_device->GetDeviceName());
+		Logger::Log<INFO>("API Version: {}", m_device->GetApiVersion());
+		Logger::Log<INFO>("Buffering mode: {}", static_cast<uint8_t>(createInfo.bufferingMode));
+		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
+		Logger::Log<INFO>("Anisotropy: {}x", m_device->GetMaxAnisotropy());
+		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_device->GetMaxMsaaSamples()));
 	}
 
 	RenderingDevice::~RenderingDevice() {}
@@ -123,5 +125,10 @@ namespace BetterThanNothing
 	Pipeline* RenderingDevice::GetDefaultPipeline() const
 	{
 		return m_defaultPipeline.get();
+	}
+
+	uint32_t RenderingDevice::GetMaxFramesInFlight() const
+	{
+		return m_maxFramesInFlight;
 	}
 }

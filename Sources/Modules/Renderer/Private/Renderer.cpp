@@ -45,6 +45,8 @@ namespace BetterThanNothing
 	Renderer::Renderer(VulkanContext* context, ResourceManager* resourceManager, RenderingDevice* renderingDevice)
 	: m_context(context), m_resourceManager(resourceManager), m_renderingDevice(renderingDevice)
 	{
+		m_context->settings.maxFramesInFlight = m_renderingDevice->GetMaxFramesInFlight();
+
 		m_context->instance = m_renderingDevice->GetInstance();
 		m_context->surface = m_renderingDevice->GetSurface();
 		m_context->device = m_renderingDevice->GetDevice();
