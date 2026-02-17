@@ -7,7 +7,7 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     vec3 cameraPosition;
 } globalUniforms;
 
-layout(set = 1, binding = 0) uniform DynamicUniformBuffer {
+layout(push_constant) uniform constants {
     mat4 model;
 } dynamicUniforms;
 

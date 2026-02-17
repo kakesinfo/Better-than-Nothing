@@ -17,6 +17,7 @@
  */
 
 #pragma once
+#include "Module_Data/Graphics/DynamicUniformData.hpp"
 
 namespace BetterThanNothing
 {
@@ -30,9 +31,7 @@ namespace BetterThanNothing
 		uint32_t indexCount;
 
 		VkDescriptorSet globalDescriptorSet;
-
-		VkDescriptorSet dynamicDescriptorSet;
-		uint32_t		dynamicOffset;
+		DynamicUniformData dynamicUniformData;
 
 		VkDescriptorSet samplerDescriptorSet;
 		VkDescriptorSet pointLightDescriptorSet;

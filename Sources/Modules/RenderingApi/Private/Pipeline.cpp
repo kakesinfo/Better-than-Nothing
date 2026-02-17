@@ -18,6 +18,7 @@
 
 #include "RenderingApi.hpp"
 #include "RenderingApi/Deprecated/VertexInputDescription.hpp"
+#include <Module_Data/Graphics/DynamicUniformData.hpp>
 
 #include <Module_Base/Logger.hpp>
 
@@ -127,18 +128,22 @@ namespace BetterThanNothing
 		depthStencil.back = {};	 // Optional
 
 		VkDescriptorSetLayout globalLayout = m_context->vkGlobalDescriptorSetLayout->Handle();
-		VkDescriptorSetLayout dynamicLayout = m_context->vkDynamicDescriptorSetLayout->Handle();
 		VkDescriptorSetLayout samplerLayout = m_context->vkSamplerDescriptorSetLayout->Handle();
 		VkDescriptorSetLayout pointLightLayout = m_context->vkPointLightDescriptorLayout->Handle();
 
-		auto layouts = std::array{globalLayout, dynamicLayout, samplerLayout, pointLightLayout};
+		std::array layouts = {globalLayout, samplerLayout, pointLightLayout};
+
+		VkPushConstantRange dynamicPushConstant{};
+		dynamicPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		dynamicPushConstant.offset = 0;
+		dynamicPushConstant.size = sizeof(DynamicUniformData);
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
 		pipelineLayoutInfo.pSetLayouts = layouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 0;	  // Optional
-		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges = &dynamicPushConstant;
 
 		if (vkCreatePipelineLayout(m_context->device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create pipeline layout");

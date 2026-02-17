@@ -17,7 +17,7 @@
  */
 
 #include "Renderer/GlobalUniformProvider.hpp"
-#include "Renderer/Data/GlobalUniformData.hpp"
+#include "Module_Data/Graphics/GlobalUniformData.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <RenderingApi/Deprecated/VulkanContext.hpp>

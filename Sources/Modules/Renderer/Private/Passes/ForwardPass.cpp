@@ -104,14 +104,18 @@ namespace BetterThanNothing
 						boundGlobalDescriptor = true;
 					}
 
+					commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 1, 1, &drawCommand.samplerDescriptorSet, 0, nullptr);
+
 					if (!boundPointLightDescriptor)
 					{
-						commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 3, 1, &drawCommand.pointLightDescriptorSet, 0, nullptr);
+						commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 2, 1, &drawCommand.pointLightDescriptorSet, 0, nullptr);
 						boundPointLightDescriptor = true;
 					}
 
-					commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 1, 1, &drawCommand.dynamicDescriptorSet, 1, &drawCommand.dynamicOffset);
-					commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 2, 1, &drawCommand.samplerDescriptorSet, 0, nullptr);
+					commandBuffer->PushConstants(
+						drawCommand.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData),
+						&drawCommand.dynamicUniformData
+					);
 
 					const VkBuffer		   vertexBuffers[] = {drawCommand.vertexBuffer};
 					constexpr VkDeviceSize offsets[] = {0};

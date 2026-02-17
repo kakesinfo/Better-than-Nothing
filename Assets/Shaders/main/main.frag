@@ -27,9 +27,9 @@ layout(location = 3) in vec3 fragNormal;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 2, binding = 0) uniform sampler2D texSampler;
+layout(set = 1, binding = 0) uniform sampler2D texSampler;
 
-layout(std430, set = 3, binding = 0) readonly buffer PointLightBuffer {
+layout(std430, set = 2, binding = 0) readonly buffer PointLightBuffer {
     PointLightData lights[];
 } pointLights;
 
