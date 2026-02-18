@@ -18,7 +18,7 @@
 
 #pragma once
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	class Device;
 

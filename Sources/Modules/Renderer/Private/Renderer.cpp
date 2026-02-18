@@ -234,7 +234,7 @@ namespace BetterThanNothing
 		const uint32_t count = m_context->settings.maxFramesInFlight;
 
 		for (uint32_t i = 0; i < count; i++)
-			m_context->frames[i].commandBuffer = CommandBuffer::Create({m_context->device, m_context->commandPool});
+			m_context->frames[i].commandBuffer = RenderingApi::CommandBuffer::Create({m_context->device, m_context->commandPool});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
 	}
@@ -246,9 +246,9 @@ namespace BetterThanNothing
 		for (uint32_t i = 0; i < count; i++)
 		{
 			auto& frame = m_context->frames[i];
-			frame.imageAvailableSemaphore = Semaphore::Create({m_context->device});
-			frame.renderFinishedSemaphore = Semaphore::Create({m_context->device});
-			frame.inFlightFences = Fence::Create({m_context->device, true});
+			frame.imageAvailableSemaphore = RenderingApi::Semaphore::Create({m_context->device});
+			frame.renderFinishedSemaphore = RenderingApi::Semaphore::Create({m_context->device});
+			frame.inFlightFences = RenderingApi::Fence::Create({m_context->device, true});
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok (count: {})", count);
@@ -286,7 +286,7 @@ namespace BetterThanNothing
 	{
 		const uint32_t maxFramesInFlight = m_context->settings.maxFramesInFlight;
 
-		m_context->descriptorPool = DescriptorPool::Builder(m_context->device)
+		m_context->descriptorPool = RenderingApi::DescriptorPool::Builder(m_context->device)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
 										.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxFramesInFlight)
@@ -370,12 +370,12 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Point light descriptor sets: ok (count: {})", m_context->vkPointLightDescriptorSets.size());
 	}
 
-	void Renderer::AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback)
+	void Renderer::AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback)
 	{
-		VulkanPipelineBuilder builder;
+		RenderingApi::PipelineBuilder builder;
 		callback(&builder);
 
-		VulkanPipelineParams params = builder.GetBuildParams();
+		RenderingApi::PipelineParams params = builder.GetBuildParams();
 
 		std::vector<const ShaderGpuData*> shaderModules;
 		shaderModules.reserve(params.shadersInfos.size());
@@ -391,7 +391,7 @@ namespace BetterThanNothing
 		vertexInputDescription.bindings = {GetVertexBindingDescription()};
 		vertexInputDescription.attributes = GetVertexAttributeDescriptions();
 
-		m_context->defaultPipeline = std::make_unique<Pipeline>(params, vertexInputDescription, shaderModules, m_context);
+		m_context->defaultPipeline = std::make_unique<RenderingApi::Pipeline>(params, vertexInputDescription, shaderModules, m_context);
 	}
 
 	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()

@@ -62,7 +62,7 @@ namespace BetterThanNothing
 		m_legacyRenderer = std::make_unique<Renderer>(m_context.get(), m_resourceManager.get(), m_renderingDevice.get());
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
 
-		m_legacyRenderer->AddPipeline([&](VulkanPipelineBuilder* builder) {
+		m_legacyRenderer->AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Assets/Shaders/");
 			builder->SetName("main");
 			builder->AddVertexShader("main/main.vert");

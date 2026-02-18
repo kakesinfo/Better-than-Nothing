@@ -23,15 +23,18 @@
 
 namespace BetterThanNothing
 {
-	class Instance;
-	class Surface;
-	class Device;
-	class Queue;
-	class Allocator;
-	class SwapChain;
-	class CommandPool;
-	class Pipeline;
-	class DescriptorPool;
+	namespace RenderingApi
+	{
+		class Instance;
+		class Surface;
+		class Device;
+		class Queue;
+		class Allocator;
+		class SwapChain;
+		class CommandPool;
+		class Pipeline;
+		class DescriptorPool;
+	}
 
 	struct RenderingDeviceCreateInfo
 	{
@@ -46,30 +49,41 @@ namespace BetterThanNothing
 
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
-		[[nodiscard]] Instance*		  GetInstance() const;
-		[[nodiscard]] Surface*		  GetSurface() const;
-		[[nodiscard]] Device*		  GetDevice() const;
-		[[nodiscard]] Queue*		  GetGraphicsQueue() const;
-		[[nodiscard]] Queue*		  GetPresentQueue() const;
-		[[nodiscard]] Allocator*	  GetAllocator() const;
-		[[nodiscard]] SwapChain*	  GetSwapChain() const;
-		[[nodiscard]] CommandPool*	  GetCommandPool() const;
-		[[nodiscard]] DescriptorPool* GetDescriptorPool() const;
-		[[nodiscard]] Pipeline*		  GetDefaultPipeline() const;
-		[[nodiscard]] uint32_t		  GetMaxFramesInFlight() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Instance*		GetInstance() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Surface*		GetSurface() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Device*			GetDevice() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Queue*			GetGraphicsQueue() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Queue*			GetPresentQueue() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Allocator*		GetAllocator() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::SwapChain*		GetSwapChain() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::CommandPool*	GetCommandPool() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::DescriptorPool* GetDescriptorPool() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Pipeline*		GetDefaultPipeline() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] uint32_t						GetMaxFramesInFlight() const;
 
 	private:
-		RenderingDeviceCreateInfo		m_createInfo;
-		std::unique_ptr<Instance>		m_instance;
-		std::unique_ptr<Surface>		m_surface;
-		std::unique_ptr<Device>			m_device;
-		std::unique_ptr<Queue>			m_graphicsQueue;
-		std::unique_ptr<Queue>			m_presentQueue;
-		std::unique_ptr<Allocator>		m_allocator;
-		std::unique_ptr<SwapChain>		m_swapChain;
-		std::unique_ptr<CommandPool>	m_commandPool;
-		std::unique_ptr<DescriptorPool> m_descriptorPool;
-		std::unique_ptr<Pipeline>		m_defaultPipeline;
-		uint32_t						m_maxFramesInFlight;
+		RenderingDeviceCreateInfo					  m_createInfo;
+		std::unique_ptr<RenderingApi::Instance>		  m_instance;
+		std::unique_ptr<RenderingApi::Surface>		  m_surface;
+		std::unique_ptr<RenderingApi::Device>		  m_device;
+		std::unique_ptr<RenderingApi::Queue>		  m_graphicsQueue;
+		std::unique_ptr<RenderingApi::Queue>		  m_presentQueue;
+		std::unique_ptr<RenderingApi::Allocator>	  m_allocator;
+		std::unique_ptr<RenderingApi::SwapChain>	  m_swapChain;
+		std::unique_ptr<RenderingApi::CommandPool>	  m_commandPool;
+		std::unique_ptr<RenderingApi::DescriptorPool> m_descriptorPool;
+		std::unique_ptr<RenderingApi::Pipeline>		  m_defaultPipeline;
+		uint32_t									  m_maxFramesInFlight;
 	};
 };

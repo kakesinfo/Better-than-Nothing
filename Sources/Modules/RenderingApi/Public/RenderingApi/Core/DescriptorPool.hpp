@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	class Device;
 

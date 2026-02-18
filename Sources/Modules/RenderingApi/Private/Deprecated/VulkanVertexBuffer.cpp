@@ -28,8 +28,8 @@ namespace BetterThanNothing
 		{
 			const VulkanStagingBuffer stagingBuffer(context, size, data);
 
-			CommandBuffer::SingleTimeCommands(
-				[&](const std::unique_ptr<CommandBuffer>& commandBuffer) {
+			RenderingApi::CommandBuffer::SingleTimeCommands(
+				[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
 					commandBuffer->CopyBuffer(stagingBuffer.Handle(), m_buffer, size);
 				},
 				context->device, context->commandPool, context->graphicsQueue);

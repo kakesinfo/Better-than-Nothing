@@ -20,7 +20,7 @@
 #include <Module_Base/Logger.hpp>
 #include <set>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	Device::Device(const DeviceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{

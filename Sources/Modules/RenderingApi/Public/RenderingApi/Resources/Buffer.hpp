@@ -19,7 +19,7 @@
 #pragma once
 
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	struct Buffer
 	{

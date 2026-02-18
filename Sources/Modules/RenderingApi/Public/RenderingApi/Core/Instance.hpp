@@ -20,7 +20,7 @@
 
 #include <vector>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	struct InstanceCreateInfo
 	{

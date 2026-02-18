@@ -22,9 +22,9 @@
 
 #include <Module_Base/Logger.hpp>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
-	Pipeline::Pipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
+	Pipeline::Pipeline(PipelineParams params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
 		: m_context(context), m_params(std::move(params))
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
@@ -205,21 +205,21 @@ namespace BetterThanNothing
 		}
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::SetPath(const char* path)
+	PipelineBuilder& PipelineBuilder::SetPath(const char* path)
 	{
 		m_params.path = path;
 		return *this;
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::SetName(const char* name)
+	PipelineBuilder& PipelineBuilder::SetName(const char* name)
 	{
 		m_params.name = name;
 		return *this;
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::AddShader(const std::string& shaderPath, const EShaderType shaderType)
+	PipelineBuilder& PipelineBuilder::AddShader(const std::string& shaderPath, const EShaderType shaderType)
 	{
-		VulkanPipelineShaderInfo shaderInfo;
+		PipelineShaderInfo shaderInfo;
 		shaderInfo.shaderPath = shaderPath;
 		shaderInfo.shaderType = shaderType;
 
@@ -234,35 +234,35 @@ namespace BetterThanNothing
 		return *this;
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::AddVertexShader(const std::string& shaderPath)
+	PipelineBuilder& PipelineBuilder::AddVertexShader(const std::string& shaderPath)
 	{
 		return AddShader(shaderPath, EShaderType::Vertex);
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::AddFragmentShader(const std::string& shaderPath)
+	PipelineBuilder& PipelineBuilder::AddFragmentShader(const std::string& shaderPath)
 	{
 		return AddShader(shaderPath, EShaderType::Fragment);
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::AddColorAttachment(VkFormat format)
+	PipelineBuilder& PipelineBuilder::AddColorAttachment(VkFormat format)
 	{
 		m_params.colorAttachmentFormats.push_back(format);
 		return *this;
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::SetDepthAttachment(VkFormat format)
+	PipelineBuilder& PipelineBuilder::SetDepthAttachment(VkFormat format)
 	{
 		m_params.depthAttachmentFormat = format;
 		return *this;
 	}
 
-	VulkanPipelineBuilder& VulkanPipelineBuilder::SetStencilAttachment(VkFormat format)
+	PipelineBuilder& PipelineBuilder::SetStencilAttachment(VkFormat format)
 	{
 		m_params.stencilAttachmentFormat = format;
 		return *this;
 	}
 
-	VulkanPipelineParams& VulkanPipelineBuilder::GetBuildParams()
+	PipelineParams& PipelineBuilder::GetBuildParams()
 	{
 		if (!m_hasVertexShader)
 			throw std::runtime_error("Missing vertex shader");

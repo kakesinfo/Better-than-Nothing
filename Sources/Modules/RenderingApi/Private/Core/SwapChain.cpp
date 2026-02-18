@@ -19,7 +19,7 @@
 #include "RenderingApi.hpp"
 #include <Module_Base/Logger.hpp>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	SwapChain::SwapChain(const SwapChainCreateInfo& createInfo) : m_createInfo(createInfo)
 	{

@@ -39,16 +39,16 @@ namespace BetterThanNothing
 		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
 
 
-		m_instance = Instance::Create({.enableValidation = true});
-		m_surface = Surface::Create({window->Handle(), m_instance.get()});
-		m_device = Device::Create({m_instance.get(), m_surface.get()});
+		m_instance = RenderingApi::Instance::Create({.enableValidation = true});
+		m_surface = RenderingApi::Surface::Create({window->Handle(), m_instance.get()});
+		m_device = RenderingApi::Device::Create({m_instance.get(), m_surface.get()});
 		m_graphicsQueue = m_device->CreateGraphicsQueue();
 		m_presentQueue = m_device->CreatePresentQueue();
-		m_allocator = Allocator::Create({m_instance.get(), m_device.get()});
+		m_allocator = RenderingApi::Allocator::Create({m_instance.get(), m_device.get()});
 
-		m_commandPool = CommandPool::Create({m_device.get(), m_graphicsQueue.get()});
+		m_commandPool = RenderingApi::CommandPool::Create({m_device.get(), m_graphicsQueue.get()});
 
-		m_swapChain = SwapChain::Create({
+		m_swapChain = RenderingApi::SwapChain::Create({
 			m_surface.get(),
 			m_device.get(),
 			m_allocator.get(),
@@ -77,52 +77,52 @@ namespace BetterThanNothing
 		return std::make_unique<RenderingDevice>(createInfo);
 	}
 
-	Instance* RenderingDevice::GetInstance() const
+	RenderingApi::Instance* RenderingDevice::GetInstance() const
 	{
 		return m_instance.get();
 	}
 
-	Surface* RenderingDevice::GetSurface() const
+	RenderingApi::Surface* RenderingDevice::GetSurface() const
 	{
 		return m_surface.get();
 	}
 
-	Device* RenderingDevice::GetDevice() const
+	RenderingApi::Device* RenderingDevice::GetDevice() const
 	{
 		return m_device.get();
 	}
 
-	Queue* RenderingDevice::GetGraphicsQueue() const
+	RenderingApi::Queue* RenderingDevice::GetGraphicsQueue() const
 	{
 		return m_graphicsQueue.get();
 	}
 
-	Queue* RenderingDevice::GetPresentQueue() const
+	RenderingApi::Queue* RenderingDevice::GetPresentQueue() const
 	{
 		return m_presentQueue.get();
 	}
 
-	Allocator* RenderingDevice::GetAllocator() const
+	RenderingApi::Allocator* RenderingDevice::GetAllocator() const
 	{
 		return m_allocator.get();
 	}
 
-	SwapChain* RenderingDevice::GetSwapChain() const
+	RenderingApi::SwapChain* RenderingDevice::GetSwapChain() const
 	{
 		return m_swapChain.get();
 	}
 
-	CommandPool* RenderingDevice::GetCommandPool() const
+	RenderingApi::CommandPool* RenderingDevice::GetCommandPool() const
 	{
 		return m_commandPool.get();
 	}
 
-	DescriptorPool* RenderingDevice::GetDescriptorPool() const
+	RenderingApi::DescriptorPool* RenderingDevice::GetDescriptorPool() const
 	{
 		return m_descriptorPool.get();
 	}
 
-	Pipeline* RenderingDevice::GetDefaultPipeline() const
+	RenderingApi::Pipeline* RenderingDevice::GetDefaultPipeline() const
 	{
 		return m_defaultPipeline.get();
 	}

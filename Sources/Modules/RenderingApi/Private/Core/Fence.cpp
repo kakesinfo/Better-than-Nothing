@@ -18,7 +18,7 @@
 
 #include "RenderingApi.hpp"
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	Fence::Fence(const FenceCreateInfo& createInfo): m_device(createInfo.device)
 	{

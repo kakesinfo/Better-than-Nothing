@@ -18,8 +18,7 @@
 
 #pragma once
 
-
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	struct Sampler
 	{

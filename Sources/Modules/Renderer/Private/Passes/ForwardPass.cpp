@@ -80,7 +80,7 @@ namespace BetterThanNothing
 		renderingInfo.pDepthAttachment = &depthAttachment;
 
 		commandBuffer->ExecuteRenderPass(
-			[&](CommandBuffer* cmd) {
+			[&](RenderingApi::CommandBuffer* cmd) {
 				cmd->SetViewport(0, 0, m_context->swapChain->GetExtent(), 0, 1);
 				cmd->SetScissor(0, 0, m_context->swapChain->GetExtent());
 

@@ -139,8 +139,8 @@ namespace BetterThanNothing
 		renderingInfo.pColorAttachments = &colorAttachment;
 
 		// clang-format off
-		commandBuffer->ExecuteRenderPass([&](CommandBuffer* cmd) {
-			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer->Handle());
+		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) {
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd->Handle());
 		}, renderingInfo);
 		// clang-format on
 
