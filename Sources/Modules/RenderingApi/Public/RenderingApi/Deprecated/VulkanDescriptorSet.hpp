@@ -20,13 +20,17 @@
 
 namespace BetterThanNothing
 {
-	class VulkanDescriptorSetLayout;
+	namespace RenderingApi
+	{
+		class DescriptorSetLayout;
+	}
+
 	struct VulkanContext;
 
 	class VulkanDescriptorSet
 	{
 	public:
-		VulkanDescriptorSet(const std::unique_ptr<VulkanDescriptorSetLayout>& layout, VulkanContext* context);
+		VulkanDescriptorSet(const RenderingApi::DescriptorSetLayout* layout, VulkanContext* context);
 		~VulkanDescriptorSet();
 
 		VkDescriptorSet Handle() const;

@@ -29,11 +29,12 @@ namespace BetterThanNothing
 	class VulkanImageView;
 	class VulkanSampler;
 	class VulkanDescriptorSet;
+	class RenderingDevice;
 
 	class TextureLoader final : public ResourceLoader<std::string, TextureGpuData>
 	{
 	public:
-		explicit TextureLoader(VulkanContext* context);
+		explicit TextureLoader(VulkanContext* context, RenderingDevice* renderingDevice);
 
 		std::unique_ptr<TextureGpuData> Load(const std::string& input) override;
 
@@ -43,5 +44,7 @@ namespace BetterThanNothing
 		void CreateMipmaps(VkImage image, VkFormat format, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) const;
 		std::unique_ptr<VulkanSampler>		 CreateTextureSampler(uint32_t mipLevels);
 		std::unique_ptr<VulkanDescriptorSet> CreateTextureDescriptorSet(const TextureGpuData* textureGpuData);
+
+		RenderingDevice* m_renderingDevice;
 	};
 }

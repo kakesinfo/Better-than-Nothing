@@ -20,6 +20,7 @@
 
 #include <Module_Base/EBufferingMode.hpp>
 #include <memory>
+#include <unordered_map>
 
 namespace BetterThanNothing
 {
@@ -34,7 +35,16 @@ namespace BetterThanNothing
 		class CommandPool;
 		class Pipeline;
 		class DescriptorPool;
+		class DescriptorSetLayout;
+		struct DescriptorSetLayoutCreateInfo;
 	}
+
+	enum class EDescriptorLayoutKey : std::uint8_t
+	{
+		GlobalUniforms = 0,
+		Textures = 1,
+		PointLights = 2
+	};
 
 	struct RenderingDeviceCreateInfo
 	{
@@ -49,28 +59,34 @@ namespace BetterThanNothing
 
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
+	private:
+		void RegisterDescriptorLayout(EDescriptorLayoutKey key, VkDescriptorType type, VkShaderStageFlags stageFlags);
+
+	public:
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Instance*		GetInstance() const;
+		[[nodiscard]] RenderingApi::Instance* GetInstance() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Surface*		GetSurface() const;
+		[[nodiscard]] RenderingApi::Surface* GetSurface() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Device*			GetDevice() const;
+		[[nodiscard]] RenderingApi::Device* GetDevice() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Queue*			GetGraphicsQueue() const;
+		[[nodiscard]] RenderingApi::Queue* GetGraphicsQueue() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Queue*			GetPresentQueue() const;
+		[[nodiscard]] RenderingApi::Queue* GetPresentQueue() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Allocator*		GetAllocator() const;
+		[[nodiscard]] RenderingApi::Allocator* GetAllocator() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::SwapChain*		GetSwapChain() const;
+		[[nodiscard]] RenderingApi::SwapChain* GetSwapChain() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::CommandPool*	GetCommandPool() const;
+		[[nodiscard]] RenderingApi::CommandPool* GetCommandPool() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Pipeline* GetDefaultPipeline() const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] uint32_t GetMaxFramesInFlight() const;
+
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::DescriptorPool* GetDescriptorPool() const;
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Pipeline*		GetDefaultPipeline() const;
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] uint32_t						GetMaxFramesInFlight() const;
+		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(EDescriptorLayoutKey key) const;
 
 	private:
 		RenderingDeviceCreateInfo					  m_createInfo;
@@ -82,8 +98,10 @@ namespace BetterThanNothing
 		std::unique_ptr<RenderingApi::Allocator>	  m_allocator;
 		std::unique_ptr<RenderingApi::SwapChain>	  m_swapChain;
 		std::unique_ptr<RenderingApi::CommandPool>	  m_commandPool;
-		std::unique_ptr<RenderingApi::DescriptorPool> m_descriptorPool;
 		std::unique_ptr<RenderingApi::Pipeline>		  m_defaultPipeline;
 		uint32_t									  m_maxFramesInFlight;
+
+		std::unique_ptr<RenderingApi::DescriptorPool> m_descriptorPool;
+		std::unordered_map<EDescriptorLayoutKey, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_layouts;
 	};
 };

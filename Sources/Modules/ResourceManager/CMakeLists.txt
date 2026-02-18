@@ -30,6 +30,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Math
         Module_Data
         Module_RenderingApi
+        Module_RenderingDevice
         stb
     PUBLIC
         glslang

@@ -29,6 +29,8 @@ namespace BetterThanNothing
 
 namespace BetterThanNothing::RenderingApi
 {
+	class DescriptorSetLayout;
+
 	struct PipelineShaderInfo
 	{
 		std::string shaderPath;
@@ -37,9 +39,10 @@ namespace BetterThanNothing::RenderingApi
 
 	struct PipelineParams
 	{
-		const char*							  path;
-		const char*							  name;
-		std::vector<PipelineShaderInfo> shadersInfos;
+		const char*						   path;
+		const char*						   name;
+		std::vector<VkDescriptorSetLayout> descriptorLayouts;
+		std::vector<PipelineShaderInfo>	   shadersInfos;
 
 		std::vector<VkFormat> colorAttachmentFormats;
 		VkFormat			  depthAttachmentFormat = VK_FORMAT_UNDEFINED;
@@ -49,20 +52,16 @@ namespace BetterThanNothing::RenderingApi
 	class Pipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit Pipeline(PipelineParams params, const VertexInputDescription& vertexInputDescription,
-								const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context);
+		explicit Pipeline(const PipelineParams& params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context);
 		~Pipeline();
 
-		[[nodiscard]]
-		VkPipeline Handle() const;
-
-		[[nodiscard]]
-		VkPipelineLayout GetLayout() const;
+		[[nodiscard]] VkPipeline	   Handle() const;
+		[[nodiscard]] VkPipelineLayout GetLayout() const;
 
 	private:
 		static VkShaderStageFlagBits GetShaderStageTypeByShaderType(EShaderType type);
 
-		VulkanContext*		 m_context = nullptr;
+		VulkanContext* m_context = nullptr;
 		PipelineParams m_params;
 
 		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
@@ -80,13 +79,13 @@ namespace BetterThanNothing::RenderingApi
 		PipelineBuilder& AddShader(const std::string& shaderPath, EShaderType shaderType);
 		PipelineBuilder& AddVertexShader(const std::string& shaderPath);
 		PipelineBuilder& AddFragmentShader(const std::string& shaderPath);
+		PipelineBuilder& AddDescriptorSetLayout(const VkDescriptorSetLayout& layout);
 
 		PipelineBuilder& AddColorAttachment(VkFormat format);
 		PipelineBuilder& SetDepthAttachment(VkFormat format);
 		PipelineBuilder& SetStencilAttachment(VkFormat format);
 
-		[[nodiscard]]
-		PipelineParams& GetBuildParams();
+		[[nodiscard]] PipelineParams& GetBuildParams();
 
 	private:
 		PipelineParams m_params{};

@@ -17,19 +17,10 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
-
-#include <RenderingApi/Core/Allocator.hpp>
-#include <RenderingApi/Core/CommandPool.hpp>
-#include <RenderingApi/Core/Device.hpp>
-#include <RenderingApi/Core/Instance.hpp>
-#include <RenderingApi/Core/Pipeline.hpp>
-#include <RenderingApi/Core/Queue.hpp>
-#include <RenderingApi/Core/Surface.hpp>
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-#include <RenderingApi/Core/DescriptorPool.hpp>
-#include <RenderingApi/Core/SwapChain.hpp>
+#include <RenderingApi.hpp>
 
 namespace BetterThanNothing
 {
@@ -37,7 +28,6 @@ namespace BetterThanNothing
 	{
 		const auto& window = WindowManager::GetWindow();
 		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
-
 
 		m_instance = RenderingApi::Instance::Create({.enableValidation = true});
 		m_surface = RenderingApi::Surface::Create({window->Handle(), m_instance.get()});
@@ -68,9 +58,24 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
 		Logger::Log<INFO>("Anisotropy: {}x", m_device->GetMaxAnisotropy());
 		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_device->GetMaxMsaaSamples()));
+
+		m_descriptorPool = RenderingApi::DescriptorPool::Builder(m_device.get())
+							   .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)
+							   .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
+							   .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
+							   .Build();
+
+		RegisterDescriptorLayout(EDescriptorLayoutKey::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+		RegisterDescriptorLayout(EDescriptorLayoutKey::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		RegisterDescriptorLayout(EDescriptorLayoutKey::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	}
 
 	RenderingDevice::~RenderingDevice() {}
+
+	void RenderingDevice::RegisterDescriptorLayout(const EDescriptorLayoutKey key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	{
+		m_layouts[key] = RenderingApi::DescriptorSetLayout::Create({m_device.get(), type, 1, stageFlags});
+	}
 
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
 	{
@@ -117,11 +122,6 @@ namespace BetterThanNothing
 		return m_commandPool.get();
 	}
 
-	RenderingApi::DescriptorPool* RenderingDevice::GetDescriptorPool() const
-	{
-		return m_descriptorPool.get();
-	}
-
 	RenderingApi::Pipeline* RenderingDevice::GetDefaultPipeline() const
 	{
 		return m_defaultPipeline.get();
@@ -130,5 +130,17 @@ namespace BetterThanNothing
 	uint32_t RenderingDevice::GetMaxFramesInFlight() const
 	{
 		return m_maxFramesInFlight;
+	}
+
+	RenderingApi::DescriptorPool* RenderingDevice::GetDescriptorPool() const
+	{
+		return m_descriptorPool.get();
+	}
+
+	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(EDescriptorLayoutKey key) const
+	{
+		if (!m_layouts.contains(key))
+			throw std::runtime_error("Cannot find descriptorSetLayout");
+		return m_layouts.at(key).get();
 	}
 }

@@ -20,10 +20,11 @@
 #include "RenderingApi/Core/Device.hpp"
 
 #include <Module_Base/Logger.hpp>
+#include <utility>
 
 namespace BetterThanNothing::RenderingApi
 {
-	DescriptorPool::DescriptorPool(const DescriptorPoolCreateInfo& createInfo) : m_createInfo(createInfo)
+	DescriptorPool::DescriptorPool(DescriptorPoolCreateInfo  createInfo) : m_createInfo(std::move(createInfo))
 	{
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
