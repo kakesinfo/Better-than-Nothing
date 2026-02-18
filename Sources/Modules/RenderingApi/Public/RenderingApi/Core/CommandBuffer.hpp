@@ -21,7 +21,7 @@
 #include <functional>
 #include <memory>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	class Device;
 	class CommandPool;

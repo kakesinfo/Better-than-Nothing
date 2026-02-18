@@ -21,7 +21,7 @@
 #include <optional>
 #include <vector>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	class Instance;
 	class Surface;

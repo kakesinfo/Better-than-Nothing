@@ -25,18 +25,21 @@ namespace BetterThanNothing
 	struct VertexInputDescription;
 	struct VulkanContext;
 	struct ShaderGpuData;
+}
 
-	struct VulkanPipelineShaderInfo
+namespace BetterThanNothing::RenderingApi
+{
+	struct PipelineShaderInfo
 	{
 		std::string shaderPath;
 		EShaderType shaderType;
 	};
 
-	struct VulkanPipelineParams
+	struct PipelineParams
 	{
 		const char*							  path;
 		const char*							  name;
-		std::vector<VulkanPipelineShaderInfo> shadersInfos;
+		std::vector<PipelineShaderInfo> shadersInfos;
 
 		std::vector<VkFormat> colorAttachmentFormats;
 		VkFormat			  depthAttachmentFormat = VK_FORMAT_UNDEFINED;
@@ -46,7 +49,7 @@ namespace BetterThanNothing
 	class Pipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit Pipeline(VulkanPipelineParams params, const VertexInputDescription& vertexInputDescription,
+		explicit Pipeline(PipelineParams params, const VertexInputDescription& vertexInputDescription,
 								const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context);
 		~Pipeline();
 
@@ -60,33 +63,33 @@ namespace BetterThanNothing
 		static VkShaderStageFlagBits GetShaderStageTypeByShaderType(EShaderType type);
 
 		VulkanContext*		 m_context = nullptr;
-		VulkanPipelineParams m_params;
+		PipelineParams m_params;
 
 		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
 		VkPipeline		 m_pipeline = VK_NULL_HANDLE;
 	};
 
-	class VulkanPipelineBuilder final
+	class PipelineBuilder final
 	{
 	public:
-		explicit VulkanPipelineBuilder() = default;
-		~VulkanPipelineBuilder() = default;
+		explicit PipelineBuilder() = default;
+		~PipelineBuilder() = default;
 
-		VulkanPipelineBuilder& SetPath(const char* path);
-		VulkanPipelineBuilder& SetName(const char* name);
-		VulkanPipelineBuilder& AddShader(const std::string& shaderPath, EShaderType shaderType);
-		VulkanPipelineBuilder& AddVertexShader(const std::string& shaderPath);
-		VulkanPipelineBuilder& AddFragmentShader(const std::string& shaderPath);
+		PipelineBuilder& SetPath(const char* path);
+		PipelineBuilder& SetName(const char* name);
+		PipelineBuilder& AddShader(const std::string& shaderPath, EShaderType shaderType);
+		PipelineBuilder& AddVertexShader(const std::string& shaderPath);
+		PipelineBuilder& AddFragmentShader(const std::string& shaderPath);
 
-		VulkanPipelineBuilder& AddColorAttachment(VkFormat format);
-		VulkanPipelineBuilder& SetDepthAttachment(VkFormat format);
-		VulkanPipelineBuilder& SetStencilAttachment(VkFormat format);
+		PipelineBuilder& AddColorAttachment(VkFormat format);
+		PipelineBuilder& SetDepthAttachment(VkFormat format);
+		PipelineBuilder& SetStencilAttachment(VkFormat format);
 
 		[[nodiscard]]
-		VulkanPipelineParams& GetBuildParams();
+		PipelineParams& GetBuildParams();
 
 	private:
-		VulkanPipelineParams m_params{};
+		PipelineParams m_params{};
 
 		bool m_hasVertexShader = false;
 		bool m_hasFragmentShader = false;

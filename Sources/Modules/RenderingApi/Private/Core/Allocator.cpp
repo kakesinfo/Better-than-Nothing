@@ -20,7 +20,7 @@
 
 #include <Module_Base/Logger.hpp>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	Allocator::Allocator(const AllocatorCreateInfo& createInfo) : m_createInfo(createInfo)
 	{

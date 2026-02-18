@@ -18,7 +18,7 @@
 
 #include "RenderingApi.hpp"
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	CommandBuffer::CommandBuffer(const CommandBufferCreateInfo& createInfo) : m_createInfo(createInfo)
 	{

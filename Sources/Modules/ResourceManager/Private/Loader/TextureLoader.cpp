@@ -59,8 +59,8 @@ namespace BetterThanNothing
 
 		auto image = std::make_unique<VulkanImage>(m_context, &imageInfo);
 
-		CommandBuffer::SingleTimeCommands(
-			[&](const std::unique_ptr<CommandBuffer>& commandBuffer) {
+		RenderingApi::CommandBuffer::SingleTimeCommands(
+			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
 				VkImage vkImage = image->Handle();
 
 				commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
@@ -91,8 +91,8 @@ namespace BetterThanNothing
 		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 			throw std::runtime_error("texture image format does not support linear blitting!");
 
-		CommandBuffer::SingleTimeCommands(
-			[&](const std::unique_ptr<CommandBuffer>& commandBuffer) {
+		RenderingApi::CommandBuffer::SingleTimeCommands(
+			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
 				VkImageMemoryBarrier barrier{};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 				barrier.image = image;

@@ -18,7 +18,7 @@
 
 #include "RenderingApi.hpp"
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	Queue::Queue(const QueueCreateInfo& createInfo) : m_createInfo(createInfo) {}
 	Queue::~Queue() = default;

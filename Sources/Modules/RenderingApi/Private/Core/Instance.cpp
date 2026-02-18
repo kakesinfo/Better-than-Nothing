@@ -21,7 +21,7 @@
 #include <Module_Base/Logger.hpp>
 #include <algorithm>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	Instance::Instance(InstanceCreateInfo createInfo) : m_createInfo(std::move(createInfo))
 	{

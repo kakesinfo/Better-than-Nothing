@@ -22,13 +22,11 @@ namespace BetterThanNothing
 {
 	class Window;
 
-	class SwapChain;
-	class CommandPool;
-	class CommandBuffer;
-	class Pipeline;
-	class VulkanPipelineBuilder;
-	class Semaphore;
-	class Fence;
+	namespace RenderingApi
+	{
+		class Pipeline;
+		class PipelineBuilder;
+	}
 
 	class RenderList;
 	class RenderCache;
@@ -38,15 +36,12 @@ namespace BetterThanNothing
 	class Camera;
 
 	struct VulkanContext;
-	struct VertexData;
 	struct VulkanFrame;
 	struct CameraData;
 	struct DirectionalLightData;
 
 	class ResourceManager;
 	class RenderingDevice;
-
-	struct DynamicUniformsData;
 
 	class Renderer final
 	{
@@ -73,7 +68,7 @@ namespace BetterThanNothing
 		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();
 
 	public:
-		void AddPipeline(const std::function<void(VulkanPipelineBuilder*)>& callback);
+		void AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback);
 
 	private:
 		VulkanContext*							m_context = nullptr;

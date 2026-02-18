@@ -21,7 +21,7 @@
 #include <vector>
 #include <Module_Base/EBufferingMode.hpp>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	class Instance;
 	class Surface;

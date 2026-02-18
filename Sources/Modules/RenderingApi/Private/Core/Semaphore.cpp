@@ -18,7 +18,7 @@
 
 #include "RenderingApi.hpp"
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	Semaphore::Semaphore(const SemaphoreCreateInfo& createInfo): m_device(createInfo.device)
 	{

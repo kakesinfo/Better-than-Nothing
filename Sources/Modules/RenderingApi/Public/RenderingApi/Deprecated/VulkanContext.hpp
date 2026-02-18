@@ -18,21 +18,23 @@
 
 #pragma once
 
-#include "../../../../Base/Public/Module_Base/EBufferingMode.hpp"
-
 namespace BetterThanNothing
 {
-	class Instance;
-	class Surface;
-	class Device;
-	class Queue;
-	class Allocator;
-	class SwapChain;
-	class CommandPool;
-	class VulkanDescriptorSetLayout;
+	namespace RenderingApi
+	{
+		class Instance;
+		class Surface;
+		class Device;
+		class Queue;
+		class Allocator;
+		class SwapChain;
+		class CommandPool;
+		class Pipeline;
 	class DescriptorPool;
+	}
+
+	class VulkanDescriptorSetLayout;
 	class VulkanDescriptorSet;
-	class Pipeline;
 	struct VulkanFrame;
 
 	/// @deprecated Will be removed
@@ -40,22 +42,22 @@ namespace BetterThanNothing
 	{
 		struct
 		{
-			uint32_t	   maxFramesInFlight = 2;
+			uint32_t maxFramesInFlight = 2;
 		} settings;
 
-		Instance*				  instance;
-		Surface*				  surface;
-		Device*					  device;
-		Queue*					  graphicsQueue;
-		Queue*					  presentQueue;
-		Allocator*				  allocator;
-		SwapChain*				  swapChain;
-		CommandPool*			  commandPool;
-		std::unique_ptr<Pipeline> defaultPipeline;
+		RenderingApi::Instance*					instance;
+		RenderingApi::Surface*					surface;
+		RenderingApi::Device*					device;
+		RenderingApi::Queue*					graphicsQueue;
+		RenderingApi::Queue*					presentQueue;
+		RenderingApi::Allocator*				allocator;
+		RenderingApi::SwapChain*				swapChain;
+		RenderingApi::CommandPool*				commandPool;
+		std::unique_ptr<RenderingApi::Pipeline> defaultPipeline;
 
 		std::vector<VulkanFrame> frames;
 
-		std::unique_ptr<DescriptorPool> descriptorPool;
+		std::unique_ptr<RenderingApi::DescriptorPool> descriptorPool;
 
 		std::unique_ptr<VulkanDescriptorSetLayout>		  vkGlobalDescriptorSetLayout;
 		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkGlobalDescriptorSets;

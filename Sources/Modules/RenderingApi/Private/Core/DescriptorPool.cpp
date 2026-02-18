@@ -21,7 +21,7 @@
 
 #include <Module_Base/Logger.hpp>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	DescriptorPool::DescriptorPool(const DescriptorPoolCreateInfo& createInfo) : m_createInfo(createInfo)
 	{

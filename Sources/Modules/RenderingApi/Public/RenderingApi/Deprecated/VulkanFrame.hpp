@@ -20,20 +20,24 @@
 
 namespace BetterThanNothing
 {
-	class CommandBuffer;
 	class VulkanUniformBuffer;
 	class VulkanStorageBuffer;
-	class Semaphore;
-	class Fence;
+
+	namespace RenderingApi
+	{
+		class CommandBuffer;
+		class Semaphore;
+		class Fence;
+	}
 
 	struct VulkanFrame
 	{
-		std::unique_ptr<CommandBuffer> commandBuffer;
-		std::unique_ptr<VulkanUniformBuffer> globalUniformBuffer;
-		std::unique_ptr<VulkanUniformBuffer> dynamicUniformBuffer;
-		std::unique_ptr<VulkanStorageBuffer> pointLightBuffer;
-		std::unique_ptr<Semaphore>	 imageAvailableSemaphore;
-		std::unique_ptr<Semaphore>	 renderFinishedSemaphore;
-		std::unique_ptr<Fence>		 inFlightFences;
+		std::unique_ptr<RenderingApi::CommandBuffer> commandBuffer;
+		std::unique_ptr<VulkanUniformBuffer>		 globalUniformBuffer;
+		std::unique_ptr<VulkanUniformBuffer>		 dynamicUniformBuffer;
+		std::unique_ptr<VulkanStorageBuffer>		 pointLightBuffer;
+		std::unique_ptr<RenderingApi::Semaphore>	 imageAvailableSemaphore;
+		std::unique_ptr<RenderingApi::Semaphore>	 renderFinishedSemaphore;
+		std::unique_ptr<RenderingApi::Fence>		 inFlightFences;
 	};
 };

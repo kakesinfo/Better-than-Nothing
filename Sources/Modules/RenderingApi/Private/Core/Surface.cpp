@@ -23,7 +23,7 @@
 
 #include <Module_Base/Logger.hpp>
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
 	Surface::Surface(const SurfaceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
