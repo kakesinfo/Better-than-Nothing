@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.19)
 
 project(Module_Engine)
 
+find_package(Vulkan REQUIRED)
+
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
     "Private/*.cpp"
     "Private/*.hpp"
@@ -28,6 +30,8 @@ target_link_libraries(${PROJECT_NAME}
         Module_RenderingDevice
         Module_Renderer
         Module_ResourceManager
+        SDL3::SDL3
+        Vulkan::Vulkan
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

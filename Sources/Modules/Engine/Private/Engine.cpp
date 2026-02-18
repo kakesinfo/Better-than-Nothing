@@ -26,6 +26,7 @@
 #include "Module_Math/Matrix4.hpp"
 #include "ResourceManager/ResourceManager.hpp"
 
+#include <RenderingApi/Core/Pipeline.hpp>
 #include <Module_Data/Graphics/CameraData.hpp>
 #include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
@@ -38,7 +39,6 @@
 #include <Renderer/RenderList.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingApi/Deprecated/VulkanContext.hpp>
-#include <RenderingApi/Pipeline.hpp>
 
 #include "Renderer/RenderMetrics.hpp"
 

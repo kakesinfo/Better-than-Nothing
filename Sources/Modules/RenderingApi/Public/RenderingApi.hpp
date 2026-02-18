@@ -18,10 +18,16 @@
 
 #pragma once
 
+#include <memory>
+
 #include "Module_Base/EBufferingMode.hpp"
-#include "RenderingApi/Allocator.hpp"
-#include "RenderingApi/CommandBuffer.hpp"
-#include "RenderingApi/CommandPool.hpp"
+#include "RenderingApi/Core/CommandPool.hpp"
+#include "RenderingApi/Core/Allocator.hpp"
+#include "RenderingApi/Core/CommandBuffer.hpp"
+#include "RenderingApi/Core/Device.hpp"
+#include "RenderingApi/Core/Instance.hpp"
+#include "RenderingApi/Core/Queue.hpp"
+#include "RenderingApi/Core/Surface.hpp"
 #include "RenderingApi/Data/ShaderGpuData.hpp"
 #include "RenderingApi/Deprecated/VertexInputDescription.hpp"
 #include "RenderingApi/Deprecated/VulkanBuffer.hpp"
@@ -38,12 +44,8 @@
 #include "RenderingApi/Deprecated/VulkanStorageBuffer.hpp"
 #include "RenderingApi/Deprecated/VulkanUniformBuffer.hpp"
 #include "RenderingApi/Deprecated/VulkanVertexBuffer.hpp"
-#include "RenderingApi/DescriptorPool.hpp"
-#include "RenderingApi/Device.hpp"
-#include "RenderingApi/Fence.hpp"
-#include "RenderingApi/Instance.hpp"
-#include "RenderingApi/Pipeline.hpp"
-#include "RenderingApi/Queue.hpp"
-#include "RenderingApi/Semaphore.hpp"
-#include "RenderingApi/Surface.hpp"
-#include "RenderingApi/SwapChain.hpp"
+#include "RenderingApi/Core/DescriptorPool.hpp"
+#include "RenderingApi/Core/Fence.hpp"
+#include "RenderingApi/Core/Pipeline.hpp"
+#include "RenderingApi/Core/Semaphore.hpp"
+#include "RenderingApi/Core/SwapChain.hpp"

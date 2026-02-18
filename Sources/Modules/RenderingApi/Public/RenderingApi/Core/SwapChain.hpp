@@ -19,12 +19,16 @@
 #pragma once
 
 #include <vector>
+#include <Module_Base/EBufferingMode.hpp>
 
 namespace BetterThanNothing
 {
 	class Instance;
 	class Surface;
 	class Device;
+	class Allocator;
+	class CommandPool;
+	class Queue;
 
 	struct SwapChainCreateInfo
 	{
