@@ -35,9 +35,9 @@
 
 namespace BetterThanNothing
 {
-	ResourceManager::ResourceManager(VulkanContext* context) : m_context(context)
+	ResourceManager::ResourceManager(VulkanContext* context, RenderingDevice* renderingDevice) : m_context(context), m_renderingDevice(renderingDevice)
 	{
-		m_textureLoader = std::make_unique<TextureLoader>(context);
+		m_textureLoader = std::make_unique<TextureLoader>(context, m_renderingDevice);
 		m_shaderLoader = std::make_unique<ShaderLoader>(context);
 	}
 

@@ -3,13 +3,14 @@
 #include <RenderingApi.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
+#include "RenderingDevice/RenderingDevice.hpp"
 #include "stb_image.h"
 
 #include <sstream>
 
 namespace BetterThanNothing
 {
-	TextureLoader::TextureLoader(VulkanContext* context) : ResourceLoader(context) {}
+	TextureLoader::TextureLoader(VulkanContext* context, RenderingDevice* renderingDevice) : ResourceLoader(context), m_renderingDevice(renderingDevice) {}
 
 	std::unique_ptr<TextureGpuData> TextureLoader::Load(const std::string& input)
 	{
@@ -182,7 +183,9 @@ namespace BetterThanNothing
 
 	std::unique_ptr<VulkanDescriptorSet> TextureLoader::CreateTextureDescriptorSet(const TextureGpuData* textureGpuData)
 	{
-		auto descriptorSet = std::make_unique<VulkanDescriptorSet>(m_context->vkSamplerDescriptorSetLayout, m_context);
+		auto layout = m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::Textures);
+
+		auto descriptorSet = std::make_unique<VulkanDescriptorSet>(layout, m_context);
 
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

@@ -38,7 +38,7 @@ namespace BetterThanNothing::RenderingApi
 	class DescriptorPool
 	{
 	public:
-		explicit DescriptorPool(const DescriptorPoolCreateInfo& createInfo);
+		explicit DescriptorPool(DescriptorPoolCreateInfo  createInfo);
 		~DescriptorPool();
 
 		DescriptorPool(const DescriptorPool&) = delete;

@@ -45,11 +45,12 @@ namespace BetterThanNothing
 	class TextureLoader;
 	class ShaderLoader;
 	enum class EShaderType;
+	class RenderingDevice;
 
 	class ResourceManager
 	{
 	public:
-		explicit ResourceManager(VulkanContext* context);
+		explicit ResourceManager(VulkanContext* context, RenderingDevice* renderingDevice);
 		~ResourceManager();
 
 	private:
@@ -68,6 +69,7 @@ namespace BetterThanNothing
 
 	private:
 		VulkanContext*													m_context;
+		RenderingDevice*												m_renderingDevice;
 		std::unique_ptr<TextureLoader>									m_textureLoader;
 		std::unique_ptr<ShaderLoader>									m_shaderLoader;
 		std::unordered_map<ResourceId, std::unique_ptr<MeshGpuData>>	m_meshes;

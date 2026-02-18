@@ -39,6 +39,7 @@
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/TextureGpuData.hpp>
 #include <cstring>
+#include <iostream>
 
 namespace BetterThanNothing
 {
@@ -64,8 +65,8 @@ namespace BetterThanNothing
 		m_renderGraph->AddRenderPass<ForwardPass>();
 		m_renderGraph->AddRenderPass<ImGuiPass>();
 
-		CreateDescriptorSetLayout();
-		CreateDescriptorPool();
+		m_context->descriptorPool = m_renderingDevice->GetDescriptorPool();
+
 		CreateGlobalDescriptorSets();
 
 		constexpr uint32_t MAX_LIGHT_COUNT = 1000;
@@ -74,6 +75,16 @@ namespace BetterThanNothing
 
 		CreateCommandBuffers();
 		CreateSyncObjects();
+
+		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
+			builder->SetPath("../../../Assets/Shaders/");
+			builder->SetName("main");
+			builder->AddVertexShader("main/main.vert");
+			builder->AddFragmentShader("main/main.frag");
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::GlobalUniforms)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::Textures)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::PointLights)->Handle());
+		});
 
 		Logger::Log<SUCCESS>("Renderer: initialized successfully");
 	}
@@ -254,54 +265,15 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok (count: {})", count);
 	}
 
-	void Renderer::CreateDescriptorSetLayout()
-	{
-		VkDescriptorSetLayoutBinding globalUniformLayoutBinding{};
-		globalUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		globalUniformLayoutBinding.descriptorCount = 1;
-		globalUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		samplerLayoutBinding.descriptorCount = 1;
-		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding pointLightLayoutBinding{};
-		pointLightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		pointLightLayoutBinding.descriptorCount = 1;
-		pointLightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		auto globalBindings = {globalUniformLayoutBinding};
-		auto samplerBindings = {samplerLayoutBinding};
-		auto pointLightBinding = {pointLightLayoutBinding};
-
-		m_context->vkGlobalDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(globalBindings, m_context);
-		m_context->vkSamplerDescriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>(samplerBindings, m_context);
-		m_context->vkPointLightDescriptorLayout = std::make_unique<VulkanDescriptorSetLayout>(pointLightBinding, m_context);
-
-		Logger::Log<SUCCESS>("Vulkan descriptor set layout: ok");
-	}
-
-	void Renderer::CreateDescriptorPool() const
-	{
-		const uint32_t maxFramesInFlight = m_context->settings.maxFramesInFlight;
-
-		m_context->descriptorPool = RenderingApi::DescriptorPool::Builder(m_context->device)
-										.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight)
-										.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
-										.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxFramesInFlight)
-										.Build();
-
-		Logger::Log<SUCCESS>("Vulkan descriptor pool: ok");
-	}
-
 	void Renderer::CreateGlobalDescriptorSets()
 	{
+		const auto* globalDescriptorSetLayout = m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::GlobalUniforms);
+
 		m_context->vkGlobalDescriptorSets.resize(m_context->settings.maxFramesInFlight);
 
 		for (size_t i = 0; i < m_context->settings.maxFramesInFlight; i++)
 		{
-			m_context->vkGlobalDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkGlobalDescriptorSetLayout, m_context);
+			m_context->vkGlobalDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(globalDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo globalInfo{};
 			globalInfo.buffer = m_context->frames[i].globalUniformBuffer->Handle();
@@ -341,13 +313,15 @@ namespace BetterThanNothing
 
 	void Renderer::CreatePointLightDescriptorSets(uint32_t maxLights)
 	{
+		const auto* pointLightDescriptorSetLayout = m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::PointLights);
+
 		m_context->vkPointLightDescriptorSets.resize(m_context->settings.maxFramesInFlight);
 
 		const VkDeviceSize lightBufferSize = sizeof(PointLightData) * maxLights;
 
 		for (size_t i = 0; i < m_context->settings.maxFramesInFlight; i++)
 		{
-			m_context->vkPointLightDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(m_context->vkPointLightDescriptorLayout, m_context);
+			m_context->vkPointLightDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(pointLightDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo dynamicInfo{};
 			dynamicInfo.buffer = m_context->frames[i].pointLightBuffer->Handle();

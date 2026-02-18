@@ -18,14 +18,16 @@
 
 #include "RenderingApi.hpp"
 #include "RenderingApi/Deprecated/VertexInputDescription.hpp"
+
 #include <Module_Data/Graphics/DynamicUniformData.hpp>
+#include <iostream>
 
 #include <Module_Base/Logger.hpp>
 
 namespace BetterThanNothing::RenderingApi
 {
-	Pipeline::Pipeline(PipelineParams params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
-		: m_context(context), m_params(std::move(params))
+	Pipeline::Pipeline(const PipelineParams& params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
+		: m_context(context), m_params(params)
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		for (const ShaderGpuData* shaderGpuData : shaders)
@@ -127,12 +129,6 @@ namespace BetterThanNothing::RenderingApi
 		depthStencil.front = {}; // Optional
 		depthStencil.back = {};	 // Optional
 
-		VkDescriptorSetLayout globalLayout = m_context->vkGlobalDescriptorSetLayout->Handle();
-		VkDescriptorSetLayout samplerLayout = m_context->vkSamplerDescriptorSetLayout->Handle();
-		VkDescriptorSetLayout pointLightLayout = m_context->vkPointLightDescriptorLayout->Handle();
-
-		std::array layouts = {globalLayout, samplerLayout, pointLightLayout};
-
 		VkPushConstantRange dynamicPushConstant{};
 		dynamicPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		dynamicPushConstant.offset = 0;
@@ -140,8 +136,8 @@ namespace BetterThanNothing::RenderingApi
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
-		pipelineLayoutInfo.pSetLayouts = layouts.data();
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(params.descriptorLayouts.size());
+		pipelineLayoutInfo.pSetLayouts = params.descriptorLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &dynamicPushConstant;
 
@@ -259,6 +255,12 @@ namespace BetterThanNothing::RenderingApi
 	PipelineBuilder& PipelineBuilder::SetStencilAttachment(VkFormat format)
 	{
 		m_params.stencilAttachmentFormat = format;
+		return *this;
+	}
+
+	PipelineBuilder& PipelineBuilder::AddDescriptorSetLayout(const VkDescriptorSetLayout& layout)
+	{
+		m_params.descriptorLayouts.push_back(layout);
 		return *this;
 	}
 

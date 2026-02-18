@@ -54,8 +54,6 @@ namespace BetterThanNothing
 	private:
 		void CreateCommandBuffers() const;
 		void CreateSyncObjects();
-		void CreateDescriptorSetLayout();
-		void CreateDescriptorPool() const;
 		void CreateGlobalDescriptorSets();
 
 		void CreatePointLightBuffers(uint32_t maxLights) const;

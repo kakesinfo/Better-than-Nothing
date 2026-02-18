@@ -57,17 +57,10 @@ namespace BetterThanNothing
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
 		m_context = std::make_unique<VulkanContext>();
-		m_resourceManager = std::make_unique<ResourceManager>(m_context.get());
+		m_resourceManager = std::make_unique<ResourceManager>(m_context.get(), m_renderingDevice.get());
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 		m_legacyRenderer = std::make_unique<Renderer>(m_context.get(), m_resourceManager.get(), m_renderingDevice.get());
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
-
-		m_legacyRenderer->AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
-			builder->SetPath("../../../Assets/Shaders/");
-			builder->SetName("main");
-			builder->AddVertexShader("main/main.vert");
-			builder->AddFragmentShader("main/main.frag");
-		});
 
 		DirectionalLightData directionalLight{};
 		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();

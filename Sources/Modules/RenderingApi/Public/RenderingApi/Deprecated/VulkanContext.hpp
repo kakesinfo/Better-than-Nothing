@@ -57,14 +57,9 @@ namespace BetterThanNothing
 
 		std::vector<VulkanFrame> frames;
 
-		std::unique_ptr<RenderingApi::DescriptorPool> descriptorPool;
+		RenderingApi::DescriptorPool* descriptorPool;
 
-		std::unique_ptr<VulkanDescriptorSetLayout>		  vkGlobalDescriptorSetLayout;
 		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkGlobalDescriptorSets;
-
-		std::unique_ptr<VulkanDescriptorSetLayout> vkSamplerDescriptorSetLayout;
-
-		std::unique_ptr<VulkanDescriptorSetLayout>		  vkPointLightDescriptorLayout;
 		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkPointLightDescriptorSets;
 	};
 };
