@@ -18,10 +18,10 @@
 
 #include "Renderer/Passes/ForwardPass.hpp"
 
+#include "RenderingApi/Core/CommandBuffer.hpp"
+#include "RenderingApi/Core/SwapChain.hpp"
 #include "Renderer/DrawStream.hpp"
-#include "RenderingApi/CommandBuffer.hpp"
 #include "RenderingApi/Deprecated/VulkanContext.hpp"
-#include "RenderingApi/SwapChain.hpp"
 
 namespace BetterThanNothing
 {

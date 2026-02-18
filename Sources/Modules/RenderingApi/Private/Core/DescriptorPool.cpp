@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingApi/DescriptorPool.hpp"
-#include "RenderingApi/Device.hpp"
+#include "RenderingApi/Core/DescriptorPool.hpp"
+#include "RenderingApi/Core/Device.hpp"
 
 #include <Module_Base/Logger.hpp>
 
