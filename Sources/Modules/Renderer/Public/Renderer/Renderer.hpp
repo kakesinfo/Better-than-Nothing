@@ -55,7 +55,7 @@ namespace BetterThanNothing
 
 	private:
 		void CreateCommandBuffers() const;
-		void CreateSyncObjects();
+		void CreateSyncObjects() const;
 		void CreateGlobalDescriptorSets();
 
 		void CreatePointLightBuffers(uint32_t maxLights) const;
@@ -75,7 +75,6 @@ namespace BetterThanNothing
 		ResourceManager*									  m_resourceManager = nullptr;
 		RenderingDevice*									  m_renderingDevice = nullptr;
 		std::vector<VulkanFrame>							  m_frames;
-		std::vector<std::unique_ptr<RenderingApi::Semaphore>> m_imageFinishedSemaphores;
 		uint32_t											  m_currentFrame = 0;
 		std::unique_ptr<GlobalUniformProvider>				  m_globalUniformProvider = nullptr;
 		std::unique_ptr<RenderGraph>						  m_renderGraph = nullptr;
