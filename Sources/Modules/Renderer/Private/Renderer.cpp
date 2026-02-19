@@ -21,13 +21,13 @@
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Data/Graphics/DynamicUniformData.hpp"
 #include "Module_Data/Graphics/GlobalUniformData.hpp"
-#include "RenderingDevice/DrawStream.hpp"
 #include "Renderer/GlobalUniformProvider.hpp"
 #include "Renderer/Passes/ForwardPass.hpp"
 #include "Renderer/Passes/ImGuiPass.hpp"
 #include "Renderer/Passes/RenderGraph.hpp"
 #include "Renderer/RenderList.hpp"
 #include "Renderer/RenderMetrics.hpp"
+#include "RenderingDevice/DrawStream.hpp"
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
@@ -38,12 +38,13 @@
 #include <ResourceManager/MeshGpuData.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/TextureGpuData.hpp>
+#include <bits/stl_queue.h>
 #include <cstring>
 
 namespace BetterThanNothing
 {
 	Renderer::Renderer(VulkanContext* context, ResourceManager* resourceManager, RenderingDevice* renderingDevice)
-	: m_context(context), m_resourceManager(resourceManager), m_renderingDevice(renderingDevice)
+		: m_context(context), m_resourceManager(resourceManager), m_renderingDevice(renderingDevice)
 	{
 		m_context->settings.maxFramesInFlight = m_renderingDevice->GetMaxFramesInFlight();
 
@@ -102,42 +103,34 @@ namespace BetterThanNothing
 
 		m_context->frames[m_currentFrame].inFlightFences->Wait();
 
-		const auto device = m_context->device->Handle();
-		const auto swapchain = m_context->swapChain->Handle();
+		const auto acquireResult = m_context->swapChain->AcquireNextImage(m_context->frames[m_currentFrame].imageAvailableSemaphore->Handle());
 
-		uint32_t	   imageIndex;
-		const VkResult acquireResult =
-			vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, m_context->frames[m_currentFrame].imageAvailableSemaphore->Handle(), VK_NULL_HANDLE, &imageIndex);
-
-		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
+		if (!acquireResult.has_value())
 		{
 			const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
 			m_context->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 			return;
 		}
 
-		if (acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR)
-			throw std::runtime_error("failed to acquire swap chain image!");
+		const uint32_t imageIndex = acquireResult.value();
 
 		m_context->frames[m_currentFrame].inFlightFences->Reset();
 		m_context->frames[m_currentFrame].commandBuffer->Reset();
 
 		RecordCommandBuffer(renderList, camera, imageIndex);
 
-		const VkSemaphore waitSemaphores[] = {m_context->frames[m_currentFrame].imageAvailableSemaphore->Handle()};
+		const auto					   commandBuffer = m_context->frames[m_currentFrame].commandBuffer->Handle();
+		const VkSemaphore			   waitSemaphores[] = {m_context->frames[m_currentFrame].imageAvailableSemaphore->Handle()};
 		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+		const VkSemaphore			   signalSemaphores[] = {m_context->swapChain->GetImageFinishedSemaphore(imageIndex)};
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-
-		const auto commandBuffer = m_context->frames[m_currentFrame].commandBuffer->Handle();
-		submitInfo.pCommandBuffers = &commandBuffer;
-
-		const VkSemaphore signalSemaphores[] = {m_imageFinishedSemaphores[imageIndex]->Handle()};
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -145,12 +138,12 @@ namespace BetterThanNothing
 		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->frames[m_currentFrame].inFlightFences->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
+		const VkSwapchainKHR swapChains[] = {m_context->swapChain->Handle()};
+
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pWaitSemaphores = signalSemaphores;
-
-		const VkSwapchainKHR swapChains[] = {swapchain};
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;
 		presentInfo.pImageIndices = &imageIndex;
@@ -206,18 +199,18 @@ namespace BetterThanNothing
 
 			auto meshPosition = Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2]);
 
-			m_drawStream->Draw({
-				.pipeline = m_context->defaultPipeline->Handle(),
-				.pipelineLayout = m_context->defaultPipeline->GetLayout(),
-				.vertexBuffer = meshGpuData->vertexBuffer->Handle(),
-				.indexBuffer = meshGpuData->indexBuffer->Handle(),
-				.indexCount = meshGpuData->indexCount,
-				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
-				.samplerDescriptorSet = textureGpuData->descriptorSet->Handle(),
-				.pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
-				.transform = transform,
-				.distanceToCamera = Vector3::Distance(camera.position, meshPosition)
-			});
+			m_drawStream->Draw(
+				{.pipeline = m_context->defaultPipeline->Handle(),
+				 .pipelineLayout = m_context->defaultPipeline->GetLayout(),
+				 .vertexBuffer = meshGpuData->vertexBuffer->Handle(),
+				 .indexBuffer = meshGpuData->indexBuffer->Handle(),
+				 .indexCount = meshGpuData->indexCount,
+				 .globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
+				 .samplerDescriptorSet = textureGpuData->descriptorSet->Handle(),
+				 .pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
+				 .transform = transform,
+				 .distanceToCamera = Vector3::Distance(camera.position, meshPosition)}
+			);
 
 			RenderMetrics::AddDrawCall(meshGpuData->vertexCount);
 		}
@@ -253,10 +246,9 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
 	}
 
-	void Renderer::CreateSyncObjects()
+	void Renderer::CreateSyncObjects() const
 	{
 		const uint32_t frameCount = m_context->settings.maxFramesInFlight;
-		const uint32_t imageCount = m_context->swapChain->GetImageCount();
 
 		for (uint32_t i = 0; i < frameCount; i++)
 		{
@@ -265,13 +257,7 @@ namespace BetterThanNothing
 			frame.inFlightFences = RenderingApi::Fence::Create({m_context->device, true});
 		}
 
-		m_imageFinishedSemaphores.resize(imageCount);
-		for (uint32_t i = 0; i < imageCount; i++)
-		{
-			m_imageFinishedSemaphores[i] = RenderingApi::Semaphore::Create({m_context->device});
-		}
-
-		Logger::Log<SUCCESS>("Vulkan sync objects: ok (frames: {}, images: {})", frameCount, imageCount);
+		Logger::Log<SUCCESS>("Vulkan sync objects: ok (frames: {})", frameCount);
 	}
 
 	void Renderer::CreateGlobalDescriptorSets()
@@ -305,7 +291,6 @@ namespace BetterThanNothing
 
 		Logger::Log<SUCCESS>("Vulkan global descriptor sets: ok (count: {})", m_context->vkGlobalDescriptorSets.size());
 	}
-
 
 	void Renderer::CreatePointLightBuffers(uint32_t maxLights) const
 	{

@@ -27,6 +27,7 @@ namespace BetterThanNothing::RenderingApi
 		CreateImages();
 		CreateColorResources();
 		CreateDepthResources();
+		CreateSyncObjects();
 
 		Logger::Log<SUCCESS>("Vulkan swap chain: ok");
 	}
@@ -208,6 +209,29 @@ namespace BetterThanNothing::RenderingApi
 			throw std::runtime_error("Cannot allocate depth image view");
 	}
 
+	void SwapChain::CreateSyncObjects()
+	{
+		const uint32_t imageCount = m_images.size();
+
+		m_imageFinishedSemaphores.resize(imageCount);
+		for (uint32_t i = 0; i < imageCount; i++)
+			m_imageFinishedSemaphores[i] = Semaphore::Create({m_createInfo.device});
+	}
+
+	std::optional<uint32_t> SwapChain::AcquireNextImage(const VkSemaphore imageAvailableSemaphore) const
+	{
+		uint32_t imageIndex;
+		const VkResult result = vkAcquireNextImageKHR(m_createInfo.device->Handle(), m_swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+			return std::nullopt;
+
+		if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+			throw std::runtime_error("Failed to acquire swap chain image!");
+
+		return imageIndex;
+	}
+
 	void SwapChain::RecreateSwapChain(const uint32_t newWidth, const uint32_t newHeight)
 	{
 		m_createInfo.device->WaitIdle();
@@ -218,10 +242,13 @@ namespace BetterThanNothing::RenderingApi
 		CreateImages();
 		CreateColorResources();
 		CreateDepthResources();
+		CreateSyncObjects();
 	}
 
 	void SwapChain::CleanupSwapChain()
 	{
+		m_imageFinishedSemaphores.clear();
+
 		m_createInfo.device->DestroyImageView(m_depthImageView);
 		m_createInfo.allocator->DestroyImage(m_depthImage, m_depthAllocation);
 
@@ -336,18 +363,25 @@ namespace BetterThanNothing::RenderingApi
 		return m_imageFormat;
 	}
 
-	VkImage SwapChain::GetImage(uint32_t index) const
+	VkImage SwapChain::GetImage(const uint32_t index) const
 	{
 		if (index >= m_images.size())
 			throw std::runtime_error("Image index out of range");
 		return m_images.at(index);
 	}
 
-	VkImageView SwapChain::GetImageView(uint32_t index) const
+	VkImageView SwapChain::GetImageView(const uint32_t index) const
 	{
 		if (index >= m_imageViews.size())
 			throw std::runtime_error("Image view index out of range");
 		return m_imageViews.at(index);
+	}
+
+	VkSemaphore SwapChain::GetImageFinishedSemaphore(const uint32_t index) const
+	{
+		if (index >= m_imageFinishedSemaphores.size())
+			throw std::runtime_error("Image finished semaphore index out of range");
+		return m_imageFinishedSemaphores.at(index)->Handle();
 	}
 
 	VkFormat SwapChain::GetDepthFormat() const

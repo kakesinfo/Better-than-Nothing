@@ -18,8 +18,9 @@
 
 #pragma once
 
-#include <vector>
 #include <Module_Base/EBufferingMode.hpp>
+#include <vector>
+#include <optional>
 
 namespace BetterThanNothing::RenderingApi
 {
@@ -29,6 +30,7 @@ namespace BetterThanNothing::RenderingApi
 	class Allocator;
 	class CommandPool;
 	class Queue;
+	class Semaphore;
 
 	struct SwapChainCreateInfo
 	{
@@ -66,10 +68,12 @@ namespace BetterThanNothing::RenderingApi
 		[[nodiscard]] static uint32_t	ChooseImageCount(const VkSurfaceCapabilitiesKHR& capabilities, const VkPresentModeKHR& presentMode);
 		[[nodiscard]] VkFormat			ChooseDepthFormat(const std::vector<VkFormat>& candidates) const;
 
-	public:
 		void CreateDepthResources();
 		void CreateColorResources();
+		void CreateSyncObjects();
 
+	public:
+		[[nodiscard]] std::optional<uint32_t> AcquireNextImage(VkSemaphore imageAvailableSemaphore) const;
 		void RecreateSwapChain(uint32_t newWidth, uint32_t newHeight);
 
 		[[nodiscard]] VkExtent2D	 GetExtent() const;
@@ -80,6 +84,7 @@ namespace BetterThanNothing::RenderingApi
 		[[nodiscard]] VkFormat		 GetImageFormat() const;
 		[[nodiscard]] VkImage		 GetImage(uint32_t index) const;
 		[[nodiscard]] VkImageView	 GetImageView(uint32_t index) const;
+		[[nodiscard]] VkSemaphore	 GetImageFinishedSemaphore(uint32_t index) const;
 		[[nodiscard]] VkFormat		 GetDepthFormat() const;
 		[[nodiscard]] VkImage		 GetDepthImage() const;
 		[[nodiscard]] VkImageView	 GetDepthImageView() const;
@@ -89,18 +94,19 @@ namespace BetterThanNothing::RenderingApi
 		[[nodiscard]] VkSwapchainKHR Handle() const;
 
 	private:
-		const SwapChainCreateInfo m_createInfo;
-		VkSwapchainKHR			  m_swapChain = VK_NULL_HANDLE;
-		VkExtent2D				  m_extent{};
-		VkFormat				  m_imageFormat = VK_FORMAT_UNDEFINED;
-		std::vector<VkImage>	  m_images;
-		std::vector<VkImageView>  m_imageViews;
-		VkImage					  m_depthImage = VK_NULL_HANDLE;
-		VkImageView				  m_depthImageView = VK_NULL_HANDLE;
-		VkFormat				  m_depthFormat = VK_FORMAT_UNDEFINED;
-		VmaAllocation			  m_depthAllocation = VK_NULL_HANDLE;
-		VkImage					  m_colorImage = VK_NULL_HANDLE; // For multisampling
-		VkImageView				  m_colorImageView = VK_NULL_HANDLE;
-		VmaAllocation			  m_colorAllocation = VK_NULL_HANDLE;
+		const SwapChainCreateInfo				m_createInfo;
+		VkSwapchainKHR							m_swapChain = VK_NULL_HANDLE;
+		VkExtent2D								m_extent{};
+		VkFormat								m_imageFormat = VK_FORMAT_UNDEFINED;
+		std::vector<VkImage>					m_images;
+		std::vector<VkImageView>				m_imageViews;
+		std::vector<std::unique_ptr<Semaphore>> m_imageFinishedSemaphores;
+		VkImage									m_depthImage = VK_NULL_HANDLE;
+		VkImageView								m_depthImageView = VK_NULL_HANDLE;
+		VkFormat								m_depthFormat = VK_FORMAT_UNDEFINED;
+		VmaAllocation							m_depthAllocation = VK_NULL_HANDLE;
+		VkImage									m_colorImage = VK_NULL_HANDLE; // For multisampling
+		VkImageView								m_colorImageView = VK_NULL_HANDLE;
+		VmaAllocation							m_colorAllocation = VK_NULL_HANDLE;
 	};
 };
