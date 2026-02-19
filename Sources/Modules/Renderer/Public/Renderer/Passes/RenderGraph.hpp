@@ -28,6 +28,7 @@ namespace BetterThanNothing
 	class RenderList;
 	struct VulkanContext;
 	struct CameraData;
+	class DrawStreamView;
 
 	class RenderGraph
 	{
@@ -42,7 +43,7 @@ namespace BetterThanNothing
 			m_renderPasses.push_back(std::make_unique<T>(m_context));
 		}
 
-		void Execute(const RenderPassContext& context, const DrawStream& drawStream) const;
+		void Execute(const RenderPassContext& context, const DrawStreamView& drawStream) const;
 
 	private:
 		VulkanContext*							  m_context;

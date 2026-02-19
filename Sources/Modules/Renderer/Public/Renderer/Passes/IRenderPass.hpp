@@ -22,12 +22,12 @@
 
 namespace BetterThanNothing
 {
-	class DrawStream;
+	class DrawStreamView;
 
 	class IRenderPass
 	{
 	public:
 		virtual ~IRenderPass() = default;
-		virtual void Execute(const RenderPassContext& context, const DrawStream& drawStream) = 0;
+		virtual void Execute(const RenderPassContext& context, const DrawStreamView& drawStream) = 0;
 	};
 }

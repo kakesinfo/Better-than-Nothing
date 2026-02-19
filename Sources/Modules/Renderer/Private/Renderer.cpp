@@ -21,7 +21,7 @@
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Data/Graphics/DynamicUniformData.hpp"
 #include "Module_Data/Graphics/GlobalUniformData.hpp"
-#include "Renderer/DrawStream.hpp"
+#include "RenderingDevice/DrawStream.hpp"
 #include "Renderer/GlobalUniformProvider.hpp"
 #include "Renderer/Passes/ForwardPass.hpp"
 #include "Renderer/Passes/ImGuiPass.hpp"
@@ -39,7 +39,6 @@
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/TextureGpuData.hpp>
 #include <cstring>
-#include <iostream>
 
 namespace BetterThanNothing
 {
@@ -86,6 +85,8 @@ namespace BetterThanNothing
 			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::PointLights)->Handle());
 		});
 
+		m_drawStream = std::make_unique<DrawStream>();
+
 		Logger::Log<SUCCESS>("Renderer: initialized successfully");
 	}
 
@@ -124,8 +125,6 @@ namespace BetterThanNothing
 		RecordCommandBuffer(renderList, camera, imageIndex);
 
 		const VkSemaphore waitSemaphores[] = {m_context->frames[m_currentFrame].imageAvailableSemaphore->Handle()};
-
-		// We wait for the fragment shader to output the color before we can start writing to the image
 		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
 		VkSubmitInfo submitInfo{};
@@ -138,7 +137,7 @@ namespace BetterThanNothing
 		const auto commandBuffer = m_context->frames[m_currentFrame].commandBuffer->Handle();
 		submitInfo.pCommandBuffers = &commandBuffer;
 
-		const VkSemaphore signalSemaphores[] = {m_context->frames[m_currentFrame].renderFinishedSemaphore->Handle()};
+		const VkSemaphore signalSemaphores[] = {m_imageFinishedSemaphores[imageIndex]->Handle()};
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -193,7 +192,8 @@ namespace BetterThanNothing
 
 		RenderMetrics::SetCameraCoordinates(camera.position.GetX(), camera.position.GetY(), camera.position.GetZ());
 
-		DrawStream drawStream;
+		m_drawStream->Reset(renderList->Size());
+
 		for (uint32_t i = 0; i < renderList->Size(); i++)
 		{
 			const auto& [meshId, textureId, transform] = renderList->Get(i);
@@ -204,16 +204,19 @@ namespace BetterThanNothing
 			if (!meshGpuData || !textureGpuData)
 				continue;
 
-			drawStream.Draw({
+			auto meshPosition = Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2]);
+
+			m_drawStream->Draw({
 				.pipeline = m_context->defaultPipeline->Handle(),
 				.pipelineLayout = m_context->defaultPipeline->GetLayout(),
 				.vertexBuffer = meshGpuData->vertexBuffer->Handle(),
 				.indexBuffer = meshGpuData->indexBuffer->Handle(),
 				.indexCount = meshGpuData->indexCount,
 				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
-				.dynamicUniformData = { .model = transform },
 				.samplerDescriptorSet = textureGpuData->descriptorSet->Handle(),
 				.pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
+				.transform = transform,
+				.distanceToCamera = Vector3::Distance(camera.position, meshPosition)
 			});
 
 			RenderMetrics::AddDrawCall(meshGpuData->vertexCount);
@@ -224,7 +227,7 @@ namespace BetterThanNothing
 		renderPassContext.imageIndex = imageIndex;
 		renderPassContext.currentFrame = m_currentFrame;
 
-		m_renderGraph->Execute(renderPassContext, drawStream);
+		m_renderGraph->Execute(renderPassContext, m_drawStream->Build());
 
 		currentFrame.commandBuffer->EndRecording();
 	}
@@ -252,17 +255,23 @@ namespace BetterThanNothing
 
 	void Renderer::CreateSyncObjects()
 	{
-		const uint32_t count = m_context->settings.maxFramesInFlight;
+		const uint32_t frameCount = m_context->settings.maxFramesInFlight;
+		const uint32_t imageCount = m_context->swapChain->GetImageCount();
 
-		for (uint32_t i = 0; i < count; i++)
+		for (uint32_t i = 0; i < frameCount; i++)
 		{
 			auto& frame = m_context->frames[i];
 			frame.imageAvailableSemaphore = RenderingApi::Semaphore::Create({m_context->device});
-			frame.renderFinishedSemaphore = RenderingApi::Semaphore::Create({m_context->device});
 			frame.inFlightFences = RenderingApi::Fence::Create({m_context->device, true});
 		}
 
-		Logger::Log<SUCCESS>("Vulkan sync objects: ok (count: {})", count);
+		m_imageFinishedSemaphores.resize(imageCount);
+		for (uint32_t i = 0; i < imageCount; i++)
+		{
+			m_imageFinishedSemaphores[i] = RenderingApi::Semaphore::Create({m_context->device});
+		}
+
+		Logger::Log<SUCCESS>("Vulkan sync objects: ok (frames: {}, images: {})", frameCount, imageCount);
 	}
 
 	void Renderer::CreateGlobalDescriptorSets()

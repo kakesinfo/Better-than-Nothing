@@ -18,17 +18,18 @@
 
 #include "Renderer/Passes/ForwardPass.hpp"
 
+#include "Module_Data/Graphics/DynamicUniformData.hpp"
 #include "RenderingApi/Core/CommandBuffer.hpp"
 #include "RenderingApi/Core/SwapChain.hpp"
-#include "Renderer/DrawStream.hpp"
 #include "RenderingApi/Deprecated/VulkanContext.hpp"
+#include "RenderingDevice/DrawStream.hpp"
 
 namespace BetterThanNothing
 {
 	ForwardPass::ForwardPass(VulkanContext* context) : m_context(context) {}
 	ForwardPass::~ForwardPass() = default;
 
-	void ForwardPass::Execute(const RenderPassContext& context, const DrawStream& drawStream)
+	void ForwardPass::Execute(const RenderPassContext& context, const DrawStreamView& drawStream)
 	{
 		auto commandBuffer = context.commandBuffer;
 
@@ -88,41 +89,40 @@ namespace BetterThanNothing
 				bool	   boundGlobalDescriptor = false;
 				bool	   boundPointLightDescriptor = false;
 
-				for (uint32_t i = 0; i < drawStream.Size(); i++)
+				for (const DrawPacket& drawPacket : drawStream)
 				{
-					const DrawCommand& drawCommand = drawStream[i];
-
-					if (lastPipeline != drawCommand.pipeline)
+					if (lastPipeline != drawPacket.pipeline)
 					{
-						commandBuffer->BindPipeline(drawCommand.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
-						lastPipeline = drawCommand.pipeline;
+						commandBuffer->BindPipeline(drawPacket.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+						lastPipeline = drawPacket.pipeline;
 					}
 
 					if (!boundGlobalDescriptor)
 					{
-						commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 0, 1, &drawCommand.globalDescriptorSet, 0, nullptr);
+						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 0, 1, &drawPacket.globalDescriptorSet, 0, nullptr);
 						boundGlobalDescriptor = true;
 					}
 
-					commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 1, 1, &drawCommand.samplerDescriptorSet, 0, nullptr);
+					commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &drawPacket.samplerDescriptorSet, 0, nullptr);
 
 					if (!boundPointLightDescriptor)
 					{
-						commandBuffer->BindDescriptorSets(drawCommand.pipelineLayout, 2, 1, &drawCommand.pointLightDescriptorSet, 0, nullptr);
+						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 2, 1, &drawPacket.pointLightDescriptorSet, 0, nullptr);
 						boundPointLightDescriptor = true;
 					}
 
+					const DynamicUniformData dynamicUniforms = {drawPacket.transform};
 					commandBuffer->PushConstants(
-						drawCommand.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData),
-						&drawCommand.dynamicUniformData
+						drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData),
+						&dynamicUniforms
 					);
 
-					const VkBuffer		   vertexBuffers[] = {drawCommand.vertexBuffer};
+					const VkBuffer		   vertexBuffers[] = {drawPacket.vertexBuffer};
 					constexpr VkDeviceSize offsets[] = {0};
 					commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-					commandBuffer->BindIndexBuffer(drawCommand.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+					commandBuffer->BindIndexBuffer(drawPacket.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-					commandBuffer->DrawIndexed(drawCommand.indexCount, 1, 0, 0, 0);
+					commandBuffer->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
 				}
 			},
 			renderingInfo

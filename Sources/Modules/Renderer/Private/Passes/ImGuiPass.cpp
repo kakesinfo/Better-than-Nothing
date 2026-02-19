@@ -27,6 +27,7 @@
 #include "Module_Platform/Window.hpp"
 #include "Renderer/RenderMetrics.hpp"
 #include "RenderingApi/Deprecated/VulkanContext.hpp"
+#include "RenderingDevice/DrawStream.hpp"
 
 namespace BetterThanNothing
 {
@@ -89,7 +90,7 @@ namespace BetterThanNothing
 		vkDestroyDescriptorPool(m_context->device->Handle(), m_imguiPool, nullptr);
 	}
 
-	void ImGuiPass::Execute(const RenderPassContext& context, const DrawStream& drawStream)
+	void ImGuiPass::Execute(const RenderPassContext& context, const DrawStreamView& drawStream)
 	{
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL3_NewFrame();

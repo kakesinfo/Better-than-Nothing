@@ -26,6 +26,7 @@ namespace BetterThanNothing
 	{
 		class Pipeline;
 		class PipelineBuilder;
+		class Semaphore;
 	}
 
 	class RenderList;
@@ -38,6 +39,7 @@ namespace BetterThanNothing
 	struct VulkanContext;
 	struct VulkanFrame;
 	struct CameraData;
+	class DrawStream;
 	struct DirectionalLightData;
 
 	class ResourceManager;
@@ -69,12 +71,14 @@ namespace BetterThanNothing
 		void AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback);
 
 	private:
-		VulkanContext*							m_context = nullptr;
-		ResourceManager*						m_resourceManager = nullptr;
-		RenderingDevice*						m_renderingDevice = nullptr;
-		std::vector<VulkanFrame>				m_frames;
-		uint32_t								m_currentFrame = 0;
-		std::unique_ptr<GlobalUniformProvider>	m_globalUniformProvider = nullptr;
-		std::unique_ptr<RenderGraph>			m_renderGraph = nullptr;
+		VulkanContext*										  m_context = nullptr;
+		ResourceManager*									  m_resourceManager = nullptr;
+		RenderingDevice*									  m_renderingDevice = nullptr;
+		std::vector<VulkanFrame>							  m_frames;
+		std::vector<std::unique_ptr<RenderingApi::Semaphore>> m_imageFinishedSemaphores;
+		uint32_t											  m_currentFrame = 0;
+		std::unique_ptr<GlobalUniformProvider>				  m_globalUniformProvider = nullptr;
+		std::unique_ptr<RenderGraph>						  m_renderGraph = nullptr;
+		std::unique_ptr<DrawStream>							  m_drawStream;
 	};
 }
