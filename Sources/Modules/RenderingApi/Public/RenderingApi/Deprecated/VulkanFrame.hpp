@@ -37,7 +37,6 @@ namespace BetterThanNothing
 		std::unique_ptr<VulkanUniformBuffer>		 dynamicUniformBuffer;
 		std::unique_ptr<VulkanStorageBuffer>		 pointLightBuffer;
 		std::unique_ptr<RenderingApi::Semaphore>	 imageAvailableSemaphore;
-		std::unique_ptr<RenderingApi::Semaphore>	 renderFinishedSemaphore;
 		std::unique_ptr<RenderingApi::Fence>		 inFlightFences;
 	};
 };

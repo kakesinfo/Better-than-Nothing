@@ -28,7 +28,7 @@ namespace BetterThanNothing
 	struct RenderPassContext
 	{
 		RenderingApi::CommandBuffer* commandBuffer;
-		uint32_t	   imageIndex;
-		uint32_t	   currentFrame;
+		uint32_t					 imageIndex;
+		uint32_t					 currentFrame;
 	};
 }

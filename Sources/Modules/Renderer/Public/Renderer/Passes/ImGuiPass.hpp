@@ -22,6 +22,7 @@
 namespace BetterThanNothing
 {
 	struct VulkanContext;
+	class DrawStreamView;
 
 	class ImGuiPass : public IRenderPass
 	{
@@ -29,7 +30,7 @@ namespace BetterThanNothing
 		explicit ImGuiPass(VulkanContext* context);
 		~ImGuiPass() override;
 
-		void Execute(const RenderPassContext& context, const DrawStream& drawStream) override;
+		void Execute(const RenderPassContext& context, const DrawStreamView& drawStream) override;
 
 	private:
 		VulkanContext* m_context;
