@@ -17,8 +17,10 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
-#include "RenderingDevice/SamplerRegistry.hpp"
+
+#include "RenderingDevice/BufferRegistry.hpp"
 #include "RenderingDevice/Handle.hpp"
+#include "RenderingDevice/SamplerRegistry.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
@@ -73,6 +75,7 @@ namespace BetterThanNothing
 		RegisterDescriptorLayout(EDescriptorLayoutKey::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 		m_samplerRegistry = SamplerRegistry::Create(m_device.get());
+		m_bufferRegistry = BufferRegistry::Create({m_device.get(), m_commandPool.get(), m_graphicsQueue.get(), m_allocator.get()});
 	}
 
 	RenderingDevice::~RenderingDevice() {}
@@ -95,6 +98,31 @@ namespace BetterThanNothing
 	void RenderingDevice::DestroyTextureSampler(const SamplerHandle handle) const
 	{
 		m_samplerRegistry->DestroySampler(handle);
+	}
+
+	BufferHandle RenderingDevice::CreateBuffer(const BufferDescription& desc) const
+	{
+		return m_bufferRegistry->CreateBuffer(desc);
+	}
+
+	BufferHandle RenderingDevice::CreateVertexBuffer(const void* data, const size_t size) const
+	{
+		return m_bufferRegistry->CreateVertexBuffer(data, size);
+	}
+
+	BufferHandle RenderingDevice::CreateIndexBuffer(const void* data, const size_t size) const
+	{
+		return m_bufferRegistry->CreateIndexBuffer(data, size);
+	}
+
+	bool RenderingDevice::CopyDataToBuffer(const BufferHandle dstBufferHandle, const void* data, const size_t size) const
+	{
+		return m_bufferRegistry->CopyDataToBuffer(dstBufferHandle, data, size);
+	}
+
+	void RenderingDevice::DestroyBuffer(const BufferHandle handle) const
+	{
+		return m_bufferRegistry->DestroyBuffer(handle);
 	}
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const
