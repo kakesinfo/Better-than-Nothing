@@ -17,6 +17,9 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice/SamplerRegistry.hpp"
+#include "RenderingDevice/Handle.hpp"
+
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
@@ -68,6 +71,8 @@ namespace BetterThanNothing
 		RegisterDescriptorLayout(EDescriptorLayoutKey::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 		RegisterDescriptorLayout(EDescriptorLayoutKey::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		RegisterDescriptorLayout(EDescriptorLayoutKey::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+		m_samplerRegistry = SamplerRegistry::Create(m_device.get());
 	}
 
 	RenderingDevice::~RenderingDevice() {}
@@ -80,6 +85,16 @@ namespace BetterThanNothing
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
 	{
 		return std::make_unique<RenderingDevice>(createInfo);
+	}
+
+	SamplerHandle RenderingDevice::GetOrCreateTextureSampler(const SamplerDescription& desc) const
+	{
+		return m_samplerRegistry->GetOrCreateSampler(desc);
+	}
+
+	void RenderingDevice::DestroyTextureSampler(const SamplerHandle handle) const
+	{
+		m_samplerRegistry->DestroySampler(handle);
 	}
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const
