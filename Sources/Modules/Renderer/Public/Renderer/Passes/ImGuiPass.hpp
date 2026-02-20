@@ -23,18 +23,19 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 	class DrawStreamView;
+	class RenderingDevice;
 
 	class ImGuiPass : public IRenderPass
 	{
 	public:
-		explicit ImGuiPass(VulkanContext* context);
+		explicit ImGuiPass(VulkanContext* context, RenderingDevice* renderingDevice);
 		~ImGuiPass() override;
 
 		void Execute(const RenderPassContext& context, const DrawStreamView& drawStream) override;
 
 	private:
 		VulkanContext* m_context;
-
+		RenderingDevice* m_renderingDevice;
 		VkDescriptorPool m_imguiPool;
 	};
 }

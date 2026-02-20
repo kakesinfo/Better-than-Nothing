@@ -60,7 +60,8 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Device: {}", m_device->GetDeviceName());
 		Logger::Log<INFO>("API Version: {}", m_device->GetApiVersion());
 		Logger::Log<INFO>("Buffering mode: {}", static_cast<uint8_t>(createInfo.bufferingMode));
-		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode == EBufferingMode::Double ? "enabled" : "disabled");
+		Logger::Log<INFO>("Max frame in-flight: {}", m_maxFramesInFlight);
+		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode != EBufferingMode::Immediate ? "enabled" : "disabled");
 		Logger::Log<INFO>("Anisotropy: {}x", m_device->GetMaxAnisotropy());
 		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_device->GetMaxMsaaSamples()));
 
@@ -123,6 +124,11 @@ namespace BetterThanNothing
 	void RenderingDevice::DestroyBuffer(const BufferHandle handle) const
 	{
 		return m_bufferRegistry->DestroyBuffer(handle);
+	}
+
+	RenderingApi::Buffer* RenderingDevice::GetBuffer(const BufferHandle handle) const
+	{
+		return m_bufferRegistry->GetBuffer(handle);
 	}
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const

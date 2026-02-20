@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "Handle.hpp"
+
 #include <Module_Math/Matrix4.hpp>
 #include <vector>
 
@@ -30,8 +32,8 @@ namespace BetterThanNothing
 	{
 		VkPipeline		 pipeline{};
 		VkPipelineLayout pipelineLayout{};
-		VkBuffer		 vertexBuffer{};
-		VkBuffer		 indexBuffer{};
+		BufferHandle	 vertexBuffer{};
+		BufferHandle	 indexBuffer{};
 		uint32_t		 indexCount{};
 		VkDescriptorSet	 globalDescriptorSet{};
 		VkDescriptorSet	 samplerDescriptorSet{};
@@ -44,7 +46,7 @@ namespace BetterThanNothing
 	{
 		uint64_t packetId : 32 = 0;
 		uint64_t distance : 24 = 0;
-		uint64_t _padding : 8  = 0;
+		uint64_t _padding : 8 = 0;
 	};
 
 	struct DrawPacketSortKey

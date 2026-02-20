@@ -21,7 +21,7 @@
 
 namespace BetterThanNothing
 {
-	RenderGraph::RenderGraph(VulkanContext* context) : m_context(context) {}
+	RenderGraph::RenderGraph(VulkanContext* context, RenderingDevice* renderingDevice) : m_context(context), m_renderingDevice(renderingDevice) {}
 	RenderGraph::~RenderGraph() = default;
 
 	void RenderGraph::Execute(const RenderPassContext& context, const DrawStreamView& drawStream) const

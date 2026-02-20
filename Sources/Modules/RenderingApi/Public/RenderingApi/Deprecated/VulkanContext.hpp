@@ -33,7 +33,6 @@ namespace BetterThanNothing
 	class DescriptorPool;
 	}
 
-	class VulkanDescriptorSetLayout;
 	class VulkanDescriptorSet;
 	struct VulkanFrame;
 

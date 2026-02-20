@@ -102,19 +102,19 @@ namespace BetterThanNothing
 	enum class BufferUsageFlags : std::uint32_t
 	{
 		None = 0,
-		Vertex = 1 << 0,
-		Index = 1 << 1,
-		Uniform = 1 << 2,
-		TransferSrc = 1 << 3,
-		TransferDst = 1 << 4,
-		Storage = 1 << 5
+		TransferSrc = 0x00000001,
+		TransferDst = 0x00000002,
+		Uniform = 0x00000010,
+		Storage = 0x00000020,
+		Index = 0x00000040,
+		Vertex = 0x00000080,
 	};
 
 	enum class BufferAllocationFlags : std::uint32_t
 	{
 		None = 0,
-		Mapped = 1 << 0,	// VMA_ALLOCATION_CREATE_MAPPED_BIT
-		Dedicated = 1 << 1, // VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT
+		Mapped = 0x00000004,	// VMA_ALLOCATION_CREATE_MAPPED_BIT
+		Dedicated = 0x00000001, // VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT
 	};
 
 	inline BufferUsageFlags operator|(BufferUsageFlags a, BufferUsageFlags b)

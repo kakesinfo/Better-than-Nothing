@@ -22,11 +22,13 @@
 #include "RenderingApi/Core/CommandBuffer.hpp"
 #include "RenderingApi/Core/SwapChain.hpp"
 #include "RenderingApi/Deprecated/VulkanContext.hpp"
+#include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingDevice/DrawStream.hpp"
+#include "RenderingDevice/RenderingDevice.hpp"
 
 namespace BetterThanNothing
 {
-	ForwardPass::ForwardPass(VulkanContext* context) : m_context(context) {}
+	ForwardPass::ForwardPass(VulkanContext* context, RenderingDevice* renderingDevice) : m_context(context), m_renderingDevice(renderingDevice) {}
 	ForwardPass::~ForwardPass() = default;
 
 	void ForwardPass::Execute(const RenderPassContext& context, const DrawStreamView& drawStream)
@@ -117,10 +119,13 @@ namespace BetterThanNothing
 						&dynamicUniforms
 					);
 
-					const VkBuffer		   vertexBuffers[] = {drawPacket.vertexBuffer};
+					const auto vertexBuffer = m_renderingDevice->GetBuffer(drawPacket.vertexBuffer);
+					const auto indexBuffer = m_renderingDevice->GetBuffer(drawPacket.indexBuffer);
+
+					const VkBuffer		   vertexBuffers[] = {vertexBuffer->value};
 					constexpr VkDeviceSize offsets[] = {0};
 					commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-					commandBuffer->BindIndexBuffer(drawPacket.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+					commandBuffer->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
 
 					commandBuffer->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
 				}

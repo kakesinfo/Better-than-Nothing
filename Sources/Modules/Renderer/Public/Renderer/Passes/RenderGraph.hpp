@@ -29,24 +29,26 @@ namespace BetterThanNothing
 	struct VulkanContext;
 	struct CameraData;
 	class DrawStreamView;
+	class RenderingDevice;
 
 	class RenderGraph
 	{
 	public:
-		explicit RenderGraph(VulkanContext* context);
+		explicit RenderGraph(VulkanContext* context, RenderingDevice* renderingDevice);
 		~RenderGraph();
 
 		template <typename T>
 		void AddRenderPass()
 		{
 			static_assert(std::is_base_of_v<IRenderPass, T>, "T must inherit from IRenderPass");
-			m_renderPasses.push_back(std::make_unique<T>(m_context));
+			m_renderPasses.push_back(std::make_unique<T>(m_context, m_renderingDevice));
 		}
 
 		void Execute(const RenderPassContext& context, const DrawStreamView& drawStream) const;
 
 	private:
 		VulkanContext*							  m_context;
+		RenderingDevice*						  m_renderingDevice;
 		std::vector<std::unique_ptr<IRenderPass>> m_renderPasses;
 	};
 }
