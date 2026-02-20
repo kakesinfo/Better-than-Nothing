@@ -1,6 +1,8 @@
 # Better than Nothing
 Everything is in the title, it is a better-than-nothing Game Engine.
 
+### 🚧 Currently under heavy refactoring of the Renderer
+
 ### 🚀 Features
 
  - Support for Linux.
