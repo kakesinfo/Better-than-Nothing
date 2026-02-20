@@ -21,6 +21,7 @@
 #include <Module_Base/EBufferingMode.hpp>
 #include <memory>
 #include <unordered_map>
+#include "Handle.hpp"
 
 namespace BetterThanNothing
 {
@@ -38,6 +39,10 @@ namespace BetterThanNothing
 		class DescriptorSetLayout;
 		struct DescriptorSetLayoutCreateInfo;
 	}
+
+	class SamplerRegistry;
+	struct SamplerDescription;
+
 
 	enum class EDescriptorLayoutKey : std::uint8_t
 	{
@@ -63,6 +68,9 @@ namespace BetterThanNothing
 		void RegisterDescriptorLayout(EDescriptorLayoutKey key, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	public:
+		SamplerHandle GetOrCreateTextureSampler(const SamplerDescription& desc) const;
+		void		  DestroyTextureSampler(SamplerHandle handle) const;
+
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Instance* GetInstance() const;
 		/// @deprecated Will be removed in the future.
@@ -103,5 +111,7 @@ namespace BetterThanNothing
 
 		std::unique_ptr<RenderingApi::DescriptorPool> m_descriptorPool;
 		std::unordered_map<EDescriptorLayoutKey, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_layouts;
+
+		std::unique_ptr<SamplerRegistry> m_samplerRegistry;
 	};
 };
