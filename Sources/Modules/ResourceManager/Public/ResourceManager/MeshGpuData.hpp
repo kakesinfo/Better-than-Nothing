@@ -18,16 +18,15 @@
 
 #pragma once
 
-#include <RenderingApi/Deprecated/VulkanIndexBuffer.hpp>
-#include <RenderingApi/Deprecated/VulkanVertexBuffer.hpp>
+#include "RenderingDevice/Handle.hpp"
 
 namespace BetterThanNothing
 {
 	struct MeshGpuData
 	{
-		std::unique_ptr<VulkanVertexBuffer> vertexBuffer;
-		uint32_t							vertexCount = 0;
-		std::unique_ptr<VulkanIndexBuffer>	indexBuffer;
-		uint32_t							indexCount = 0;
+		BufferHandle vertexBuffer;
+		uint32_t	 vertexCount = 0;
+		BufferHandle indexBuffer;
+		uint32_t	 indexCount = 0;
 	};
 }

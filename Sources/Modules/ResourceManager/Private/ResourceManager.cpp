@@ -24,6 +24,8 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 
+#include "RenderingDevice/RenderingDevice.hpp"
+
 #include <filesystem>
 #include <future>
 #include <tiny_obj_loader.h>
@@ -215,12 +217,12 @@ namespace BetterThanNothing
 
 		const uint32_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
 		const void*	   vertexBufferData = mesh.vertices.data();
-		meshGpuData->vertexBuffer = std::make_unique<VulkanVertexBuffer>(m_context, vertexBufferSize, vertexBufferData);
+		meshGpuData->vertexBuffer = m_renderingDevice->CreateVertexBuffer(vertexBufferData, vertexBufferSize);
 		meshGpuData->vertexCount = static_cast<uint32_t>(mesh.vertices.size());
 
 		const uint32_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
 		const void*	   indexBufferData = mesh.indices.data();
-		meshGpuData->indexBuffer = std::make_unique<VulkanIndexBuffer>(m_context, indexBufferSize, indexBufferData);
+		meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(indexBufferData, indexBufferSize);
 		meshGpuData->indexCount = static_cast<uint32_t>(mesh.indices.size());
 
 		m_meshes[meshId] = std::move(meshGpuData);

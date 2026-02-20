@@ -39,8 +39,6 @@ namespace BetterThanNothing
 
 	void Runtime::OnEnable()
 	{
-		Logger::SetLogLevel(DEBUG);
-
 		m_transform[0] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f).Scale(0.01f);
 		m_transform[1] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
 	}

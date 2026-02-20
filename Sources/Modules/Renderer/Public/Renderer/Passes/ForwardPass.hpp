@@ -23,16 +23,18 @@ namespace BetterThanNothing
 {
 	struct VulkanContext;
 	class DrawStreamView;
+	class RenderingDevice;
 
 	class ForwardPass : public IRenderPass
 	{
 	public:
-		explicit ForwardPass(VulkanContext* context);
+		explicit ForwardPass(VulkanContext* context, RenderingDevice* renderingDevice);
 		~ForwardPass() override;
 
 		void Execute(const RenderPassContext& context, const DrawStreamView& drawStream) override;
 
 	private:
 		VulkanContext* m_context;
+		RenderingDevice* m_renderingDevice;
 	};
 }

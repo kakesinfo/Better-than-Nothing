@@ -61,7 +61,7 @@ namespace BetterThanNothing
 
 		m_globalUniformProvider = std::make_unique<GlobalUniformProvider>(m_context);
 
-		m_renderGraph = std::make_unique<RenderGraph>(m_context);
+		m_renderGraph = std::make_unique<RenderGraph>(m_context, m_renderingDevice);
 		m_renderGraph->AddRenderPass<ForwardPass>();
 		m_renderGraph->AddRenderPass<ImGuiPass>();
 
@@ -202,8 +202,10 @@ namespace BetterThanNothing
 			m_drawStream->Draw(
 				{.pipeline = m_context->defaultPipeline->Handle(),
 				 .pipelineLayout = m_context->defaultPipeline->GetLayout(),
-				 .vertexBuffer = meshGpuData->vertexBuffer->Handle(),
-				 .indexBuffer = meshGpuData->indexBuffer->Handle(),
+				 // .vertexBuffer = meshGpuData->vertexBuffer->Handle(),
+				 .vertexBuffer = meshGpuData->vertexBuffer,
+				 //.indexBuffer = meshGpuData->indexBuffer->Handle(),
+				 .indexBuffer = meshGpuData->indexBuffer,
 				 .indexCount = meshGpuData->indexCount,
 				 .globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
 				 .samplerDescriptorSet = textureGpuData->descriptorSet->Handle(),

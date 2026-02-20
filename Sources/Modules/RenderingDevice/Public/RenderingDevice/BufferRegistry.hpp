@@ -54,6 +54,7 @@ namespace BetterThanNothing
 		Handle<RenderingApi::Buffer> CreateIndexBuffer(const void* data, size_t size);
 		bool						 CopyDataToBuffer(Handle<RenderingApi::Buffer> dstBufferHandle, const void* data, size_t size);
 		void						 DestroyBuffer(Handle<RenderingApi::Buffer> handle);
+		RenderingApi::Buffer*		 GetBuffer(Handle<RenderingApi::Buffer> handle);
 
 	private:
 		BufferRegistryCreateInfo			 m_createInfo;

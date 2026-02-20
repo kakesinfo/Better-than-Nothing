@@ -19,18 +19,15 @@
 #include "RenderingDevice/BufferRegistry.hpp"
 
 #include "RenderingApi/Core/Allocator.hpp"
-#include "RenderingApi/Core/Device.hpp"
 #include "RenderingApi/Core/CommandBuffer.hpp"
+#include "RenderingApi/Core/Device.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 
 #include <cstring>
 
 namespace BetterThanNothing
 {
-	BufferRegistry::BufferRegistry(const BufferRegistryCreateInfo& createInfo): m_createInfo(createInfo)
-	{
-
-	}
+	BufferRegistry::BufferRegistry(const BufferRegistryCreateInfo& createInfo) : m_createInfo(createInfo) {}
 
 	BufferRegistry::~BufferRegistry()
 	{
@@ -178,5 +175,12 @@ namespace BetterThanNothing
 		const RenderingApi::Buffer* buffer = m_buffers.Get(handle);
 		m_createInfo.allocator->DestroyBuffer(buffer->value, buffer->allocation);
 		m_buffers.Destroy(handle);
+	}
+
+	RenderingApi::Buffer* BufferRegistry::GetBuffer(Handle<RenderingApi::Buffer> handle)
+	{
+		if (!m_buffers.Has(handle))
+			throw std::runtime_error("Invalid buffer handle!");
+		return m_buffers.Get(handle);
 	}
 }

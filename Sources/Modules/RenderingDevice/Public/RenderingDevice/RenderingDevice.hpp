@@ -72,11 +72,12 @@ namespace BetterThanNothing
 		SamplerHandle GetOrCreateTextureSampler(const SamplerDescription& desc) const;
 		void		  DestroyTextureSampler(SamplerHandle handle) const;
 
-		BufferHandle CreateBuffer(const BufferDescription& desc) const;
-		BufferHandle CreateVertexBuffer(const void* data, size_t size) const;
-		BufferHandle CreateIndexBuffer(const void* data, size_t size) const;
-		bool		 CopyDataToBuffer(BufferHandle dstBufferHandle, const void* data, size_t size) const;
-		void		 DestroyBuffer(BufferHandle handle) const;
+		BufferHandle		  CreateBuffer(const BufferDescription& desc) const;
+		BufferHandle		  CreateVertexBuffer(const void* data, size_t size) const;
+		BufferHandle		  CreateIndexBuffer(const void* data, size_t size) const;
+		bool				  CopyDataToBuffer(BufferHandle dstBufferHandle, const void* data, size_t size) const;
+		void				  DestroyBuffer(BufferHandle handle) const;
+		RenderingApi::Buffer* GetBuffer(BufferHandle handle) const;
 
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Instance* GetInstance() const;
