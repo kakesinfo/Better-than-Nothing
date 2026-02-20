@@ -52,9 +52,11 @@ namespace BetterThanNothing
 	namespace RenderingApi
 	{
 		struct Sampler;
+		struct Buffer;
 	}
 
 	using SamplerHandle = Handle<RenderingApi::Sampler>;
+	using BufferHandle = Handle<RenderingApi::Buffer>;
 }
 
 namespace std
