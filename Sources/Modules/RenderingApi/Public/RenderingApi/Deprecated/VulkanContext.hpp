@@ -20,6 +20,9 @@
 
 namespace BetterThanNothing
 {
+	class VulkanUniformBuffer;
+	class VulkanStorageBuffer;
+
 	namespace RenderingApi
 	{
 		class Instance;
@@ -30,7 +33,10 @@ namespace BetterThanNothing
 		class SwapChain;
 		class CommandPool;
 		class Pipeline;
-	class DescriptorPool;
+		class DescriptorPool;
+		class CommandBuffer;
+		class Semaphore;
+		class Fence;
 	}
 
 	class VulkanDescriptorSet;
@@ -54,7 +60,11 @@ namespace BetterThanNothing
 		RenderingApi::CommandPool*				commandPool;
 		std::unique_ptr<RenderingApi::Pipeline> defaultPipeline;
 
-		std::vector<VulkanFrame> frames;
+		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> commandBuffer;
+		std::vector<std::unique_ptr<VulkanUniformBuffer>>		  globalUniformBuffer;
+		std::vector<std::unique_ptr<VulkanStorageBuffer>>		  pointLightBuffer;
+		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  imageAvailableSemaphore;
+		std::vector<std::unique_ptr<RenderingApi::Fence>>		  inFlightFences;
 
 		RenderingApi::DescriptorPool* descriptorPool;
 

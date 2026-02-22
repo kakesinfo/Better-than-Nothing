@@ -38,7 +38,6 @@
 #include "RenderingApi/Deprecated/VulkanBuffer.hpp"
 #include "RenderingApi/Deprecated/VulkanContext.hpp"
 #include "RenderingApi/Deprecated/VulkanDescriptorSet.hpp"
-#include "RenderingApi/Deprecated/VulkanFrame.hpp"
 #include "RenderingApi/Deprecated/VulkanImage.hpp"
 #include "RenderingApi/Deprecated/VulkanImageView.hpp"
 #include "RenderingApi/Deprecated/VulkanSampler.hpp"

@@ -19,7 +19,6 @@
 #pragma once
 
 #include <RenderingApi/Deprecated/VulkanContext.hpp>
-#include <RenderingApi/Deprecated/VulkanFrame.hpp>
 #include <RenderingApi/Deprecated/VulkanUniformBuffer.hpp>
 
 namespace BetterThanNothing
@@ -33,7 +32,7 @@ namespace BetterThanNothing
 		template <typename T>
 		T* Get(const uint32_t frameIndex) const
 		{
-			return static_cast<T*>(m_context->frames[frameIndex].globalUniformBuffer->GetData());
+			return static_cast<T*>(m_context->globalUniformBuffer[frameIndex]->GetData());
 		}
 
 	private:

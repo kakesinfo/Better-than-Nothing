@@ -74,7 +74,6 @@ namespace BetterThanNothing
 		VulkanContext*										  m_context = nullptr;
 		ResourceManager*									  m_resourceManager = nullptr;
 		RenderingDevice*									  m_renderingDevice = nullptr;
-		std::vector<VulkanFrame>							  m_frames;
 		uint32_t											  m_currentFrame = 0;
 		std::unique_ptr<GlobalUniformProvider>				  m_globalUniformProvider = nullptr;
 		std::unique_ptr<RenderGraph>						  m_renderGraph = nullptr;
