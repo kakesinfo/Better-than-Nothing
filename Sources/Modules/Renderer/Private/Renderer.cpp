@@ -57,8 +57,6 @@ namespace BetterThanNothing
 		m_context->commandPool = m_renderingDevice->GetCommandPool();
 		m_context->swapChain = m_renderingDevice->GetSwapChain();
 
-		m_context->frames.resize(m_context->settings.maxFramesInFlight);
-
 		m_globalUniformProvider = std::make_unique<GlobalUniformProvider>(m_context);
 
 		m_renderGraph = std::make_unique<RenderGraph>(m_context, m_renderingDevice);
@@ -101,9 +99,9 @@ namespace BetterThanNothing
 		if (!m_context->defaultPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
 
-		m_context->frames[m_currentFrame].inFlightFences->Wait();
+		m_context->inFlightFences[m_currentFrame]->Wait();
 
-		const auto acquireResult = m_context->swapChain->AcquireNextImage(m_context->frames[m_currentFrame].imageAvailableSemaphore->Handle());
+		const auto acquireResult = m_context->swapChain->AcquireNextImage(m_context->imageAvailableSemaphore[m_currentFrame]->Handle());
 
 		if (!acquireResult.has_value())
 		{
@@ -114,13 +112,13 @@ namespace BetterThanNothing
 
 		const uint32_t imageIndex = acquireResult.value();
 
-		m_context->frames[m_currentFrame].inFlightFences->Reset();
-		m_context->frames[m_currentFrame].commandBuffer->Reset();
+		m_context->inFlightFences[m_currentFrame]->Reset();
+		m_context->commandBuffer[m_currentFrame]->Reset();
 
 		RecordCommandBuffer(renderList, camera, imageIndex);
 
-		const auto					   commandBuffer = m_context->frames[m_currentFrame].commandBuffer->Handle();
-		const VkSemaphore			   waitSemaphores[] = {m_context->frames[m_currentFrame].imageAvailableSemaphore->Handle()};
+		const auto					   commandBuffer = m_context->commandBuffer[m_currentFrame]->Handle();
+		const VkSemaphore			   waitSemaphores[] = {m_context->imageAvailableSemaphore[m_currentFrame]->Handle()};
 		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		const VkSemaphore			   signalSemaphores[] = {m_context->swapChain->GetImageFinishedSemaphore(imageIndex)};
 
@@ -135,7 +133,7 @@ namespace BetterThanNothing
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		auto graphicsQueue = m_context->graphicsQueue->Handle();
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->frames[m_currentFrame].inFlightFences->Handle()) != VK_SUCCESS)
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->inFlightFences[m_currentFrame]->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
 		const VkSwapchainKHR swapChains[] = {m_context->swapChain->Handle()};
@@ -160,14 +158,12 @@ namespace BetterThanNothing
 		else if (presentResult != VK_SUCCESS)
 			throw std::runtime_error("failed to present swap chain image!");
 
-		m_currentFrame = (m_currentFrame + 1) % m_context->frames.size();
+		m_currentFrame = (m_currentFrame + 1) % m_renderingDevice->GetMaxFramesInFlight();
 	}
 
 	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const std ::uint32_t imageIndex) const
 	{
-		const auto& currentFrame = m_context->frames[m_currentFrame];
-
-		currentFrame.commandBuffer->BeginRecording();
+		m_context->commandBuffer[m_currentFrame]->BeginRecording();
 
 		auto directionalLight = renderList->GetDirectionalLight();
 
@@ -218,13 +214,13 @@ namespace BetterThanNothing
 		}
 
 		RenderPassContext renderPassContext{};
-		renderPassContext.commandBuffer = currentFrame.commandBuffer.get();
+		renderPassContext.commandBuffer = m_context->commandBuffer[m_currentFrame].get();
 		renderPassContext.imageIndex = imageIndex;
 		renderPassContext.currentFrame = m_currentFrame;
 
 		m_renderGraph->Execute(renderPassContext, m_drawStream->Build());
 
-		currentFrame.commandBuffer->EndRecording();
+		m_context->commandBuffer[m_currentFrame]->EndRecording();
 	}
 
 	void Renderer::DrawPointLights(const RenderList* renderList) const
@@ -234,7 +230,7 @@ namespace BetterThanNothing
 		if (count == 0)
 			return;
 
-		void* dstData = m_context->frames[m_currentFrame].pointLightBuffer->GetMappedData();
+		void* dstData = m_context->pointLightBuffer[m_currentFrame]->GetMappedData();
 		std::memcpy(dstData, renderList->GetPointLights().data(), count * sizeof(PointLightData));
 	}
 
@@ -242,8 +238,9 @@ namespace BetterThanNothing
 	{
 		const uint32_t count = m_context->settings.maxFramesInFlight;
 
+		m_context->commandBuffer.resize(count);
 		for (uint32_t i = 0; i < count; i++)
-			m_context->frames[i].commandBuffer = RenderingApi::CommandBuffer::Create({m_context->device, m_context->commandPool});
+			m_context->commandBuffer[i] = RenderingApi::CommandBuffer::Create({m_context->device, m_context->commandPool});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
 	}
@@ -252,11 +249,13 @@ namespace BetterThanNothing
 	{
 		const uint32_t frameCount = m_context->settings.maxFramesInFlight;
 
+		m_context->imageAvailableSemaphore.resize(frameCount);
+		m_context->inFlightFences.resize(frameCount);
+
 		for (uint32_t i = 0; i < frameCount; i++)
 		{
-			auto& frame = m_context->frames[i];
-			frame.imageAvailableSemaphore = RenderingApi::Semaphore::Create({m_context->device});
-			frame.inFlightFences = RenderingApi::Fence::Create({m_context->device, true});
+			m_context->imageAvailableSemaphore[i] = RenderingApi::Semaphore::Create({m_context->device});
+			m_context->inFlightFences[i] = RenderingApi::Fence::Create({m_context->device, true});
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok (frames: {})", frameCount);
@@ -273,7 +272,7 @@ namespace BetterThanNothing
 			m_context->vkGlobalDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(globalDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo globalInfo{};
-			globalInfo.buffer = m_context->frames[i].globalUniformBuffer->Handle();
+			globalInfo.buffer = m_context->globalUniformBuffer[i]->Handle();
 			globalInfo.offset = 0;
 			globalInfo.range = sizeof(GlobalUniformData);
 
@@ -299,10 +298,9 @@ namespace BetterThanNothing
 		const uint32_t count = m_context->settings.maxFramesInFlight;
 		const uint32_t bufferSize = maxLights * sizeof(PointLightData);
 
+		m_context->pointLightBuffer.resize(count);
 		for (uint32_t i = 0; i < count; i++)
-		{
-			m_context->frames[i].pointLightBuffer = std::make_unique<VulkanStorageBuffer>(m_context, bufferSize);
-		}
+			m_context->pointLightBuffer[i] = std::make_unique<VulkanStorageBuffer>(m_context, bufferSize);
 
 		Logger::Log<SUCCESS>("Point light buffers: ok (count: {})", count);
 	}
@@ -320,7 +318,7 @@ namespace BetterThanNothing
 			m_context->vkPointLightDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(pointLightDescriptorSetLayout, m_context);
 
 			VkDescriptorBufferInfo dynamicInfo{};
-			dynamicInfo.buffer = m_context->frames[i].pointLightBuffer->Handle();
+			dynamicInfo.buffer = m_context->pointLightBuffer[i]->Handle();
 			dynamicInfo.offset = 0;
 			dynamicInfo.range = lightBufferSize;
 
