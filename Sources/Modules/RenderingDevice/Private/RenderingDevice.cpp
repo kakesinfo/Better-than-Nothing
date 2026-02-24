@@ -47,8 +47,6 @@ namespace BetterThanNothing
 			m_surface.get(),
 			m_device.get(),
 			m_allocator.get(),
-			m_commandPool.get(),
-			m_graphicsQueue.get(),
 			windowWidth,
 			windowHeight,
 			createInfo.bufferingMode,
