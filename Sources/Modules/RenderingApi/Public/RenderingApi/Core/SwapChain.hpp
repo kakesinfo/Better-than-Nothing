@@ -19,17 +19,14 @@
 #pragma once
 
 #include <Module_Base/EBufferingMode.hpp>
-#include <vector>
 #include <optional>
+#include <vector>
 
 namespace BetterThanNothing::RenderingApi
 {
-	class Instance;
 	class Surface;
 	class Device;
 	class Allocator;
-	class CommandPool;
-	class Queue;
 	class Semaphore;
 
 	struct SwapChainCreateInfo
@@ -37,8 +34,6 @@ namespace BetterThanNothing::RenderingApi
 		Surface*	   surface;
 		Device*		   device;
 		Allocator*	   allocator;
-		CommandPool*   commandPool;
-		Queue*		   graphicsQueue;
 		uint32_t	   width;
 		uint32_t	   height;
 		EBufferingMode bufferingMode = EBufferingMode::Double;
@@ -74,24 +69,25 @@ namespace BetterThanNothing::RenderingApi
 
 	public:
 		[[nodiscard]] std::optional<uint32_t> AcquireNextImage(VkSemaphore imageAvailableSemaphore) const;
-		void RecreateSwapChain(uint32_t newWidth, uint32_t newHeight);
+		void								  RecreateSwapChain(uint32_t newWidth, uint32_t newHeight);
 
-		[[nodiscard]] VkExtent2D	 GetExtent() const;
-		[[nodiscard]] uint32_t		 GetWidth() const;
-		[[nodiscard]] uint32_t		 GetHeight() const;
-		[[nodiscard]] float			 GetAspectRatio() const;
-		[[nodiscard]] uint32_t		 GetImageCount() const;
-		[[nodiscard]] VkFormat		 GetImageFormat() const;
-		[[nodiscard]] VkImage		 GetImage(uint32_t index) const;
-		[[nodiscard]] VkImageView	 GetImageView(uint32_t index) const;
-		[[nodiscard]] VkSemaphore	 GetImageFinishedSemaphore(uint32_t index) const;
-		[[nodiscard]] VkFormat		 GetDepthFormat() const;
-		[[nodiscard]] VkImage		 GetDepthImage() const;
-		[[nodiscard]] VkImageView	 GetDepthImageView() const;
-		[[nodiscard]] VkFormat		 GetColorFormat() const;
-		[[nodiscard]] VkImage		 GetColorImage() const;
-		[[nodiscard]] VkImageView	 GetColorImageView() const;
-		[[nodiscard]] VkSwapchainKHR Handle() const;
+		[[nodiscard]] VkExtent2D		 GetExtent() const;
+		[[nodiscard]] uint32_t			 GetWidth() const;
+		[[nodiscard]] uint32_t			 GetHeight() const;
+		[[nodiscard]] float				 GetAspectRatio() const;
+		[[nodiscard]] uint32_t			 GetImageCount() const;
+		[[nodiscard]] VkFormat			 GetImageFormat() const;
+		[[nodiscard]] VkImage			 GetImage(uint32_t index) const;
+		[[nodiscard]] VkImageView		 GetImageView(uint32_t index) const;
+		[[nodiscard]] VkSemaphore		 GetImageFinishedSemaphore(uint32_t index) const;
+		[[nodiscard]] VkFormat			 GetDepthFormat() const;
+		[[nodiscard]] VkImageAspectFlags GetDepthAspectFlags() const;
+		[[nodiscard]] VkImage			 GetDepthImage() const;
+		[[nodiscard]] VkImageView		 GetDepthImageView() const;
+		[[nodiscard]] VkFormat			 GetColorFormat() const;
+		[[nodiscard]] VkImage			 GetColorImage() const;
+		[[nodiscard]] VkImageView		 GetColorImageView() const;
+		[[nodiscard]] VkSwapchainKHR	 Handle() const;
 
 	private:
 		const SwapChainCreateInfo				m_createInfo;
@@ -104,6 +100,7 @@ namespace BetterThanNothing::RenderingApi
 		VkImage									m_depthImage = VK_NULL_HANDLE;
 		VkImageView								m_depthImageView = VK_NULL_HANDLE;
 		VkFormat								m_depthFormat = VK_FORMAT_UNDEFINED;
+		VkImageAspectFlags						m_depthAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 		VmaAllocation							m_depthAllocation = VK_NULL_HANDLE;
 		VkImage									m_colorImage = VK_NULL_HANDLE; // For multisampling
 		VkImageView								m_colorImageView = VK_NULL_HANDLE;

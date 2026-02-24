@@ -28,7 +28,10 @@
 
 namespace BetterThanNothing
 {
-	ForwardPass::ForwardPass(VulkanContext* context, RenderingDevice* renderingDevice) : m_context(context), m_renderingDevice(renderingDevice) {}
+	ForwardPass::ForwardPass(VulkanContext* context, RenderingDevice* renderingDevice)
+		: m_context(context), m_renderingDevice(renderingDevice)
+	{}
+
 	ForwardPass::~ForwardPass() = default;
 
 	void ForwardPass::Execute(const RenderPassContext& context, const DrawStreamView& drawStream)
@@ -36,22 +39,54 @@ namespace BetterThanNothing
 		auto commandBuffer = context.commandBuffer;
 
 		{
-			VkImageMemoryBarrier barrier{};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.image = m_context->swapChain->GetImage(context.imageIndex);
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = 1;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 1;
+			std::array<VkImageMemoryBarrier, 3> barriers{};
 
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+			barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barriers[0].srcAccessMask = 0;
+			barriers[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			barriers[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			barriers[0].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barriers[0].image = m_context->swapChain->GetImage(context.imageIndex);
+			barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barriers[0].subresourceRange.baseMipLevel = 0;
+			barriers[0].subresourceRange.levelCount = 1;
+			barriers[0].subresourceRange.baseArrayLayer = 0;
+			barriers[0].subresourceRange.layerCount = 1;
+
+			barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barriers[1].srcAccessMask = 0;
+			barriers[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+			barriers[1].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			barriers[1].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barriers[1].image = m_context->swapChain->GetColorImage();
+			barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barriers[1].subresourceRange.baseMipLevel = 0;
+			barriers[1].subresourceRange.levelCount = 1;
+			barriers[1].subresourceRange.baseArrayLayer = 0;
+			barriers[1].subresourceRange.layerCount = 1;
+
+			barriers[2].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barriers[2].srcAccessMask = 0;
+			barriers[2].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			barriers[2].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			barriers[2].newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barriers[2].image = m_context->swapChain->GetDepthImage();
+			barriers[2].subresourceRange.aspectMask = m_context->swapChain->GetDepthAspectFlags();
+			barriers[2].subresourceRange.baseMipLevel = 0;
+			barriers[2].subresourceRange.levelCount = 1;
+			barriers[2].subresourceRange.baseArrayLayer = 0;
+			barriers[2].subresourceRange.layerCount = 1;
+
+			commandBuffer->PipelineBarrier(
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr,
+				barriers.size(), barriers.data()
+			);
 		}
 
 		VkRenderingAttachmentInfo colorAttachment{};
@@ -59,7 +94,7 @@ namespace BetterThanNothing
 		colorAttachment.imageView = m_context->swapChain->GetColorImageView();
 		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
 		colorAttachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
 		colorAttachment.resolveImageView = m_context->swapChain->GetImageView(context.imageIndex);
@@ -114,10 +149,7 @@ namespace BetterThanNothing
 					}
 
 					const DynamicUniformData dynamicUniforms = {drawPacket.transform};
-					commandBuffer->PushConstants(
-						drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData),
-						&dynamicUniforms
-					);
+					commandBuffer->PushConstants(drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData), &dynamicUniforms);
 
 					const auto vertexBuffer = m_renderingDevice->GetBuffer(drawPacket.vertexBuffer);
 					const auto indexBuffer = m_renderingDevice->GetBuffer(drawPacket.indexBuffer);

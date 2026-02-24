@@ -143,16 +143,16 @@ namespace BetterThanNothing::RenderingApi
 		if (m_createInfo.allocator->CreateImage(&imageInfo, &allocCreateInfo, &m_depthImage, &m_depthAllocation, nullptr) != VK_SUCCESS)
 			throw std::runtime_error("Cannot allocate depth image");
 
-		VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+		m_depthAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 		if (m_depthFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || m_depthFormat == VK_FORMAT_D24_UNORM_S8_UINT)
-			aspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			m_depthAspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
 		VkImageViewCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		createInfo.image = m_depthImage;
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		createInfo.format = m_depthFormat;
-		createInfo.subresourceRange.aspectMask = aspectFlags;
+		createInfo.subresourceRange.aspectMask = m_depthAspectFlags;
 		createInfo.subresourceRange.baseMipLevel = 0;
 		createInfo.subresourceRange.levelCount = 1;
 		createInfo.subresourceRange.baseArrayLayer = 0;
@@ -160,13 +160,6 @@ namespace BetterThanNothing::RenderingApi
 
 		if (m_createInfo.device->CreateImageView(createInfo, &m_depthImageView) != VK_SUCCESS)
 			throw std::runtime_error("Cannot allocate depth image view");
-
-		CommandBuffer::SingleTimeCommands(
-			[&](const std::unique_ptr<CommandBuffer>& commandBuffer) {
-				commandBuffer->TransitionImageLayout(m_depthImage, m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
-			},
-			m_createInfo.device, m_createInfo.commandPool, m_createInfo.graphicsQueue
-		);
 	}
 
 	void SwapChain::CreateColorResources()
@@ -387,6 +380,11 @@ namespace BetterThanNothing::RenderingApi
 	VkFormat SwapChain::GetDepthFormat() const
 	{
 		return m_depthFormat;
+	}
+
+	VkImageAspectFlags SwapChain::GetDepthAspectFlags() const
+	{
+		return m_depthAspectFlags;
 	}
 
 	VkImage SwapChain::GetDepthImage() const
