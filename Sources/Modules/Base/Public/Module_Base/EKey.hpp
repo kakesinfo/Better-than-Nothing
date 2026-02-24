@@ -1,6 +1,6 @@
 /*
  *	Better than Nothing
- *	Copyright (C) 2025 kakesinfo
+ *	Copyright (C) 2026 kakesinfo
  *
  *	Modified for SDL3 Migration
  */
