@@ -43,47 +43,77 @@ namespace BetterThanNothing
 		static const Vector3 Forward;
 		static const Vector3 Zero;
 
-		Vector3();
-		Vector3(float x, float y, float z);
-
-		explicit Vector3(const glm::vec3& other);
-		explicit Vector3(float value);
+		Vector3() : m_data(0.0f, 0.0f, 0.0f) {}
+		Vector3(float x, float y, float z) : m_data(x, y, z) {}
+		explicit Vector3(const glm::vec3& other) : m_data(other) {}
+		explicit Vector3(float value) : m_data(value) {}
 
 		// TODO: Add copy constructor and copy assignment operator
-		Vector3(const Vector3& other);
+		Vector3(const Vector3& other) : m_data(other.m_data) {}
 
-		[[nodiscard]] float GetX() const;
-		[[nodiscard]] float GetY() const;
-		[[nodiscard]] float GetZ() const;
+		[[nodiscard]] float GetX() const { return m_data.x; }
+		[[nodiscard]] float GetY() const { return m_data.y; }
+		[[nodiscard]] float GetZ() const { return m_data.z; }
 
-		void SetX(float x);
-		void SetY(float y);
-		void SetZ(float z);
+		void SetX(float x) { m_data.x = x; }
+		void SetY(float y) { m_data.y = y; }
+		void SetZ(float z) { m_data.z = z; }
 
-		[[nodiscard]] Vector3 operator+(const Vector3& other) const;
-		[[nodiscard]] Vector3 operator-(const Vector3& other) const;
-		[[nodiscard]] Vector3 operator*(float scalar) const;
-		[[nodiscard]] Vector3 operator/(float scalar) const;
-		[[nodiscard]] Vector3 operator-() const;
+		[[nodiscard]] Vector3 operator+(const Vector3& other) const { return Vector3(m_data + other.m_data); }
+		[[nodiscard]] Vector3 operator-(const Vector3& other) const { return Vector3(m_data - other.m_data); }
+		[[nodiscard]] Vector3 operator*(float scalar) const { return Vector3(m_data * scalar); }
+		[[nodiscard]] Vector3 operator/(float scalar) const { return Vector3(m_data / scalar); }
+		[[nodiscard]] Vector3 operator-() const { return Vector3(-m_data); }
 
-		Vector3 operator+=(const Vector3& other);
-		Vector3 operator-=(const Vector3& other);
-		Vector3 operator*=(float scalar);
-		Vector3 operator/=(float scalar);
-		Vector3 operator=(const Vector3& other);
+		Vector3 operator+=(const Vector3& other)
+		{
+			m_data += other.m_data;
+			return *this;
+		}
 
-		[[nodiscard]] bool		Equals(const Vector3& other) const;
-		[[nodiscard]] float		Magnitude() const;
-		[[nodiscard]] Vector3	Normalized() const;
-		[[nodiscard]] glm::vec3 Value() const;
+		Vector3 operator-=(const Vector3& other)
+		{
+			m_data -= other.m_data;
+			return *this;
+		}
 
-		static float   Dot(const Vector3& a, const Vector3& b);
-		static float   Distance(const Vector3& a, const Vector3& b);
-		static Vector3 Lerp(const Vector3& a, const Vector3& b, float t);
-		static Vector3 Max(const Vector3& a, const Vector3& b);
-		static Vector3 Min(const Vector3& a, const Vector3& b);
+		Vector3 operator*=(float scalar)
+		{
+			m_data *= scalar;
+			return *this;
+		}
 
-		friend std::ostream& operator<<(std::ostream& os, const Vector3& vec);
+		Vector3 operator/=(float scalar)
+		{
+			m_data /= scalar;
+			return *this;
+		}
+
+		Vector3 operator=(const Vector3& other)
+		{
+			m_data = other.m_data;
+			return *this;
+		}
+
+		[[nodiscard]] bool Equals(const Vector3& other) const { return m_data == other.m_data; }
+
+		[[nodiscard]] float Magnitude() const { return glm::length(m_data); }
+
+		[[nodiscard]] Vector3 Normalized() const { return Vector3(glm::normalize(m_data)); }
+
+		[[nodiscard]] glm::vec3 Value() const { return m_data; }
+
+		static float   Dot(const Vector3& a, const Vector3& b) { return glm::dot(a.m_data, b.m_data); }
+		static float   Distance(const Vector3& a, const Vector3& b) { return glm::distance(a.m_data, b.m_data); }
+		static Vector3 Lerp(const Vector3& a, const Vector3& b, float t) { return Vector3(glm::mix(a.m_data, b.m_data, t)); }
+		static Vector3 Max(const Vector3& a, const Vector3& b) { return Vector3(glm::max(a.m_data, b.m_data)); }
+		static Vector3 Min(const Vector3& a, const Vector3& b) { return Vector3(glm::min(a.m_data, b.m_data)); }
+
+		friend std::ostream& operator<<(std::ostream& os, const Vector3& vec)
+		{
+			os << "Vector3(" << vec.GetX() << ", " << vec.GetY() << ")";
+			return os;
+		}
 
 	private:
 		glm::vec3 m_data;
