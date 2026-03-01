@@ -28,42 +28,54 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include "Vector3.hpp"
+
 #include <ostream>
 
 namespace BetterThanNothing
 {
-	class Vector3;
-
 	class Quaternion
 	{
 	public:
 		static const Quaternion Identity;
 
-		Quaternion();
-		Quaternion(float w, float x, float y, float z);
-		explicit Quaternion(const glm::quat& quat);
+		Quaternion() : m_data(0.0f, 0.0f, 0.0f, 0.0f) {}
+		Quaternion(float w, float x, float y, float z) : m_data(w, x, y, z) {}
+		explicit Quaternion(const glm::quat& quat) : m_data(quat) {}
 
-		float GetX() const;
-		float GetY() const;
-		float GetZ() const;
-		float GetW() const;
+		[[nodiscard]] float GetX() const { return m_data.x; }
+		[[nodiscard]] float GetY() const { return m_data.y; }
+		[[nodiscard]] float GetZ() const { return m_data.z; }
+		[[nodiscard]] float GetW() const { return m_data.w; }
 
-		[[nodiscard]] Quaternion operator*(const Quaternion& other) const;
-		[[nodiscard]] Quaternion operator+(const Quaternion& other) const;
-		[[nodiscard]] Quaternion operator-(const Quaternion& other) const;
-		[[nodiscard]] Vector3	 operator*(const Vector3& other) const;
+		[[nodiscard]] Quaternion operator*(const Quaternion& other) const { return Quaternion(m_data * other.m_data); }
+		[[nodiscard]] Quaternion operator+(const Quaternion& other) const { return Quaternion(m_data + other.m_data); }
+		[[nodiscard]] Quaternion operator-(const Quaternion& other) const { return Quaternion(m_data - other.m_data); }
+		[[nodiscard]] Vector3	 operator*(const Vector3& other) const { return Vector3(m_data * other.Value()); }
 
-		static Quaternion AngleAxis(float angleInDegrees, float x, float y, float z);
-		static Quaternion AngleAxis(float angleInDegrees, const Vector3& axis);
+		[[nodiscard]] static Quaternion AngleAxis(float angleInDegrees, float x, float y, float z)
+		{
+			return Quaternion(glm::angleAxis(glm::radians(angleInDegrees), glm::vec3(x, y, z)));
+		}
 
-		[[nodiscard]] Quaternion Normalized() const;
-		[[nodiscard]] Quaternion Conjugated() const;
+		[[nodiscard]] static Quaternion AngleAxis(float angleInDegrees, const Vector3& axis)
+		{
+			return AngleAxis(angleInDegrees, axis.GetX(), axis.GetY(), axis.GetZ());
+		}
 
-		[[nodiscard]] float		Magnitude() const;
-		[[nodiscard]] bool		Equals(const Quaternion& other) const;
-		[[nodiscard]] glm::quat Value() const;
+		[[nodiscard]] Quaternion Normalized() const { return Quaternion(glm::normalize(m_data)); }
 
-		friend std::ostream& operator<<(std::ostream& os, const Quaternion& vec);
+		[[nodiscard]] Quaternion Conjugated() const { return Quaternion(glm::conjugate(m_data)); }
+
+		[[nodiscard]] float		Magnitude() const { return glm::length(m_data); }
+		[[nodiscard]] bool		Equals(const Quaternion& other) const { return glm::all(glm::equal(m_data, other.m_data)); }
+		[[nodiscard]] glm::quat Value() const { return m_data; }
+
+		friend std::ostream& operator<<(std::ostream& os, const Quaternion& quat)
+		{
+			os << "Quaternion(" << quat.GetW() << ", " << quat.GetX() << ", " << quat.GetY() << ", " << quat.GetZ() << ")";
+			return os;
+		}
 
 	private:
 		glm::quat m_data;
