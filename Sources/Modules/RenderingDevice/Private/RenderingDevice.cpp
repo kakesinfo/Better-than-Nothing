@@ -21,6 +21,7 @@
 #include "RenderingDevice/BufferRegistry.hpp"
 #include "RenderingDevice/Handle.hpp"
 #include "RenderingDevice/SamplerRegistry.hpp"
+#include "RenderingDevice/TextureRegistry.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
@@ -73,11 +74,12 @@ namespace BetterThanNothing
 		RegisterDescriptorLayout(EDescriptorLayoutKey::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		RegisterDescriptorLayout(EDescriptorLayoutKey::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		m_samplerRegistry = SamplerRegistry::Create(m_device.get());
 		m_bufferRegistry = BufferRegistry::Create({m_device.get(), m_commandPool.get(), m_graphicsQueue.get(), m_allocator.get()});
+		m_textureRegistry = TextureRegistry::Create({m_device.get(), m_commandPool.get(), m_graphicsQueue.get(), m_allocator.get()});
+		m_samplerRegistry = SamplerRegistry::Create(m_device.get());
 	}
 
-	RenderingDevice::~RenderingDevice() {}
+	RenderingDevice::~RenderingDevice() = default;
 
 	void RenderingDevice::RegisterDescriptorLayout(const EDescriptorLayoutKey key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
@@ -97,6 +99,11 @@ namespace BetterThanNothing
 	void RenderingDevice::DestroyTextureSampler(const SamplerHandle handle) const
 	{
 		m_samplerRegistry->DestroySampler(handle);
+	}
+
+	RenderingApi::Sampler* RenderingDevice::GetSampler(SamplerHandle handle) const
+	{
+		return m_samplerRegistry->GetSampler(handle);
 	}
 
 	BufferHandle RenderingDevice::CreateBuffer(const BufferDescription& desc) const
@@ -127,6 +134,21 @@ namespace BetterThanNothing
 	RenderingApi::Buffer* RenderingDevice::GetBuffer(const BufferHandle handle) const
 	{
 		return m_bufferRegistry->GetBuffer(handle);
+	}
+
+	TextureHandle RenderingDevice::CreateTextureFromData(const TextureFromDataDescription& desc) const
+	{
+		return m_textureRegistry->CreateTextureFromData(desc);
+	}
+
+	void RenderingDevice::DestroyTexture(const Handle<RenderingApi::Texture>& handle) const
+	{
+		m_textureRegistry->DestroyTexture(handle);
+	}
+
+	RenderingApi::Texture* RenderingDevice::GetTexture(const Handle<RenderingApi::Texture>& handle) const
+	{
+		return m_textureRegistry->GetTexture(handle);
 	}
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const

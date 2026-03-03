@@ -1,6 +1,6 @@
 /*
 *	Better than Nothing
- *	Copyright (C) 2026 kakesinfo
+ *	Copyright (C) 2025 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ namespace BetterThanNothing
 {
 	struct BufferDescription
 	{
-		std::uint64_t		  size = 0;
+		uint64_t			  size = 0;
 		BufferUsageFlags	  bufferUsage = BufferUsageFlags::None;
 		BufferMemoryUsage	  memoryUsage = BufferMemoryUsage::Auto;
 		BufferAllocationFlags allocationFlags = BufferAllocationFlags::None;

@@ -18,10 +18,9 @@
 
 #pragma once
 
+#include "RenderingDevice/Handle.hpp"
+
 #include <RenderingApi/Deprecated/VulkanDescriptorSet.hpp>
-#include <RenderingApi/Deprecated/VulkanImage.hpp>
-#include <RenderingApi/Deprecated/VulkanImageView.hpp>
-#include <RenderingApi/Deprecated/VulkanSampler.hpp>
 
 namespace BetterThanNothing
 {
@@ -31,10 +30,8 @@ namespace BetterThanNothing
 		int32_t								 height;
 		int32_t								 channels;
 		int32_t								 size;
-		uint32_t							 mipLevels;
-		std::unique_ptr<VulkanImage>		 image;
-		std::unique_ptr<VulkanImageView>	 imageView;
-		std::unique_ptr<VulkanSampler>		 sampler;
+		TextureHandle						 textureHandle;
+		SamplerHandle						 samplerHandle;
 		std::unique_ptr<VulkanDescriptorSet> descriptorSet;
 	};
 }
