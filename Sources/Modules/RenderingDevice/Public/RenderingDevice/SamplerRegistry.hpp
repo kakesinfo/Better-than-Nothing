@@ -41,6 +41,8 @@ namespace BetterThanNothing
 
 		Handle<RenderingApi::Sampler> GetOrCreateSampler(const SamplerDescription& desc);
 		void						  DestroySampler(Handle<RenderingApi::Sampler> handle);
+		RenderingApi::Sampler*		  GetSampler(Handle<RenderingApi::Sampler> handle);
+
 
 	private:
 		RenderingApi::Device*				  m_device;

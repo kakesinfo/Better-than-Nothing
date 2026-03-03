@@ -165,4 +165,12 @@ namespace BetterThanNothing
 		m_device->DestroySampler(sampler->value);
 		m_samplers.Destroy(handle);
 	}
+
+	RenderingApi::Sampler* SamplerRegistry::GetSampler(Handle<RenderingApi::Sampler> handle)
+	{
+		if (!m_samplers.Has(handle))
+			throw std::runtime_error("Invalid sampler handle!");
+
+		return m_samplers.Get(handle);
+	}
 }

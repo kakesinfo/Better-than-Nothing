@@ -166,7 +166,7 @@ namespace BetterThanNothing::RenderingApi
 		throw std::runtime_error("Failed to find supported format");
 	}
 
-	bool Device::IsSupportedFormatFeature(VkFormat format, VkFormatFeatureFlags features) const
+	bool Device::IsSupportedFormatFeature(const VkFormat format, const VkFormatFeatureFlags features) const
 	{
 		VkFormatProperties props;
 		vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &props);

@@ -44,6 +44,8 @@ namespace BetterThanNothing
 	struct SamplerDescription;
 	class BufferRegistry;
 	struct BufferDescription;
+	class TextureRegistry;
+	struct TextureFromDataDescription;
 
 	enum class EDescriptorLayoutKey : std::uint8_t
 	{
@@ -71,13 +73,17 @@ namespace BetterThanNothing
 	public:
 		SamplerHandle GetOrCreateTextureSampler(const SamplerDescription& desc) const;
 		void		  DestroyTextureSampler(SamplerHandle handle) const;
+		RenderingApi::Sampler* GetSampler(SamplerHandle handle) const;
 
-		BufferHandle		  CreateBuffer(const BufferDescription& desc) const;
-		BufferHandle		  CreateVertexBuffer(const void* data, size_t size) const;
-		BufferHandle		  CreateIndexBuffer(const void* data, size_t size) const;
-		bool				  CopyDataToBuffer(BufferHandle dstBufferHandle, const void* data, size_t size) const;
-		void				  DestroyBuffer(BufferHandle handle) const;
-		RenderingApi::Buffer* GetBuffer(BufferHandle handle) const;
+		BufferHandle		   CreateBuffer(const BufferDescription& desc) const;
+		BufferHandle		   CreateVertexBuffer(const void* data, size_t size) const;
+		BufferHandle		   CreateIndexBuffer(const void* data, size_t size) const;
+		bool				   CopyDataToBuffer(BufferHandle dstBufferHandle, const void* data, size_t size) const;
+		void				   DestroyBuffer(BufferHandle handle) const;
+		RenderingApi::Buffer*  GetBuffer(BufferHandle handle) const;
+		TextureHandle		   CreateTextureFromData(const TextureFromDataDescription& desc) const;
+		void				   DestroyTexture(const Handle<RenderingApi::Texture>& handle) const;
+		RenderingApi::Texture* GetTexture(const Handle<RenderingApi::Texture>& handle) const;
 
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Instance* GetInstance() const;
@@ -122,5 +128,6 @@ namespace BetterThanNothing
 
 		std::unique_ptr<SamplerRegistry> m_samplerRegistry;
 		std::unique_ptr<BufferRegistry>	 m_bufferRegistry;
+		std::unique_ptr<TextureRegistry> m_textureRegistry;
 	};
 };

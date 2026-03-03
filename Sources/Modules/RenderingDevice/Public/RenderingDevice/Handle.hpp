@@ -53,10 +53,12 @@ namespace BetterThanNothing
 	{
 		struct Sampler;
 		struct Buffer;
+		struct Texture;
 	}
 
 	using SamplerHandle = Handle<RenderingApi::Sampler>;
 	using BufferHandle = Handle<RenderingApi::Buffer>;
+	using TextureHandle = Handle<RenderingApi::Texture>;
 }
 
 namespace std
