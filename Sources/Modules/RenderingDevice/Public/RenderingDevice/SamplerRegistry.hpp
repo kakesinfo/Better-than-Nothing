@@ -39,14 +39,14 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<SamplerRegistry> Create(RenderingApi::Device* device);
 
-		Handle<RenderingApi::Sampler> GetOrCreateSampler(const SamplerDescription& desc);
-		void						  DestroySampler(Handle<RenderingApi::Sampler> handle);
-		RenderingApi::Sampler*		  GetSampler(Handle<RenderingApi::Sampler> handle);
+		Handle GetOrCreateSampler(const SamplerDescription& desc);
+		void						  DestroySampler(Handle handle);
+		RenderingApi::Sampler*		  GetSampler(Handle handle);
 
 
 	private:
 		RenderingApi::Device*				  m_device;
-		HandleRegistry<RenderingApi::Sampler> m_samplers;
-		std::unordered_map<SamplerDescription, Handle<RenderingApi::Sampler>, SamplerDescriptionHash, SamplerDescriptionEqual> m_samplersLUT;
+		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler> m_samplers;
+		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> m_samplersLUT;
 	};
 }

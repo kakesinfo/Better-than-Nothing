@@ -22,55 +22,62 @@
 
 namespace BetterThanNothing
 {
-	template <typename T>
+	enum class HandleType: uint8_t
+	{
+		INVALID = 0,
+		DescriptorSet,
+		Buffer,
+		Texture,
+		Sampler
+	};
+
 	class Handle
 	{
 	public:
 		Handle() = default;
-		Handle(const uint32_t index, const uint32_t generation) : m_id(index), m_generation(generation) {}
+		Handle(const uint32_t index, const uint32_t generation, const uint8_t type) : m_id(index), m_generation(generation), m_type(type)
+		{}
 
-		[[nodiscard]] std::uint32_t GetId() const { return m_id; }
-		[[nodiscard]] std::uint32_t GetGeneration() const { return m_generation; }
-		[[nodiscard]] bool			IsValid() const { return m_id != 0 && m_generation != 0; }
+		[[nodiscard]] uint32_t GetId() const { return m_id; }
+		[[nodiscard]] uint32_t GetGeneration() const { return m_generation; }
+		[[nodiscard]] uint8_t GetType() const { return m_type; }
+		[[nodiscard]] bool	   IsValid() const { return m_id != 0 && m_generation != 0 && m_type != 0; }
 
-		bool operator==(const Handle& other) const { return m_id == other.m_id && m_generation == other.m_generation; }
-		bool operator!=(const Handle& other) const { return m_id != other.GetId() || m_generation != other.GetGeneration(); }
+		bool operator==(const Handle& other) const
+		{
+			return m_id == other.m_id && m_generation == other.m_generation && m_type == other.m_type;
+		}
+
+		bool operator!=(const Handle& other) const
+		{
+			return m_id != other.GetId() || m_generation != other.GetGeneration() || m_type != other.GetType();
+		}
+
 		bool operator<(const Handle& other) const
 		{
 			return m_id < other.GetId() || (m_id == other.GetId() && m_generation < other.GetGeneration());
 		}
+
 		bool operator>(const Handle& other) const
 		{
 			return m_id > other.GetId() || (m_id == other.GetId() && m_generation > other.GetGeneration());
 		}
 
 	private:
-		std::uint32_t m_id : 20 = 0;
-		std::uint32_t m_generation : 12 = 0;
+		uint64_t m_id : 32 = 0;
+		uint64_t m_generation : 24 = 0;
+		uint64_t m_type : 8 = 0;
 	};
-
-	namespace RenderingApi
-	{
-		struct Sampler;
-		struct Buffer;
-		struct Texture;
-		struct DescriptorSet;
-	}
-
-	using SamplerHandle = Handle<RenderingApi::Sampler>;
-	using BufferHandle = Handle<RenderingApi::Buffer>;
-	using TextureHandle = Handle<RenderingApi::Texture>;
-	using DescriptorSetHandle = Handle<RenderingApi::DescriptorSet>;
 }
 
 namespace std
 {
-	template <typename T>
-	struct hash<BetterThanNothing::Handle<T>>
+	template<>
+	struct hash<BetterThanNothing::Handle>
 	{
-		size_t operator()(const BetterThanNothing::Handle<T>& h) const
+		size_t operator()(const BetterThanNothing::Handle& h) const noexcept
 		{
-			return hash<uint32_t>()(h.GetId()) ^ (hash<uint32_t>()(h.GetGeneration()) << 1);
+			return hash<uint32_t>()(h.GetId()) ^ (hash<uint32_t>()(h.GetGeneration()) << 1) ^ (hash<uint8_t>()(h.GetType()) << 2);
 		}
 	};
 }

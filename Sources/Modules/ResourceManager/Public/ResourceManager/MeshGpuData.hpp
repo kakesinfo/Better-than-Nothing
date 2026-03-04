@@ -24,9 +24,9 @@ namespace BetterThanNothing
 {
 	struct MeshGpuData
 	{
-		BufferHandle vertexBuffer;
+		Handle vertexBuffer;
 		uint32_t	 vertexCount = 0;
-		BufferHandle indexBuffer;
+		Handle indexBuffer;
 		uint32_t	 indexCount = 0;
 	};
 }

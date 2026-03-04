@@ -88,9 +88,9 @@ namespace BetterThanNothing
 		return true;
 	}
 
-	Handle<RenderingApi::Buffer> BufferRegistry::CreateBuffer(const BufferDescription& desc)
+	Handle BufferRegistry::CreateBuffer(const BufferDescription& desc)
 	{
-		const Handle<RenderingApi::Buffer> handle = m_buffers.Allocate();
+		const Handle handle = m_buffers.Allocate();
 
 		if (!Internal_CreateBuffer(desc, m_buffers.Get(handle), m_createInfo.allocator))
 		{
@@ -101,14 +101,14 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle<RenderingApi::Buffer> BufferRegistry::CreateVertexBuffer(const void* data, size_t size)
+	Handle BufferRegistry::CreateVertexBuffer(const void* data, size_t size)
 	{
 		BufferDescription desc{};
 		desc.size = size;
 		desc.bufferUsage = BufferUsageFlags::TransferDst | BufferUsageFlags::Vertex;
 		desc.memoryUsage = BufferMemoryUsage::GpuOnly;
 
-		const Handle<RenderingApi::Buffer> handle = CreateBuffer(desc);
+		const Handle handle = CreateBuffer(desc);
 
 		if (!CopyDataToBuffer(handle, data, size))
 			throw std::runtime_error("Failed to copy data to buffer!");
@@ -116,14 +116,14 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle<RenderingApi::Buffer> BufferRegistry::CreateIndexBuffer(const void* data, size_t size)
+	Handle BufferRegistry::CreateIndexBuffer(const void* data, size_t size)
 	{
 		BufferDescription desc{};
 		desc.size = size;
 		desc.bufferUsage = BufferUsageFlags::TransferDst | BufferUsageFlags::Index;
 		desc.memoryUsage = BufferMemoryUsage::GpuOnly;
 
-		const Handle<RenderingApi::Buffer> handle = CreateBuffer(desc);
+		const Handle handle = CreateBuffer(desc);
 
 		if (!CopyDataToBuffer(handle, data, size))
 			throw std::runtime_error("Failed to copy data to buffer!");
@@ -131,7 +131,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	bool BufferRegistry::CopyDataToBuffer(Handle<RenderingApi::Buffer> dstBufferHandle, const void* data, size_t size)
+	bool BufferRegistry::CopyDataToBuffer(Handle dstBufferHandle, const void* data, size_t size)
 	{
 		if (data == nullptr || size == 0)
 			return false;
@@ -167,7 +167,7 @@ namespace BetterThanNothing
 		return true;
 	}
 
-	void BufferRegistry::DestroyBuffer(Handle<RenderingApi::Buffer> handle)
+	void BufferRegistry::DestroyBuffer(Handle handle)
 	{
 		if (!m_buffers.Has(handle))
 			throw std::runtime_error("Invalid buffer handle!");
@@ -177,7 +177,7 @@ namespace BetterThanNothing
 		m_buffers.Destroy(handle);
 	}
 
-	RenderingApi::Buffer* BufferRegistry::GetBuffer(Handle<RenderingApi::Buffer> handle)
+	RenderingApi::Buffer* BufferRegistry::GetBuffer(Handle handle)
 	{
 		if (!m_buffers.Has(handle))
 			throw std::runtime_error("Invalid buffer handle!");

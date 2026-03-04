@@ -41,6 +41,10 @@ namespace BetterThanNothing
 		class DescriptorPool;
 		class DescriptorSetLayout;
 		struct DescriptorSetLayoutCreateInfo;
+		struct Sampler;
+		struct Buffer;
+		struct Texture;
+		struct DescriptorSet;
 	}
 
 	class SamplerRegistry;
@@ -67,24 +71,24 @@ namespace BetterThanNothing
 		void RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	public:
-		SamplerHandle		   GetOrCreateTextureSampler(const SamplerDescription& desc) const;
-		void				   DestroyTextureSampler(SamplerHandle handle) const;
-		RenderingApi::Sampler* GetSampler(SamplerHandle handle) const;
+		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc) const;
+		void				   DestroyTextureSampler(Handle handle) const;
+		RenderingApi::Sampler* GetSampler(Handle handle) const;
 
-		BufferHandle		   CreateBuffer(const BufferDescription& desc) const;
-		BufferHandle		   CreateVertexBuffer(const void* data, size_t size) const;
-		BufferHandle		   CreateIndexBuffer(const void* data, size_t size) const;
-		bool				   CopyDataToBuffer(BufferHandle dstBufferHandle, const void* data, size_t size) const;
-		void				   DestroyBuffer(BufferHandle handle) const;
-		RenderingApi::Buffer*  GetBuffer(BufferHandle handle) const;
-		TextureHandle		   CreateTextureFromData(const TextureFromDataDescription& desc) const;
-		void				   DestroyTexture(const Handle<RenderingApi::Texture>& handle) const;
-		RenderingApi::Texture* GetTexture(const Handle<RenderingApi::Texture>& handle) const;
+		Handle				   CreateBuffer(const BufferDescription& desc) const;
+		Handle				   CreateVertexBuffer(const void* data, size_t size) const;
+		Handle				   CreateIndexBuffer(const void* data, size_t size) const;
+		bool				   CopyDataToBuffer(Handle dstBufferHandle, const void* data, size_t size) const;
+		void				   DestroyBuffer(Handle handle) const;
+		RenderingApi::Buffer*  GetBuffer(Handle handle) const;
+		Handle				   CreateTextureFromData(const TextureFromDataDescription& desc) const;
+		void				   DestroyTexture(const Handle& handle) const;
+		RenderingApi::Texture* GetTexture(const Handle& handle) const;
 
-		[[nodiscard]] DescriptorSetHandle CreateDescriptorSet(DescriptorSetLayoutType type) const;
-		[[nodiscard]] DescriptorSetHandle CreateTextureDescriptorSet(TextureHandle textureHandle, SamplerHandle samplerHandle) const;
-		void							  FlushDescriptorSetUpdateRequests() const;
-		RenderingApi::DescriptorSet*	  GetDescriptorSet(const Handle<RenderingApi::DescriptorSet>& handle) const;
+		[[nodiscard]] Handle		 CreateDescriptorSet(DescriptorSetLayoutType type) const;
+		[[nodiscard]] Handle		 CreateTextureDescriptorSet(Handle textureHandle, Handle samplerHandle) const;
+		void						 FlushDescriptorSetUpdateRequests() const;
+		RenderingApi::DescriptorSet* GetDescriptorSet(const Handle& handle) const;
 
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Instance* GetInstance() const;

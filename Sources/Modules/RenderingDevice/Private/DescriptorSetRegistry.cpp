@@ -50,9 +50,9 @@ namespace BetterThanNothing
 		return vkAllocateDescriptorSets(m_createInfo.device->Handle(), &allocInfo, &newDescriptorSet->value) == VK_SUCCESS;
 	}
 
-	Handle<RenderingApi::DescriptorSet> DescriptorSetRegistry::CreateDescriptorSet(const DescriptorSetLayoutType& layoutType)
+	Handle DescriptorSetRegistry::CreateDescriptorSet(const DescriptorSetLayoutType& layoutType)
 	{
-		const DescriptorSetHandle handle = m_descriptors.Allocate();
+		const Handle handle = m_descriptors.Allocate();
 
 		if (!Internal_CreateDescriptorSet(layoutType, m_descriptors.Get(handle)))
 		{
@@ -63,7 +63,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	void DescriptorSetRegistry::DestroyDescriptorSet(Handle<RenderingApi::DescriptorSet> handle)
+	void DescriptorSetRegistry::DestroyDescriptorSet(Handle handle)
 	{
 		if (!m_descriptors.Has(handle))
 			throw std::runtime_error("Invalid descriptor set handle!");
@@ -71,7 +71,7 @@ namespace BetterThanNothing
 		m_descriptors.Destroy(handle);
 	}
 
-	RenderingApi::DescriptorSet* DescriptorSetRegistry::GetDescriptorSet(Handle<RenderingApi::DescriptorSet> handle)
+	RenderingApi::DescriptorSet* DescriptorSetRegistry::GetDescriptorSet(Handle handle)
 	{
 		if (!m_descriptors.Has(handle))
 			throw std::runtime_error("Invalid descriptor set handle!");
