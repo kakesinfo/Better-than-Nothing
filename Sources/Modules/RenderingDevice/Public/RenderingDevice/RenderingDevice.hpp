@@ -18,8 +18,11 @@
 
 #pragma once
 
-#include "DescriptorSetRegistry.hpp"
+#include "DescriptorSetUpdateRequest.hpp"
 #include "Handle.hpp"
+#include "HandleRegistry.hpp"
+#include "SamplerDescription.hpp"
+#include "TextureDescription.hpp"
 #include "Types.hpp"
 
 #include <Module_Base/EBufferingMode.hpp>
@@ -48,10 +51,7 @@ namespace BetterThanNothing
 	}
 
 	class SamplerRegistry;
-	struct SamplerDescription;
-	class BufferRegistry;
 	struct BufferDescription;
-	class TextureRegistry;
 	struct TextureFromDataDescription;
 
 	struct RenderingDeviceCreateInfo
@@ -71,24 +71,38 @@ namespace BetterThanNothing
 		void RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	public:
-		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc) const;
-		void				   DestroyTextureSampler(Handle handle) const;
-		RenderingApi::Sampler* GetSampler(Handle handle) const;
+		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc);
+		void				   DestroyTextureSampler(const Handle& handle);
+		RenderingApi::Sampler* GetSampler(const Handle& handle);
 
-		Handle				   CreateBuffer(const BufferDescription& desc) const;
-		Handle				   CreateVertexBuffer(const void* data, size_t size) const;
-		Handle				   CreateIndexBuffer(const void* data, size_t size) const;
-		bool				   CopyDataToBuffer(Handle dstBufferHandle, const void* data, size_t size) const;
-		void				   DestroyBuffer(Handle handle) const;
-		RenderingApi::Buffer*  GetBuffer(Handle handle) const;
-		Handle				   CreateTextureFromData(const TextureFromDataDescription& desc) const;
-		void				   DestroyTexture(const Handle& handle) const;
-		RenderingApi::Texture* GetTexture(const Handle& handle) const;
+		Handle				  CreateBuffer(const BufferDescription& desc);
+		Handle				  CreateVertexBuffer(const void* data, size_t size);
+		Handle				  CreateIndexBuffer(const void* data, size_t size);
+		bool				  CopyDataToBuffer(const Handle& dstBufferHandle, const void* data, size_t size);
+		void				  DestroyBuffer(const Handle& handle);
+		RenderingApi::Buffer* GetBuffer(const Handle& handle);
 
-		[[nodiscard]] Handle		 CreateDescriptorSet(DescriptorSetLayoutType type) const;
-		[[nodiscard]] Handle		 CreateTextureDescriptorSet(Handle textureHandle, Handle samplerHandle) const;
-		void						 FlushDescriptorSetUpdateRequests() const;
-		RenderingApi::DescriptorSet* GetDescriptorSet(const Handle& handle) const;
+	private:
+		bool Internal_CreateTextureImage(const TextureImageDescription& desc);
+		bool Internal_CreateTextureImageView(const TextureImageViewDescription& desc);
+		bool Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc);
+		bool Internal_CreateTextureMipmaps(const Handle& destination);
+
+	public:
+		Handle				   CreateTextureFromData(const TextureFromDataDescription& desc);
+		void				   DestroyTexture(const Handle& handle);
+		RenderingApi::Texture* GetTexture(const Handle& handle);
+
+	private:
+		bool Internal_CreateDescriptorSet(const DescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const;
+
+	public:
+		[[nodiscard]] Handle		 CreateDescriptorSet(DescriptorSetLayoutType type);
+		[[nodiscard]] Handle		 CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle);
+		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
+		void						 FlushDescriptorSetUpdateRequests();
+		void						 DestroyDescriptorSet(const Handle& handle);
+		RenderingApi::DescriptorSet* GetDescriptorSet(const Handle& handle);
 
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Instance* GetInstance() const;
@@ -131,9 +145,14 @@ namespace BetterThanNothing
 		std::unique_ptr<RenderingApi::DescriptorPool>													m_descriptorPool;
 		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_layouts;
 
-		std::unique_ptr<SamplerRegistry>	   m_samplerRegistry;
-		std::unique_ptr<BufferRegistry>		   m_bufferRegistry;
-		std::unique_ptr<TextureRegistry>	   m_textureRegistry;
-		std::unique_ptr<DescriptorSetRegistry> m_descriptorSetRegistry;
+		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>   m_buffers;
+		HandleRegistry<RenderingApi::Texture, HandleType::Texture> m_textures;
+
+		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>										m_samplers;
+		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> m_samplersLUT;
+
+		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> m_descriptors;
+		std::vector<DescriptorSetUpdateRequest>								   m_descriptorsUpdateRequests;
+		std::vector<VkWriteDescriptorSet>									   m_descriptorsWrites;
 	};
 };
