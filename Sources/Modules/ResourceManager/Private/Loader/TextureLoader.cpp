@@ -23,7 +23,7 @@
 #include "RenderingDevice/SamplerDescription.hpp"
 #include "RenderingDevice/TextureDescription.hpp"
 #include "ResourceManager/Loader/TextureLoader.hpp"
-
+#include "Module_Base/Logger.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
 #include "ResourceManager/TextureGpuData.hpp"
@@ -33,7 +33,9 @@
 
 namespace BetterThanNothing
 {
-	TextureLoader::TextureLoader(VulkanContext* context, RenderingDevice* renderingDevice) : ResourceLoader(context), m_renderingDevice(renderingDevice) {}
+	TextureLoader::TextureLoader(VulkanContext* context, RenderingDevice* renderingDevice)
+		: ResourceLoader(context), m_renderingDevice(renderingDevice)
+	{}
 
 	std::unique_ptr<TextureGpuData> TextureLoader::Load(const std::string& input)
 	{
@@ -59,19 +61,19 @@ namespace BetterThanNothing
 		desc.channels = gpuData->channels;
 
 		gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
-		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription {}); // Default sampler description
-		gpuData->descriptorSet = CreateTextureDescriptorSet(gpuData.get());
-
-		// TODO: gpuData->descriptor = m_renderingDevice->CreateTextureDescriptor(gpuData->textureHandle, gpuData->samplerHandle);
+		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{}); // Default sampler description
+		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle);
 
 		stbi_image_free(pixels);
+
+		Logger::Log<INFO>("Loaded Texture {}", input);
 
 		return gpuData;
 	}
 
 	std::unique_ptr<VulkanDescriptorSet> TextureLoader::CreateTextureDescriptorSet(const TextureGpuData* textureGpuData)
 	{
-		auto layout = m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::Textures);
+		auto layout = m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::Textures);
 
 		auto descriptorSet = std::make_unique<VulkanDescriptorSet>(layout, m_context);
 

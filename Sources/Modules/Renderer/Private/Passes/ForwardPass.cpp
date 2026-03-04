@@ -23,6 +23,7 @@
 #include "RenderingApi/Core/SwapChain.hpp"
 #include "RenderingApi/Deprecated/VulkanContext.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
+#include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingDevice/DrawStream.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 
@@ -123,6 +124,8 @@ namespace BetterThanNothing
 				cmd->SetScissor(0, 0, m_context->swapChain->GetExtent());
 
 				VkPipeline lastPipeline = VK_NULL_HANDLE;
+				DescriptorSetHandle lastSamplerHandle = {};
+
 				bool	   boundGlobalDescriptor = false;
 				bool	   boundPointLightDescriptor = false;
 
@@ -140,12 +143,17 @@ namespace BetterThanNothing
 						boundGlobalDescriptor = true;
 					}
 
-					commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &drawPacket.samplerDescriptorSet, 0, nullptr);
-
 					if (!boundPointLightDescriptor)
 					{
 						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 2, 1, &drawPacket.pointLightDescriptorSet, 0, nullptr);
 						boundPointLightDescriptor = true;
+					}
+
+					if (lastSamplerHandle != drawPacket.samplerDescriptorSet)
+					{
+						const auto samplerDescriptorSet = m_renderingDevice->GetDescriptorSet(drawPacket.samplerDescriptorSet);
+						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &samplerDescriptorSet->value, 0, nullptr);
+						lastSamplerHandle = drawPacket.samplerDescriptorSet;
 					}
 
 					const DynamicUniformData dynamicUniforms = {drawPacket.transform};

@@ -18,7 +18,11 @@
 
 #include "RenderingDevice/RenderingDevice.hpp"
 
+#include "RenderingApi/Resources/DescriptorSet.hpp"
+#include "RenderingApi/Resources/Sampler.hpp"
+#include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice/BufferRegistry.hpp"
+#include "RenderingDevice/DescriptorSetUpdateRequest.hpp"
 #include "RenderingDevice/Handle.hpp"
 #include "RenderingDevice/SamplerRegistry.hpp"
 #include "RenderingDevice/TextureRegistry.hpp"
@@ -70,10 +74,11 @@ namespace BetterThanNothing
 							   .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
 							   .Build();
 
-		RegisterDescriptorLayout(EDescriptorLayoutKey::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-		RegisterDescriptorLayout(EDescriptorLayoutKey::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-		RegisterDescriptorLayout(EDescriptorLayoutKey::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+		RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
+		m_descriptorSetRegistry = DescriptorSetRegistry::Create({m_device.get(), m_descriptorPool.get(), this});
 		m_bufferRegistry = BufferRegistry::Create({m_device.get(), m_commandPool.get(), m_graphicsQueue.get(), m_allocator.get()});
 		m_textureRegistry = TextureRegistry::Create({m_device.get(), m_commandPool.get(), m_graphicsQueue.get(), m_allocator.get()});
 		m_samplerRegistry = SamplerRegistry::Create(m_device.get());
@@ -81,7 +86,7 @@ namespace BetterThanNothing
 
 	RenderingDevice::~RenderingDevice() = default;
 
-	void RenderingDevice::RegisterDescriptorLayout(const EDescriptorLayoutKey key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	void RenderingDevice::RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
 		m_layouts[key] = RenderingApi::DescriptorSetLayout::Create({m_device.get(), type, 1, stageFlags});
 	}
@@ -151,6 +156,50 @@ namespace BetterThanNothing
 		return m_textureRegistry->GetTexture(handle);
 	}
 
+	DescriptorSetHandle RenderingDevice::CreateDescriptorSet(DescriptorSetLayoutType type) const
+	{
+		return m_descriptorSetRegistry->CreateDescriptorSet(type);
+	}
+
+	DescriptorSetHandle RenderingDevice::CreateTextureDescriptorSet(TextureHandle textureHandle, SamplerHandle samplerHandle) const
+	{
+		const DescriptorSetHandle handle = CreateDescriptorSet(DescriptorSetLayoutType::Textures);
+
+		const RenderingApi::DescriptorSet* descriptor = m_descriptorSetRegistry->GetDescriptorSet(handle);
+		const RenderingApi::Texture*	texture = m_textureRegistry->GetTexture(textureHandle);
+		const RenderingApi::Sampler*	sampler = m_samplerRegistry->GetSampler(samplerHandle);
+
+		DescriptorSetUpdateRequest request{};
+
+		request.imageInfo = {};
+		request.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		request.imageInfo.imageView = texture->defaultView;
+		request.imageInfo.sampler = sampler->value;
+
+		request.write = {};
+		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		request.write.dstSet = descriptor->value;
+		request.write.dstBinding = 0;
+		request.write.dstArrayElement = 0;
+		request.write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		request.write.descriptorCount = 1;
+		request.write.pImageInfo = &request.imageInfo;
+
+		m_descriptorSetRegistry->RequestDescriptorSetUpdate(request);
+
+		return handle;
+	}
+
+	RenderingApi::DescriptorSet* RenderingDevice::GetDescriptorSet(const Handle<RenderingApi::DescriptorSet>& handle) const
+	{
+		return m_descriptorSetRegistry->GetDescriptorSet(handle);
+	}
+
+	void RenderingDevice::FlushDescriptorSetUpdateRequests() const
+	{
+		m_descriptorSetRegistry->FlushDescriptorSetUpdateRequests();
+	}
+
 	RenderingApi::Instance* RenderingDevice::GetInstance() const
 	{
 		return m_instance.get();
@@ -206,7 +255,7 @@ namespace BetterThanNothing
 		return m_descriptorPool.get();
 	}
 
-	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(EDescriptorLayoutKey key) const
+	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
 	{
 		if (!m_layouts.contains(key))
 			throw std::runtime_error("Cannot find descriptorSetLayout");

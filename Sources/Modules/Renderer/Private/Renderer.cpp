@@ -33,6 +33,7 @@
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>
+#include "RenderingApi/Resources/DescriptorSet.hpp"
 #include <RenderingApi/Deprecated/VertexInputDescription.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/MeshGpuData.hpp>
@@ -79,9 +80,9 @@ namespace BetterThanNothing
 			builder->SetName("main");
 			builder->AddVertexShader("main/main.vert");
 			builder->AddFragmentShader("main/main.frag");
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::GlobalUniforms)->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::Textures)->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::PointLights)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::Textures)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights)->Handle());
 		});
 
 		m_drawStream = std::make_unique<DrawStream>();
@@ -100,6 +101,8 @@ namespace BetterThanNothing
 			throw std::runtime_error("No pipeline set for rendering!");
 
 		m_context->inFlightFences[m_currentFrame]->Wait();
+
+		m_renderingDevice->FlushDescriptorSetUpdateRequests();
 
 		const auto acquireResult = m_context->swapChain->AcquireNextImage(m_context->imageAvailableSemaphore[m_currentFrame]->Handle());
 
@@ -198,13 +201,11 @@ namespace BetterThanNothing
 			m_drawStream->Draw(
 				{.pipeline = m_context->defaultPipeline->Handle(),
 				 .pipelineLayout = m_context->defaultPipeline->GetLayout(),
-				 // .vertexBuffer = meshGpuData->vertexBuffer->Handle(),
 				 .vertexBuffer = meshGpuData->vertexBuffer,
-				 //.indexBuffer = meshGpuData->indexBuffer->Handle(),
 				 .indexBuffer = meshGpuData->indexBuffer,
 				 .indexCount = meshGpuData->indexCount,
 				 .globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
-				 .samplerDescriptorSet = textureGpuData->descriptorSet->Handle(),
+				 .samplerDescriptorSet = textureGpuData->descriptorSetHandle,
 				 .pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
 				 .transform = transform,
 				 .distanceToCamera = Vector3::Distance(camera.position, meshPosition)}
@@ -263,7 +264,7 @@ namespace BetterThanNothing
 
 	void Renderer::CreateGlobalDescriptorSets()
 	{
-		const auto* globalDescriptorSetLayout = m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::GlobalUniforms);
+		const auto* globalDescriptorSetLayout = m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms);
 
 		m_context->vkGlobalDescriptorSets.resize(m_context->settings.maxFramesInFlight);
 
@@ -307,7 +308,7 @@ namespace BetterThanNothing
 
 	void Renderer::CreatePointLightDescriptorSets(uint32_t maxLights)
 	{
-		const auto* pointLightDescriptorSetLayout = m_renderingDevice->GetDescriptorSetLayout(EDescriptorLayoutKey::PointLights);
+		const auto* pointLightDescriptorSetLayout = m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights);
 
 		m_context->vkPointLightDescriptorSets.resize(m_context->settings.maxFramesInFlight);
 
