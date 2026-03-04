@@ -26,8 +26,8 @@
 
 namespace BetterThanNothing
 {
-	struct MeshGpuData;
-	struct TextureGpuData;
+	struct MeshResourceCache;
+	struct TextureResourceCache;
 	struct MeshData;
 	struct ModelResource;
 

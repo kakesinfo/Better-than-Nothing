@@ -18,21 +18,27 @@
 
 #pragma once
 
-#include "RenderingDevice/Handle.hpp"
-
-#include <RenderingApi/Deprecated/VulkanDescriptorSet.hpp>
+#include <memory>
+#include <RenderingDevice/Handle.hpp>
 
 namespace BetterThanNothing
 {
-	struct TextureGpuData
+	struct MeshResourceCache
 	{
-		int32_t								 width;
-		int32_t								 height;
-		int32_t								 channels;
-		int32_t								 size;
+		Handle	 vertexBuffer;
+		uint32_t vertexCount = 0;
+		Handle	 indexBuffer;
+		uint32_t indexCount = 0;
+	};
+
+	struct TextureResourceCache
+	{
+		int32_t								 width{};
+		int32_t								 height{};
+		int32_t								 channels{};
+		int32_t								 size{};
 		Handle								 textureHandle;
 		Handle								 samplerHandle;
 		Handle								 descriptorSetHandle;
-		std::unique_ptr<VulkanDescriptorSet> descriptorSet;
 	};
 }
