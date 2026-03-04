@@ -23,15 +23,15 @@
 
 namespace BetterThanNothing
 {
-	template <typename T>
+	template <typename dataType>
 	struct HandleRegistrySlot
 	{
-		T			  data;
-		std::uint32_t generation = 1;
+		dataType	  data;
+		uint32_t generation = 1;
 		bool		  active = false;
 	};
 
-	template <typename T>
+	template <typename dataType, HandleType handleType>
 	class HandleRegistry
 	{
 	public:
@@ -44,28 +44,28 @@ namespace BetterThanNothing
 		HandleRegistry& operator=(HandleRegistry&&) = delete;
 
 		template <typename... Args>
-		Handle<T> Create(Args&&... args);
-		Handle<T> Allocate();
-		Handle<T> Append(T&& data);
+		Handle Create(Args&&... args);
+		Handle Allocate();
+		Handle Append(dataType&& data);
 
-		bool	 Has(Handle<T> handle);
-		T*		 Get(Handle<T> handle);
-		const T* Get(Handle<T> handle) const;
+		bool	 Has(Handle handle);
+		dataType*		 Get(Handle handle);
+		const dataType* Get(Handle handle) const;
 		void	 Destroy(std::uint32_t index);
-		void	 Destroy(Handle<T> handle);
+		void	 Destroy(Handle handle);
 
 		std::uint32_t Size();
-		T*			  Get(std::uint32_t index);
+		dataType*			  Get(std::uint32_t index);
 
 	private:
-		std::vector<HandleRegistrySlot<T>> m_slots;
+		std::vector<HandleRegistrySlot<dataType>> m_slots;
 		std::vector<std::uint32_t>			 m_freeIndices;
 	};
 
-	template <typename T>
-	static std::uint32_t GetFreeIndex_Internal(std::vector<HandleRegistrySlot<T>>& slots, std::vector<std::uint32_t>& freeIndices)
+	template <typename dataType, HandleType handleType>
+	static uint32_t Internal_GetFreeIndex(std::vector<HandleRegistrySlot<dataType>>& slots, std::vector<std::uint32_t>& freeIndices)
 	{
-		std::uint32_t idx;
+		uint32_t idx;
 
 		if (!freeIndices.empty())
 		{
@@ -79,13 +79,16 @@ namespace BetterThanNothing
 		return idx;
 	}
 
-	template <typename T>
-	bool IsValidHandle_Internal(std::vector<HandleRegistrySlot<T>>& slots, Handle<T> handle)
+	template <typename dataType, HandleType handleType>
+	static bool Internal_IsValidHandle(std::vector<HandleRegistrySlot<dataType>>& slots, Handle handle)
 	{
+		if (handle.GetType() != static_cast<uint8_t>(handleType))
+			return false;
+
 		if (handle.GetId() >= slots.size())
 			return false;
 
-		const HandleRegistrySlot<T>& slot = slots[handle.GetId()];
+		const HandleRegistrySlot<dataType>& slot = slots[handle.GetId()];
 
 		if (!slot.active)
 			return false;
@@ -95,74 +98,74 @@ namespace BetterThanNothing
 		return true;
 	}
 
-	template <typename T>
+	template <typename dataType, HandleType handleType>
 	template <typename... Args>
-	Handle<T> HandleRegistry<T>::Create(Args&&... args)
+	Handle HandleRegistry<dataType, handleType>::Create(Args&&... args)
 	{
-		uint32_t idx = GetFreeIndex_Internal(m_slots, m_freeIndices);
+		uint32_t idx = Internal_GetFreeIndex<dataType, handleType>(m_slots, m_freeIndices);
 
-		HandleRegistrySlot<T>& slot = m_slots[idx];
+		HandleRegistrySlot<dataType>& slot = m_slots[idx];
 		slot.active = true;
 		slot.data = T(std::forward<Args>(args)...);
 
-		return Handle<T>(idx, slot.generation);
+		return Handle(idx, slot.generation, static_cast<uint8_t>(handleType));
 	}
 
-	template <typename T>
-	Handle<T> HandleRegistry<T>::Allocate()
+	template <typename dataType, HandleType handleType>
+	Handle HandleRegistry<dataType, handleType>::Allocate()
 	{
-		std::uint32_t			 idx = GetFreeIndex_Internal(m_slots, m_freeIndices);
-		HandleRegistrySlot<T>& slot = m_slots[idx];
+		std::uint32_t			 idx = Internal_GetFreeIndex<dataType, handleType>(m_slots, m_freeIndices);
+		HandleRegistrySlot<dataType>& slot = m_slots[idx];
 
 		slot.active = true;
 
-		return Handle<T>(idx, slot.generation);
+		return Handle(idx, slot.generation, static_cast<uint8_t>(handleType));
 	}
 
-	template <typename T>
-	Handle<T> HandleRegistry<T>::Append(T&& data)
+	template <typename dataType, HandleType handleType>
+	Handle HandleRegistry<dataType, handleType>::Append(dataType&& data)
 	{
-		std::uint32_t			 idx = GetFreeIndex_Internal(m_slots, m_freeIndices);
-		HandleRegistrySlot<T>& slot = m_slots[idx];
+		std::uint32_t			 idx = Internal_GetFreeIndex<dataType, handleType>(m_slots, m_freeIndices);
+		HandleRegistrySlot<dataType>& slot = m_slots[idx];
 
 		slot.active = true;
 		slot.data = std::move(data);
 
-		return Handle<T>(idx, slot.generation);
+		return Handle(idx, slot.generation, static_cast<uint8_t>(handleType));
 	}
 
-	template <typename T>
-	bool HandleRegistry<T>::Has(Handle<T> handle)
+	template <typename dataType, HandleType handleType>
+	bool HandleRegistry<dataType, handleType>::Has(Handle handle)
 	{
-		return IsValidHandle_Internal(m_slots, handle);
+		return Internal_IsValidHandle<dataType, handleType>(m_slots, handle);
 	}
 
-	template <typename T>
-	T* HandleRegistry<T>::Get(Handle<T> handle)
+	template <typename dataType, HandleType handleType>
+	dataType* HandleRegistry<dataType, handleType>::Get(Handle handle)
 	{
-		if (!IsValidHandle_Internal(m_slots, handle))
-			return nullptr;
+		if (!Internal_IsValidHandle<dataType, handleType>(m_slots, handle))
+			throw std::runtime_error("Invalid handle!");
 		return &m_slots.at(handle.GetId()).data;
 	}
 
-	template <typename T>
-	const T* HandleRegistry<T>::Get(Handle<T> handle) const
+	template <typename dataType, HandleType handleType>
+	const dataType* HandleRegistry<dataType, handleType>::Get(Handle handle) const
 	{
-		if (!IsValidHandle_Internal(m_slots, handle))
-			return nullptr;
+		if (!Internal_IsValidHandle<dataType, handleType>(m_slots, handle))
+			throw std::runtime_error("Invalid handle!");
 		return &m_slots[handle.GetId()].data;
 	}
 
-	template <typename T>
-	void HandleRegistry<T>::Destroy(std::uint32_t index)
+	template <typename dataType, HandleType handleType>
+	void HandleRegistry<dataType, handleType>::Destroy(std::uint32_t index)
 	{
 		if (index >= m_slots.size())
 			throw std::overflow_error("Index out of range");
 
-		HandleRegistrySlot<T>& slot = m_slots.at(index);
+		HandleRegistrySlot<dataType>& slot = m_slots.at(index);
 
 		slot.active = false;
-		slot.data = T{};
+		slot.data = dataType{};
 		++slot.generation;
 
 		// TODO: Prevent m_generation to overflow
@@ -170,16 +173,16 @@ namespace BetterThanNothing
 		m_freeIndices.push_back(index);
 	}
 
-	template <typename T>
-	void HandleRegistry<T>::Destroy(Handle<T> handle)
+	template <typename dataType, HandleType handleType>
+	void HandleRegistry<dataType, handleType>::Destroy(Handle handle)
 	{
-		if (!IsValidHandle_Internal(m_slots, handle))
-			return;
+		if (!Internal_IsValidHandle<dataType, handleType>(m_slots, handle))
+			throw std::runtime_error("Invalid handle!");
 
-		HandleRegistrySlot<T>& slot = m_slots.at(handle.GetId());
+		HandleRegistrySlot<dataType>& slot = m_slots.at(handle.GetId());
 
 		slot.active = false;
-		slot.data = T{};
+		slot.data = dataType{};
 		++slot.generation;
 
 		// TODO: Prevent m_generation to overflow
@@ -187,14 +190,14 @@ namespace BetterThanNothing
 		m_freeIndices.push_back(handle.GetId());
 	}
 
-	template <typename T>
-	std::uint32_t HandleRegistry<T>::Size()
+	template <typename dataType, HandleType handleType>
+	std::uint32_t HandleRegistry<dataType, handleType>::Size()
 	{
 		return m_slots.size();
 	}
 
-	template <typename T>
-	T* HandleRegistry<T>::Get(std::uint32_t index)
+	template <typename dataType, HandleType handleType>
+	dataType* HandleRegistry<dataType, handleType>::Get(std::uint32_t index)
 	{
 		return &m_slots.at(index).data;
 	}

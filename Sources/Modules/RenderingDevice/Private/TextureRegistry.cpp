@@ -35,7 +35,10 @@ namespace BetterThanNothing
 		return static_cast<std::uint8_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 	}
 
-	TextureRegistry::TextureRegistry(const TextureRegistryCreateInfo& createInfo) : m_createInfo(createInfo) {}
+	TextureRegistry::TextureRegistry(const TextureRegistryCreateInfo& createInfo) : m_createInfo(createInfo)
+	{
+
+	}
 
 	TextureRegistry::~TextureRegistry()
 	{
@@ -151,7 +154,7 @@ namespace BetterThanNothing
 		return true;
 	}
 
-	bool TextureRegistry::Internal_CreateTextureMipmaps(const TextureHandle& destination)
+	bool TextureRegistry::Internal_CreateTextureMipmaps(const Handle& destination)
 	{
 		const RenderingApi::Texture* texture = m_textures.Get(destination);
 
@@ -225,9 +228,9 @@ namespace BetterThanNothing
 		return true;
 	}
 
-	Handle<RenderingApi::Texture> TextureRegistry::CreateTextureFromData(const TextureFromDataDescription& desc)
+	Handle TextureRegistry::CreateTextureFromData(const TextureFromDataDescription& desc)
 	{
-		const TextureHandle handle = m_textures.Allocate();
+		const Handle handle = m_textures.Allocate();
 		const std::uint8_t	mipLevels = Internal_CalculateMipLevels(desc.width, desc.height);
 
 		TextureImageDescription imageDesc{};
@@ -266,7 +269,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	void TextureRegistry::DestroyTexture(const Handle<RenderingApi::Texture>& handle)
+	void TextureRegistry::DestroyTexture(const Handle& handle)
 	{
 		if (!m_textures.Has(handle))
 			throw std::runtime_error("Invalid texture handle!");
@@ -277,7 +280,7 @@ namespace BetterThanNothing
 		m_textures.Destroy(handle);
 	}
 
-	RenderingApi::Texture* TextureRegistry::GetTexture(const Handle<RenderingApi::Texture>& handle)
+	RenderingApi::Texture* TextureRegistry::GetTexture(const Handle& handle)
 	{
 		if (!m_textures.Has(handle))
 			throw std::runtime_error("Invalid texture handle!");

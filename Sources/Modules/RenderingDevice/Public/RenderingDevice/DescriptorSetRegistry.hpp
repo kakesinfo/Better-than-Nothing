@@ -56,15 +56,15 @@ namespace BetterThanNothing
 		bool Internal_CreateDescriptorSet(const DescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const;
 
 	public:
-		Handle<RenderingApi::DescriptorSet> CreateDescriptorSet(const DescriptorSetLayoutType& layoutType);
-		void								DestroyDescriptorSet(Handle<RenderingApi::DescriptorSet> handle);
-		RenderingApi::DescriptorSet*		GetDescriptorSet(Handle<RenderingApi::DescriptorSet> handle);
+		Handle CreateDescriptorSet(const DescriptorSetLayoutType& layoutType);
+		void								DestroyDescriptorSet(Handle handle);
+		RenderingApi::DescriptorSet*		GetDescriptorSet(Handle handle);
 		void								RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void								FlushDescriptorSetUpdateRequests();
 
 	private:
 		DescriptorSetRegistryCreateInfo				m_createInfo;
-		HandleRegistry<RenderingApi::DescriptorSet> m_descriptors;
+		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> m_descriptors;
 		std::vector<DescriptorSetUpdateRequest>		m_updateRequests;
 		std::vector<VkWriteDescriptorSet>			m_writeDescriptorSets;
 	};

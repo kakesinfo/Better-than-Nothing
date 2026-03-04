@@ -124,7 +124,7 @@ namespace BetterThanNothing
 				cmd->SetScissor(0, 0, m_context->swapChain->GetExtent());
 
 				VkPipeline lastPipeline = VK_NULL_HANDLE;
-				DescriptorSetHandle lastSamplerHandle = {};
+				Handle lastSamplerHandle = {};
 
 				bool	   boundGlobalDescriptor = false;
 				bool	   boundPointLightDescriptor = false;

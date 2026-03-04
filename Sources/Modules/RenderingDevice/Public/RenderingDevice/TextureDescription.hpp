@@ -34,7 +34,7 @@ namespace BetterThanNothing
 
 	struct CopyDataToTextureImageDescription
 	{
-		TextureHandle destination;
+		Handle destination;
 		void*		  data{};
 		std::uint32_t dataSize{};
 		VkFormat	  format{};
@@ -44,7 +44,7 @@ namespace BetterThanNothing
 
 	struct TextureImageDescription
 	{
-		TextureHandle		  destination;
+		Handle		  destination;
 		std::uint32_t		  width{};
 		std::uint32_t		  height{};
 		std::uint32_t		  depth = 1;
@@ -58,7 +58,7 @@ namespace BetterThanNothing
 
 	struct TextureImageViewDescription
 	{
-		TextureHandle	   destination;
+		Handle	   destination;
 		VkImageAspectFlags aspectFlags{};
 	};
 }

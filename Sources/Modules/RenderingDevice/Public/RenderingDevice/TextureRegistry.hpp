@@ -53,15 +53,15 @@ namespace BetterThanNothing
 		bool Internal_CreateTextureImage(const TextureImageDescription& desc);
 		bool Internal_CreateTextureImageView(const TextureImageViewDescription& desc);
 		bool Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc);
-		bool Internal_CreateTextureMipmaps(const Handle<RenderingApi::Texture>& destination);
+		bool Internal_CreateTextureMipmaps(const Handle& destination);
 
 	public:
-		Handle<RenderingApi::Texture> CreateTextureFromData(const TextureFromDataDescription& desc);
-		void						  DestroyTexture(const Handle<RenderingApi::Texture>& handle);
-		RenderingApi::Texture*		  GetTexture(const Handle<RenderingApi::Texture>& handle);
+		Handle CreateTextureFromData(const TextureFromDataDescription& desc);
+		void						  DestroyTexture(const Handle& handle);
+		RenderingApi::Texture*		  GetTexture(const Handle& handle);
 
 	private:
 		TextureRegistryCreateInfo			  m_createInfo;
-		HandleRegistry<RenderingApi::Texture> m_textures;
+		HandleRegistry<RenderingApi::Texture, HandleType::Texture> m_textures;
 	};
 }

@@ -123,12 +123,12 @@ namespace BetterThanNothing
 		return std::make_unique<SamplerRegistry>(device);
 	}
 
-	Handle<RenderingApi::Sampler> SamplerRegistry::GetOrCreateSampler(const SamplerDescription& desc)
+	Handle SamplerRegistry::GetOrCreateSampler(const SamplerDescription& desc)
 	{
 		if (m_samplersLUT.contains(desc))
 			return m_samplersLUT[desc];
 
-		const Handle<RenderingApi::Sampler> handle = m_samplers.Allocate();
+		const Handle handle = m_samplers.Allocate();
 		RenderingApi::Sampler*				newSampler = m_samplers.Get(handle);
 
 		VkSamplerCreateInfo samplerInfo{};
@@ -156,7 +156,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	void SamplerRegistry::DestroySampler(const Handle<RenderingApi::Sampler> handle)
+	void SamplerRegistry::DestroySampler(const Handle handle)
 	{
 		if (!m_samplers.Has(handle))
 			throw std::runtime_error("Invalid sampler handle!");
@@ -166,7 +166,7 @@ namespace BetterThanNothing
 		m_samplers.Destroy(handle);
 	}
 
-	RenderingApi::Sampler* SamplerRegistry::GetSampler(Handle<RenderingApi::Sampler> handle)
+	RenderingApi::Sampler* SamplerRegistry::GetSampler(Handle handle)
 	{
 		if (!m_samplers.Has(handle))
 			throw std::runtime_error("Invalid sampler handle!");

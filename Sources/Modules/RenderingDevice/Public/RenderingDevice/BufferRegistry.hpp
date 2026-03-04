@@ -49,15 +49,15 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<BufferRegistry> Create(const BufferRegistryCreateInfo& createInfo);
 
-		Handle<RenderingApi::Buffer> CreateBuffer(const BufferDescription& desc);
-		Handle<RenderingApi::Buffer> CreateVertexBuffer(const void* data, size_t size);
-		Handle<RenderingApi::Buffer> CreateIndexBuffer(const void* data, size_t size);
-		bool						 CopyDataToBuffer(Handle<RenderingApi::Buffer> dstBufferHandle, const void* data, size_t size);
-		void						 DestroyBuffer(Handle<RenderingApi::Buffer> handle);
-		RenderingApi::Buffer*		 GetBuffer(Handle<RenderingApi::Buffer> handle);
+		Handle CreateBuffer(const BufferDescription& desc);
+		Handle CreateVertexBuffer(const void* data, size_t size);
+		Handle CreateIndexBuffer(const void* data, size_t size);
+		bool						 CopyDataToBuffer(Handle dstBufferHandle, const void* data, size_t size);
+		void						 DestroyBuffer(Handle handle);
+		RenderingApi::Buffer*		 GetBuffer(Handle handle);
 
 	private:
 		BufferRegistryCreateInfo			 m_createInfo;
-		HandleRegistry<RenderingApi::Buffer> m_buffers;
+		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer> m_buffers;
 	};
 }

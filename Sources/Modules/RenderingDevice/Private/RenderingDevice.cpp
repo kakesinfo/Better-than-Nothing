@@ -96,74 +96,74 @@ namespace BetterThanNothing
 		return std::make_unique<RenderingDevice>(createInfo);
 	}
 
-	SamplerHandle RenderingDevice::GetOrCreateTextureSampler(const SamplerDescription& desc) const
+	Handle RenderingDevice::GetOrCreateTextureSampler(const SamplerDescription& desc) const
 	{
 		return m_samplerRegistry->GetOrCreateSampler(desc);
 	}
 
-	void RenderingDevice::DestroyTextureSampler(const SamplerHandle handle) const
+	void RenderingDevice::DestroyTextureSampler(const Handle handle) const
 	{
 		m_samplerRegistry->DestroySampler(handle);
 	}
 
-	RenderingApi::Sampler* RenderingDevice::GetSampler(SamplerHandle handle) const
+	RenderingApi::Sampler* RenderingDevice::GetSampler(Handle handle) const
 	{
 		return m_samplerRegistry->GetSampler(handle);
 	}
 
-	BufferHandle RenderingDevice::CreateBuffer(const BufferDescription& desc) const
+	Handle RenderingDevice::CreateBuffer(const BufferDescription& desc) const
 	{
 		return m_bufferRegistry->CreateBuffer(desc);
 	}
 
-	BufferHandle RenderingDevice::CreateVertexBuffer(const void* data, const size_t size) const
+	Handle RenderingDevice::CreateVertexBuffer(const void* data, const size_t size) const
 	{
 		return m_bufferRegistry->CreateVertexBuffer(data, size);
 	}
 
-	BufferHandle RenderingDevice::CreateIndexBuffer(const void* data, const size_t size) const
+	Handle RenderingDevice::CreateIndexBuffer(const void* data, const size_t size) const
 	{
 		return m_bufferRegistry->CreateIndexBuffer(data, size);
 	}
 
-	bool RenderingDevice::CopyDataToBuffer(const BufferHandle dstBufferHandle, const void* data, const size_t size) const
+	bool RenderingDevice::CopyDataToBuffer(const Handle dstHandle, const void* data, const size_t size) const
 	{
-		return m_bufferRegistry->CopyDataToBuffer(dstBufferHandle, data, size);
+		return m_bufferRegistry->CopyDataToBuffer(dstHandle, data, size);
 	}
 
-	void RenderingDevice::DestroyBuffer(const BufferHandle handle) const
+	void RenderingDevice::DestroyBuffer(const Handle handle) const
 	{
 		return m_bufferRegistry->DestroyBuffer(handle);
 	}
 
-	RenderingApi::Buffer* RenderingDevice::GetBuffer(const BufferHandle handle) const
+	RenderingApi::Buffer* RenderingDevice::GetBuffer(const Handle handle) const
 	{
 		return m_bufferRegistry->GetBuffer(handle);
 	}
 
-	TextureHandle RenderingDevice::CreateTextureFromData(const TextureFromDataDescription& desc) const
+	Handle RenderingDevice::CreateTextureFromData(const TextureFromDataDescription& desc) const
 	{
 		return m_textureRegistry->CreateTextureFromData(desc);
 	}
 
-	void RenderingDevice::DestroyTexture(const Handle<RenderingApi::Texture>& handle) const
+	void RenderingDevice::DestroyTexture(const Handle& handle) const
 	{
 		m_textureRegistry->DestroyTexture(handle);
 	}
 
-	RenderingApi::Texture* RenderingDevice::GetTexture(const Handle<RenderingApi::Texture>& handle) const
+	RenderingApi::Texture* RenderingDevice::GetTexture(const Handle& handle) const
 	{
 		return m_textureRegistry->GetTexture(handle);
 	}
 
-	DescriptorSetHandle RenderingDevice::CreateDescriptorSet(DescriptorSetLayoutType type) const
+	Handle RenderingDevice::CreateDescriptorSet(DescriptorSetLayoutType type) const
 	{
 		return m_descriptorSetRegistry->CreateDescriptorSet(type);
 	}
 
-	DescriptorSetHandle RenderingDevice::CreateTextureDescriptorSet(TextureHandle textureHandle, SamplerHandle samplerHandle) const
+	Handle RenderingDevice::CreateTextureDescriptorSet(Handle textureHandle, Handle samplerHandle) const
 	{
-		const DescriptorSetHandle handle = CreateDescriptorSet(DescriptorSetLayoutType::Textures);
+		const Handle handle = CreateDescriptorSet(DescriptorSetLayoutType::Textures);
 
 		const RenderingApi::DescriptorSet* descriptor = m_descriptorSetRegistry->GetDescriptorSet(handle);
 		const RenderingApi::Texture*	texture = m_textureRegistry->GetTexture(textureHandle);
@@ -190,7 +190,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	RenderingApi::DescriptorSet* RenderingDevice::GetDescriptorSet(const Handle<RenderingApi::DescriptorSet>& handle) const
+	RenderingApi::DescriptorSet* RenderingDevice::GetDescriptorSet(const Handle& handle) const
 	{
 		return m_descriptorSetRegistry->GetDescriptorSet(handle);
 	}
