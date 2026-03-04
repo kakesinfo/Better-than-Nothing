@@ -32,6 +32,7 @@ namespace BetterThanNothing
 		int32_t								 size;
 		TextureHandle						 textureHandle;
 		SamplerHandle						 samplerHandle;
+		DescriptorSetHandle					 descriptorSetHandle;
 		std::unique_ptr<VulkanDescriptorSet> descriptorSet;
 	};
 }

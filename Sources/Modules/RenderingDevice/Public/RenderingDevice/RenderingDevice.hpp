@@ -18,7 +18,10 @@
 
 #pragma once
 
+#include "DescriptorSetRegistry.hpp"
 #include "Handle.hpp"
+#include "Types.hpp"
+
 #include <Module_Base/EBufferingMode.hpp>
 #include <memory>
 #include <unordered_map>
@@ -47,13 +50,6 @@ namespace BetterThanNothing
 	class TextureRegistry;
 	struct TextureFromDataDescription;
 
-	enum class EDescriptorLayoutKey : std::uint8_t
-	{
-		GlobalUniforms = 0,
-		Textures = 1,
-		PointLights = 2
-	};
-
 	struct RenderingDeviceCreateInfo
 	{
 		EBufferingMode bufferingMode = EBufferingMode::Double;
@@ -68,11 +64,11 @@ namespace BetterThanNothing
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
 	private:
-		void RegisterDescriptorLayout(EDescriptorLayoutKey key, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		void RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	public:
-		SamplerHandle GetOrCreateTextureSampler(const SamplerDescription& desc) const;
-		void		  DestroyTextureSampler(SamplerHandle handle) const;
+		SamplerHandle		   GetOrCreateTextureSampler(const SamplerDescription& desc) const;
+		void				   DestroyTextureSampler(SamplerHandle handle) const;
 		RenderingApi::Sampler* GetSampler(SamplerHandle handle) const;
 
 		BufferHandle		   CreateBuffer(const BufferDescription& desc) const;
@@ -84,6 +80,11 @@ namespace BetterThanNothing
 		TextureHandle		   CreateTextureFromData(const TextureFromDataDescription& desc) const;
 		void				   DestroyTexture(const Handle<RenderingApi::Texture>& handle) const;
 		RenderingApi::Texture* GetTexture(const Handle<RenderingApi::Texture>& handle) const;
+
+		[[nodiscard]] DescriptorSetHandle CreateDescriptorSet(DescriptorSetLayoutType type) const;
+		[[nodiscard]] DescriptorSetHandle CreateTextureDescriptorSet(TextureHandle textureHandle, SamplerHandle samplerHandle) const;
+		void							  FlushDescriptorSetUpdateRequests() const;
+		RenderingApi::DescriptorSet*	  GetDescriptorSet(const Handle<RenderingApi::DescriptorSet>& handle) const;
 
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Instance* GetInstance() const;
@@ -108,7 +109,7 @@ namespace BetterThanNothing
 
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::DescriptorPool*		 GetDescriptorPool() const;
-		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(EDescriptorLayoutKey key) const;
+		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetLayoutType key) const;
 
 	private:
 		RenderingDeviceCreateInfo				   m_createInfo;
@@ -123,11 +124,12 @@ namespace BetterThanNothing
 		std::unique_ptr<RenderingApi::Pipeline>	   m_defaultPipeline;
 		uint32_t								   m_maxFramesInFlight;
 
-		std::unique_ptr<RenderingApi::DescriptorPool>												 m_descriptorPool;
-		std::unordered_map<EDescriptorLayoutKey, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_layouts;
+		std::unique_ptr<RenderingApi::DescriptorPool>													m_descriptorPool;
+		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_layouts;
 
-		std::unique_ptr<SamplerRegistry> m_samplerRegistry;
-		std::unique_ptr<BufferRegistry>	 m_bufferRegistry;
-		std::unique_ptr<TextureRegistry> m_textureRegistry;
+		std::unique_ptr<SamplerRegistry>	   m_samplerRegistry;
+		std::unique_ptr<BufferRegistry>		   m_bufferRegistry;
+		std::unique_ptr<TextureRegistry>	   m_textureRegistry;
+		std::unique_ptr<DescriptorSetRegistry> m_descriptorSetRegistry;
 	};
 };

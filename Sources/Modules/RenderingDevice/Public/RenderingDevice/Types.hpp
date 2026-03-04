@@ -22,7 +22,14 @@
 
 namespace BetterThanNothing
 {
-	enum class TextureFormat : std::uint8_t
+	enum class DescriptorSetLayoutType : uint8_t
+	{
+		GlobalUniforms = 0,
+		Textures = 1,
+		PointLights = 2
+	};
+
+	enum class TextureFormat : uint8_t
 	{
 		Undefined = 0,
 		R8G8B8A8_UNORM = 37,
@@ -32,7 +39,7 @@ namespace BetterThanNothing
 		D32_SFLOAT_S8_UINT = 130,
 	};
 
-	enum class TextureUsageFlags : std::uint32_t
+	enum class TextureUsageFlags : uint32_t
 	{
 		None = 0,
 		TransferSrc = 1 << 0,
@@ -43,16 +50,16 @@ namespace BetterThanNothing
 
 	inline TextureUsageFlags operator|(TextureUsageFlags a, TextureUsageFlags b)
 	{
-		return static_cast<TextureUsageFlags>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
+		return static_cast<TextureUsageFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 	}
 
-	enum class SamplerFilter : std::uint8_t
+	enum class SamplerFilter : uint8_t
 	{
 		Nearest,
 		Linear
 	};
 
-	enum class SamplerAddressMode : std::uint8_t
+	enum class SamplerAddressMode : uint8_t
 	{
 		Repeat,
 		ClampToEdge,
@@ -60,13 +67,13 @@ namespace BetterThanNothing
 		MirrorRepeat
 	};
 
-	enum class SamplerMipmapMode : std::uint8_t
+	enum class SamplerMipmapMode : uint8_t
 	{
 		Nearest,
 		Linear
 	};
 
-	enum class CompareOp : std::uint8_t
+	enum class CompareOp : uint8_t
 	{
 		Never = 0,
 		Less = 1,
@@ -78,7 +85,7 @@ namespace BetterThanNothing
 		Always = 7
 	};
 
-	enum class BorderColor : std::uint8_t
+	enum class BorderColor : uint8_t
 	{
 		FloatTransparentBlack = 0,
 		IntTransparentBlack = 1,
@@ -88,7 +95,7 @@ namespace BetterThanNothing
 		IntOpaqueWhite = 5,
 	};
 
-	enum class BufferMemoryUsage : std::uint32_t
+	enum class BufferMemoryUsage : uint32_t
 	{
 		None = 0,
 		GpuOnly,
@@ -99,7 +106,7 @@ namespace BetterThanNothing
 		Auto
 	};
 
-	enum class BufferUsageFlags : std::uint32_t
+	enum class BufferUsageFlags : uint32_t
 	{
 		None = 0,
 		TransferSrc = 0x00000001,
@@ -110,7 +117,7 @@ namespace BetterThanNothing
 		Vertex = 0x00000080,
 	};
 
-	enum class BufferAllocationFlags : std::uint32_t
+	enum class BufferAllocationFlags : uint32_t
 	{
 		None = 0,
 		Mapped = 0x00000004,	// VMA_ALLOCATION_CREATE_MAPPED_BIT
@@ -119,17 +126,17 @@ namespace BetterThanNothing
 
 	inline BufferUsageFlags operator|(BufferUsageFlags a, BufferUsageFlags b)
 	{
-		return static_cast<BufferUsageFlags>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
+		return static_cast<BufferUsageFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 	}
 
 	inline BufferAllocationFlags operator|(BufferAllocationFlags a, BufferAllocationFlags b)
 	{
-		return static_cast<BufferAllocationFlags>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
+		return static_cast<BufferAllocationFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 	}
 
 	inline bool operator&(BufferAllocationFlags a, BufferAllocationFlags b)
 	{
-		return (static_cast<std::uint32_t>(a) & static_cast<std::uint32_t>(b)) != 0;
+		return (static_cast<uint32_t>(a) & static_cast<uint32_t>(b)) != 0;
 	}
 
 }
