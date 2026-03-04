@@ -27,18 +27,18 @@
 #include "Renderer/Passes/RenderGraph.hpp"
 #include "Renderer/RenderList.hpp"
 #include "Renderer/RenderMetrics.hpp"
+#include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingDevice/DrawStream.hpp"
+#include "ResourceManager/ResourceManager_Types.hpp"
+
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>
-#include "RenderingApi/Resources/DescriptorSet.hpp"
 #include <RenderingApi/Deprecated/VertexInputDescription.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
-#include <ResourceManager/MeshGpuData.hpp>
 #include <ResourceManager/ResourceManager.hpp>
-#include <ResourceManager/TextureGpuData.hpp>
 #include <bits/stl_queue.h>
 #include <cstring>
 
@@ -190,10 +190,10 @@ namespace BetterThanNothing
 		{
 			const auto& [meshId, textureId, transform] = renderList->Get(i);
 
-			const auto meshGpuData = m_resourceManager->GetMeshGpuData(meshId);
-			const auto textureGpuData = m_resourceManager->GetTextureGpuData(textureId);
+			const auto meshData = m_resourceManager->GetMeshData(meshId);
+			const auto textureData = m_resourceManager->GetTextureData(textureId);
 
-			if (!meshGpuData || !textureGpuData)
+			if (!meshData || !textureData)
 				continue;
 
 			auto meshPosition = Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2]);
@@ -201,17 +201,17 @@ namespace BetterThanNothing
 			m_drawStream->Draw(
 				{.pipeline = m_context->defaultPipeline->Handle(),
 				 .pipelineLayout = m_context->defaultPipeline->GetLayout(),
-				 .vertexBuffer = meshGpuData->vertexBuffer,
-				 .indexBuffer = meshGpuData->indexBuffer,
-				 .indexCount = meshGpuData->indexCount,
+				 .vertexBuffer = meshData->vertexBuffer,
+				 .indexBuffer = meshData->indexBuffer,
+				 .indexCount = meshData->indexCount,
 				 .globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
-				 .samplerDescriptorSet = textureGpuData->descriptorSetHandle,
+				 .samplerDescriptorSet = textureData->descriptorSetHandle,
 				 .pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
 				 .transform = transform,
 				 .distanceToCamera = Vector3::Distance(camera.position, meshPosition)}
 			);
 
-			RenderMetrics::AddDrawCall(meshGpuData->vertexCount);
+			RenderMetrics::AddDrawCall(meshData->vertexCount);
 		}
 
 		RenderPassContext renderPassContext{};

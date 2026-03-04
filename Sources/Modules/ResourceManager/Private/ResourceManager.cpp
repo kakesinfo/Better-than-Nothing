@@ -16,30 +16,31 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ResourceManager/ResourceManager.hpp"
-#include "ResourceManager/Loader/ShaderLoader.hpp"
-#include "ResourceManager/Loader/TextureLoader.hpp"
-#include "ResourceManager/MeshGpuData.hpp"
-#include "ResourceManager/TextureGpuData.hpp"
-
 #define TINYOBJLOADER_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 
+#include "ResourceManager/ResourceManager.hpp"
+
+#include "Module_Data/Graphics/MeshData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
-
-#include <filesystem>
-#include <future>
-#include <tiny_obj_loader.h>
-
+#include "RenderingDevice/SamplerDescription.hpp"
+#include "RenderingDevice/TextureDescription.hpp"
+#include "ResourceManager/Loader/ShaderLoader.hpp"
+#include "ResourceManager/ResourceManager_Types.hpp"
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>
 #include <RenderingApi/Deprecated/VulkanContext.hpp>
+#include <filesystem>
+#include <future>
+#include <stb_image.h>
+#include <tiny_obj_loader.h>
 
 namespace BetterThanNothing
 {
-	ResourceManager::ResourceManager(VulkanContext* context, RenderingDevice* renderingDevice) : m_context(context), m_renderingDevice(renderingDevice)
+	ResourceManager::ResourceManager(VulkanContext* context, RenderingDevice* renderingDevice)
+		: m_context(context), m_renderingDevice(renderingDevice)
 	{
-		m_textureLoader = std::make_unique<TextureLoader>(context, m_renderingDevice);
 		m_shaderLoader = std::make_unique<ShaderLoader>(context);
 	}
 
@@ -210,7 +211,7 @@ namespace BetterThanNothing
 	ResourceId ResourceManager::LoadMesh(const MeshData& mesh)
 	{
 		auto meshId = GenerateUniqueResourceId();
-		auto meshGpuData = std::make_unique<MeshGpuData>();
+		auto meshGpuData = std::make_unique<MeshResourceCache>();
 
 		if (mesh.vertices.empty() || mesh.indices.empty())
 			throw std::runtime_error("Mesh has no vertices or indices!");
@@ -243,10 +244,37 @@ namespace BetterThanNothing
 
 		const auto textureId = GenerateUniqueResourceId();
 
-		m_textures[textureId] = m_textureLoader->Load(texturePath);
+		auto gpuData = std::make_unique<TextureResourceCache>();
+
+		stbi_uc* pixels = stbi_load(texturePath.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels, STBI_rgb_alpha);
+
+		if (!pixels)
+		{
+			std::stringstream ss;
+			ss << "Failed to load texture image from path: " << texturePath << " - " << stbi_failure_reason() << std::endl;
+			throw std::runtime_error(ss.str());
+		}
+
+		gpuData->channels = STBI_rgb_alpha; // Override with 4 channels
+		gpuData->size = gpuData->width * gpuData->height * gpuData->channels;
+
+		TextureFromDataDescription desc{};
+		desc.data = pixels;
+		desc.dataSize = gpuData->size;
+		desc.width = gpuData->width;
+		desc.height = gpuData->height;
+		desc.channels = gpuData->channels;
+
+		gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
+		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{}); // Default sampler description
+		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle);
+
+		stbi_image_free(pixels);
+
+		m_textures[textureId] = std::move(gpuData);
 		m_texturesLUT[texturePath] = textureId;
 
-		Logger::Log<DEBUG>("TextureGpuData created and cached for Texture: {}", texturePath);
+		Logger::Log<INFO>("TextureGpuData created and cached for Texture: {}", texturePath);
 
 		return textureId;
 	}
@@ -266,7 +294,7 @@ namespace BetterThanNothing
 		return shaderId;
 	}
 
-	MeshGpuData* ResourceManager::GetMeshGpuData(ResourceId id)
+	MeshResourceCache* ResourceManager::GetMeshData(ResourceId id)
 	{
 		if (!m_meshes.contains(id))
 			return nullptr;
@@ -274,7 +302,7 @@ namespace BetterThanNothing
 		return m_meshes[id].get();
 	}
 
-	TextureGpuData* ResourceManager::GetTextureGpuData(const ResourceId id)
+	TextureResourceCache* ResourceManager::GetTextureData(const ResourceId id)
 	{
 		if (!m_textures.contains(id))
 			return nullptr;

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace BetterThanNothing
 {
 	using ResourceId = uint64_t;

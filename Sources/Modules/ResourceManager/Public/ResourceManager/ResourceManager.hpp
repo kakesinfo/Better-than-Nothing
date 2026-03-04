@@ -19,13 +19,14 @@
 #pragma once
 
 #include "ResourceId.hpp"
-#include <Module_Data/Graphics/MeshData.hpp>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 namespace BetterThanNothing
 {
+	struct MeshData;
+
 	struct MeshResource
 	{
 		ResourceId id;
@@ -38,9 +39,10 @@ namespace BetterThanNothing
 		std::vector<MeshResource> meshes;
 	};
 
+	struct MeshResourceCache;
+	struct TextureResourceCache;
+
 	struct VulkanContext;
-	struct MeshGpuData;
-	struct TextureGpuData;
 	struct ShaderGpuData;
 	class TextureLoader;
 	class ShaderLoader;
@@ -62,23 +64,22 @@ namespace BetterThanNothing
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
 		ResourceId LoadShader(const std::string& path, EShaderType type);
 
-		MeshGpuData*	GetMeshGpuData(ResourceId id);
-		TextureGpuData* GetTextureGpuData(ResourceId id);
-		ModelResource*	GetModel(ResourceId id);
-		ShaderGpuData*	GetShader(ResourceId id);
+		MeshResourceCache*	  GetMeshData(ResourceId id);
+		TextureResourceCache* GetTextureData(ResourceId id);
+		ModelResource*		  GetModel(ResourceId id);
+		ShaderGpuData*		  GetShader(ResourceId id);
 
 	private:
-		VulkanContext*													m_context;
-		RenderingDevice*												m_renderingDevice;
-		std::unique_ptr<TextureLoader>									m_textureLoader;
-		std::unique_ptr<ShaderLoader>									m_shaderLoader;
-		std::unordered_map<ResourceId, std::unique_ptr<MeshGpuData>>	m_meshes;
-		std::unordered_map<ResourceId, std::unique_ptr<TextureGpuData>> m_textures;
-		std::unordered_map<ResourceId, std::unique_ptr<ShaderGpuData>>	m_shaders;
-		std::unordered_map<ResourceId, ModelResource>					m_models;
-		std::unordered_map<std::string, ResourceId>						m_texturesLUT;
-		std::unordered_map<std::string, ResourceId>						m_modelsLUT;
-		std::unordered_map<std::string, ResourceId>						m_shadersLUT;
-		std::vector<ResourceId>											m_freeIds;
+		VulkanContext*														  m_context;
+		RenderingDevice*													  m_renderingDevice;
+		std::unique_ptr<ShaderLoader>										  m_shaderLoader;
+		std::unordered_map<ResourceId, std::unique_ptr<MeshResourceCache>>	  m_meshes;
+		std::unordered_map<ResourceId, std::unique_ptr<TextureResourceCache>> m_textures;
+		std::unordered_map<ResourceId, std::unique_ptr<ShaderGpuData>>		  m_shaders;
+		std::unordered_map<ResourceId, ModelResource>						  m_models;
+		std::unordered_map<std::string, ResourceId>							  m_texturesLUT;
+		std::unordered_map<std::string, ResourceId>							  m_modelsLUT;
+		std::unordered_map<std::string, ResourceId>							  m_shadersLUT;
+		std::vector<ResourceId>												  m_freeIds;
 	};
 }
