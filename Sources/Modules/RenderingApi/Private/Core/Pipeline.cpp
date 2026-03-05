@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "../../Public/RenderingApi/Data/VertexInputDescription.hpp"
 #include "RenderingApi.hpp"
-#include "RenderingApi/Deprecated/VertexInputDescription.hpp"
 
 #include <Module_Data/Graphics/DynamicUniformData.hpp>
 #include <iostream>

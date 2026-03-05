@@ -34,7 +34,7 @@
 #include "RenderingApi/Core/Surface.hpp"
 #include "RenderingApi/Core/SwapChain.hpp"
 #include "RenderingApi/Data/ShaderGpuData.hpp"
-#include "RenderingApi/Deprecated/VertexInputDescription.hpp"
+#include "RenderingApi/Data/VertexInputDescription.hpp"
 #include "RenderingApi/Deprecated/VulkanBuffer.hpp"
 #include "RenderingApi/Deprecated/VulkanContext.hpp"
 #include "RenderingApi/Deprecated/VulkanDescriptorSet.hpp"
