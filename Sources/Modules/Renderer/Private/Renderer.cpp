@@ -31,12 +31,12 @@
 #include "RenderingDevice/DrawStream.hpp"
 #include "ResourceManager/ResourceManager_Types.hpp"
 
+#include <../../RenderingApi/Public/RenderingApi/Data/VertexInputDescription.hpp>
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>
-#include <RenderingApi/Deprecated/VertexInputDescription.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <bits/stl_queue.h>
