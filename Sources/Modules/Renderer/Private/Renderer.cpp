@@ -30,17 +30,17 @@
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingDevice/DrawStream.hpp"
 #include "ResourceManager/ResourceManager_Types.hpp"
-
-#include <../../RenderingApi/Public/RenderingApi/Data/VertexInputDescription.hpp>
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>
+#include <RenderingApi/Data/VertexInputDescription.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <bits/stl_queue.h>
 #include <cstring>
+#include <optional>
 
 namespace BetterThanNothing
 {
@@ -50,12 +50,9 @@ namespace BetterThanNothing
 		m_context->settings.maxFramesInFlight = m_renderingDevice->GetMaxFramesInFlight();
 
 		m_context->instance = m_renderingDevice->GetInstance();
-		m_context->surface = m_renderingDevice->GetSurface();
 		m_context->device = m_renderingDevice->GetDevice();
 		m_context->graphicsQueue = m_renderingDevice->GetGraphicsQueue();
-		m_context->presentQueue = m_renderingDevice->GetPresentQueue();
 		m_context->allocator = m_renderingDevice->GetAllocator();
-		m_context->commandPool = m_renderingDevice->GetCommandPool();
 		m_context->swapChain = m_renderingDevice->GetSwapChain();
 
 		m_globalUniformProvider = std::make_unique<GlobalUniformProvider>(m_context);
@@ -89,84 +86,31 @@ namespace BetterThanNothing
 
 	Renderer::~Renderer()
 	{
-		m_context->device->WaitIdle();
+
 	}
 
-	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera)
+	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera) const
 	{
 		if (!m_context->defaultPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
 
-		m_renderingDevice->GetInFlightFence(m_currentFrame)->Wait();
-		m_renderingDevice->FlushDescriptorSetUpdateRequests();
-
-		const auto acquireResult = m_context->swapChain->AcquireNextImage(m_renderingDevice->GetImageAvailableSemaphore(m_currentFrame)->Handle());
-
-		if (!acquireResult.has_value())
-		{
-			const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
-			m_context->swapChain->RecreateSwapChain(windowWidth, windowHeight);
+		const auto imageIndexOpt = m_renderingDevice->BeginFrame();
+		if (!imageIndexOpt)
 			return;
-		}
 
-		const uint32_t imageIndex = acquireResult.value();
-
-		m_renderingDevice->GetInFlightFence(m_currentFrame)->Reset();
-		m_renderingDevice->GetCommandBuffer(m_currentFrame)->Reset();
+		const uint32_t imageIndex = imageIndexOpt.value();
 
 		RecordCommandBuffer(renderList, camera, imageIndex);
 
-		const auto					   commandBuffer = m_renderingDevice->GetCommandBuffer(m_currentFrame)->Handle();
-		const VkSemaphore			   waitSemaphores[] = {m_renderingDevice->GetImageAvailableSemaphore(m_currentFrame)->Handle()};
-		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-		const VkSemaphore			   signalSemaphores[] = {m_context->swapChain->GetImageFinishedSemaphore(imageIndex)};
-
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		auto graphicsQueue = m_context->graphicsQueue->Handle();
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_renderingDevice->GetInFlightFence(m_currentFrame)->Handle()) != VK_SUCCESS)
-			throw std::runtime_error("failed to submit draw command buffer!");
-
-		const VkSwapchainKHR swapChains[] = {m_context->swapChain->Handle()};
-
-		VkPresentInfoKHR presentInfo{};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = swapChains;
-		presentInfo.pImageIndices = &imageIndex;
-
-		const VkResult presentResult = vkQueuePresentKHR(m_context->presentQueue->Handle(), &presentInfo);
-
-		auto& window = WindowManager::GetWindow();
-		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || window->IsResized())
-		{
-			const auto [windowWidth, windowHeight] = window->GetFramebufferSize();
-			window->SetResized(false);
-			m_context->swapChain->RecreateSwapChain(windowWidth, windowHeight);
-		}
-		else if (presentResult != VK_SUCCESS)
-			throw std::runtime_error("failed to present swap chain image!");
-
-		m_currentFrame = (m_currentFrame + 1) % m_renderingDevice->GetMaxFramesInFlight();
+		m_renderingDevice->EndFrame(imageIndex);
 	}
 
-	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const std ::uint32_t imageIndex) const
+	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const uint32_t imageIndex) const
 	{
-		m_renderingDevice->GetCommandBuffer(m_currentFrame)->BeginRecording();
+		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
+		const auto directionalLight = renderList->GetDirectionalLight();
 
-		auto directionalLight = renderList->GetDirectionalLight();
-
-		const auto globalUniform = m_globalUniformProvider->Get<GlobalUniformData>(m_currentFrame);
+		const auto globalUniform = m_globalUniformProvider->Get<GlobalUniformData>(frameIndex);
 		globalUniform->view = camera.view;
 		globalUniform->projection = camera.projection;
 		globalUniform->cameraPosition = camera.position;
@@ -176,7 +120,7 @@ namespace BetterThanNothing
 		globalUniform->lightIntensity = directionalLight.intensity;
 		globalUniform->pointLightCount = renderList->GetPointLightCount();
 
-		DrawPointLights(renderList);
+		DrawPointLights(renderList, frameIndex);
 
 		RenderMetrics::SetCameraCoordinates(camera.position.GetX(), camera.position.GetY(), camera.position.GetZ());
 
@@ -199,9 +143,9 @@ namespace BetterThanNothing
 				.vertexBuffer = meshData->vertexBuffer,
 				.indexBuffer = meshData->indexBuffer,
 				.indexCount = meshData->indexCount,
-				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
+				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[frameIndex]->Handle(),
 				.samplerDescriptorSet = textureData->descriptorSetHandle,
-				.pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
+				.pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[frameIndex]->Handle(),
 				.transform = transform,
 				.distanceToCamera = Vector3::Distance(
 					camera.position,
@@ -214,23 +158,21 @@ namespace BetterThanNothing
 		}
 
 		RenderPassContext renderPassContext{};
-		renderPassContext.commandBuffer = m_renderingDevice->GetCommandBuffer(m_currentFrame);
+		renderPassContext.commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		renderPassContext.imageIndex = imageIndex;
-		renderPassContext.currentFrame = m_currentFrame;
+		renderPassContext.currentFrame = frameIndex;
 
 		m_renderGraph->Execute(renderPassContext, m_drawStream->Build());
-
-		m_renderingDevice->GetCommandBuffer(m_currentFrame)->EndRecording();
 	}
 
-	void Renderer::DrawPointLights(const RenderList* renderList) const
+	void Renderer::DrawPointLights(const RenderList* renderList, const uint32_t frameIndex) const
 	{
 		const uint32_t count = renderList->GetPointLightCount();
 
 		if (count == 0)
 			return;
 
-		void* dstData = m_context->pointLightBuffer[m_currentFrame]->GetMappedData();
+		void* dstData = m_context->pointLightBuffer[frameIndex]->GetMappedData();
 		std::memcpy(dstData, renderList->GetPointLights().data(), count * sizeof(PointLightData));
 	}
 

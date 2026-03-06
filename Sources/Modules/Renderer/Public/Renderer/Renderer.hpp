@@ -51,7 +51,7 @@ namespace BetterThanNothing
 		explicit Renderer(VulkanContext* context, ResourceManager* resourceManager, RenderingDevice* renderingDevice);
 		~Renderer();
 
-		void RenderFrame(const RenderList* renderList, const CameraData& camera);
+		void RenderFrame(const RenderList* renderList, const CameraData& camera) const;
 
 	private:
 		void CreateGlobalDescriptorSets();
@@ -59,7 +59,7 @@ namespace BetterThanNothing
 		void CreatePointLightDescriptorSets(uint32_t maxLights);
 
 		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, uint32_t imageIndex) const;
-		void DrawPointLights(const RenderList* renderList) const;
+		void DrawPointLights(const RenderList* renderList, uint32_t frameIndex) const;
 
 		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
 		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();
@@ -71,7 +71,6 @@ namespace BetterThanNothing
 		VulkanContext*						   m_context = nullptr;
 		ResourceManager*					   m_resourceManager = nullptr;
 		RenderingDevice*					   m_renderingDevice = nullptr;
-		uint32_t							   m_currentFrame = 0;
 		std::unique_ptr<GlobalUniformProvider> m_globalUniformProvider = nullptr;
 		std::unique_ptr<RenderGraph>		   m_renderGraph = nullptr;
 		std::unique_ptr<DrawStream>			   m_drawStream;

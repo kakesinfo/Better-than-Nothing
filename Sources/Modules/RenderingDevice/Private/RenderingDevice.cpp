@@ -22,10 +22,6 @@
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
-#include "RenderingDevice/BufferDescription.hpp"
-#include "RenderingDevice/DescriptorSetUpdateRequest.hpp"
-#include "RenderingDevice/Handle.hpp"
-
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
@@ -84,6 +80,8 @@ namespace BetterThanNothing
 
 	RenderingDevice::~RenderingDevice()
 	{
+		m_device->WaitIdle();
+
 		m_samplersLUT.clear();
 
 		for (std::uint32_t i = 0; i < m_samplers.Size(); i++)
@@ -110,7 +108,7 @@ namespace BetterThanNothing
 
 	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
-		m_layouts[key] = RenderingApi::DescriptorSetLayout::Create({m_device.get(), type, 1, stageFlags});
+		m_descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_device.get(), type, 1, stageFlags});
 	}
 
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
@@ -141,29 +139,92 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
 	}
 
-	RenderingApi::CommandBuffer* RenderingDevice::GetCommandBuffer(const uint32_t frameIndex) const
+	std::optional<uint32_t> RenderingDevice::BeginFrame()
 	{
-		return m_commandBuffers[frameIndex].get();
+		m_inFlightFences.at(m_currentFrameIndex)->Wait();
+		FlushDescriptorSetUpdateRequests();
+
+		const auto acquireResult = m_swapChain->AcquireNextImage(m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
+
+		if (!acquireResult.has_value())
+		{
+			const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
+			m_device->WaitIdle();
+			m_swapChain->RecreateSwapChain(windowWidth, windowHeight);
+			return std::nullopt;
+		}
+
+		const uint32_t imageIndex = acquireResult.value();
+
+		m_inFlightFences.at(m_currentFrameIndex)->Reset();
+		m_commandBuffers.at(m_currentFrameIndex)->Reset();
+		m_commandBuffers.at(m_currentFrameIndex)->BeginRecording();
+
+		return imageIndex;
 	}
 
-	RenderingApi::Semaphore* RenderingDevice::GetImageAvailableSemaphore(const uint32_t frameIndex) const
+	void RenderingDevice::EndFrame(const uint32_t imageIndex)
 	{
-		return m_imageAvailableSemaphores[frameIndex].get();
+		m_commandBuffers.at(m_currentFrameIndex)->EndRecording();
+
+		const auto					   commandBuffer = m_commandBuffers.at(m_currentFrameIndex)->Handle();
+		const VkSemaphore			   waitSemaphores[] = {m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle()};
+		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+		const VkSemaphore			   signalSemaphores[] = {m_swapChain->GetImageFinishedSemaphore(imageIndex)};
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		auto graphicsQueue = m_graphicsQueue->Handle();
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_inFlightFences.at(m_currentFrameIndex)->Handle()) != VK_SUCCESS)
+			throw std::runtime_error("failed to submit draw command buffer!");
+
+		const VkSwapchainKHR swapChains[] = {m_swapChain->Handle()};
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores;
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &imageIndex;
+
+		const VkResult presentResult = vkQueuePresentKHR(m_presentQueue->Handle(), &presentInfo);
+
+		auto& window = WindowManager::GetWindow();
+		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || window->IsResized())
+		{
+			const auto [windowWidth, windowHeight] = window->GetFramebufferSize();
+			window->SetResized(false);
+			m_device->WaitIdle();
+			m_swapChain->RecreateSwapChain(windowWidth, windowHeight);
+		}
+		else if (presentResult != VK_SUCCESS)
+			throw std::runtime_error("failed to present swap chain image!");
+
+		m_currentFrameIndex = (m_currentFrameIndex + 1) % m_maxFramesInFlight;
 	}
 
-	RenderingApi::Fence* RenderingDevice::GetInFlightFence(const uint32_t frameIndex) const
+	[[nodiscard]] uint32_t RenderingDevice::GetCurrentFrameIndex() const
 	{
-		return m_inFlightFences[frameIndex].get();
+		return m_currentFrameIndex;
+	}
+
+	RenderingApi::CommandBuffer* RenderingDevice::GetCurrentCommandBuffer() const
+	{
+		return m_commandBuffers[m_currentFrameIndex].get();
 	}
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const
 	{
 		return m_instance.get();
-	}
-
-	RenderingApi::Surface* RenderingDevice::GetSurface() const
-	{
-		return m_surface.get();
 	}
 
 	RenderingApi::Device* RenderingDevice::GetDevice() const
@@ -176,11 +237,6 @@ namespace BetterThanNothing
 		return m_graphicsQueue.get();
 	}
 
-	RenderingApi::Queue* RenderingDevice::GetPresentQueue() const
-	{
-		return m_presentQueue.get();
-	}
-
 	RenderingApi::Allocator* RenderingDevice::GetAllocator() const
 	{
 		return m_allocator.get();
@@ -189,16 +245,6 @@ namespace BetterThanNothing
 	RenderingApi::SwapChain* RenderingDevice::GetSwapChain() const
 	{
 		return m_swapChain.get();
-	}
-
-	RenderingApi::CommandPool* RenderingDevice::GetCommandPool() const
-	{
-		return m_commandPool.get();
-	}
-
-	RenderingApi::Pipeline* RenderingDevice::GetDefaultPipeline() const
-	{
-		return m_defaultPipeline.get();
 	}
 
 	uint32_t RenderingDevice::GetMaxFramesInFlight() const
@@ -213,8 +259,8 @@ namespace BetterThanNothing
 
 	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
 	{
-		if (!m_layouts.contains(key))
+		if (!m_descriptorLayouts.contains(key))
 			throw std::runtime_error("Cannot find descriptorSetLayout");
-		return m_layouts.at(key).get();
+		return m_descriptorLayouts.at(key).get();
 	}
 }
