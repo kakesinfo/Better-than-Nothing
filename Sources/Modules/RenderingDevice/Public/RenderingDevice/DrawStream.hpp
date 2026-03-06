@@ -44,13 +44,15 @@ namespace BetterThanNothing
 
 	struct DrawPacketSortKeyData
 	{
-		uint64_t packetId : 32 = 0;
-		uint64_t distance : 24 = 0;
-		uint64_t _padding : 8 = 0;
+		uint64_t distance : 16 = 0;
+		uint64_t _padding1 : 16 = 0;
+		uint64_t textureId : 16 = 0;
+		uint64_t _padding2 : 16 = 0; // TODO: change to pipelineId
 	};
 
 	struct DrawPacketSortKey
 	{
+		uint32_t packetId = 0;
 		DrawPacketSortKeyData data;
 
 		bool operator<(const DrawPacketSortKey& other) const;
