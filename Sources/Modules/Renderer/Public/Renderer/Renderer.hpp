@@ -31,7 +31,6 @@ namespace BetterThanNothing
 
 	class RenderList;
 	class RenderCache;
-	class RenderGraph;
 
 	class GlobalUniformProvider;
 	class Camera;
@@ -41,6 +40,11 @@ namespace BetterThanNothing
 	struct CameraData;
 	class DrawStream;
 	struct DirectionalLightData;
+	class ImGuiPass;
+
+	struct DrawStreamView;
+
+	struct DrawStreamView;
 
 	class ResourceManager;
 	class RenderingDevice;
@@ -61,6 +65,8 @@ namespace BetterThanNothing
 		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, uint32_t imageIndex) const;
 		void DrawPointLights(const RenderList* renderList, uint32_t frameIndex) const;
 
+		void ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const;
+
 		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
 		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();
 
@@ -72,7 +78,7 @@ namespace BetterThanNothing
 		ResourceManager*					   m_resourceManager = nullptr;
 		RenderingDevice*					   m_renderingDevice = nullptr;
 		std::unique_ptr<GlobalUniformProvider> m_globalUniformProvider = nullptr;
-		std::unique_ptr<RenderGraph>		   m_renderGraph = nullptr;
 		std::unique_ptr<DrawStream>			   m_drawStream;
+		std::unique_ptr<ImGuiPass>			   m_imGuiPass;
 	};
 }

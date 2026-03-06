@@ -18,16 +18,20 @@
 
 #pragma once
 
-#include "RenderPassContext.hpp"
-
 namespace BetterThanNothing
 {
-	class DrawStreamView;
+	class RenderingDevice;
 
-	class IRenderPass
+	class ImGuiPass
 	{
 	public:
-		virtual ~IRenderPass() = default;
-		virtual void Execute(const RenderPassContext& context, const DrawStreamView& drawStream) = 0;
+		explicit ImGuiPass(RenderingDevice* renderingDevice);
+		~ImGuiPass();
+
+		void Execute(uint32_t imageIndex);
+
+	private:
+		RenderingDevice* m_renderingDevice;
+		VkDescriptorPool m_imguiPool;
 	};
 }
