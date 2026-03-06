@@ -43,8 +43,9 @@ namespace BetterThanNothing
 		m_packets.push_back(drawPacket);
 
 		DrawPacketSortKey sortKey{};
-		sortKey.data.packetId = m_packets.size() - 1;
-		sortKey.data.distance = std::bit_cast<uint32_t>(std::max(0.0f, drawPacket.distanceToCamera)) >> 8;
+		sortKey.packetId = m_packets.size() - 1;
+		sortKey.data.distance = std::bit_cast<uint32_t>(drawPacket.distanceToCamera) >> 16;
+		sortKey.data.textureId = drawPacket.samplerDescriptorSet.GetId();
 
 		m_sortKeys.push_back(sortKey);
 	}
@@ -68,12 +69,12 @@ namespace BetterThanNothing
 
 	DrawPacket& DrawStreamViewIterator::operator*() const
 	{
-		return m_packets[m_currentKey->data.packetId];
+		return m_packets[m_currentKey->packetId];
 	}
 
 	DrawPacket* DrawStreamViewIterator::operator->() const
 	{
-		return &m_packets[m_currentKey->data.packetId];
+		return &m_packets[m_currentKey->packetId];
 	}
 
 	DrawStreamViewIterator& DrawStreamViewIterator::operator++()
