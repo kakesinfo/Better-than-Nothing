@@ -50,24 +50,20 @@ namespace BetterThanNothing
 			uint32_t maxFramesInFlight = 2;
 		} settings;
 
-		RenderingApi::Instance*					instance;
-		RenderingApi::Surface*					surface;
-		RenderingApi::Device*					device;
-		RenderingApi::Queue*					graphicsQueue;
-		RenderingApi::Queue*					presentQueue;
-		RenderingApi::Allocator*				allocator;
-		RenderingApi::SwapChain*				swapChain;
-		RenderingApi::CommandPool*				commandPool;
-		std::unique_ptr<RenderingApi::Pipeline> defaultPipeline;
-
-		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> commandBuffer;
-		std::vector<std::unique_ptr<VulkanUniformBuffer>>		  globalUniformBuffer;
-		std::vector<std::unique_ptr<VulkanStorageBuffer>>		  pointLightBuffer;
-		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  imageAvailableSemaphore;
-		std::vector<std::unique_ptr<RenderingApi::Fence>>		  inFlightFences;
-
+		RenderingApi::Instance*		  instance;
+		RenderingApi::Surface*		  surface;
+		RenderingApi::Device*		  device;
+		RenderingApi::Queue*		  graphicsQueue;
+		RenderingApi::Queue*		  presentQueue;
+		RenderingApi::Allocator*	  allocator;
+		RenderingApi::SwapChain*	  swapChain;
+		RenderingApi::CommandPool*	  commandPool;
 		RenderingApi::DescriptorPool* descriptorPool;
 
+		std::unique_ptr<RenderingApi::Pipeline> defaultPipeline;
+
+		std::vector<std::unique_ptr<VulkanUniformBuffer>> globalUniformBuffer;
+		std::vector<std::unique_ptr<VulkanStorageBuffer>> pointLightBuffer;
 		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkGlobalDescriptorSets;
 		std::vector<std::unique_ptr<VulkanDescriptorSet>> vkPointLightDescriptorSets;
 	};

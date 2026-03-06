@@ -74,9 +74,12 @@ namespace BetterThanNothing
 							   .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
 							   .Build();
 
-		RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-		RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-		RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+		Internal_CreateCommandBuffers();
+		Internal_CreateSyncObjects();
 	}
 
 	RenderingDevice::~RenderingDevice()
@@ -105,7 +108,7 @@ namespace BetterThanNothing
 		}
 	};
 
-	void RenderingDevice::RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
 		m_layouts[key] = RenderingApi::DescriptorSetLayout::Create({m_device.get(), type, 1, stageFlags});
 	}
@@ -113,6 +116,44 @@ namespace BetterThanNothing
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
 	{
 		return std::make_unique<RenderingDevice>(createInfo);
+	}
+
+	void RenderingDevice::Internal_CreateCommandBuffers()
+	{
+		m_commandBuffers.resize(m_maxFramesInFlight);
+		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
+			m_commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_device.get(), m_commandPool.get()});
+
+		Logger::Log<SUCCESS>("Vulkan command buffers: ok");
+	}
+
+	void RenderingDevice::Internal_CreateSyncObjects()
+	{
+		m_imageAvailableSemaphores.resize(m_maxFramesInFlight);
+		m_inFlightFences.resize(m_maxFramesInFlight);
+
+		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
+		{
+			m_imageAvailableSemaphores[i] = RenderingApi::Semaphore::Create({m_device.get()});
+			m_inFlightFences[i] = RenderingApi::Fence::Create({m_device.get(), true});
+		}
+
+		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
+	}
+
+	RenderingApi::CommandBuffer* RenderingDevice::GetCommandBuffer(const uint32_t frameIndex) const
+	{
+		return m_commandBuffers[frameIndex].get();
+	}
+
+	RenderingApi::Semaphore* RenderingDevice::GetImageAvailableSemaphore(const uint32_t frameIndex) const
+	{
+		return m_imageAvailableSemaphores[frameIndex].get();
+	}
+
+	RenderingApi::Fence* RenderingDevice::GetInFlightFence(const uint32_t frameIndex) const
+	{
+		return m_inFlightFences[frameIndex].get();
 	}
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const

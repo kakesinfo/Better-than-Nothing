@@ -72,9 +72,6 @@ namespace BetterThanNothing
 		CreatePointLightBuffers(MAX_LIGHT_COUNT);
 		CreatePointLightDescriptorSets(MAX_LIGHT_COUNT);
 
-		CreateCommandBuffers();
-		CreateSyncObjects();
-
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Assets/Shaders/");
 			builder->SetName("main");
@@ -100,11 +97,10 @@ namespace BetterThanNothing
 		if (!m_context->defaultPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
 
-		m_context->inFlightFences[m_currentFrame]->Wait();
-
+		m_renderingDevice->GetInFlightFence(m_currentFrame)->Wait();
 		m_renderingDevice->FlushDescriptorSetUpdateRequests();
 
-		const auto acquireResult = m_context->swapChain->AcquireNextImage(m_context->imageAvailableSemaphore[m_currentFrame]->Handle());
+		const auto acquireResult = m_context->swapChain->AcquireNextImage(m_renderingDevice->GetImageAvailableSemaphore(m_currentFrame)->Handle());
 
 		if (!acquireResult.has_value())
 		{
@@ -115,13 +111,13 @@ namespace BetterThanNothing
 
 		const uint32_t imageIndex = acquireResult.value();
 
-		m_context->inFlightFences[m_currentFrame]->Reset();
-		m_context->commandBuffer[m_currentFrame]->Reset();
+		m_renderingDevice->GetInFlightFence(m_currentFrame)->Reset();
+		m_renderingDevice->GetCommandBuffer(m_currentFrame)->Reset();
 
 		RecordCommandBuffer(renderList, camera, imageIndex);
 
-		const auto					   commandBuffer = m_context->commandBuffer[m_currentFrame]->Handle();
-		const VkSemaphore			   waitSemaphores[] = {m_context->imageAvailableSemaphore[m_currentFrame]->Handle()};
+		const auto					   commandBuffer = m_renderingDevice->GetCommandBuffer(m_currentFrame)->Handle();
+		const VkSemaphore			   waitSemaphores[] = {m_renderingDevice->GetImageAvailableSemaphore(m_currentFrame)->Handle()};
 		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		const VkSemaphore			   signalSemaphores[] = {m_context->swapChain->GetImageFinishedSemaphore(imageIndex)};
 
@@ -136,7 +132,7 @@ namespace BetterThanNothing
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		auto graphicsQueue = m_context->graphicsQueue->Handle();
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_context->inFlightFences[m_currentFrame]->Handle()) != VK_SUCCESS)
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_renderingDevice->GetInFlightFence(m_currentFrame)->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
 		const VkSwapchainKHR swapChains[] = {m_context->swapChain->Handle()};
@@ -166,7 +162,7 @@ namespace BetterThanNothing
 
 	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const std ::uint32_t imageIndex) const
 	{
-		m_context->commandBuffer[m_currentFrame]->BeginRecording();
+		m_renderingDevice->GetCommandBuffer(m_currentFrame)->BeginRecording();
 
 		auto directionalLight = renderList->GetDirectionalLight();
 
@@ -196,32 +192,35 @@ namespace BetterThanNothing
 			if (!meshData || !textureData)
 				continue;
 
-			auto meshPosition = Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2]);
-
-			m_drawStream->Draw(
-				{.pipeline = m_context->defaultPipeline->Handle(),
-				 .pipelineLayout = m_context->defaultPipeline->GetLayout(),
-				 .vertexBuffer = meshData->vertexBuffer,
-				 .indexBuffer = meshData->indexBuffer,
-				 .indexCount = meshData->indexCount,
-				 .globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
-				 .samplerDescriptorSet = textureData->descriptorSetHandle,
-				 .pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
-				 .transform = transform,
-				 .distanceToCamera = Vector3::Distance(camera.position, meshPosition)}
-			);
+			// clang-format off
+			m_drawStream->Draw({
+				.pipeline = m_context->defaultPipeline->Handle(),
+				.pipelineLayout = m_context->defaultPipeline->GetLayout(),
+				.vertexBuffer = meshData->vertexBuffer,
+				.indexBuffer = meshData->indexBuffer,
+				.indexCount = meshData->indexCount,
+				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[m_currentFrame]->Handle(),
+				.samplerDescriptorSet = textureData->descriptorSetHandle,
+				.pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[m_currentFrame]->Handle(),
+				.transform = transform,
+				.distanceToCamera = Vector3::Distance(
+					camera.position,
+					Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2])
+				)
+			});
+			// clang-format on
 
 			RenderMetrics::AddDrawCall(meshData->vertexCount);
 		}
 
 		RenderPassContext renderPassContext{};
-		renderPassContext.commandBuffer = m_context->commandBuffer[m_currentFrame].get();
+		renderPassContext.commandBuffer = m_renderingDevice->GetCommandBuffer(m_currentFrame);
 		renderPassContext.imageIndex = imageIndex;
 		renderPassContext.currentFrame = m_currentFrame;
 
 		m_renderGraph->Execute(renderPassContext, m_drawStream->Build());
 
-		m_context->commandBuffer[m_currentFrame]->EndRecording();
+		m_renderingDevice->GetCommandBuffer(m_currentFrame)->EndRecording();
 	}
 
 	void Renderer::DrawPointLights(const RenderList* renderList) const
@@ -233,33 +232,6 @@ namespace BetterThanNothing
 
 		void* dstData = m_context->pointLightBuffer[m_currentFrame]->GetMappedData();
 		std::memcpy(dstData, renderList->GetPointLights().data(), count * sizeof(PointLightData));
-	}
-
-	void Renderer::CreateCommandBuffers() const
-	{
-		const uint32_t count = m_context->settings.maxFramesInFlight;
-
-		m_context->commandBuffer.resize(count);
-		for (uint32_t i = 0; i < count; i++)
-			m_context->commandBuffer[i] = RenderingApi::CommandBuffer::Create({m_context->device, m_context->commandPool});
-
-		Logger::Log<SUCCESS>("Vulkan command buffers: ok (count: {})", count);
-	}
-
-	void Renderer::CreateSyncObjects() const
-	{
-		const uint32_t frameCount = m_context->settings.maxFramesInFlight;
-
-		m_context->imageAvailableSemaphore.resize(frameCount);
-		m_context->inFlightFences.resize(frameCount);
-
-		for (uint32_t i = 0; i < frameCount; i++)
-		{
-			m_context->imageAvailableSemaphore[i] = RenderingApi::Semaphore::Create({m_context->device});
-			m_context->inFlightFences[i] = RenderingApi::Fence::Create({m_context->device, true});
-		}
-
-		Logger::Log<SUCCESS>("Vulkan sync objects: ok (frames: {})", frameCount);
 	}
 
 	void Renderer::CreateGlobalDescriptorSets()

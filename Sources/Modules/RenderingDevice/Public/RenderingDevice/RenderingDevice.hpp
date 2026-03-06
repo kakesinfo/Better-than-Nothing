@@ -48,6 +48,9 @@ namespace BetterThanNothing
 		struct Buffer;
 		struct Texture;
 		struct DescriptorSet;
+		class CommandBuffer;
+		class Semaphore;
+		class Fence;
 	}
 
 	class SamplerRegistry;
@@ -68,7 +71,7 @@ namespace BetterThanNothing
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
 	private:
-		void RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		void Internal_RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	public:
 		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc);
@@ -104,6 +107,17 @@ namespace BetterThanNothing
 		void						 DestroyDescriptorSet(const Handle& handle);
 		RenderingApi::DescriptorSet* GetDescriptorSet(const Handle& handle);
 
+	private:
+		void Internal_CreateCommandBuffers();
+		void Internal_CreateSyncObjects();
+
+	public:
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::CommandBuffer* GetCommandBuffer(uint32_t frameIndex) const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Semaphore* GetImageAvailableSemaphore(uint32_t frameIndex) const;
+		/// @deprecated Will be removed in the future.
+		[[nodiscard]] RenderingApi::Fence* GetInFlightFence(uint32_t frameIndex) const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Instance* GetInstance() const;
 		/// @deprecated Will be removed in the future.
@@ -144,6 +158,10 @@ namespace BetterThanNothing
 
 		std::unique_ptr<RenderingApi::DescriptorPool>													m_descriptorPool;
 		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_layouts;
+
+		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> m_commandBuffers;
+		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  m_imageAvailableSemaphores;
+		std::vector<std::unique_ptr<RenderingApi::Fence>>		  m_inFlightFences;
 
 		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>   m_buffers;
 		HandleRegistry<RenderingApi::Texture, HandleType::Texture> m_textures;

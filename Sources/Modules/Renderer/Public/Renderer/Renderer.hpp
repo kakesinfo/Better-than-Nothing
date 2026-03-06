@@ -54,10 +54,7 @@ namespace BetterThanNothing
 		void RenderFrame(const RenderList* renderList, const CameraData& camera);
 
 	private:
-		void CreateCommandBuffers() const;
-		void CreateSyncObjects() const;
 		void CreateGlobalDescriptorSets();
-
 		void CreatePointLightBuffers(uint32_t maxLights) const;
 		void CreatePointLightDescriptorSets(uint32_t maxLights);
 
@@ -71,12 +68,12 @@ namespace BetterThanNothing
 		void AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback);
 
 	private:
-		VulkanContext*										  m_context = nullptr;
-		ResourceManager*									  m_resourceManager = nullptr;
-		RenderingDevice*									  m_renderingDevice = nullptr;
-		uint32_t											  m_currentFrame = 0;
-		std::unique_ptr<GlobalUniformProvider>				  m_globalUniformProvider = nullptr;
-		std::unique_ptr<RenderGraph>						  m_renderGraph = nullptr;
-		std::unique_ptr<DrawStream>							  m_drawStream;
+		VulkanContext*						   m_context = nullptr;
+		ResourceManager*					   m_resourceManager = nullptr;
+		RenderingDevice*					   m_renderingDevice = nullptr;
+		uint32_t							   m_currentFrame = 0;
+		std::unique_ptr<GlobalUniformProvider> m_globalUniformProvider = nullptr;
+		std::unique_ptr<RenderGraph>		   m_renderGraph = nullptr;
+		std::unique_ptr<DrawStream>			   m_drawStream;
 	};
 }
