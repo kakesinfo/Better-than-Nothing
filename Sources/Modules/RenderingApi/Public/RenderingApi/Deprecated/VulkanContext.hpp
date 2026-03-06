@@ -51,13 +51,10 @@ namespace BetterThanNothing
 		} settings;
 
 		RenderingApi::Instance*		  instance;
-		RenderingApi::Surface*		  surface;
 		RenderingApi::Device*		  device;
 		RenderingApi::Queue*		  graphicsQueue;
-		RenderingApi::Queue*		  presentQueue;
 		RenderingApi::Allocator*	  allocator;
 		RenderingApi::SwapChain*	  swapChain;
-		RenderingApi::CommandPool*	  commandPool;
 		RenderingApi::DescriptorPool* descriptorPool;
 
 		std::unique_ptr<RenderingApi::Pipeline> defaultPipeline;

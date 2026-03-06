@@ -37,8 +37,6 @@ namespace BetterThanNothing
 
 	void ForwardPass::Execute(const RenderPassContext& context, const DrawStreamView& drawStream)
 	{
-		auto commandBuffer = context.commandBuffer;
-
 		{
 			std::array<VkImageMemoryBarrier, 3> barriers{};
 
@@ -84,7 +82,7 @@ namespace BetterThanNothing
 			barriers[2].subresourceRange.baseArrayLayer = 0;
 			barriers[2].subresourceRange.layerCount = 1;
 
-			commandBuffer->PipelineBarrier(
+			context.commandBuffer->PipelineBarrier(
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr,
 				barriers.size(), barriers.data()
 			);
@@ -118,7 +116,7 @@ namespace BetterThanNothing
 		renderingInfo.pColorAttachments = &colorAttachment;
 		renderingInfo.pDepthAttachment = &depthAttachment;
 
-		commandBuffer->ExecuteRenderPass(
+		context.commandBuffer->ExecuteRenderPass(
 			[&](RenderingApi::CommandBuffer* cmd) {
 				cmd->SetViewport(0, 0, m_context->swapChain->GetExtent(), 0, 1);
 				cmd->SetScissor(0, 0, m_context->swapChain->GetExtent());
@@ -133,41 +131,41 @@ namespace BetterThanNothing
 				{
 					if (lastPipeline != drawPacket.pipeline)
 					{
-						commandBuffer->BindPipeline(drawPacket.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+						context.commandBuffer->BindPipeline(drawPacket.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
 						lastPipeline = drawPacket.pipeline;
 					}
 
 					if (!boundGlobalDescriptor)
 					{
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 0, 1, &drawPacket.globalDescriptorSet, 0, nullptr);
+						context.commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 0, 1, &drawPacket.globalDescriptorSet, 0, nullptr);
 						boundGlobalDescriptor = true;
 					}
 
 					if (!boundPointLightDescriptor)
 					{
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 2, 1, &drawPacket.pointLightDescriptorSet, 0, nullptr);
+						context.commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 2, 1, &drawPacket.pointLightDescriptorSet, 0, nullptr);
 						boundPointLightDescriptor = true;
 					}
 
 					if (lastSamplerHandle != drawPacket.samplerDescriptorSet)
 					{
 						const auto samplerDescriptorSet = m_renderingDevice->GetDescriptorSet(drawPacket.samplerDescriptorSet);
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &samplerDescriptorSet->value, 0, nullptr);
+						context.commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &samplerDescriptorSet->value, 0, nullptr);
 						lastSamplerHandle = drawPacket.samplerDescriptorSet;
 					}
 
 					const DynamicUniformData dynamicUniforms = {drawPacket.transform};
-					commandBuffer->PushConstants(drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData), &dynamicUniforms);
+					context.commandBuffer->PushConstants(drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData), &dynamicUniforms);
 
 					const auto vertexBuffer = m_renderingDevice->GetBuffer(drawPacket.vertexBuffer);
 					const auto indexBuffer = m_renderingDevice->GetBuffer(drawPacket.indexBuffer);
 
 					const VkBuffer		   vertexBuffers[] = {vertexBuffer->value};
 					constexpr VkDeviceSize offsets[] = {0};
-					commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-					commandBuffer->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
+					context.commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
+					context.commandBuffer->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
 
-					commandBuffer->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
+					context.commandBuffer->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
 				}
 			},
 			renderingInfo

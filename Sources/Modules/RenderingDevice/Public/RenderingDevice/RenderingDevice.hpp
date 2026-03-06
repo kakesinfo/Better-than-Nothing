@@ -28,6 +28,7 @@
 #include <Module_Base/EBufferingMode.hpp>
 #include <memory>
 #include <unordered_map>
+#include <optional>
 
 namespace BetterThanNothing
 {
@@ -112,30 +113,23 @@ namespace BetterThanNothing
 		void Internal_CreateSyncObjects();
 
 	public:
+		std::optional<uint32_t> BeginFrame();
+		void					EndFrame(uint32_t imageIndex);
+
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::CommandBuffer* GetCommandBuffer(uint32_t frameIndex) const;
+		[[nodiscard]] uint32_t GetCurrentFrameIndex() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Semaphore* GetImageAvailableSemaphore(uint32_t frameIndex) const;
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Fence* GetInFlightFence(uint32_t frameIndex) const;
+		[[nodiscard]] RenderingApi::CommandBuffer* GetCurrentCommandBuffer() const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Instance* GetInstance() const;
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Surface* GetSurface() const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Device* GetDevice() const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Queue* GetGraphicsQueue() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Queue* GetPresentQueue() const;
-		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Allocator* GetAllocator() const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::SwapChain* GetSwapChain() const;
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::CommandPool* GetCommandPool() const;
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Pipeline* GetDefaultPipeline() const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] uint32_t GetMaxFramesInFlight() const;
 
@@ -144,33 +138,33 @@ namespace BetterThanNothing
 		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetLayoutType key) const;
 
 	private:
-		RenderingDeviceCreateInfo				   m_createInfo;
-		std::unique_ptr<RenderingApi::Instance>	   m_instance;
-		std::unique_ptr<RenderingApi::Surface>	   m_surface;
-		std::unique_ptr<RenderingApi::Device>	   m_device;
-		std::unique_ptr<RenderingApi::Queue>	   m_graphicsQueue;
-		std::unique_ptr<RenderingApi::Queue>	   m_presentQueue;
-		std::unique_ptr<RenderingApi::Allocator>   m_allocator;
-		std::unique_ptr<RenderingApi::SwapChain>   m_swapChain;
-		std::unique_ptr<RenderingApi::CommandPool> m_commandPool;
-		std::unique_ptr<RenderingApi::Pipeline>	   m_defaultPipeline;
-		uint32_t								   m_maxFramesInFlight;
-
-		std::unique_ptr<RenderingApi::DescriptorPool>													m_descriptorPool;
-		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_layouts;
+		RenderingDeviceCreateInfo					  m_createInfo;
+		std::unique_ptr<RenderingApi::Instance>		  m_instance;
+		std::unique_ptr<RenderingApi::Surface>		  m_surface;
+		std::unique_ptr<RenderingApi::Device>		  m_device;
+		std::unique_ptr<RenderingApi::Queue>		  m_graphicsQueue;
+		std::unique_ptr<RenderingApi::Queue>		  m_presentQueue;
+		std::unique_ptr<RenderingApi::Allocator>	  m_allocator;
+		std::unique_ptr<RenderingApi::SwapChain>	  m_swapChain;
+		std::unique_ptr<RenderingApi::CommandPool>	  m_commandPool;
+		std::unique_ptr<RenderingApi::DescriptorPool> m_descriptorPool;
 
 		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> m_commandBuffers;
 		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  m_imageAvailableSemaphores;
 		std::vector<std::unique_ptr<RenderingApi::Fence>>		  m_inFlightFences;
 
-		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>   m_buffers;
-		HandleRegistry<RenderingApi::Texture, HandleType::Texture> m_textures;
+		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_descriptorLayouts;
 
-		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>										m_samplers;
-		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> m_samplersLUT;
-
+		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>			   m_buffers;
+		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   m_textures;
+		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   m_samplers;
 		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> m_descriptors;
-		std::vector<DescriptorSetUpdateRequest>								   m_descriptorsUpdateRequests;
-		std::vector<VkWriteDescriptorSet>									   m_descriptorsWrites;
+
+		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> m_samplersLUT;
+		std::vector<DescriptorSetUpdateRequest>															m_descriptorsUpdateRequests;
+		std::vector<VkWriteDescriptorSet>																m_descriptorsWrites;
+
+		uint32_t m_maxFramesInFlight;
+		uint32_t m_currentFrameIndex = 0;
 	};
 };

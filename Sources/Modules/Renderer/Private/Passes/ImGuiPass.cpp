@@ -123,8 +123,6 @@ namespace BetterThanNothing
 
 		ImGui::Render();
 
-		const auto commandBuffer = context.commandBuffer;
-
 		{
 			VkImageMemoryBarrier barrier{};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -141,7 +139,7 @@ namespace BetterThanNothing
 			barrier.subresourceRange.baseArrayLayer = 0;
 			barrier.subresourceRange.layerCount = 1;
 
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+			context.commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 		}
 
 		VkRenderingAttachmentInfo colorAttachment = {};
@@ -159,7 +157,7 @@ namespace BetterThanNothing
 		renderingInfo.pColorAttachments = &colorAttachment;
 
 		// clang-format off
-		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) {
+		context.commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) {
 			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd->Handle());
 		}, renderingInfo);
 		// clang-format on
@@ -180,7 +178,7 @@ namespace BetterThanNothing
 			presentationBarrier.subresourceRange.baseArrayLayer = 0;
 			presentationBarrier.subresourceRange.layerCount = 1;
 
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
+			context.commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
 		}
 	}
 }

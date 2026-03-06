@@ -22,13 +22,11 @@
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
-#include "RenderingDevice/BufferDescription.hpp"
 #include "RenderingDevice/DescriptorSetUpdateRequest.hpp"
 #include "RenderingDevice/Handle.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
-#include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
 
