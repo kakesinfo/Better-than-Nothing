@@ -120,8 +120,9 @@ namespace BetterThanNothing
 	enum class BufferAllocationFlags : uint32_t
 	{
 		None = 0,
-		Mapped = 0x00000004,	// VMA_ALLOCATION_CREATE_MAPPED_BIT
-		Dedicated = 0x00000001, // VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT
+		Mapped = 0x00000004,					// VMA_ALLOCATION_CREATE_MAPPED_BIT
+		Dedicated = 0x00000001,					// VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT
+		HostAccessSequentialWrite = 0x00000400, // VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
 	};
 
 	inline BufferUsageFlags operator|(BufferUsageFlags a, BufferUsageFlags b)

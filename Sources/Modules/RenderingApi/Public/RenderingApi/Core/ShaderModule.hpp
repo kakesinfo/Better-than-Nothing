@@ -16,27 +16,22 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingApi.hpp"
+#pragma once
 
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
-	VulkanShaderModule::VulkanShaderModule(VulkanContext* vkContext, const VkShaderModuleCreateInfo* createInfo)
-		: m_vkContext(vkContext)
-	{
-		if (vkCreateShaderModule(m_vkContext->device->Handle(), createInfo, nullptr, &m_shaderModule) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create shader module!");
-		}
-	}
+	class Device;
 
-	VulkanShaderModule::~VulkanShaderModule()
+	class ShaderModule
 	{
-		if (m_shaderModule)
-			vkDestroyShaderModule(m_vkContext->device->Handle(), m_shaderModule, nullptr);
-	}
+	public:
+		ShaderModule(Device* device, const VkShaderModuleCreateInfo* createInfo);
+		~ShaderModule();
 
-	VkShaderModule VulkanShaderModule::Handle() const
-	{
-		return m_shaderModule;
-	}
+		[[nodiscard]] VkShaderModule Handle() const;
+
+	private:
+		Device*		   m_device = nullptr;
+		VkShaderModule m_shaderModule = VK_NULL_HANDLE;
+	};
 }

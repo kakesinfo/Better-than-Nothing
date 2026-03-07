@@ -87,6 +87,28 @@ namespace BetterThanNothing
 		return handle;
 	}
 
+	Handle RenderingDevice::CreateUniformBuffer(const size_t size)
+	{
+		BufferDescription desc{};
+		desc.size = size;
+		desc.bufferUsage = BufferUsageFlags::Uniform;
+		desc.memoryUsage = BufferMemoryUsage::CpuToGpu;
+		desc.allocationFlags = BufferAllocationFlags::Mapped;
+
+		return CreateBuffer(desc);
+	}
+
+	Handle RenderingDevice::CreateStorageBuffer(const size_t size)
+	{
+		BufferDescription desc{};
+		desc.size = size;
+		desc.bufferUsage = BufferUsageFlags::Storage;
+		desc.memoryUsage = BufferMemoryUsage::CpuToGpu;
+		desc.allocationFlags = BufferAllocationFlags::HostAccessSequentialWrite | BufferAllocationFlags::Mapped;
+
+		return CreateBuffer(desc);
+	}
+
 	Handle RenderingDevice::CreateVertexBuffer(const void* data, const size_t size)
 	{
 		BufferDescription desc{};

@@ -18,13 +18,12 @@
 
 #pragma once
 
-#include "ResourceLoader.hpp"
-
 namespace BetterThanNothing
 {
-	struct VulkanContext;
+	class RenderingDevice;
+
 	struct ShaderGpuData;
-	class VulkanShaderModule;
+	class ShaderModule;
 	enum class EShaderType;
 
 	struct ShaderData
@@ -33,18 +32,27 @@ namespace BetterThanNothing
 		std::string filePath;
 	};
 
-	class ShaderLoader final : public ResourceLoader<ShaderData, ShaderGpuData>
+	namespace RenderingApi
+	{
+		class ShaderModule;
+	}
+
+	class ShaderLoader final
 	{
 	public:
-		explicit ShaderLoader(VulkanContext* context);
-		~ShaderLoader() override;
-
-		std::unique_ptr<ShaderGpuData> Load(const ShaderData& input) override;
+		explicit ShaderLoader(RenderingDevice* renderingDevice);
+		~ShaderLoader();
 
 	private:
-		static std::vector<char>			ReadFile(const std::string& filename);
-		static glslang_stage_t				GetShaderStage(EShaderType type);
-		static glslang_program_t*			GetShaderProgram(const std::vector<char>& source, glslang_stage_t stage);
-		std::unique_ptr<VulkanShaderModule> GetShaderModule(glslang_program_t* program) const;
+		static std::vector<char>	  ReadFile(const std::string& filename);
+		static glslang_stage_t		  GetShaderStage(EShaderType type);
+		static glslang_program_t*	  GetShaderProgram(const std::vector<char>& source, glslang_stage_t stage);
+		std::unique_ptr<RenderingApi::ShaderModule> GetShaderModule(glslang_program_t* program) const;
+
+	public:
+		std::unique_ptr<ShaderGpuData> Load(const ShaderData& input) const;
+
+	private:
+		RenderingDevice* m_renderingDevice = nullptr;
 	};
 }
