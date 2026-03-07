@@ -28,8 +28,6 @@ namespace BetterThanNothing
 	class Renderer;
 	class Camera;
 
-	struct VulkanContext;
-
 	class Engine
 	{
 	public:
@@ -45,10 +43,9 @@ namespace BetterThanNothing
 
 	private:
 		std::unique_ptr<RenderingDevice> m_renderingDevice;
-		std::unique_ptr<VulkanContext>	 m_context;
 		std::unique_ptr<ResourceManager> m_resourceManager;
 		std::unique_ptr<RenderList>		 m_renderList;
-		std::unique_ptr<Renderer>		 m_legacyRenderer;
+		std::unique_ptr<Renderer>		 m_renderer;
 		std::unique_ptr<Camera>			 m_camera;
 
 		IEngineApplication* m_application;

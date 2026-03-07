@@ -42,7 +42,6 @@ namespace BetterThanNothing
 	struct MeshResourceCache;
 	struct TextureResourceCache;
 
-	struct VulkanContext;
 	struct ShaderGpuData;
 	class TextureLoader;
 	class ShaderLoader;
@@ -52,7 +51,7 @@ namespace BetterThanNothing
 	class ResourceManager
 	{
 	public:
-		explicit ResourceManager(VulkanContext* context, RenderingDevice* renderingDevice);
+		explicit ResourceManager(RenderingDevice* renderingDevice);
 		~ResourceManager();
 
 	private:
@@ -70,7 +69,6 @@ namespace BetterThanNothing
 		ShaderGpuData*		  GetShader(ResourceId id);
 
 	private:
-		VulkanContext*														  m_context;
 		RenderingDevice*													  m_renderingDevice;
 		std::unique_ptr<ShaderLoader>										  m_shaderLoader;
 		std::unordered_map<ResourceId, std::unique_ptr<MeshResourceCache>>	  m_meshes;

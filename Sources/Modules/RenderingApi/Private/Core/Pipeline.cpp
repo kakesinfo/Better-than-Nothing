@@ -16,9 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../../Public/RenderingApi/Data/VertexInputDescription.hpp"
 #include "RenderingApi.hpp"
-
 #include <Module_Data/Graphics/DynamicUniformData.hpp>
 #include <iostream>
 
@@ -26,8 +24,7 @@
 
 namespace BetterThanNothing::RenderingApi
 {
-	Pipeline::Pipeline(const PipelineParams& params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context)
-		: m_context(context), m_params(params)
+	Pipeline::Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders): m_params(params)
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		for (const ShaderGpuData* shaderGpuData : shaders)
@@ -42,7 +39,7 @@ namespace BetterThanNothing::RenderingApi
 			shaderStages.push_back(shaderStageInfo);
 		}
 
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo = vertexInputDescription.GetCreateInfo();
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo = params.vertexInputDescription.GetCreateInfo();
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -78,17 +75,17 @@ namespace BetterThanNothing::RenderingApi
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.rasterizationSamples = m_context->device->GetMaxMsaaSamples();
+		multisampling.rasterizationSamples = m_params.device->GetMaxMsaaSamples();
 		multisampling.sampleShadingEnable = VK_TRUE;
 		multisampling.minSampleShading = 0.8f; // closer to one is better quality
 
 		// Fallback: If no color attachment format is defined, we take the one from the Swapchain
 		if (m_params.colorAttachmentFormats.empty())
-			m_params.colorAttachmentFormats.push_back(m_context->swapChain->GetImageFormat());
+			m_params.colorAttachmentFormats.push_back(m_params.swapChain->GetImageFormat());
 
 		// Fallback: If no depth attachment format is defined, we take the one from the Swapchain
 		if (m_params.depthAttachmentFormat == VK_FORMAT_UNDEFINED)
-			m_params.depthAttachmentFormat = m_context->swapChain->GetDepthFormat();
+			m_params.depthAttachmentFormat = m_params.swapChain->GetDepthFormat();
 
 		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
 		pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -141,7 +138,7 @@ namespace BetterThanNothing::RenderingApi
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &dynamicPushConstant;
 
-		if (vkCreatePipelineLayout(m_context->device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
+		if (vkCreatePipelineLayout(m_params.device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create pipeline layout");
 
 		Logger::Log<SUCCESS>("Vulkan pipeline layout: ok");
@@ -163,7 +160,7 @@ namespace BetterThanNothing::RenderingApi
 		pipelineInfo.renderPass = VK_NULL_HANDLE; // m_context->vkRenderPass->Handle();
 		pipelineInfo.subpass = 0;
 
-		if (vkCreateGraphicsPipelines(m_context->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
+		if (vkCreateGraphicsPipelines(m_params.device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create graphics pipeline");
 
 		Logger::Log<SUCCESS>("Vulkan graphics pipeline: ok");
@@ -172,10 +169,10 @@ namespace BetterThanNothing::RenderingApi
 	Pipeline::~Pipeline()
 	{
 		if (m_pipelineLayout != VK_NULL_HANDLE)
-			vkDestroyPipelineLayout(m_context->device->Handle(), m_pipelineLayout, nullptr);
+			vkDestroyPipelineLayout(m_params.device->Handle(), m_pipelineLayout, nullptr);
 
 		if (m_pipeline != VK_NULL_HANDLE)
-			vkDestroyPipeline(m_context->device->Handle(), m_pipeline, nullptr);
+			vkDestroyPipeline(m_params.device->Handle(), m_pipeline, nullptr);
 	}
 
 	VkPipeline Pipeline::Handle() const
@@ -264,7 +261,7 @@ namespace BetterThanNothing::RenderingApi
 		return *this;
 	}
 
-	PipelineParams& PipelineBuilder::GetBuildParams()
+	PipelineCreateInfo& PipelineBuilder::GetBuildParams()
 	{
 		if (!m_hasVertexShader)
 			throw std::runtime_error("Missing vertex shader");

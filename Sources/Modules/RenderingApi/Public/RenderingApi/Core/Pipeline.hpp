@@ -19,17 +19,17 @@
 #pragma once
 
 #include "Module_Base/EShaderType.hpp"
+#include "RenderingApi/Data/VertexInputDescription.hpp"
 
 namespace BetterThanNothing
 {
-	struct VertexInputDescription;
-	struct VulkanContext;
 	struct ShaderGpuData;
 }
 
 namespace BetterThanNothing::RenderingApi
 {
 	class DescriptorSetLayout;
+	class SwapChain;
 
 	struct PipelineShaderInfo
 	{
@@ -37,7 +37,7 @@ namespace BetterThanNothing::RenderingApi
 		EShaderType shaderType;
 	};
 
-	struct PipelineParams
+	struct PipelineCreateInfo
 	{
 		const char*						   path;
 		const char*						   name;
@@ -47,12 +47,17 @@ namespace BetterThanNothing::RenderingApi
 		std::vector<VkFormat> colorAttachmentFormats;
 		VkFormat			  depthAttachmentFormat = VK_FORMAT_UNDEFINED;
 		VkFormat			  stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
+		VertexInputDescription vertexInputDescription;
+
+		Device* device;
+		SwapChain* swapChain;
 	};
 
 	class Pipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit Pipeline(const PipelineParams& params, const VertexInputDescription& vertexInputDescription, const std::vector<const ShaderGpuData*>& shaders, VulkanContext* context);
+		explicit Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders);
 		~Pipeline();
 
 		[[nodiscard]] VkPipeline	   Handle() const;
@@ -61,8 +66,7 @@ namespace BetterThanNothing::RenderingApi
 	private:
 		static VkShaderStageFlagBits GetShaderStageTypeByShaderType(EShaderType type);
 
-		VulkanContext* m_context = nullptr;
-		PipelineParams m_params;
+		PipelineCreateInfo m_params;
 
 		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
 		VkPipeline		 m_pipeline = VK_NULL_HANDLE;
@@ -85,10 +89,10 @@ namespace BetterThanNothing::RenderingApi
 		PipelineBuilder& SetDepthAttachment(VkFormat format);
 		PipelineBuilder& SetStencilAttachment(VkFormat format);
 
-		[[nodiscard]] PipelineParams& GetBuildParams();
+		[[nodiscard]] PipelineCreateInfo& GetBuildParams();
 
 	private:
-		PipelineParams m_params{};
+		PipelineCreateInfo m_params = {};
 
 		bool m_hasVertexShader = false;
 		bool m_hasFragmentShader = false;

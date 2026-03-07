@@ -20,7 +20,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 
 #include "ResourceManager/ResourceManager.hpp"
-
 #include "Module_Data/Graphics/MeshData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingDevice/SamplerDescription.hpp"
@@ -30,7 +29,7 @@
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>
-#include <RenderingApi/Deprecated/VulkanContext.hpp>
+#include <RenderingApi/Core/ShaderModule.hpp>
 #include <filesystem>
 #include <future>
 #include <stb_image.h>
@@ -38,10 +37,9 @@
 
 namespace BetterThanNothing
 {
-	ResourceManager::ResourceManager(VulkanContext* context, RenderingDevice* renderingDevice)
-		: m_context(context), m_renderingDevice(renderingDevice)
+	ResourceManager::ResourceManager(RenderingDevice* renderingDevice) : m_renderingDevice(renderingDevice)
 	{
-		m_shaderLoader = std::make_unique<ShaderLoader>(context);
+		m_shaderLoader = std::make_unique<ShaderLoader>(m_renderingDevice);
 	}
 
 	ResourceManager::~ResourceManager() = default;

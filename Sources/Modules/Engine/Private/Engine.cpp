@@ -26,7 +26,6 @@
 #include "Module_Math/Matrix4.hpp"
 #include "ResourceManager/ResourceManager.hpp"
 
-#include <RenderingApi/Core/Pipeline.hpp>
 #include <Module_Data/Graphics/CameraData.hpp>
 #include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
@@ -38,7 +37,6 @@
 #include <Renderer/Camera.hpp>
 #include <Renderer/RenderList.hpp>
 #include <Renderer/Renderer.hpp>
-#include <RenderingApi/Deprecated/VulkanContext.hpp>
 
 #include "Renderer/RenderMetrics.hpp"
 
@@ -56,10 +54,9 @@ namespace BetterThanNothing
 		InputManager::Initialize();
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
-		m_context = std::make_unique<VulkanContext>();
-		m_resourceManager = std::make_unique<ResourceManager>(m_context.get(), m_renderingDevice.get());
+		m_resourceManager = std::make_unique<ResourceManager>(m_renderingDevice.get());
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
-		m_legacyRenderer = std::make_unique<Renderer>(m_context.get(), m_resourceManager.get(), m_renderingDevice.get());
+		m_renderer = std::make_unique<Renderer>(m_resourceManager.get(), m_renderingDevice.get());
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
 
 		DirectionalLightData directionalLight{};
@@ -114,13 +111,15 @@ namespace BetterThanNothing
 		const RenderContext renderContext(m_renderList.get());
 		m_application->OnRender(&renderContext);
 
+		const float aspectRatio = m_renderingDevice->GetAspectRatio();
+
 		CameraData cameraData{};
 		cameraData.view = m_camera->GetViewMatrix();
-		cameraData.projection = m_camera->GetProjectionMatrix(m_context->swapChain->GetAspectRatio());
+		cameraData.projection = m_camera->GetProjectionMatrix(aspectRatio);
 		cameraData.position = m_camera->GetPosition();
 		cameraData.exposure = 0.5f;
 
-		m_legacyRenderer->RenderFrame(m_renderList.get(), cameraData);
+		m_renderer->RenderFrame(m_renderList.get(), cameraData);
 	}
 
 	void Engine::Run() const

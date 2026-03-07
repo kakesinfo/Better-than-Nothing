@@ -16,6 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "Module_Data/Graphics/GlobalUniformData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 
 #include "RenderingApi/Resources/Buffer.hpp"
@@ -81,6 +82,61 @@ namespace BetterThanNothing
 		request.write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		request.write.descriptorCount = 1;
 		request.write.pImageInfo = &request.imageInfo;
+
+		RequestDescriptorSetUpdate(request);
+
+		return handle;
+	}
+
+	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const DescriptorSetLayoutType layoutType)
+	{
+		const Handle handle = CreateDescriptorSet(layoutType);
+
+		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
+		const RenderingApi::Buffer*		   buffer = GetBuffer(storageBufferHandle);
+
+		DescriptorSetUpdateRequest request{};
+
+		request.bufferInfo = {};
+		request.bufferInfo.buffer = buffer->value;
+		request.bufferInfo.offset = 0;
+		request.bufferInfo.range = size;
+
+		request.write = {};
+		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		request.write.dstSet = descriptor->value;
+		request.write.dstBinding = 0;
+		request.write.dstArrayElement = 0;
+		request.write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		request.write.descriptorCount = 1;
+		request.write.pBufferInfo = &request.bufferInfo;
+
+		RequestDescriptorSetUpdate(request);
+
+		return handle;
+	}
+
+	Handle RenderingDevice::CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const DescriptorSetLayoutType layoutType)
+	{
+		const Handle handle = CreateDescriptorSet(layoutType);
+
+		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
+		const RenderingApi::Buffer*		   buffer = GetBuffer(uniformBufferHandle);
+
+		DescriptorSetUpdateRequest request{};
+
+		request.bufferInfo = {};
+		request.bufferInfo.buffer = buffer->value;
+		request.bufferInfo.offset = 0;
+		request.bufferInfo.range = size;
+
+		request.write = {};
+		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		request.write.dstSet = descriptor->value;
+		request.write.dstBinding = 0;
+		request.write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		request.write.descriptorCount = 1;
+		request.write.pBufferInfo = &request.bufferInfo;
 
 		RequestDescriptorSetUpdate(request);
 

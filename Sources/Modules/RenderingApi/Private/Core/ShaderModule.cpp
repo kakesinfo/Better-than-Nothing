@@ -16,20 +16,25 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "RenderingApi.hpp"
 
-#include "VulkanBuffer.hpp"
-
-namespace BetterThanNothing
+namespace BetterThanNothing::RenderingApi
 {
-	struct VulkanContext;
-
-	/// @deprecated Will be replaced by BufferHandle
-	class VulkanStorageBuffer : public VulkanBuffer
+	ShaderModule::ShaderModule(Device* device, const VkShaderModuleCreateInfo* createInfo)
+		: m_device(device)
 	{
-	public:
-		VulkanStorageBuffer(VulkanContext* context, VkDeviceSize size);
+		if (vkCreateShaderModule(m_device->Handle(), createInfo, nullptr, &m_shaderModule) != VK_SUCCESS)
+			throw std::runtime_error("failed to create shader module!");
+	}
 
-		void* GetMappedData() const;
-	};
+	ShaderModule::~ShaderModule()
+	{
+		if (m_device && m_shaderModule)
+			vkDestroyShaderModule(m_device->Handle(), m_shaderModule, nullptr);
+	}
+
+	VkShaderModule ShaderModule::Handle() const
+	{
+		return m_shaderModule;
+	}
 }

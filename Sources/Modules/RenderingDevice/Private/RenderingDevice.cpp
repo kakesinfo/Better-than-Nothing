@@ -250,9 +250,14 @@ namespace BetterThanNothing
 		return m_swapChain.get();
 	}
 
-	uint32_t RenderingDevice::GetMaxFramesInFlight() const
+	auto RenderingDevice::GetMaxFramesInFlight() const -> uint32_t
 	{
 		return m_maxFramesInFlight;
+	}
+
+	auto RenderingDevice::GetAspectRatio() const -> float
+	{
+		return m_swapChain->GetAspectRatio();
 	}
 
 	RenderingApi::DescriptorPool* RenderingDevice::GetDescriptorPool() const

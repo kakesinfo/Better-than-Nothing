@@ -27,8 +27,8 @@
 
 #include <Module_Base/EBufferingMode.hpp>
 #include <memory>
-#include <unordered_map>
 #include <optional>
+#include <unordered_map>
 
 namespace BetterThanNothing
 {
@@ -80,6 +80,8 @@ namespace BetterThanNothing
 		RenderingApi::Sampler* GetSampler(const Handle& handle);
 
 		Handle				  CreateBuffer(const BufferDescription& desc);
+		Handle				  CreateUniformBuffer(size_t size);
+		Handle				  CreateStorageBuffer(size_t size);
 		Handle				  CreateVertexBuffer(const void* data, size_t size);
 		Handle				  CreateIndexBuffer(const void* data, size_t size);
 		bool				  CopyDataToBuffer(const Handle& dstBufferHandle, const void* data, size_t size);
@@ -101,7 +103,9 @@ namespace BetterThanNothing
 		bool Internal_CreateDescriptorSet(const DescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const;
 
 	public:
-		[[nodiscard]] Handle		 CreateDescriptorSet(DescriptorSetLayoutType type);
+		[[nodiscard]] Handle CreateDescriptorSet(DescriptorSetLayoutType type);
+		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, DescriptorSetLayoutType layoutType);
+		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, DescriptorSetLayoutType layoutType);
 		[[nodiscard]] Handle		 CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void						 FlushDescriptorSetUpdateRequests();
@@ -130,8 +134,9 @@ namespace BetterThanNothing
 		[[nodiscard]] RenderingApi::Allocator* GetAllocator() const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::SwapChain* GetSwapChain() const;
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] uint32_t GetMaxFramesInFlight() const;
+
+		[[nodiscard]] auto GetMaxFramesInFlight() const -> uint32_t;
+		[[nodiscard]] auto GetAspectRatio() const -> float;
 
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::DescriptorPool*		 GetDescriptorPool() const;

@@ -22,7 +22,6 @@
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Data/Graphics/DynamicUniformData.hpp"
 #include "Module_Data/Graphics/GlobalUniformData.hpp"
-#include "Renderer/GlobalUniformProvider.hpp"
 #include "Renderer/RenderList.hpp"
 #include "Renderer/RenderMetrics.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
@@ -42,28 +41,17 @@
 
 namespace BetterThanNothing
 {
-	Renderer::Renderer(VulkanContext* context, ResourceManager* resourceManager, RenderingDevice* renderingDevice)
-		: m_context(context), m_resourceManager(resourceManager), m_renderingDevice(renderingDevice)
+	constexpr uint32_t MAX_LIGHT_COUNT = 1000;
+
+	Renderer::Renderer(ResourceManager* resourceManager, RenderingDevice* renderingDevice)
+		: m_resourceManager(resourceManager), m_renderingDevice(renderingDevice)
 	{
-		m_context->settings.maxFramesInFlight = m_renderingDevice->GetMaxFramesInFlight();
-
-		m_context->instance = m_renderingDevice->GetInstance();
-		m_context->device = m_renderingDevice->GetDevice();
-		m_context->graphicsQueue = m_renderingDevice->GetGraphicsQueue();
-		m_context->allocator = m_renderingDevice->GetAllocator();
-		m_context->swapChain = m_renderingDevice->GetSwapChain();
-
-		m_globalUniformProvider = std::make_unique<GlobalUniformProvider>(m_context);
-
 		m_imGuiPass = std::make_unique<ImGuiPass>(m_renderingDevice);
 
-		m_context->descriptorPool = m_renderingDevice->GetDescriptorPool();
-
-		CreateGlobalDescriptorSets();
-
-		constexpr uint32_t MAX_LIGHT_COUNT = 1000;
-		CreatePointLightBuffers(MAX_LIGHT_COUNT);
-		CreatePointLightDescriptorSets(MAX_LIGHT_COUNT);
+		CreateGlobalUniformBuffers();
+		CreateGlobalUniformDescriptorSets();
+		CreatePointLightBuffers();
+		CreatePointLightDescriptorSets();
 
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Assets/Shaders/");
@@ -82,12 +70,13 @@ namespace BetterThanNothing
 
 	Renderer::~Renderer()
 	{
-
+		if (m_renderingDevice)
+			m_renderingDevice->GetDevice()->WaitIdle();
 	}
 
 	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera) const
 	{
-		if (!m_context->defaultPipeline)
+		if (!m_defaultPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
 
 		const auto imageIndexOpt = m_renderingDevice->BeginFrame();
@@ -106,7 +95,7 @@ namespace BetterThanNothing
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
 		const auto directionalLight = renderList->GetDirectionalLight();
 
-		const auto globalUniform = m_globalUniformProvider->Get<GlobalUniformData>(frameIndex);
+		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
 		globalUniform->view = camera.view;
 		globalUniform->projection = camera.projection;
 		globalUniform->cameraPosition = camera.position;
@@ -134,14 +123,14 @@ namespace BetterThanNothing
 
 			// clang-format off
 			m_drawStream->Draw({
-				.pipeline = m_context->defaultPipeline->Handle(),
-				.pipelineLayout = m_context->defaultPipeline->GetLayout(),
+				.pipeline = m_defaultPipeline->Handle(),
+				.pipelineLayout = m_defaultPipeline->GetLayout(),
 				.vertexBuffer = meshData->vertexBuffer,
 				.indexBuffer = meshData->indexBuffer,
 				.indexCount = meshData->indexCount,
-				.globalDescriptorSet = m_context->vkGlobalDescriptorSets[frameIndex]->Handle(),
+				.globalDescriptorSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value,
 				.samplerDescriptorSet = textureData->descriptorSetHandle,
-				.pointLightDescriptorSet = m_context->vkPointLightDescriptorSets[frameIndex]->Handle(),
+				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
 				.transform = transform,
 				.distanceToCamera = Vector3::Distance(
 					camera.position,
@@ -166,88 +155,75 @@ namespace BetterThanNothing
 		if (count == 0)
 			return;
 
-		void* dstData = m_context->pointLightBuffer[frameIndex]->GetMappedData();
+		const auto handle = m_pointLightBuffer.at(frameIndex);
+		void* dstData =	m_renderingDevice->GetBuffer(handle)->allocInfo.pMappedData;
 		std::memcpy(dstData, renderList->GetPointLights().data(), count * sizeof(PointLightData));
 	}
 
-	void Renderer::CreateGlobalDescriptorSets()
+	auto Renderer::CreateGlobalUniformBuffers() -> void
 	{
-		const auto* globalDescriptorSetLayout = m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms);
+		const uint32_t frameCount = m_renderingDevice->GetMaxFramesInFlight();
 
-		m_context->vkGlobalDescriptorSets.resize(m_context->settings.maxFramesInFlight);
-
-		for (size_t i = 0; i < m_context->settings.maxFramesInFlight; i++)
-		{
-			m_context->vkGlobalDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(globalDescriptorSetLayout, m_context);
-
-			VkDescriptorBufferInfo globalInfo{};
-			globalInfo.buffer = m_context->globalUniformBuffer[i]->Handle();
-			globalInfo.offset = 0;
-			globalInfo.range = sizeof(GlobalUniformData);
-
-			const auto& descriptorSet = m_context->vkGlobalDescriptorSets[i]->Handle();
-
-			VkWriteDescriptorSet descriptorWrite{};
-
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = descriptorSet;
-			descriptorWrite.dstBinding = 0;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = &globalInfo;
-
-			vkUpdateDescriptorSets(m_context->device->Handle(), 1, &descriptorWrite, 0, nullptr);
-		}
-
-		Logger::Log<SUCCESS>("Vulkan global descriptor sets: ok (count: {})", m_context->vkGlobalDescriptorSets.size());
+		m_globalUniformBuffer.resize(frameCount);
+		for (uint32_t i = 0; i < frameCount; i++)
+			m_globalUniformBuffer[i] = m_renderingDevice->CreateUniformBuffer(sizeof(GlobalUniformData));
 	}
 
-	void Renderer::CreatePointLightBuffers(uint32_t maxLights) const
+	void Renderer::CreateGlobalUniformDescriptorSets()
 	{
-		const uint32_t count = m_context->settings.maxFramesInFlight;
-		const uint32_t bufferSize = maxLights * sizeof(PointLightData);
+		const auto frameCount = m_renderingDevice->GetMaxFramesInFlight();
 
-		m_context->pointLightBuffer.resize(count);
+		m_globalDescriptorSets.resize(frameCount);
+		for (size_t i = 0; i < frameCount; i++)
+		{
+			const auto handle = m_globalUniformBuffer.at(i);
+			constexpr auto size = sizeof(GlobalUniformData);
+			constexpr auto layout = DescriptorSetLayoutType::GlobalUniforms;
+
+			m_globalDescriptorSets[i] = m_renderingDevice->CreateUniformBufferDescriptorSet(handle, size, layout);
+		}
+
+		Logger::Log<SUCCESS>("Vulkan global descriptor sets: ok (count: {})", m_globalDescriptorSets.size());
+	}
+
+	auto Renderer::GetGlobalUniformBuffer(const uint32_t frameIndex) const -> GlobalUniformData*
+	{
+		const auto handle = m_globalUniformBuffer.at(frameIndex);
+		const auto data =	m_renderingDevice->GetBuffer(handle)->allocInfo.pMappedData;
+		return static_cast<GlobalUniformData*>(data);
+	}
+
+	void Renderer::CreatePointLightBuffers()
+	{
+		const uint32_t count = m_renderingDevice->GetMaxFramesInFlight();
+		constexpr uint32_t bufferSize = MAX_LIGHT_COUNT * sizeof(PointLightData);
+
+		m_pointLightBuffer.resize(count);
 		for (uint32_t i = 0; i < count; i++)
-			m_context->pointLightBuffer[i] = std::make_unique<VulkanStorageBuffer>(m_context, bufferSize);
+			m_pointLightBuffer[i] = m_renderingDevice->CreateStorageBuffer(bufferSize);
 
 		Logger::Log<SUCCESS>("Point light buffers: ok (count: {})", count);
 	}
 
-	void Renderer::CreatePointLightDescriptorSets(uint32_t maxLights)
+	void Renderer::CreatePointLightDescriptorSets()
 	{
-		const auto* pointLightDescriptorSetLayout = m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights);
+		const auto frameCount = m_renderingDevice->GetMaxFramesInFlight();
 
-		m_context->vkPointLightDescriptorSets.resize(m_context->settings.maxFramesInFlight);
+		m_pointLightDescriptorSets.resize(frameCount);
 
-		const VkDeviceSize lightBufferSize = sizeof(PointLightData) * maxLights;
-
-		for (size_t i = 0; i < m_context->settings.maxFramesInFlight; i++)
+		for (size_t i = 0; i < m_renderingDevice->GetMaxFramesInFlight(); i++)
 		{
-			m_context->vkPointLightDescriptorSets[i] = std::make_unique<VulkanDescriptorSet>(pointLightDescriptorSetLayout, m_context);
+			const auto handle = m_pointLightBuffer.at(i);
+			constexpr auto size = MAX_LIGHT_COUNT * sizeof(PointLightData);
+			constexpr auto layout = DescriptorSetLayoutType::PointLights;
 
-			VkDescriptorBufferInfo dynamicInfo{};
-			dynamicInfo.buffer = m_context->pointLightBuffer[i]->Handle();
-			dynamicInfo.offset = 0;
-			dynamicInfo.range = lightBufferSize;
-
-			const auto& descriptorSet = m_context->vkPointLightDescriptorSets[i]->Handle();
-
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = descriptorSet;
-			descriptorWrite.dstBinding = 0;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = &dynamicInfo;
-
-			vkUpdateDescriptorSets(m_context->device->Handle(), 1, &descriptorWrite, 0, nullptr);
+			m_pointLightDescriptorSets[i] = m_renderingDevice->CreateStorageBufferDescriptorSet(handle, size, layout);
 		}
 
-		Logger::Log<SUCCESS>("Point light descriptor sets: ok (count: {})", m_context->vkPointLightDescriptorSets.size());
+		Logger::Log<SUCCESS>("Point light descriptor sets: ok (count: {})", m_pointLightDescriptorSets.size());
 	}
 
-	void Renderer::ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const
+	void Renderer::ExecuteForwardPass(const uint32_t imageIndex, const DrawStreamView& drawStream) const
 	{
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 
@@ -261,7 +237,7 @@ namespace BetterThanNothing
 			barriers[0].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[0].image = m_context->swapChain->GetImage(imageIndex);
+			barriers[0].image = m_renderingDevice->GetSwapChain()->GetImage(imageIndex);
 			barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			barriers[0].subresourceRange.baseMipLevel = 0;
 			barriers[0].subresourceRange.levelCount = 1;
@@ -275,7 +251,7 @@ namespace BetterThanNothing
 			barriers[1].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[1].image = m_context->swapChain->GetColorImage();
+			barriers[1].image = m_renderingDevice->GetSwapChain()->GetColorImage();
 			barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			barriers[1].subresourceRange.baseMipLevel = 0;
 			barriers[1].subresourceRange.levelCount = 1;
@@ -289,8 +265,8 @@ namespace BetterThanNothing
 			barriers[2].newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 			barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[2].image = m_context->swapChain->GetDepthImage();
-			barriers[2].subresourceRange.aspectMask = m_context->swapChain->GetDepthAspectFlags();
+			barriers[2].image = m_renderingDevice->GetSwapChain()->GetDepthImage();
+			barriers[2].subresourceRange.aspectMask = m_renderingDevice->GetSwapChain()->GetDepthAspectFlags();
 			barriers[2].subresourceRange.baseMipLevel = 0;
 			barriers[2].subresourceRange.levelCount = 1;
 			barriers[2].subresourceRange.baseArrayLayer = 0;
@@ -304,18 +280,18 @@ namespace BetterThanNothing
 
 		VkRenderingAttachmentInfo colorAttachment{};
 		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = m_context->swapChain->GetColorImageView();
+		colorAttachment.imageView = m_renderingDevice->GetSwapChain()->GetColorImageView();
 		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
 		colorAttachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorAttachment.resolveImageView = m_context->swapChain->GetImageView(imageIndex);
+		colorAttachment.resolveImageView = m_renderingDevice->GetSwapChain()->GetImageView(imageIndex);
 		colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkRenderingAttachmentInfo depthAttachment{};
 		depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		depthAttachment.imageView = m_context->swapChain->GetDepthImageView();
+		depthAttachment.imageView = m_renderingDevice->GetSwapChain()->GetDepthImageView();
 		depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -324,7 +300,7 @@ namespace BetterThanNothing
 
 		VkRenderingInfo renderingInfo{};
 		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.renderArea = {{0, 0}, m_context->swapChain->GetExtent()};
+		renderingInfo.renderArea = {{0, 0}, m_renderingDevice->GetSwapChain()->GetExtent()};
 		renderingInfo.layerCount = 1;
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAttachment;
@@ -332,8 +308,8 @@ namespace BetterThanNothing
 
 		commandBuffer->ExecuteRenderPass(
 			[&](RenderingApi::CommandBuffer* cmd) {
-				cmd->SetViewport(0, 0, m_context->swapChain->GetExtent(), 0, 1);
-				cmd->SetScissor(0, 0, m_context->swapChain->GetExtent());
+				cmd->SetViewport(0, 0, m_renderingDevice->GetSwapChain()->GetExtent(), 0, 1);
+				cmd->SetScissor(0, 0, m_renderingDevice->GetSwapChain()->GetExtent());
 
 				VkPipeline lastPipeline = VK_NULL_HANDLE;
 				Handle lastSamplerHandle = {};
@@ -392,7 +368,7 @@ namespace BetterThanNothing
 		RenderingApi::PipelineBuilder builder;
 		callback(&builder);
 
-		RenderingApi::PipelineParams params = builder.GetBuildParams();
+		RenderingApi::PipelineCreateInfo params = builder.GetBuildParams();
 
 		std::vector<const ShaderGpuData*> shaderModules;
 		shaderModules.reserve(params.shadersInfos.size());
@@ -404,11 +380,14 @@ namespace BetterThanNothing
 			shaderModules.push_back(shaderGpuData);
 		}
 
-		VertexInputDescription vertexInputDescription{};
-		vertexInputDescription.bindings = {GetVertexBindingDescription()};
-		vertexInputDescription.attributes = GetVertexAttributeDescriptions();
+		params.vertexInputDescription = {};
+		params.vertexInputDescription.bindings = {GetVertexBindingDescription()};
+		params.vertexInputDescription.attributes = GetVertexAttributeDescriptions();
 
-		m_context->defaultPipeline = std::make_unique<RenderingApi::Pipeline>(params, vertexInputDescription, shaderModules, m_context);
+		params.device = m_renderingDevice->GetDevice();
+		params.swapChain = m_renderingDevice->GetSwapChain();
+
+		m_defaultPipeline = std::make_unique<RenderingApi::Pipeline>(params, shaderModules);
 	}
 
 	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()

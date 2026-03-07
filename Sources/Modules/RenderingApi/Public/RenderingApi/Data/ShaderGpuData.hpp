@@ -19,16 +19,20 @@
 #pragma once
 
 #include "Module_Base/EShaderType.hpp"
-#include "RenderingApi/Deprecated/VulkanShaderModule.hpp"
 #include <memory>
 
 namespace BetterThanNothing
 {
-	class VulkanShaderModule;
+	class ShaderModule;
+
+	namespace RenderingApi
+	{
+		class ShaderModule;
+	}
 
 	struct ShaderGpuData
 	{
-		EShaderType					type{};
-		std::unique_ptr<VulkanShaderModule> shaderModule = VK_NULL_HANDLE;
+		EShaderType									type{};
+		std::unique_ptr<RenderingApi::ShaderModule> shaderModule = VK_NULL_HANDLE;
 	};
 };

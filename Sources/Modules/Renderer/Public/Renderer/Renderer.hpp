@@ -17,9 +17,11 @@
  */
 
 #pragma once
+#include "RenderingDevice/Handle.hpp"
 
 namespace BetterThanNothing
 {
+	struct GlobalUniformData;
 	class Window;
 
 	namespace RenderingApi
@@ -31,36 +33,30 @@ namespace BetterThanNothing
 
 	class RenderList;
 	class RenderCache;
-
-	class GlobalUniformProvider;
 	class Camera;
-
-	struct VulkanContext;
-	struct VulkanFrame;
 	struct CameraData;
 	class DrawStream;
 	struct DirectionalLightData;
 	class ImGuiPass;
-
 	struct DrawStreamView;
-
-	struct DrawStreamView;
-
 	class ResourceManager;
 	class RenderingDevice;
 
 	class Renderer final
 	{
 	public:
-		explicit Renderer(VulkanContext* context, ResourceManager* resourceManager, RenderingDevice* renderingDevice);
+		explicit Renderer(ResourceManager* resourceManager, RenderingDevice* renderingDevice);
 		~Renderer();
 
 		void RenderFrame(const RenderList* renderList, const CameraData& camera) const;
 
 	private:
-		void CreateGlobalDescriptorSets();
-		void CreatePointLightBuffers(uint32_t maxLights) const;
-		void CreatePointLightDescriptorSets(uint32_t maxLights);
+		auto CreateGlobalUniformBuffers() -> void;
+		auto CreateGlobalUniformDescriptorSets() -> void;
+		auto GetGlobalUniformBuffer(uint32_t frameIndex) const -> GlobalUniformData*;
+
+		void CreatePointLightBuffers();
+		void CreatePointLightDescriptorSets();
 
 		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, uint32_t imageIndex) const;
 		void DrawPointLights(const RenderList* renderList, uint32_t frameIndex) const;
@@ -74,11 +70,15 @@ namespace BetterThanNothing
 		void AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback);
 
 	private:
-		VulkanContext*						   m_context = nullptr;
-		ResourceManager*					   m_resourceManager = nullptr;
-		RenderingDevice*					   m_renderingDevice = nullptr;
-		std::unique_ptr<GlobalUniformProvider> m_globalUniformProvider = nullptr;
-		std::unique_ptr<DrawStream>			   m_drawStream;
-		std::unique_ptr<ImGuiPass>			   m_imGuiPass;
+		ResourceManager*			m_resourceManager = nullptr;
+		RenderingDevice*			m_renderingDevice = nullptr;
+		std::unique_ptr<DrawStream> m_drawStream;
+		std::unique_ptr<ImGuiPass>	m_imGuiPass;
+
+		std::unique_ptr<RenderingApi::Pipeline> m_defaultPipeline;
+		std::vector<Handle>						m_globalUniformBuffer;
+		std::vector<Handle>						m_globalDescriptorSets;
+		std::vector<Handle>						m_pointLightBuffer;
+		std::vector<Handle>						m_pointLightDescriptorSets;
 	};
 }
