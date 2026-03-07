@@ -39,6 +39,11 @@ namespace BetterThanNothing::RenderingApi
 		explicit CommandBuffer(const CommandBufferCreateInfo& createInfo);
 		~CommandBuffer();
 
+		CommandBuffer(const CommandBuffer&) = delete;
+		CommandBuffer& operator=(const CommandBuffer&) = delete;
+		CommandBuffer(CommandBuffer&& other) = delete;
+		CommandBuffer& operator=(CommandBuffer&& other) = delete;
+
 		[[nodiscard]] static std::unique_ptr<CommandBuffer> Create(const CommandBufferCreateInfo& createInfo);
 
 		void BeginRecording(VkCommandBufferUsageFlags flags = 0);
@@ -64,9 +69,9 @@ namespace BetterThanNothing::RenderingApi
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
 
-		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t bufferSize);
+		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t bufferSize, uint64_t offset);
 		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
-		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t offset);
 		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers, uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const;
 		void BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter);
 		void PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values);

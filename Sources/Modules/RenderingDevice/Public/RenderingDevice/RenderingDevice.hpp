@@ -54,7 +54,7 @@ namespace BetterThanNothing
 		class Fence;
 	}
 
-	class SamplerRegistry;
+	class StagingBuffer;
 	struct BufferDescription;
 	struct TextureFromDataDescription;
 
@@ -89,7 +89,7 @@ namespace BetterThanNothing
 	private:
 		bool Internal_CreateTextureImage(const TextureImageDescription& desc);
 		bool Internal_CreateTextureImageView(const TextureImageViewDescription& desc);
-		bool Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc);
+		void Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc);
 		bool Internal_CreateTextureMipmaps(const Handle& destination);
 
 	public:
@@ -152,6 +152,8 @@ namespace BetterThanNothing
 		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> m_commandBuffers;
 		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  m_imageAvailableSemaphores;
 		std::vector<std::unique_ptr<RenderingApi::Fence>>		  m_inFlightFences;
+
+		std::unique_ptr<StagingBuffer> m_stagingBuffer;
 
 		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_descriptorLayouts;
 

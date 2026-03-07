@@ -21,8 +21,8 @@
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice/Handle.hpp"
+#include "RenderingDevice/StagingBuffer.hpp"
 
-#include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
@@ -94,7 +94,7 @@ namespace BetterThanNothing
 		return true;
 	}
 
-	bool RenderingDevice::Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc)
+	void RenderingDevice::Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc)
 	{
 		const RenderingApi::Texture* texture = m_textures.Get(desc.destination);
 
@@ -102,23 +102,12 @@ namespace BetterThanNothing
 		bufferInfo.size = desc.dataSize;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-		allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-		RenderingApi::Buffer stagingBuffer; // TODO: replace this with a persistent 64MB shared buffer
-		if (m_allocator->CreateBuffer(&bufferInfo, &allocInfo, &stagingBuffer.value, &stagingBuffer.allocation, &stagingBuffer.allocInfo) != VK_SUCCESS)
-			return false;
-
-		if (!stagingBuffer.allocInfo.pMappedData)
-			return false;
-
-		memcpy(stagingBuffer.allocInfo.pMappedData, desc.data, desc.dataSize);
+		const uint64_t offset = m_stagingBuffer->Stage(desc.data, desc.dataSize);
 
 		RenderingApi::CommandBuffer::SingleTimeCommands(
 			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
 				commandBuffer->TransitionImageLayout(texture->value, desc.format, desc.oldLayout, desc.newLayout, texture->mipLevels);
-				commandBuffer->CopyBufferToImage(stagingBuffer.value, texture->value, texture->width, texture->height);
+				commandBuffer->CopyBufferToImage(m_stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, offset);
 
 				// Transition to TRANSFER_DST_OPTIMAL is done in mipmap generation _createMipmaps
 				// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB,
@@ -127,9 +116,7 @@ namespace BetterThanNothing
 			m_device.get(), m_commandPool.get(), m_graphicsQueue.get()
 		);
 
-		m_allocator->DestroyBuffer(stagingBuffer.value, stagingBuffer.allocation);
-
-		return true;
+		m_stagingBuffer->Reset();
 	}
 
 	bool RenderingDevice::Internal_CreateTextureMipmaps(const Handle& destination)
@@ -231,8 +218,7 @@ namespace BetterThanNothing
 		copyDesc.format = imageDesc.format;
 		copyDesc.oldLayout = imageDesc.initialLayout;
 
-		if (!Internal_CopyDataToTextureImage(copyDesc))
-			throw std::runtime_error("Cannot copy data to texture image using staging buffer");
+		Internal_CopyDataToTextureImage(copyDesc);
 
 		if (!Internal_CreateTextureMipmaps(handle))
 			throw std::runtime_error("Cannot create texture mip maps");

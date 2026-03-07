@@ -21,6 +21,8 @@
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingDevice/BufferDescription.hpp"
 #include "RenderingDevice/Handle.hpp"
+#include "RenderingDevice/StagingBuffer.hpp"
+
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <RenderingApi.hpp>
@@ -124,29 +126,17 @@ namespace BetterThanNothing
 		bufferInfo.size = size;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-		allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-		RenderingApi::Buffer stagingBuffer; // TODO: replace this with a persistent 128B shared buffer
-
-		if (m_allocator->CreateBuffer(&bufferInfo, &allocInfo, &stagingBuffer.value, &stagingBuffer.allocation, &stagingBuffer.allocInfo) != VK_SUCCESS)
-			return false;
-
-		if (!stagingBuffer.allocInfo.pMappedData)
-			return false;
-
-		memcpy(stagingBuffer.allocInfo.pMappedData, data, size);
+		const uint64_t offset = m_stagingBuffer->Stage(data, size);
 
 		RenderingApi::CommandBuffer::SingleTimeCommands(
 			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& cmd) {
 				const VkBuffer dstBuffer = m_buffers.Get(dstBufferHandle)->value;
-				cmd->CopyBuffer(stagingBuffer.value, dstBuffer, size);
+				cmd->CopyBuffer(m_stagingBuffer->GetBuffer(), dstBuffer, size, offset);
 			},
 			m_device.get(), m_commandPool.get(), m_graphicsQueue.get()
 		);
 
-		m_allocator->DestroyBuffer(stagingBuffer.value, stagingBuffer.allocation);
+		m_stagingBuffer->Reset();
 
 		return true;
 	}
