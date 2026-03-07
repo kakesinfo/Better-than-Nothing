@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.0] - 2026-03-07
+- 📝 Updated README and CHANGELOG for v0.4.0
+- 🎨 Removed all legacy Vulkan-prefixed classes and VulkanContext
+- ⚡ Introducing a permanent 128MB Staging Buffer
+- ⚡ Compressed sponza and modular-ruins assets
+- 🎨 Removed Forward Renderpass and RenderGraph abstraction
+- ⚡ Improved DrawStream sorting method
+- 🚚 Moved frame logic to RenderingDevice
+- 🚚 Moved CommandBuffers, Semaphores and Fences to RenderingDevice
+- 🚚 Moved VertexInputDescription
+- 🎨 Splitted RenderingDevice.cpp in multiple files
+- ♻️ Removed all Registry classes to put the logic inside RenderingDevice
+- 🔥 Removed TextureLoader from ResourceManager
+- ♻️ Handles are now 64-bits, template-less and contain the handle type
+- ✨ Introducing DescriptorSet Registry
+- ✨ Implemented Vector4
+- ✨ Introducing TextureRegistry
+- ⚡ Inline code in Math module
+- 🐛 Fixed sync code in render passes
+- 📄 Updated 2025 to 2026 in the copyright headers
+- 🔥 Removed VulkanFrame struct
+- 📝 Updated README file
+- ⚡ Using BufferRegistry in ResourceManager to load meshes
+- ✨ Introducing the BufferRegistry to create and destroy Buffers
+- ✨ Introducing the SamplerRegistry to create, destroy and cache samplers
+- ⚡ Moved imageFinished semaphore and AcquireNextImage to SwapChain
+- ⚡ Reworked DrawStream with sort keys and iterator
+- ✨ Introducing all-new DescriptorSetLayout implementation
+- ✨ Added a RenderingApi namespace
+- ✨ Added some structs to Resources folder and moved vulkan impl to new Core folder
+- 🐛 Fixed a Semaphore/Queue syncing error caused by triple buffering
+- ✨ Introducing a Push Constant for the Dynamic Uniforms
+- ✨ Add RenderingDevice class
+- 🎨 Cleaned PCH includes and cstdint use cases
+- 🗑️ Deprecated all "Vulkan"-prefixed classes in RenderingApi
+- 🔥 Removed BufferManager
+- ⬆️ Upgraded VMA to 3.3.0 for Vulkan 1.4 compatibility
+- 🏗️ Add a new module RenderingDevice
+- ♻️ Refactor CommandBuffer without VulkanContext
+- ♻️ Refactor DescriptorPool without VulkanContext
+- 🚚 Renamed some variables that were prefixed vk
+- ♻️ Refactor Fence and Semaphore without VulkanContext
+- ♻️ Refactor SwapChain without VulkanContext
+- ♻️ Refactor CommandPool without VulkanContext
+- ♻️ Refactor Allocator without VulkanContext
+- ♻️ Refactor Device and Queue without VulkanContext
+- 🔨 Added CONFIGURE_DEPENDS to all CMakeLists.txt
+- 🐛 Fixed an error in CMake when GTest is not found
+- ♻️ Refactor Surface without VulkanContext
+- ♻️ Refactor Instance without VulkanContext
+- 🚚 Renamed LegacyRenderer.cpp to Renderer.cpp
+- ⚡ Fixed buffering mode and V-Sync
+- 🚚 Rename LegacyRenderer to Renderer
+- 🚚 Remove "Vulkan" prefixes from RenderingApi vulkan implementations
+- 🚚 Rename LegacyVulkan to RenderingAPI
+
 ## [v0.3.4] - 2025-12-30
 - ✨ Added point lights, tone mapping and gamma correction
 - 🔥 Migrated from Github to on-premises Gitlab
