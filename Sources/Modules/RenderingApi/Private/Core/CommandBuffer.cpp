@@ -136,10 +136,11 @@ namespace BetterThanNothing::RenderingApi
 		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
-	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t bufferSize)
+	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, const uint32_t bufferSize, const uint64_t offset = 0)
 	{
 		VkBufferCopy copyRegion{};
 		copyRegion.size = bufferSize;
+		copyRegion.srcOffset = offset;
 
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 	}
@@ -206,10 +207,10 @@ namespace BetterThanNothing::RenderingApi
 		vkCmdPipelineBarrier(m_commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, const uint32_t width, const uint32_t height, const uint32_t offset = 0)
 	{
 		VkBufferImageCopy region{};
-		region.bufferOffset = 0;
+		region.bufferOffset = offset;
 		region.bufferRowLength = 0;
 		region.bufferImageHeight = 0;
 

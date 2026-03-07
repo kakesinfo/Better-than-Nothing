@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice/StagingBuffer.hpp"
 
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
@@ -73,6 +74,8 @@ namespace BetterThanNothing
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+		m_stagingBuffer = StagingBuffer::Create(m_allocator.get(), 128);
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();
