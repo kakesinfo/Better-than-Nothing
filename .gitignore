@@ -40,6 +40,7 @@ cmake-build-release/
 .idea/
 .cache/
 .vscode/
+.assets/
 
 # Imgui cache
 imgui.ini

@@ -14,6 +14,8 @@ build-image:
         - docker build -t $CI_REGISTRY_IMAGE/btn-ubuntu:latest -f Scripts/Dockerfile .
         - docker push $CI_REGISTRY_IMAGE/btn-ubuntu:latest
     rules:
+        - if: $CI_PIPELINE_SOURCE == "web"
+          when: always
         - changes:
               - Scripts/Dockerfile
               - Scripts/setup-linux.sh

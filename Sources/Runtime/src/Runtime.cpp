@@ -74,8 +74,8 @@ namespace BetterThanNothing
 
 	void Runtime::OnRender(const RenderContext* ctx)
 	{
-		ctx->SubmitModel("../../../Assets/Models/sponza/sponza.obj", m_transform[0], true);
-		ctx->SubmitModel("../../../Assets/Models/robot/robot.obj", m_transform[1]);
+		ctx->SubmitModel("../../../.assets/Models/sponza/sponza.obj", m_transform[0], true);
+		ctx->SubmitModel("../../../.assets/Models/robot/robot.obj", m_transform[1]);
 	}
 
 	void Runtime::OnDisable() {}

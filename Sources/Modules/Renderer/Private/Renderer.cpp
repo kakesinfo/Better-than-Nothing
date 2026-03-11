@@ -54,7 +54,7 @@ namespace BetterThanNothing
 		CreatePointLightDescriptorSets();
 
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
-			builder->SetPath("../../../Assets/Shaders/");
+			builder->SetPath("../../../Shaders/");
 			builder->SetName("main");
 			builder->AddVertexShader("main/main.vert");
 			builder->AddFragmentShader("main/main.frag");
