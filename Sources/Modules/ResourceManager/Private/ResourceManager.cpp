@@ -235,7 +235,7 @@ namespace BetterThanNothing
 	{
 		std::string texturePath = path;
 		if (texturePath.empty())
-			texturePath = "../../../.assets/Textures/default_texture.png";
+			texturePath = "../../../.assets/default_texture.png";
 
 		if (const auto it = m_texturesLUT.find(texturePath); it != m_texturesLUT.end())
 			return it->second;
