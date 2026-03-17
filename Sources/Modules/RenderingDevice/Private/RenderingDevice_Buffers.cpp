@@ -21,7 +21,7 @@
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingDevice/BufferDescription.hpp"
 #include "RenderingDevice/Handle.hpp"
-#include "RenderingDevice/StagingBuffer.hpp"
+#include "StagingBuffer.hpp"
 
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>

@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingDevice/StagingBuffer.hpp"
+#include "StagingBuffer.hpp"
 
 #include "Module_Base/Logger.hpp"
 #include "RenderingApi/Core/Allocator.hpp"

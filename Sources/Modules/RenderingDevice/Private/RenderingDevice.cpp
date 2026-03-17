@@ -17,7 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
-#include "RenderingDevice/StagingBuffer.hpp"
+#include "StagingBuffer.hpp"
 
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"

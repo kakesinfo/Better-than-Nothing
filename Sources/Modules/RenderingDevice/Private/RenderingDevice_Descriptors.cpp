@@ -19,11 +19,11 @@
 #include "Module_Data/Graphics/GlobalUniformData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 
+#include "../Public/RenderingDevice/DescriptorSetUpdateRequest.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
-#include "RenderingDevice/DescriptorSetUpdateRequest.hpp"
 #include "RenderingDevice/Handle.hpp"
 
 #include <Module_Base/Logger.hpp>
