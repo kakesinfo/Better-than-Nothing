@@ -24,6 +24,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/glm.hpp>
+#include <glm/gtx/norm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -105,6 +106,7 @@ namespace BetterThanNothing
 
 		static float   Dot(const Vector3& a, const Vector3& b) { return glm::dot(a.m_data, b.m_data); }
 		static float   Distance(const Vector3& a, const Vector3& b) { return glm::distance(a.m_data, b.m_data); }
+		static float   Distance2(const Vector3& a, const Vector3& b) { return glm::distance2(a.m_data, b.m_data); }
 		static Vector3 Lerp(const Vector3& a, const Vector3& b, float t) { return Vector3(glm::mix(a.m_data, b.m_data, t)); }
 		static Vector3 Max(const Vector3& a, const Vector3& b) { return Vector3(glm::max(a.m_data, b.m_data)); }
 		static Vector3 Min(const Vector3& a, const Vector3& b) { return Vector3(glm::min(a.m_data, b.m_data)); }

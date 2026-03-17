@@ -84,9 +84,11 @@ namespace BetterThanNothing
 		Handle				  CreateStorageBuffer(size_t size);
 		Handle				  CreateVertexBuffer(const void* data, size_t size);
 		Handle				  CreateIndexBuffer(const void* data, size_t size);
+		bool				  StageDataToBuffer(const Handle& dstBufferHandle, const void* data, size_t size);
 		bool				  CopyDataToBuffer(const Handle& dstBufferHandle, const void* data, size_t size);
 		void				  DestroyBuffer(const Handle& handle);
 		RenderingApi::Buffer* GetBuffer(const Handle& handle);
+		void*				  GetBufferData(const Handle& handle);
 
 	private:
 		bool Internal_CreateTextureImage(const TextureImageDescription& desc);

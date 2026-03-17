@@ -34,6 +34,6 @@ namespace BetterThanNothing
 
 		alignas(16) Vector3 cameraPosition;
 		float cameraExposure;
-		int pointLightCount;
+		uint32_t pointLightCount;
 	};
 }

@@ -19,6 +19,9 @@
 #include "Runtime.hpp"
 
 #include "Module_Base/Logger.hpp"
+#include "Scene/Scene.hpp"
+#include "Scene/SceneObject.hpp"
+
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Engine/EntryPoint.hpp>
@@ -68,8 +71,6 @@ namespace BetterThanNothing
 			deltaPos -= Vector3::Up * moveSpeed;
 
 		ctx->MoveCamera(deltaPos);
-
-		m_transform[1] = m_transform[1].Rotate(20.0f * deltaTime, Vector3::Up);
 	}
 
 	void Runtime::OnRender(const RenderContext* ctx)

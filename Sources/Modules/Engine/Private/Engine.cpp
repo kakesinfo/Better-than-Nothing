@@ -34,11 +34,12 @@
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-#include <Renderer/Camera.hpp>
 #include <Renderer/RenderList.hpp>
 #include <Renderer/Renderer.hpp>
 
 #include "Renderer/RenderMetrics.hpp"
+#include "Scene/Camera.hpp"
+#include "Scene/Scene.hpp"
 
 #include <chrono>
 #include <format>
@@ -54,9 +55,14 @@ namespace BetterThanNothing
 		InputManager::Initialize();
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
-		m_resourceManager = std::make_unique<ResourceManager>(m_renderingDevice.get());
+		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
+		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get());
+
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
-		m_renderer = std::make_unique<Renderer>(m_resourceManager.get(), m_renderingDevice.get());
+
+		m_defaultScene = Scene::Create(1000);
+		m_defaultScene->InitCamera(45.0f, 0.1f, 1000.0f);
+
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
 
 		DirectionalLightData directionalLight{};
@@ -64,6 +70,7 @@ namespace BetterThanNothing
 		directionalLight.color = Vector3(1.0f, 0.95f, 0.8f);
 		directionalLight.intensity = 5.0f;
 
+		m_defaultScene->SetDirectionalLight(directionalLight);
 		m_renderList->SetDirectionalLight(directionalLight);
 
 		float kConstant = 1.0f;
@@ -94,6 +101,10 @@ namespace BetterThanNothing
 		blueLight.linear = kLinear;
 		blueLight.quadratic = kQuadratic;
 		blueLight.intensity = kIntensity;
+
+		m_defaultScene->AddPointLight(redLight);
+		m_defaultScene->AddPointLight(greenLight);
+		m_defaultScene->AddPointLight(blueLight);
 
 		m_renderList->AddPointLight(redLight);
 		m_renderList->AddPointLight(greenLight);

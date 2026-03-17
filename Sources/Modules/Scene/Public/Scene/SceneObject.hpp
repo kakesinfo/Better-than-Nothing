@@ -18,25 +18,19 @@
 
 #pragma once
 
+#include <optional>
 #include "Module_Math/Matrix4.hpp"
+#include "ResourceManager/ResourceId.hpp"
 
 namespace BetterThanNothing
 {
-	enum class ComponentType
+	struct SceneObject
 	{
-		Transform = 0,
-		MAX_COMPONENTS
+		uint64_t id{};
+		Matrix4	 localMatrix{};
+		Matrix4	 globalMatrix{};
+
+		std::optional<ResourceId> meshId;
+		std::optional<ResourceId> textureId;
 	};
-
-	struct Component
-	{};
-
-	struct TransformComponent : Component
-	{
-		Matrix4	   localMatrix{};
-		Matrix4	   worldMatrix{};
-		bool	   dirty = false;
-	};
-
-	using ComponentArray = std::array<Component, static_cast<uint32_t>(ComponentType::MAX_COMPONENTS)>;
 }

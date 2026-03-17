@@ -39,12 +39,16 @@
 #include <cstring>
 #include <optional>
 
+#include "Scene/Camera.hpp"
+#include "Scene/Scene.hpp"
+#include "Scene/SceneObject.hpp"
+
 namespace BetterThanNothing
 {
 	constexpr uint32_t MAX_LIGHT_COUNT = 1000;
 
-	Renderer::Renderer(ResourceManager* resourceManager, RenderingDevice* renderingDevice)
-		: m_resourceManager(resourceManager), m_renderingDevice(renderingDevice)
+	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager)
+		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager)
 	{
 		m_imGuiPass = std::make_unique<ImGuiPass>(m_renderingDevice);
 
@@ -72,6 +76,11 @@ namespace BetterThanNothing
 	{
 		if (m_renderingDevice)
 			m_renderingDevice->GetDevice()->WaitIdle();
+	}
+
+	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager)
+	{
+		return std::make_unique<Renderer>(renderingDevice, resourceManager);
 	}
 
 	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera) const
@@ -121,6 +130,11 @@ namespace BetterThanNothing
 			if (!meshData || !textureData)
 				continue;
 
+			const float distance = Vector3::Distance2(
+				camera.position,
+				Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2])
+			);
+
 			// clang-format off
 			m_drawStream->Draw({
 				.pipeline = m_defaultPipeline->Handle(),
@@ -132,10 +146,7 @@ namespace BetterThanNothing
 				.samplerDescriptorSet = textureData->descriptorSetHandle,
 				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
 				.transform = transform,
-				.distanceToCamera = Vector3::Distance(
-					camera.position,
-					Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2])
-				)
+				.distanceToCamera = distance
 			});
 			// clang-format on
 
@@ -156,8 +167,100 @@ namespace BetterThanNothing
 			return;
 
 		const auto handle = m_pointLightBuffer.at(frameIndex);
-		void* dstData =	m_renderingDevice->GetBuffer(handle)->allocInfo.pMappedData;
-		std::memcpy(dstData, renderList->GetPointLights().data(), count * sizeof(PointLightData));
+		m_renderingDevice->CopyDataToBuffer(handle, renderList->GetPointLights().data(), count * sizeof(PointLightData));
+	}
+
+	void Renderer::RenderFrame_Scene(const Scene* scene) const
+	{
+		if (!m_defaultPipeline)
+			throw std::runtime_error("No pipeline set for rendering!");
+
+		const auto imageIndexOpt = m_renderingDevice->BeginFrame();
+		if (!imageIndexOpt)
+			return;
+
+		const uint32_t imageIndex = imageIndexOpt.value();
+
+		RecordCommandBuffer_Scene(scene, imageIndex);
+
+		m_renderingDevice->EndFrame(imageIndex);
+	}
+
+	void Renderer::RecordCommandBuffer_Scene(const Scene* scene, const uint32_t imageIndex) const
+	{
+		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
+		const float aspectRatio = m_renderingDevice->GetAspectRatio();
+
+		const auto& directionalLight = scene->GetDirectionalLight();
+		const auto& camera = scene->GetCamera();
+
+		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
+		globalUniform->view = camera->GetViewMatrix();
+		globalUniform->projection = camera->GetProjectionMatrix(aspectRatio);
+		globalUniform->cameraPosition = camera->GetPosition();
+		globalUniform->cameraExposure = 0.5f;
+		globalUniform->lightDirection = directionalLight.revDirection;
+		globalUniform->lightColor = directionalLight.color;
+		globalUniform->lightIntensity = directionalLight.intensity;
+		globalUniform->pointLightCount = scene->GetPointLightCount();
+
+		DrawPointLights_Scene(scene, frameIndex);
+
+		RenderMetrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
+
+		m_drawStream->Reset(scene->GetObjectsCount());
+
+		for (const auto& sceneObject : scene->GetObjects())
+		{
+			if (!sceneObject.meshId || !sceneObject.textureId)
+				continue;
+
+			const auto meshData = m_resourceManager->GetMeshData(sceneObject.meshId.value());
+			const auto textureData = m_resourceManager->GetTextureData(sceneObject.textureId.value());
+
+			if (!meshData || !textureData)
+				continue;
+
+			const auto transform = sceneObject.localMatrix;
+
+			const float distance = Vector3::Distance2(
+				camera->GetPosition(),
+				Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2])
+			);
+
+			// clang-format off
+			m_drawStream->Draw({
+				.pipeline = m_defaultPipeline->Handle(),
+				.pipelineLayout = m_defaultPipeline->GetLayout(),
+				.vertexBuffer = meshData->vertexBuffer,
+				.indexBuffer = meshData->indexBuffer,
+				.indexCount = meshData->indexCount,
+				.globalDescriptorSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value,
+				.samplerDescriptorSet = textureData->descriptorSetHandle,
+				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
+				.transform = transform,
+				.distanceToCamera = distance
+			});
+			// clang-format on
+
+			RenderMetrics::AddDrawCall(meshData->vertexCount);
+		}
+
+		const auto drawStream = m_drawStream->Build();
+
+		ExecuteForwardPass(imageIndex, drawStream);
+		m_imGuiPass->Execute(imageIndex);
+	}
+
+	void Renderer::DrawPointLights_Scene(const Scene* scene, const uint32_t frameIndex) const
+	{
+		const uint32_t count = scene->GetPointLightCount();
+
+		if (count == 0)
+			return;
+
+		const auto handle = m_pointLightBuffer.at(frameIndex);
+		m_renderingDevice->CopyDataToBuffer(handle, scene->GetPointLights().data(), count * sizeof(PointLightData));
 	}
 
 	auto Renderer::CreateGlobalUniformBuffers() -> void
@@ -189,8 +292,7 @@ namespace BetterThanNothing
 	auto Renderer::GetGlobalUniformBuffer(const uint32_t frameIndex) const -> GlobalUniformData*
 	{
 		const auto handle = m_globalUniformBuffer.at(frameIndex);
-		const auto data =	m_renderingDevice->GetBuffer(handle)->allocInfo.pMappedData;
-		return static_cast<GlobalUniformData*>(data);
+		return static_cast<GlobalUniformData*>(m_renderingDevice->GetBufferData(handle));
 	}
 
 	void Renderer::CreatePointLightBuffers()

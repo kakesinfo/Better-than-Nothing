@@ -16,6 +16,7 @@ target_link_libraries(${PROJECT_NAME}
 		Module_Base
 		Module_Math
 		Module_Data
+        Module_Scene
 		Module_Engine
         Module_ResourceManager
 )

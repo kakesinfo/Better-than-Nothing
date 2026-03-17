@@ -27,6 +27,7 @@
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
+#include <cstring>
 
 namespace BetterThanNothing
 {
@@ -118,7 +119,7 @@ namespace BetterThanNothing
 
 		const Handle handle = CreateBuffer(desc);
 
-		if (!CopyDataToBuffer(handle, data, size))
+		if (!StageDataToBuffer(handle, data, size))
 			throw std::runtime_error("Failed to copy data to buffer!");
 
 		return handle;
@@ -133,10 +134,31 @@ namespace BetterThanNothing
 
 		const Handle handle = CreateBuffer(desc);
 
-		if (!CopyDataToBuffer(handle, data, size))
+		if (!StageDataToBuffer(handle, data, size))
 			throw std::runtime_error("Failed to copy data to buffer!");
 
 		return handle;
+	}
+
+	bool RenderingDevice::StageDataToBuffer(const Handle& dstBufferHandle, const void* data, const size_t size)
+	{
+		if (data == nullptr || size == 0)
+			return false;
+
+		const uint64_t offset = m_stagingBuffer->Stage(data, size);
+
+		// clang-format off
+		RenderingApi::CommandBuffer::SingleTimeCommands([&](const std::unique_ptr<RenderingApi::CommandBuffer>& cmd) {
+			const auto srcBuffer = m_stagingBuffer->GetBuffer();
+			const auto dstBuffer = m_buffers.Get(dstBufferHandle)->value;
+
+			cmd->CopyBuffer(srcBuffer, dstBuffer, size, offset);
+		}, m_device.get(), m_commandPool.get(), m_graphicsQueue.get());
+		// clang-format on
+
+		m_stagingBuffer->Reset();
+
+		return true;
 	}
 
 	bool RenderingDevice::CopyDataToBuffer(const Handle& dstBufferHandle, const void* data, const size_t size)
@@ -144,21 +166,8 @@ namespace BetterThanNothing
 		if (data == nullptr || size == 0)
 			return false;
 
-		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-		bufferInfo.size = size;
-		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-		const uint64_t offset = m_stagingBuffer->Stage(data, size);
-
-		RenderingApi::CommandBuffer::SingleTimeCommands(
-			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& cmd) {
-				const VkBuffer dstBuffer = m_buffers.Get(dstBufferHandle)->value;
-				cmd->CopyBuffer(m_stagingBuffer->GetBuffer(), dstBuffer, size, offset);
-			},
-			m_device.get(), m_commandPool.get(), m_graphicsQueue.get()
-		);
-
-		m_stagingBuffer->Reset();
+		void* dst = m_buffers.Get(dstBufferHandle)->allocInfo.pMappedData;
+		std::memcpy(dst, data, size);
 
 		return true;
 	}
@@ -178,5 +187,13 @@ namespace BetterThanNothing
 		if (!m_buffers.Has(handle))
 			throw std::runtime_error("Invalid buffer handle!");
 		return m_buffers.Get(handle);
+	}
+
+	void* RenderingDevice::GetBufferData(const Handle& handle)
+	{
+		if (!m_buffers.Has(handle))
+			throw std::runtime_error("Invalid buffer handle!");
+
+		return m_buffers.Get(handle)->allocInfo.pMappedData;
 	}
 }

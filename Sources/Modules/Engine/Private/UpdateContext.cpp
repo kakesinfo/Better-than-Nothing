@@ -18,9 +18,9 @@
 
 #include "Module_Engine/UpdateContext.hpp"
 
+#include <../../Scene/Public/Scene/Camera.hpp>
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
-#include <Renderer/Camera.hpp>
 #include <Module_Math/Vector2.hpp>
 #include <Module_Math/Vector3.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>

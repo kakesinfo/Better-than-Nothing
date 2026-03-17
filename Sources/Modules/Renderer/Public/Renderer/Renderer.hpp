@@ -17,6 +17,7 @@
  */
 
 #pragma once
+
 #include "RenderingDevice/Handle.hpp"
 
 namespace BetterThanNothing
@@ -41,14 +42,18 @@ namespace BetterThanNothing
 	struct DrawStreamView;
 	class ResourceManager;
 	class RenderingDevice;
+	class Scene;
 
 	class Renderer final
 	{
 	public:
-		explicit Renderer(ResourceManager* resourceManager, RenderingDevice* renderingDevice);
+		explicit Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager);
 		~Renderer();
 
+		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager);
+
 		void RenderFrame(const RenderList* renderList, const CameraData& camera) const;
+		void RenderFrame_Scene(const Scene* renderList) const;
 
 	private:
 		auto CreateGlobalUniformBuffers() -> void;
@@ -61,6 +66,9 @@ namespace BetterThanNothing
 		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, uint32_t imageIndex) const;
 		void DrawPointLights(const RenderList* renderList, uint32_t frameIndex) const;
 
+		void RecordCommandBuffer_Scene(const Scene* scene, uint32_t imageIndex) const;
+		void DrawPointLights_Scene(const Scene* scene, uint32_t frameIndex) const;
+
 		void ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const;
 
 		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
@@ -70,8 +78,8 @@ namespace BetterThanNothing
 		void AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback);
 
 	private:
-		ResourceManager*			m_resourceManager = nullptr;
 		RenderingDevice*			m_renderingDevice = nullptr;
+		ResourceManager*			m_resourceManager = nullptr;
 		std::unique_ptr<DrawStream> m_drawStream;
 		std::unique_ptr<ImGuiPass>	m_imGuiPass;
 

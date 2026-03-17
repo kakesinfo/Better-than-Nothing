@@ -44,6 +44,11 @@ namespace BetterThanNothing
 
 	ResourceManager::~ResourceManager() = default;
 
+	std::unique_ptr<ResourceManager> ResourceManager::Create(RenderingDevice* renderingDevice)
+	{
+		return std::make_unique<ResourceManager>(renderingDevice);
+	}
+
 	ResourceId ResourceManager::GenerateUniqueResourceId()
 	{
 		static ResourceId lastResourceId = 0;

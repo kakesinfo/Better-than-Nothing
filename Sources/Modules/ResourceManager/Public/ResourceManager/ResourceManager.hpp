@@ -54,6 +54,8 @@ namespace BetterThanNothing
 		explicit ResourceManager(RenderingDevice* renderingDevice);
 		~ResourceManager();
 
+		static std::unique_ptr<ResourceManager> Create(RenderingDevice* renderingDevice);
+
 	private:
 		ResourceId GenerateUniqueResourceId();
 
