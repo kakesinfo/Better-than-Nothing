@@ -44,16 +44,13 @@ namespace BetterThanNothing
 		class SwapChain;
 		class CommandPool;
 		class Pipeline;
+		class CommandBuffer;
 		class DescriptorPool;
 		class DescriptorSetLayout;
-		struct DescriptorSetLayoutCreateInfo;
-		struct Sampler;
 		struct Buffer;
+		struct Sampler;
 		struct Texture;
 		struct DescriptorSet;
-		class CommandBuffer;
-		class Semaphore;
-		class Fence;
 	}
 
 	class StagingBuffer;

@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma
+#pragma once
 
 #include <vulkan/vulkan.h>
 

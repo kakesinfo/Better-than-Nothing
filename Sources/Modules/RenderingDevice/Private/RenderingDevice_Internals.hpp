@@ -19,6 +19,16 @@
 #pragma once
 
 #include <RenderingApi/Core/Instance.hpp>
+#include <RenderingApi/Core/Surface.hpp>
+#include <RenderingApi/Core/Device.hpp>
+#include <RenderingApi/Core/Queue.hpp>
+#include <RenderingApi/Core/Allocator.hpp>
+#include <RenderingApi/Core/CommandPool.hpp>
+#include <RenderingApi/Core/SwapChain.hpp>
+#include <RenderingApi/Core/DescriptorPool.hpp>
+#include <RenderingApi/Core/CommandBuffer.hpp>
+#include <RenderingApi/Core/Semaphore.hpp>
+#include <RenderingApi/Core/Fence.hpp>
 
 namespace BetterThanNothing
 {
