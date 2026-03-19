@@ -38,8 +38,8 @@ namespace BetterThanNothing
 		void NewFrame() const;
 
 	private:
-		Window*							  m_window;
-		RenderingDevice*				  m_renderingDevice;
+		Window*							 m_window;
+		RenderingDevice*				 m_renderingDevice;
 		std::unique_ptr<EditorInternals> m_internals;
 	};
 }
