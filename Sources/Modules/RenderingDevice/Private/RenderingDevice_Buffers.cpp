@@ -154,7 +154,7 @@ namespace BetterThanNothing
 			const auto dstBuffer = m_buffers.Get(dstBufferHandle)->value;
 
 			cmd->CopyBuffer(srcBuffer, dstBuffer, size, offset);
-		}, m_self->device.get(), m_commandPool.get(), m_self->graphicsQueue.get());
+		}, m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get());
 		// clang-format on
 
 		m_stagingBuffer->Reset();

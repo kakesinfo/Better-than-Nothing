@@ -45,7 +45,7 @@ namespace BetterThanNothing
 		m_self->presentQueue = m_self->device->CreatePresentQueue();
 		m_self->allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_self->device.get()});
 
-		m_commandPool = RenderingApi::CommandPool::Create({m_self->device.get(), m_self->graphicsQueue.get()});
+		m_self->commandPool = RenderingApi::CommandPool::Create({m_self->device.get(), m_self->graphicsQueue.get()});
 
 		m_self->swapChain = RenderingApi::SwapChain::Create({
 			m_self->surface.get(),
@@ -125,7 +125,7 @@ namespace BetterThanNothing
 	{
 		m_commandBuffers.resize(m_maxFramesInFlight);
 		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
-			m_commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_self->device.get(), m_commandPool.get()});
+			m_commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_self->device.get(), m_self->commandPool.get()});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok");
 	}
