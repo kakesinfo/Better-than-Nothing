@@ -40,6 +40,8 @@ namespace BetterThanNothing
 
 		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts;
 
+		std::unique_ptr<StagingBuffer> stagingBuffer;
+
 		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>			   buffers;
 		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   textures;
 		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   samplers;

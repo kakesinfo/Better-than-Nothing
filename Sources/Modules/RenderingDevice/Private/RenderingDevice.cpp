@@ -77,7 +77,7 @@ namespace BetterThanNothing
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		m_stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
+		m_self->stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();

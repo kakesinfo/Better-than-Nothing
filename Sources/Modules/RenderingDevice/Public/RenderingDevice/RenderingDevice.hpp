@@ -151,9 +151,7 @@ namespace BetterThanNothing
 	private:
 		RenderingDeviceCreateInfo				  m_createInfo;
 		std::unique_ptr<RenderingDeviceInternals> m_self;
-		std::unique_ptr<StagingBuffer> m_stagingBuffer;
-
-		uint32_t m_maxFramesInFlight;
-		uint32_t m_currentFrameIndex = 0;
+		uint32_t								  m_maxFramesInFlight;
+		uint32_t								  m_currentFrameIndex = 0;
 	};
 };

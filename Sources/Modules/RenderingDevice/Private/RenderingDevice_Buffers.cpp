@@ -146,18 +146,18 @@ namespace BetterThanNothing
 		if (data == nullptr || size == 0)
 			return false;
 
-		const uint64_t offset = m_stagingBuffer->Stage(data, size);
+		const uint64_t offset = m_self->stagingBuffer->Stage(data, size);
 
 		// clang-format off
 		RenderingApi::CommandBuffer::SingleTimeCommands([&](const std::unique_ptr<RenderingApi::CommandBuffer>& cmd) {
-			const auto srcBuffer = m_stagingBuffer->GetBuffer();
+			const auto srcBuffer = m_self->stagingBuffer->GetBuffer();
 			const auto dstBuffer = m_self->buffers.Get(dstBufferHandle)->value;
 
 			cmd->CopyBuffer(srcBuffer, dstBuffer, size, offset);
 		}, m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get());
 		// clang-format on
 
-		m_stagingBuffer->Reset();
+		m_self->stagingBuffer->Reset();
 
 		return true;
 	}

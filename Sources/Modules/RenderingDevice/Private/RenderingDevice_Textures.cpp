@@ -103,12 +103,12 @@ namespace BetterThanNothing
 		bufferInfo.size = desc.dataSize;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-		const uint64_t offset = m_stagingBuffer->Stage(desc.data, desc.dataSize);
+		const uint64_t offset = m_self->stagingBuffer->Stage(desc.data, desc.dataSize);
 
 		RenderingApi::CommandBuffer::SingleTimeCommands(
 			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
 				commandBuffer->TransitionImageLayout(texture->value, desc.format, desc.oldLayout, desc.newLayout, texture->mipLevels);
-				commandBuffer->CopyBufferToImage(m_stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, offset);
+				commandBuffer->CopyBufferToImage(m_self->stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, offset);
 
 				// Transition to TRANSFER_DST_OPTIMAL is done in mipmap generation _createMipmaps
 				// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB,
@@ -117,7 +117,7 @@ namespace BetterThanNothing
 			m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get()
 		);
 
-		m_stagingBuffer->Reset();
+		m_self->stagingBuffer->Reset();
 	}
 
 	bool RenderingDevice::Internal_CreateTextureMipmaps(const Handle& destination)
