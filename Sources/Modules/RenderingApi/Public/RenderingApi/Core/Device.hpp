@@ -20,6 +20,8 @@
 
 #include <optional>
 #include <vector>
+#include <memory>
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing::RenderingApi
 {

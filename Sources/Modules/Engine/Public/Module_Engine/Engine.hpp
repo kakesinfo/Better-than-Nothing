@@ -28,6 +28,7 @@ namespace BetterThanNothing
 	class Renderer;
 	class Camera;
 	class Scene;
+	class Editor;
 
 	class Engine
 	{
@@ -47,6 +48,7 @@ namespace BetterThanNothing
 		std::unique_ptr<ResourceManager> m_resourceManager;
 		std::unique_ptr<RenderList>		 m_renderList;
 		std::unique_ptr<Scene>			 m_defaultScene;
+		std::unique_ptr<Editor>		 m_debugUI;
 		std::unique_ptr<Renderer>		 m_renderer;
 		std::unique_ptr<Camera>			 m_camera;
 

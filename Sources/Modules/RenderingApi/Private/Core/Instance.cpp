@@ -21,6 +21,8 @@
 #include <Module_Base/Logger.hpp>
 #include <algorithm>
 
+#include <SDL3/SDL_vulkan.h>
+
 namespace BetterThanNothing::RenderingApi
 {
 	Instance::Instance(InstanceCreateInfo createInfo) : m_createInfo(std::move(createInfo))

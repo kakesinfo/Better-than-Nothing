@@ -122,6 +122,8 @@ namespace BetterThanNothing
 		std::optional<uint32_t> BeginFrame();
 		void					EndFrame(uint32_t imageIndex);
 
+		void WaitIdle() const;
+
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] uint32_t GetCurrentFrameIndex() const;
 		/// @deprecated Will be removed in the future.

@@ -19,7 +19,9 @@
 #pragma once
 
 #include <memory>
+
 #include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing::RenderingApi
 {

@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <memory>
-
 #include "Module_Base/EBufferingMode.hpp"
 #include "RenderingApi/Core/Allocator.hpp"
 #include "RenderingApi/Core/CommandBuffer.hpp"

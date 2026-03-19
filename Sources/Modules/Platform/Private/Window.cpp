@@ -41,11 +41,8 @@ namespace BetterThanNothing
 
 	Window::~Window()
 	{
-		if (m_window != nullptr)
-		{
-			SDL_DestroyWindow(m_window);
-			SDL_Quit();
-		}
+		SDL_DestroyWindow(m_window);
+		SDL_Quit();
 	}
 
 	SDL_Window* Window::Handle() const
@@ -53,11 +50,19 @@ namespace BetterThanNothing
 		return m_window;
 	}
 
+	void Window::SetEventCallback(const std::function<bool(const SDL_Event&)>& callback)
+	{
+		m_eventCallback = callback;
+	}
+
 	void Window::PollEvents()
 	{
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
+			if (m_eventCallback && m_eventCallback(event))
+				continue;
+
 			switch (event.type)
 			{
 				case SDL_EVENT_QUIT:

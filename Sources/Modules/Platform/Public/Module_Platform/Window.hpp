@@ -23,11 +23,13 @@
 
 #include <SDL3/SDL.h>
 #include <string>
+#include <functional>
 
 namespace BetterThanNothing
 {
 	class Window
 	{
+	private:
 		SDL_Window* m_window = nullptr;
 
 		std::string m_title{};
@@ -41,12 +43,15 @@ namespace BetterThanNothing
 
 		bool m_shouldClose = false;
 
+		std::function<bool(const SDL_Event&)> m_eventCallback;
+
 	public:
 		explicit Window(std::string title, uint32_t width, uint32_t height, bool fullscreen = false, bool resizable = false);
 		~Window();
 
 		[[nodiscard]] SDL_Window* Handle() const;
 
+		void SetEventCallback(const std::function<bool(const SDL_Event&)>& callback);
 		void PollEvents();
 
 		void Show() const;
