@@ -3,7 +3,7 @@ Everything is in the title, it is a better-than-nothing Game Engine.
 
 ### 🚀 Features
 
- - Support for Linux.
+ - Support for Linux and Windows.
  - Use C++23 and Vulkan 1.4 features.
  - In-house GLM wrapper (Vector2, Vector3, Quaternion, Matrix4)
  - In-house JIT shader compilation.

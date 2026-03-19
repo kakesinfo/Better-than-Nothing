@@ -71,6 +71,8 @@ namespace BetterThanNothing
 			deltaPos -= Vector3::Up * moveSpeed;
 
 		ctx->MoveCamera(deltaPos);
+
+		m_transform[1] = m_transform[1].Rotate(20.0f * deltaTime, Vector3::Up);
 	}
 
 	void Runtime::OnRender(const RenderContext* ctx)
