@@ -267,11 +267,6 @@ namespace BetterThanNothing
 		return m_self->swapChain->GetAspectRatio();
 	}
 
-	RenderingApi::DescriptorPool* RenderingDevice::GetDescriptorPool() const
-	{
-		return m_self->descriptorPool.get();
-	}
-
 	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
 	{
 		if (!m_self->descriptorLayouts.contains(key))
