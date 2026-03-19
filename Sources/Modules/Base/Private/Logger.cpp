@@ -23,6 +23,12 @@
 #include <iomanip>
 #include <iostream>
 
+#ifdef _WIN32
+	#define WIN32_LEAN_AND_MEAN
+	#include <windows.h>
+	#undef ERROR
+#endif
+
 namespace BetterThanNothing
 {
 	uint8_t	   Logger::s_currentLogLevel = INFO;
@@ -55,6 +61,55 @@ namespace BetterThanNothing
 		return s;
 	}
 
+	void Logger::Print_Windows(const uint8_t level, const std::string& levelStr, const std::source_location& location, const std::string_view message)
+	{
+#ifdef _WIN32
+		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (hConsole == INVALID_HANDLE_VALUE)
+			return;
+
+		WORD color = 7;
+		switch (level)
+		{
+			case DEBUG:   color = 8;  break;
+			case INFO:    color = 11; break;
+			case SUCCESS: color = 10; break;
+			case WARNING: color = 14; break;
+			case ERROR:   color = 12; break;
+		}
+
+		SetConsoleTextAttribute(hConsole, 7);
+		std::cout << std::left << GetTimestamp() << " ";
+		SetConsoleTextAttribute(hConsole, color);
+		std::cout << std::left << std::setw(10) << levelStr;
+
+		SetConsoleTextAttribute(hConsole, 7);
+		std::cout << std::left << std::setw(35) << FormatSourceFile(location);
+		std::cout << std::left << SanitizeMessage(message) << std::endl;
+#endif
+	}
+
+	void Logger::Print_Linux(const uint8_t level, const std::string& levelStr, const std::source_location& location, const std::string_view message)
+	{
+#ifndef _WIN32
+		std::string levelColor;
+		switch (level)
+		{
+			case DEBUG:   levelColor = "\033[90m"; break;
+			case INFO:    levelColor = "\033[36m"; break;
+			case SUCCESS: levelColor = "\033[32m"; break;
+			case WARNING: levelColor = "\033[33m"; break;
+			case ERROR:   levelColor = "\033[31m"; break;
+		}
+
+		std::cout << "\033[37m" << std::left << GetTimestamp() << " ";
+		std::cout << levelColor << std::left << std::setw(10) << levelStr;
+		std::cout << "\033[37m" << std::left << std::setw(35) << FormatSourceFile(location);
+		std::cout << "\033[0m" << std::left << SanitizeMessage(message);
+		std::cout << std::endl;
+#endif
+	}
+
 	void Logger::Print(const uint8_t level, const std::source_location& location, const std::string_view message)
 	{
 		if (level < s_currentLogLevel)
@@ -63,33 +118,28 @@ namespace BetterThanNothing
 		std::lock_guard lock(s_printMutex);
 
 		std::string levelStr;
-		std::string levelColor;
-
 		switch (level)
 		{
 			case DEBUG:
-				levelStr = "[DEBUG]", levelColor = "\033[90m";
+				levelStr = "[DEBUG]";
 				break;
 			case INFO:
-				levelStr = "[INFO]", levelColor = "\033[36m";
+				levelStr = "[INFO]";
 				break;
 			case SUCCESS:
-				levelStr = "[SUCCESS]", levelColor = "\033[32m";
+				levelStr = "[SUCCESS]";
 				break;
 			case WARNING:
-				levelStr = "[WARNING]", levelColor = "\033[33m";
+				levelStr = "[WARNING]";
 				break;
 			case ERROR:
-				levelStr = "[ERROR]", levelColor = "\033[31m";
+				levelStr = "[ERROR]";
 				break;
 			default:
 				break;
 		}
 
-		std::cout << "\033[37m" << std::left << GetTimestamp() << " ";
-		std::cout << levelColor << std::left << std::setw(10) << levelStr;
-		std::cout << "\033[37m" << std::left << std::setw(35) << FormatSourceFile(location);
-		std::cout << "\033[0m" << std::left << SanitizeMessage(message);
-		std::cout << std::endl;
+		Print_Windows(level, levelStr, location, message);
+		Print_Linux(level, levelStr, location, message);
 	}
 }
