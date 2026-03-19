@@ -35,10 +35,11 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<DebugUI> Create(Window* window, RenderingDevice* renderingDevice);
 
+		void NewFrame() const;
+
 	private:
 		Window*							  m_window;
 		RenderingDevice*				  m_renderingDevice;
 		std::unique_ptr<DebugUIInternals> m_internals;
 	};
-
 }

@@ -25,6 +25,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Data
         Module_Scene
         Module_Platform
+        Module_DebugUI
         Module_ResourceManager
         Module_RenderingApi
         Module_RenderingDevice

@@ -27,9 +27,9 @@ namespace BetterThanNothing
 	{
 	public:
 		explicit ImGuiPass(RenderingDevice* renderingDevice, DebugUI* debugUI);
-		~ImGuiPass();
+		~ImGuiPass() = default;
 
-		void Execute(uint32_t imageIndex);
+		void Execute(uint32_t imageIndex) const;
 
 	private:
 		RenderingDevice* m_renderingDevice;

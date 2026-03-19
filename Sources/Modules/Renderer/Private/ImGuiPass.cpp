@@ -18,36 +18,24 @@
 
 #include "../Public/Renderer/ImGuiPass.hpp"
 
-#include "../../DebugUI/Public/DebugUI/DebugUI.hpp"
-#include "Module_Platform/Manager/WindowManager.hpp"
-#include "Module_Platform/Window.hpp"
-#include "Renderer/RenderMetrics.hpp"
-#include "RenderingApi/Core/CommandBuffer.hpp"
-#include "RenderingApi/Core/Device.hpp"
-#include "RenderingApi/Core/Instance.hpp"
-#include "RenderingApi/Core/Queue.hpp"
-#include "RenderingApi/Core/SwapChain.hpp"
-#include "RenderingDevice/RenderingDevice.hpp"
+#include <DebugUI/DebugUI.hpp>
+#include <Module_Platform/Window.hpp>
+#include <Renderer/RenderMetrics.hpp>
+#include <RenderingApi/Core/CommandBuffer.hpp>
+#include <RenderingApi/Core/SwapChain.hpp>
+#include <RenderingDevice/RenderingDevice.hpp>
 
 namespace BetterThanNothing
 {
-	ImGuiPass::ImGuiPass(RenderingDevice* renderingDevice, DebugUI* debugUI) : m_renderingDevice(renderingDevice), m_debugUI(debugUI)
-	{
+	ImGuiPass::ImGuiPass(RenderingDevice* renderingDevice, DebugUI* debugUI)
+		: m_renderingDevice(renderingDevice), m_debugUI(debugUI) { }
 
-	}
-
-	ImGuiPass::~ImGuiPass()
-	{
-	}
-
-	void ImGuiPass::Execute(uint32_t imageIndex)
+	void ImGuiPass::Execute(uint32_t imageIndex) const
 	{
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
-		ImGui::NewFrame();
+		m_debugUI->NewFrame();
 
 		static float updateTimer = 0.0f;
 		static auto	 cachedMetrics = RenderMetrics::GetLastFrameMetrics();

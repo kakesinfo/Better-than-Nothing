@@ -121,4 +121,11 @@ namespace BetterThanNothing
 	{
 		return std::make_unique<DebugUI>(window, renderingDevice);
 	}
+
+	void DebugUI::NewFrame() const
+	{
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+	}
 }
