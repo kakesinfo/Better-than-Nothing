@@ -57,7 +57,7 @@ namespace BetterThanNothing
 		allocCreateInfo.flags = desc.dedicated ? VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT : 0;
 		allocCreateInfo.priority = 1.0f;
 
-		if (m_allocator->CreateImage(&imageInfo, &allocCreateInfo, &texture->value, &texture->allocation, nullptr) != VK_SUCCESS)
+		if (m_self->allocator->CreateImage(&imageInfo, &allocCreateInfo, &texture->value, &texture->allocation, nullptr) != VK_SUCCESS)
 			return false;
 
 		texture->width = desc.width;
@@ -241,7 +241,7 @@ namespace BetterThanNothing
 
 		const RenderingApi::Texture* texture = m_textures.Get(handle);
 		m_self->device->DestroyImageView(texture->defaultView);
-		m_allocator->DestroyImage(texture->value, texture->allocation);
+		m_self->allocator->DestroyImage(texture->value, texture->allocation);
 		m_textures.Destroy(handle);
 	}
 

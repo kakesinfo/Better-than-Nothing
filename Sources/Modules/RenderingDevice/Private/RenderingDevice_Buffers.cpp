@@ -80,7 +80,7 @@ namespace BetterThanNothing
 	{
 		const Handle handle = m_buffers.Allocate();
 
-		if (!Internal_CreateBuffer(desc, m_buffers.Get(handle), m_allocator.get()))
+		if (!Internal_CreateBuffer(desc, m_buffers.Get(handle), m_self->allocator.get()))
 		{
 			m_buffers.Destroy(handle);
 			throw std::runtime_error("Failed to vulkan create buffer!");
@@ -179,7 +179,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid buffer handle!");
 
 		const RenderingApi::Buffer* buffer = m_buffers.Get(handle);
-		m_allocator->DestroyBuffer(buffer->value, buffer->allocation);
+		m_self->allocator->DestroyBuffer(buffer->value, buffer->allocation);
 		m_buffers.Destroy(handle);
 	}
 

@@ -43,14 +43,14 @@ namespace BetterThanNothing
 		m_self->device = RenderingApi::Device::Create({m_self->instance.get(), m_self->surface.get()});
 		m_self->graphicsQueue = m_self->device->CreateGraphicsQueue();
 		m_self->presentQueue = m_self->device->CreatePresentQueue();
-		m_allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_self->device.get()});
+		m_self->allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_self->device.get()});
 
 		m_commandPool = RenderingApi::CommandPool::Create({m_self->device.get(), m_self->graphicsQueue.get()});
 
 		m_swapChain = RenderingApi::SwapChain::Create({
 			m_self->surface.get(),
 			m_self->device.get(),
-			m_allocator.get(),
+			m_self->allocator.get(),
 			windowWidth,
 			windowHeight,
 			createInfo.bufferingMode,
@@ -77,7 +77,7 @@ namespace BetterThanNothing
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		m_stagingBuffer = StagingBuffer::Create(m_allocator.get(), 128);
+		m_stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();
@@ -98,7 +98,7 @@ namespace BetterThanNothing
 		for (std::uint32_t i = 0; i < m_buffers.Size(); i++)
 		{
 			const auto buffer = m_buffers.Get(i);
-			m_allocator->DestroyBuffer(buffer->value, buffer->allocation);
+			m_self->allocator->DestroyBuffer(buffer->value, buffer->allocation);
 			m_buffers.Destroy(i);
 		}
 
@@ -106,7 +106,7 @@ namespace BetterThanNothing
 		{
 			const auto texture = m_textures.Get(i);
 			m_self->device->DestroyImageView(texture->defaultView);
-			m_allocator->DestroyImage(texture->value, texture->allocation);
+			m_self->allocator->DestroyImage(texture->value, texture->allocation);
 			m_textures.Destroy(i);
 		}
 	};
@@ -249,7 +249,7 @@ namespace BetterThanNothing
 
 	RenderingApi::Allocator* RenderingDevice::GetAllocator() const
 	{
-		return m_allocator.get();
+		return m_self->allocator.get();
 	}
 
 	RenderingApi::SwapChain* RenderingDevice::GetSwapChain() const
