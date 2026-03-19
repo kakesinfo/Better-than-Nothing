@@ -47,7 +47,7 @@ namespace BetterThanNothing
 
 		m_commandPool = RenderingApi::CommandPool::Create({m_self->device.get(), m_self->graphicsQueue.get()});
 
-		m_swapChain = RenderingApi::SwapChain::Create({
+		m_self->swapChain = RenderingApi::SwapChain::Create({
 			m_self->surface.get(),
 			m_self->device.get(),
 			m_self->allocator.get(),
@@ -56,7 +56,7 @@ namespace BetterThanNothing
 			createInfo.bufferingMode,
 		});
 
-		m_maxFramesInFlight = m_swapChain->GetImageCount();
+		m_maxFramesInFlight = m_self->swapChain->GetImageCount();
 
 		Logger::Log<INFO>("Vendor: {}", m_self->device->GetVendorName());
 		Logger::Log<INFO>("Device: {}", m_self->device->GetDeviceName());
@@ -149,13 +149,13 @@ namespace BetterThanNothing
 		m_inFlightFences.at(m_currentFrameIndex)->Wait();
 		FlushDescriptorSetUpdateRequests();
 
-		const auto acquireResult = m_swapChain->AcquireNextImage(m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
+		const auto acquireResult = m_self->swapChain->AcquireNextImage(m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
 
 		if (!acquireResult.has_value())
 		{
 			const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
 			m_self->device->WaitIdle();
-			m_swapChain->RecreateSwapChain(windowWidth, windowHeight);
+			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 			return std::nullopt;
 		}
 
@@ -175,7 +175,7 @@ namespace BetterThanNothing
 		const auto					   commandBuffer = m_commandBuffers.at(m_currentFrameIndex)->Handle();
 		const VkSemaphore			   waitSemaphores[] = {m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle()};
 		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-		const VkSemaphore			   signalSemaphores[] = {m_swapChain->GetImageFinishedSemaphore(imageIndex)};
+		const VkSemaphore			   signalSemaphores[] = {m_self->swapChain->GetImageFinishedSemaphore(imageIndex)};
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -191,7 +191,7 @@ namespace BetterThanNothing
 		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_inFlightFences.at(m_currentFrameIndex)->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
-		const VkSwapchainKHR swapChains[] = {m_swapChain->Handle()};
+		const VkSwapchainKHR swapChains[] = {m_self->swapChain->Handle()};
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -209,7 +209,7 @@ namespace BetterThanNothing
 			const auto [windowWidth, windowHeight] = window->GetFramebufferSize();
 			window->SetResized(false);
 			m_self->device->WaitIdle();
-			m_swapChain->RecreateSwapChain(windowWidth, windowHeight);
+			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 		}
 		else if (presentResult != VK_SUCCESS)
 			throw std::runtime_error("failed to present swap chain image!");
@@ -254,7 +254,7 @@ namespace BetterThanNothing
 
 	RenderingApi::SwapChain* RenderingDevice::GetSwapChain() const
 	{
-		return m_swapChain.get();
+		return m_self->swapChain.get();
 	}
 
 	auto RenderingDevice::GetMaxFramesInFlight() const -> uint32_t
@@ -264,7 +264,7 @@ namespace BetterThanNothing
 
 	auto RenderingDevice::GetAspectRatio() const -> float
 	{
-		return m_swapChain->GetAspectRatio();
+		return m_self->swapChain->GetAspectRatio();
 	}
 
 	RenderingApi::DescriptorPool* RenderingDevice::GetDescriptorPool() const
