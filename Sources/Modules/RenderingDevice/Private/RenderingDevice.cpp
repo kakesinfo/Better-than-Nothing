@@ -215,6 +215,11 @@ namespace BetterThanNothing
 		m_currentFrameIndex = (m_currentFrameIndex + 1) % m_maxFramesInFlight;
 	}
 
+	void RenderingDevice::WaitIdle() const
+	{
+		m_device->WaitIdle();
+	}
+
 	[[nodiscard]] uint32_t RenderingDevice::GetCurrentFrameIndex() const
 	{
 		return m_currentFrameIndex;

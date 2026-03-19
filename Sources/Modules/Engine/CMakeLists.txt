@@ -29,6 +29,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Platform
         Module_RenderingApi
         Module_RenderingDevice
+        Module_Editor
         Module_Renderer
         Module_ResourceManager
         SDL3::SDL3

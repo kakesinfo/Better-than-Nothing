@@ -20,8 +20,8 @@
 
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-
 #include <Module_Base/Logger.hpp>
+#include <SDL3/SDL_vulkan.h>
 
 namespace BetterThanNothing::RenderingApi
 {

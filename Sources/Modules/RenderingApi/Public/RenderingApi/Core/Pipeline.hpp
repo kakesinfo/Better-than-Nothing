@@ -20,6 +20,7 @@
 
 #include "Module_Base/EShaderType.hpp"
 #include "RenderingApi/Data/VertexInputDescription.hpp"
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {
