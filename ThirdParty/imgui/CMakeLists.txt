@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(imgui)
 
 find_package(X11 REQUIRED)
+find_package(Vulkan REQUIRED)
 
 set(SOURCES
 		"imgui.cpp"
@@ -27,7 +28,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "include")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-		SDL3::SDL3 ${X11_LIBRARIES})
+		SDL3::SDL3 Vulkan::Vulkan ${X11_LIBRARIES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
 		POSITION_INDEPENDENT_CODE ON

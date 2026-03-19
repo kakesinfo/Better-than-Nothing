@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.6...3.14 FATAL_ERROR)
 cmake_policy(VERSION 3.6...3.14)
 
-file(READ "include/detail/setup.hpp" GLM_SETUP_FILE)
+file(READ "glm/detail/setup.hpp" GLM_SETUP_FILE)
 string(REGEX MATCH "#define[ ]+GLM_VERSION_MAJOR[ ]+([0-9]+)" _ ${GLM_SETUP_FILE})
 set(GLM_VERSION_MAJOR "${CMAKE_MATCH_1}")
 string(REGEX MATCH "#define[ ]+GLM_VERSION_MINOR[ ]+([0-9]+)" _ ${GLM_SETUP_FILE})
@@ -250,7 +250,7 @@ elseif(GLM_ENABLE_SIMD_NEON)
 	message(STATUS "GLM: ARM NEON instruction set")
 endif()
 
-add_subdirectory(include)
+add_subdirectory(glm)
 
 if (GLM_BUILD_TESTS)
 	include(CTest)
