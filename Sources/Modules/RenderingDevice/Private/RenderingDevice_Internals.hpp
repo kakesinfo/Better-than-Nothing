@@ -33,5 +33,9 @@ namespace BetterThanNothing
 		std::unique_ptr<RenderingApi::CommandPool>	  commandPool;
 		std::unique_ptr<RenderingApi::SwapChain>	  swapChain;
 		std::unique_ptr<RenderingApi::DescriptorPool> descriptorPool;
+
+		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> commandBuffers;
+		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  imageAvailableSemaphores;
+		std::vector<std::unique_ptr<RenderingApi::Fence>>		  inFlightFences;
 	};
 }

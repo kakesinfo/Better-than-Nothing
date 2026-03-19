@@ -123,22 +123,22 @@ namespace BetterThanNothing
 
 	void RenderingDevice::Internal_CreateCommandBuffers()
 	{
-		m_commandBuffers.resize(m_maxFramesInFlight);
+		m_self->commandBuffers.resize(m_maxFramesInFlight);
 		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
-			m_commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_self->device.get(), m_self->commandPool.get()});
+			m_self->commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_self->device.get(), m_self->commandPool.get()});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok");
 	}
 
 	void RenderingDevice::Internal_CreateSyncObjects()
 	{
-		m_imageAvailableSemaphores.resize(m_maxFramesInFlight);
-		m_inFlightFences.resize(m_maxFramesInFlight);
+		m_self->imageAvailableSemaphores.resize(m_maxFramesInFlight);
+		m_self->inFlightFences.resize(m_maxFramesInFlight);
 
 		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
 		{
-			m_imageAvailableSemaphores[i] = RenderingApi::Semaphore::Create({m_self->device.get()});
-			m_inFlightFences[i] = RenderingApi::Fence::Create({m_self->device.get(), true});
+			m_self->imageAvailableSemaphores[i] = RenderingApi::Semaphore::Create({m_self->device.get()});
+			m_self->inFlightFences[i] = RenderingApi::Fence::Create({m_self->device.get(), true});
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
@@ -146,10 +146,10 @@ namespace BetterThanNothing
 
 	std::optional<uint32_t> RenderingDevice::BeginFrame()
 	{
-		m_inFlightFences.at(m_currentFrameIndex)->Wait();
+		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();
 		FlushDescriptorSetUpdateRequests();
 
-		const auto acquireResult = m_self->swapChain->AcquireNextImage(m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
+		const auto acquireResult = m_self->swapChain->AcquireNextImage(m_self->imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
 
 		if (!acquireResult.has_value())
 		{
@@ -161,19 +161,19 @@ namespace BetterThanNothing
 
 		const uint32_t imageIndex = acquireResult.value();
 
-		m_inFlightFences.at(m_currentFrameIndex)->Reset();
-		m_commandBuffers.at(m_currentFrameIndex)->Reset();
-		m_commandBuffers.at(m_currentFrameIndex)->BeginRecording();
+		m_self->inFlightFences.at(m_currentFrameIndex)->Reset();
+		m_self->commandBuffers.at(m_currentFrameIndex)->Reset();
+		m_self->commandBuffers.at(m_currentFrameIndex)->BeginRecording();
 
 		return imageIndex;
 	}
 
 	void RenderingDevice::EndFrame(const uint32_t imageIndex)
 	{
-		m_commandBuffers.at(m_currentFrameIndex)->EndRecording();
+		m_self->commandBuffers.at(m_currentFrameIndex)->EndRecording();
 
-		const auto					   commandBuffer = m_commandBuffers.at(m_currentFrameIndex)->Handle();
-		const VkSemaphore			   waitSemaphores[] = {m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle()};
+		const auto					   commandBuffer = m_self->commandBuffers.at(m_currentFrameIndex)->Handle();
+		const VkSemaphore			   waitSemaphores[] = {m_self->imageAvailableSemaphores.at(m_currentFrameIndex)->Handle()};
 		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		const VkSemaphore			   signalSemaphores[] = {m_self->swapChain->GetImageFinishedSemaphore(imageIndex)};
 
@@ -188,7 +188,7 @@ namespace BetterThanNothing
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		auto graphicsQueue = m_self->graphicsQueue->Handle();
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_inFlightFences.at(m_currentFrameIndex)->Handle()) != VK_SUCCESS)
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_self->inFlightFences.at(m_currentFrameIndex)->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
 		const VkSwapchainKHR swapChains[] = {m_self->swapChain->Handle()};
@@ -229,7 +229,7 @@ namespace BetterThanNothing
 
 	RenderingApi::CommandBuffer* RenderingDevice::GetCurrentCommandBuffer() const
 	{
-		return m_commandBuffers[m_currentFrameIndex].get();
+		return m_self->commandBuffers[m_currentFrameIndex].get();
 	}
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const

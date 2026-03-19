@@ -152,11 +152,6 @@ namespace BetterThanNothing
 		RenderingDeviceCreateInfo				  m_createInfo;
 		std::unique_ptr<RenderingDeviceInternals> m_self;
 
-
-		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> m_commandBuffers;
-		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  m_imageAvailableSemaphores;
-		std::vector<std::unique_ptr<RenderingApi::Fence>>		  m_inFlightFences;
-
 		std::unique_ptr<StagingBuffer> m_stagingBuffer;
 
 		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_descriptorLayouts;
