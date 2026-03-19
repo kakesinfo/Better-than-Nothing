@@ -67,11 +67,11 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Anisotropy: {}x", m_self->device->GetMaxAnisotropy());
 		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples()));
 
-		m_descriptorPool = RenderingApi::DescriptorPool::Builder(m_self->device.get())
-							   .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)
-							   .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
-							   .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
-							   .Build();
+		m_self->descriptorPool = RenderingApi::DescriptorPool::Builder(m_self->device.get())
+									 .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)
+									 .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
+									 .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
+									 .Build();
 
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -269,7 +269,7 @@ namespace BetterThanNothing
 
 	RenderingApi::DescriptorPool* RenderingDevice::GetDescriptorPool() const
 	{
-		return m_descriptorPool.get();
+		return m_self->descriptorPool.get();
 	}
 
 	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
