@@ -24,7 +24,8 @@ target_link_libraries(${PROJECT_NAME}
         Module_Data
         Module_Platform
         SDL3::SDL3
-        Vulkan::Vulkan # Replace with https://github.com/zeux/volk
+        Vulkan::Vulkan
+        # Replace with https://github.com/zeux/volk
 
     PUBLIC
         Vulkan::Headers

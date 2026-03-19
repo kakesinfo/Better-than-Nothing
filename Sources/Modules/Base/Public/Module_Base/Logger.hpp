@@ -56,7 +56,10 @@ namespace BetterThanNothing
 		static std::string GetTimestamp();
 		static std::string FormatSourceFile(const std::source_location& location);
 		static std::string SanitizeMessage(std::string_view message);
-		static void		   Print(uint8_t level, const std::source_location& location, std::string_view message);
+
+		static void Print_Windows(uint8_t level, const std::string& levelStr, const std::source_location& location, std::string_view message);
+		static void Print_Linux(uint8_t level, const std::string& levelStr, const std::source_location& location, std::string_view message);
+		static void Print(uint8_t level, const std::source_location& location, std::string_view message);
 
 		static uint8_t	  s_currentLogLevel;
 		static std::mutex s_printMutex;
