@@ -37,5 +37,7 @@ namespace BetterThanNothing
 		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> commandBuffers;
 		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  imageAvailableSemaphores;
 		std::vector<std::unique_ptr<RenderingApi::Fence>>		  inFlightFences;
+
+		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts;
 	};
 }

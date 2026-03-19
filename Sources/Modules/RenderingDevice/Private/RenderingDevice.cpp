@@ -113,7 +113,7 @@ namespace BetterThanNothing
 
 	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
-		m_descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
+		m_self->descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
 	}
 
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
@@ -274,8 +274,8 @@ namespace BetterThanNothing
 
 	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
 	{
-		if (!m_descriptorLayouts.contains(key))
+		if (!m_self->descriptorLayouts.contains(key))
 			throw std::runtime_error("Cannot find descriptorSetLayout");
-		return m_descriptorLayouts.at(key).get();
+		return m_self->descriptorLayouts.at(key).get();
 	}
 }

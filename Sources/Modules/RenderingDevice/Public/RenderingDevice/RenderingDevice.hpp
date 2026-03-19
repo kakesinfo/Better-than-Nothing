@@ -154,7 +154,6 @@ namespace BetterThanNothing
 
 		std::unique_ptr<StagingBuffer> m_stagingBuffer;
 
-		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_descriptorLayouts;
 
 		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>			   m_buffers;
 		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   m_textures;
