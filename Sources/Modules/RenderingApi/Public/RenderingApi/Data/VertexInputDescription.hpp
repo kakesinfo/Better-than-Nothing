@@ -19,7 +19,7 @@
 #pragma once
 
 #include <vector>
-
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {
@@ -28,7 +28,7 @@ namespace BetterThanNothing
 		std::vector<VkVertexInputBindingDescription>   bindings;
 		std::vector<VkVertexInputAttributeDescription> attributes;
 
-		VkPipelineVertexInputStateCreateInfo GetCreateInfo() const
+		[[nodiscard]] VkPipelineVertexInputStateCreateInfo GetCreateInfo() const
 		{
 			VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <vulkan/vulkan.h>
+
 namespace BetterThanNothing::RenderingApi
 {
 	struct Sampler

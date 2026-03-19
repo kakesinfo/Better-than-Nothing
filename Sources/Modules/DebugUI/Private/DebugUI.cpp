@@ -27,20 +27,23 @@
 
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 
-#include <vulkan/vulkan.h>
+#include <SDL3/SDL.h>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {
-	namespace
+	struct DebugUIInternals
 	{
-		VkDescriptorPool m_imguiPool;
-	}
+		VkDescriptorPool imguiPool = VK_NULL_HANDLE;
+	};
 
-	DebugUI::DebugUI(Window* window, RenderingDevice* renderingDevice): m_window(window), m_renderingDevice(renderingDevice)
+	DebugUI::DebugUI(Window* window, RenderingDevice* renderingDevice) : m_window(window), m_renderingDevice(renderingDevice)
 	{
+		m_internals = std::make_unique<DebugUIInternals>();
+
 		const VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
 
 		VkDescriptorPoolCreateInfo pool_info = {};
@@ -50,7 +53,7 @@ namespace BetterThanNothing
 		pool_info.poolSizeCount = static_cast<uint32_t>(std::size(pool_sizes));
 		pool_info.pPoolSizes = pool_sizes;
 
-		if (vkCreateDescriptorPool(renderingDevice->GetDevice()->Handle(), &pool_info, nullptr, &m_imguiPool) != VK_SUCCESS)
+		if (vkCreateDescriptorPool(renderingDevice->GetDevice()->Handle(), &pool_info, nullptr, &m_internals->imguiPool) != VK_SUCCESS)
 			throw std::runtime_error("failed to create ImGui descriptor pool!");
 
 		IMGUI_CHECKVERSION();
@@ -74,7 +77,7 @@ namespace BetterThanNothing
 		initInfo.PhysicalDevice = renderingDevice->GetDevice()->PhysicalHandle();
 		initInfo.Device = renderingDevice->GetDevice()->Handle();
 		initInfo.Queue = renderingDevice->GetGraphicsQueue()->Handle();
-		initInfo.DescriptorPool = m_imguiPool;
+		initInfo.DescriptorPool = m_internals->imguiPool;
 		initInfo.MinImageCount = renderingDevice->GetSwapChain()->GetImageCount();
 		initInfo.ImageCount = renderingDevice->GetSwapChain()->GetImageCount();
 		// Note: Stencil format can be added if needed
@@ -111,6 +114,11 @@ namespace BetterThanNothing
 		ImGui_ImplSDL3_Shutdown();
 		ImGui::DestroyContext();
 
-		vkDestroyDescriptorPool(m_renderingDevice->GetDevice()->Handle(), m_imguiPool, nullptr);
+		vkDestroyDescriptorPool(m_renderingDevice->GetDevice()->Handle(), m_internals->imguiPool, nullptr);
+	}
+
+	std::unique_ptr<DebugUI> DebugUI::Create(Window* window, RenderingDevice* renderingDevice)
+	{
+		return std::make_unique<DebugUI>(window, renderingDevice);
 	}
 }

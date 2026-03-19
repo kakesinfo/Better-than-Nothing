@@ -24,6 +24,7 @@ target_link_libraries(${PROJECT_NAME}
             Module_RenderingApi
             Module_RenderingDevice
             imgui
+            Vulkan::Headers
 )
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")

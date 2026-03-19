@@ -18,12 +18,14 @@
 
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include <memory>
 
 namespace BetterThanNothing
 {
 	class Window;
 	class RenderingDevice;
+
+	struct DebugUIInternals;
 
 	class DebugUI
 	{
@@ -31,10 +33,12 @@ namespace BetterThanNothing
 		DebugUI(Window* window, RenderingDevice* renderingDevice);
 		~DebugUI();
 
+		static std::unique_ptr<DebugUI> Create(Window* window, RenderingDevice* renderingDevice);
+
 	private:
-		Window*			 m_window;
-		RenderingDevice* m_renderingDevice;
-		VkDescriptorPool m_imguiPool = VK_NULL_HANDLE;
+		Window*							  m_window;
+		RenderingDevice*				  m_renderingDevice;
+		std::unique_ptr<DebugUIInternals> m_internals;
 	};
 
 }
