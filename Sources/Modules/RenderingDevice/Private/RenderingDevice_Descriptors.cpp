@@ -18,6 +18,7 @@
 
 #include "Module_Data/Graphics/GlobalUniformData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 
 #include "../Public/RenderingDevice/DescriptorSetUpdateRequest.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
@@ -43,7 +44,7 @@ namespace BetterThanNothing
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &layout;
 
-		return vkAllocateDescriptorSets(m_device->Handle(), &allocInfo, &newDescriptorSet->value) == VK_SUCCESS;
+		return vkAllocateDescriptorSets(m_self->device->Handle(), &allocInfo, &newDescriptorSet->value) == VK_SUCCESS;
 	}
 
 	Handle RenderingDevice::CreateDescriptorSet(DescriptorSetLayoutType layoutType)
@@ -192,7 +193,7 @@ namespace BetterThanNothing
 			const auto					writesCount = static_cast<std::uint32_t>(m_descriptorsWrites.size());
 			const VkWriteDescriptorSet* writesData = m_descriptorsWrites.data();
 
-			vkUpdateDescriptorSets(m_device->Handle(), writesCount, writesData, 0, nullptr);
+			vkUpdateDescriptorSets(m_self->device->Handle(), writesCount, writesData, 0, nullptr);
 		}
 
 		m_descriptorsUpdateRequests.clear();

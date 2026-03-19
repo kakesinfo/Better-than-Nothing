@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingDevice/BufferDescription.hpp"
@@ -153,7 +154,7 @@ namespace BetterThanNothing
 			const auto dstBuffer = m_buffers.Get(dstBufferHandle)->value;
 
 			cmd->CopyBuffer(srcBuffer, dstBuffer, size, offset);
-		}, m_device.get(), m_commandPool.get(), m_graphicsQueue.get());
+		}, m_self->device.get(), m_commandPool.get(), m_graphicsQueue.get());
 		// clang-format on
 
 		m_stagingBuffer->Reset();

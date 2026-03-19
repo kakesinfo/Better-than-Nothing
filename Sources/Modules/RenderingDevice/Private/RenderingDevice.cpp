@@ -40,16 +40,16 @@ namespace BetterThanNothing
 
 		m_self->instance = RenderingApi::Instance::Create({.enableValidation = true});
 		m_self->surface = RenderingApi::Surface::Create({window->Handle(), m_self->instance.get()});
-		m_device = RenderingApi::Device::Create({m_self->instance.get(), m_self->surface.get()});
-		m_graphicsQueue = m_device->CreateGraphicsQueue();
-		m_presentQueue = m_device->CreatePresentQueue();
-		m_allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_device.get()});
+		m_self->device = RenderingApi::Device::Create({m_self->instance.get(), m_self->surface.get()});
+		m_graphicsQueue = m_self->device->CreateGraphicsQueue();
+		m_presentQueue = m_self->device->CreatePresentQueue();
+		m_allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_self->device.get()});
 
-		m_commandPool = RenderingApi::CommandPool::Create({m_device.get(), m_graphicsQueue.get()});
+		m_commandPool = RenderingApi::CommandPool::Create({m_self->device.get(), m_graphicsQueue.get()});
 
 		m_swapChain = RenderingApi::SwapChain::Create({
 			m_self->surface.get(),
-			m_device.get(),
+			m_self->device.get(),
 			m_allocator.get(),
 			windowWidth,
 			windowHeight,
@@ -58,16 +58,16 @@ namespace BetterThanNothing
 
 		m_maxFramesInFlight = m_swapChain->GetImageCount();
 
-		Logger::Log<INFO>("Vendor: {}", m_device->GetVendorName());
-		Logger::Log<INFO>("Device: {}", m_device->GetDeviceName());
-		Logger::Log<INFO>("API Version: {}", m_device->GetApiVersion());
+		Logger::Log<INFO>("Vendor: {}", m_self->device->GetVendorName());
+		Logger::Log<INFO>("Device: {}", m_self->device->GetDeviceName());
+		Logger::Log<INFO>("API Version: {}", m_self->device->GetApiVersion());
 		Logger::Log<INFO>("Buffering mode: {}", static_cast<uint8_t>(createInfo.bufferingMode));
 		Logger::Log<INFO>("Max frame in-flight: {}", m_maxFramesInFlight);
 		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode != EBufferingMode::Immediate ? "enabled" : "disabled");
-		Logger::Log<INFO>("Anisotropy: {}x", m_device->GetMaxAnisotropy());
-		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_device->GetMaxMsaaSamples()));
+		Logger::Log<INFO>("Anisotropy: {}x", m_self->device->GetMaxAnisotropy());
+		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples()));
 
-		m_descriptorPool = RenderingApi::DescriptorPool::Builder(m_device.get())
+		m_descriptorPool = RenderingApi::DescriptorPool::Builder(m_self->device.get())
 							   .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)
 							   .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
 							   .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
@@ -85,13 +85,13 @@ namespace BetterThanNothing
 
 	RenderingDevice::~RenderingDevice()
 	{
-		m_device->WaitIdle();
+		m_self->device->WaitIdle();
 
 		m_samplersLUT.clear();
 
 		for (std::uint32_t i = 0; i < m_samplers.Size(); i++)
 		{
-			m_device->DestroySampler(m_samplers.Get(i)->value);
+			m_self->device->DestroySampler(m_samplers.Get(i)->value);
 			m_samplers.Destroy(i);
 		}
 
@@ -105,7 +105,7 @@ namespace BetterThanNothing
 		for (std::uint32_t i = 0; i < m_textures.Size(); i++)
 		{
 			const auto texture = m_textures.Get(i);
-			m_device->DestroyImageView(texture->defaultView);
+			m_self->device->DestroyImageView(texture->defaultView);
 			m_allocator->DestroyImage(texture->value, texture->allocation);
 			m_textures.Destroy(i);
 		}
@@ -113,7 +113,7 @@ namespace BetterThanNothing
 
 	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
-		m_descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_device.get(), type, 1, stageFlags});
+		m_descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
 	}
 
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
@@ -125,7 +125,7 @@ namespace BetterThanNothing
 	{
 		m_commandBuffers.resize(m_maxFramesInFlight);
 		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
-			m_commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_device.get(), m_commandPool.get()});
+			m_commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_self->device.get(), m_commandPool.get()});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok");
 	}
@@ -137,8 +137,8 @@ namespace BetterThanNothing
 
 		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
 		{
-			m_imageAvailableSemaphores[i] = RenderingApi::Semaphore::Create({m_device.get()});
-			m_inFlightFences[i] = RenderingApi::Fence::Create({m_device.get(), true});
+			m_imageAvailableSemaphores[i] = RenderingApi::Semaphore::Create({m_self->device.get()});
+			m_inFlightFences[i] = RenderingApi::Fence::Create({m_self->device.get(), true});
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
@@ -154,7 +154,7 @@ namespace BetterThanNothing
 		if (!acquireResult.has_value())
 		{
 			const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
-			m_device->WaitIdle();
+			m_self->device->WaitIdle();
 			m_swapChain->RecreateSwapChain(windowWidth, windowHeight);
 			return std::nullopt;
 		}
@@ -208,7 +208,7 @@ namespace BetterThanNothing
 		{
 			const auto [windowWidth, windowHeight] = window->GetFramebufferSize();
 			window->SetResized(false);
-			m_device->WaitIdle();
+			m_self->device->WaitIdle();
 			m_swapChain->RecreateSwapChain(windowWidth, windowHeight);
 		}
 		else if (presentResult != VK_SUCCESS)
@@ -219,7 +219,7 @@ namespace BetterThanNothing
 
 	void RenderingDevice::WaitIdle() const
 	{
-		m_device->WaitIdle();
+		m_self->device->WaitIdle();
 	}
 
 	[[nodiscard]] uint32_t RenderingDevice::GetCurrentFrameIndex() const
@@ -239,7 +239,7 @@ namespace BetterThanNothing
 
 	RenderingApi::Device* RenderingDevice::GetDevice() const
 	{
-		return m_device.get();
+		return m_self->device.get();
 	}
 
 	RenderingApi::Queue* RenderingDevice::GetGraphicsQueue() const

@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
@@ -88,7 +89,7 @@ namespace BetterThanNothing
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 
-		if (m_device->CreateImageView(createInfo, &texture->defaultView) != VK_SUCCESS)
+		if (m_self->device->CreateImageView(createInfo, &texture->defaultView) != VK_SUCCESS)
 			return false;
 
 		return true;
@@ -113,7 +114,7 @@ namespace BetterThanNothing
 				// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB,
 				// VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 			},
-			m_device.get(), m_commandPool.get(), m_graphicsQueue.get()
+			m_self->device.get(), m_commandPool.get(), m_graphicsQueue.get()
 		);
 
 		m_stagingBuffer->Reset();
@@ -123,7 +124,7 @@ namespace BetterThanNothing
 	{
 		const RenderingApi::Texture* texture = m_textures.Get(destination);
 
-		if (!m_device->IsSupportedFormatFeature(texture->format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+		if (!m_self->device->IsSupportedFormatFeature(texture->format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 			return false;
 
 		RenderingApi::CommandBuffer::SingleTimeCommands(
@@ -187,7 +188,7 @@ namespace BetterThanNothing
 
 				commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 			},
-			m_device.get(), m_commandPool.get(), m_graphicsQueue.get()
+			m_self->device.get(), m_commandPool.get(), m_graphicsQueue.get()
 		);
 
 		return true;
@@ -239,7 +240,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid texture handle!");
 
 		const RenderingApi::Texture* texture = m_textures.Get(handle);
-		m_device->DestroyImageView(texture->defaultView);
+		m_self->device->DestroyImageView(texture->defaultView);
 		m_allocator->DestroyImage(texture->value, texture->allocation);
 		m_textures.Destroy(handle);
 	}
