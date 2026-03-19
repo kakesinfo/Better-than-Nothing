@@ -152,8 +152,6 @@ namespace BetterThanNothing
 		RenderingDeviceCreateInfo				  m_createInfo;
 		std::unique_ptr<RenderingDeviceInternals> m_self;
 
-		std::unique_ptr<RenderingApi::Queue>		  m_graphicsQueue;
-		std::unique_ptr<RenderingApi::Queue>		  m_presentQueue;
 		std::unique_ptr<RenderingApi::Allocator>	  m_allocator;
 		std::unique_ptr<RenderingApi::SwapChain>	  m_swapChain;
 		std::unique_ptr<RenderingApi::CommandPool>	  m_commandPool;

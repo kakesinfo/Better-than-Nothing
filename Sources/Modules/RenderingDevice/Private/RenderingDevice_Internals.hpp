@@ -27,5 +27,7 @@ namespace BetterThanNothing
 		std::unique_ptr<RenderingApi::Instance> instance;
 		std::unique_ptr<RenderingApi::Surface>	surface;
 		std::unique_ptr<RenderingApi::Device>	device;
+		std::unique_ptr<RenderingApi::Queue>	graphicsQueue;
+		std::unique_ptr<RenderingApi::Queue>	presentQueue;
 	};
 }

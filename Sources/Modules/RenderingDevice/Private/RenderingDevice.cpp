@@ -41,11 +41,11 @@ namespace BetterThanNothing
 		m_self->instance = RenderingApi::Instance::Create({.enableValidation = true});
 		m_self->surface = RenderingApi::Surface::Create({window->Handle(), m_self->instance.get()});
 		m_self->device = RenderingApi::Device::Create({m_self->instance.get(), m_self->surface.get()});
-		m_graphicsQueue = m_self->device->CreateGraphicsQueue();
-		m_presentQueue = m_self->device->CreatePresentQueue();
+		m_self->graphicsQueue = m_self->device->CreateGraphicsQueue();
+		m_self->presentQueue = m_self->device->CreatePresentQueue();
 		m_allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_self->device.get()});
 
-		m_commandPool = RenderingApi::CommandPool::Create({m_self->device.get(), m_graphicsQueue.get()});
+		m_commandPool = RenderingApi::CommandPool::Create({m_self->device.get(), m_self->graphicsQueue.get()});
 
 		m_swapChain = RenderingApi::SwapChain::Create({
 			m_self->surface.get(),
@@ -187,7 +187,7 @@ namespace BetterThanNothing
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		auto graphicsQueue = m_graphicsQueue->Handle();
+		auto graphicsQueue = m_self->graphicsQueue->Handle();
 		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_inFlightFences.at(m_currentFrameIndex)->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
@@ -201,7 +201,7 @@ namespace BetterThanNothing
 		presentInfo.pSwapchains = swapChains;
 		presentInfo.pImageIndices = &imageIndex;
 
-		const VkResult presentResult = vkQueuePresentKHR(m_presentQueue->Handle(), &presentInfo);
+		const VkResult presentResult = vkQueuePresentKHR(m_self->presentQueue->Handle(), &presentInfo);
 
 		auto& window = WindowManager::GetWindow();
 		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || window->IsResized())
@@ -244,7 +244,7 @@ namespace BetterThanNothing
 
 	RenderingApi::Queue* RenderingDevice::GetGraphicsQueue() const
 	{
-		return m_graphicsQueue.get();
+		return m_self->graphicsQueue.get();
 	}
 
 	RenderingApi::Allocator* RenderingDevice::GetAllocator() const
