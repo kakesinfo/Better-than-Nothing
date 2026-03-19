@@ -32,6 +32,8 @@
 
 namespace BetterThanNothing
 {
+	struct RenderingDeviceInternals;
+
 	namespace RenderingApi
 	{
 		class Instance;
@@ -147,8 +149,9 @@ namespace BetterThanNothing
 		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetLayoutType key) const;
 
 	private:
-		RenderingDeviceCreateInfo					  m_createInfo;
-		std::unique_ptr<RenderingApi::Instance>		  m_instance;
+		RenderingDeviceCreateInfo				  m_createInfo;
+		std::unique_ptr<RenderingDeviceInternals> m_self;
+
 		std::unique_ptr<RenderingApi::Surface>		  m_surface;
 		std::unique_ptr<RenderingApi::Device>		  m_device;
 		std::unique_ptr<RenderingApi::Queue>		  m_graphicsQueue;

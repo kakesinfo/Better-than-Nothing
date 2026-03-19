@@ -17,12 +17,12 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
-#include "StagingBuffer.hpp"
-
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
+#include "RenderingDevice_Internals.hpp"
+#include "StagingBuffer.hpp"
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
@@ -36,12 +36,14 @@ namespace BetterThanNothing
 		const auto& window = WindowManager::GetWindow();
 		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
 
-		m_instance = RenderingApi::Instance::Create({.enableValidation = true});
-		m_surface = RenderingApi::Surface::Create({window->Handle(), m_instance.get()});
-		m_device = RenderingApi::Device::Create({m_instance.get(), m_surface.get()});
+		m_self = std::make_unique<RenderingDeviceInternals>();
+
+		m_self->instance = RenderingApi::Instance::Create({.enableValidation = true});
+		m_surface = RenderingApi::Surface::Create({window->Handle(), m_self->instance.get()});
+		m_device = RenderingApi::Device::Create({m_self->instance.get(), m_surface.get()});
 		m_graphicsQueue = m_device->CreateGraphicsQueue();
 		m_presentQueue = m_device->CreatePresentQueue();
-		m_allocator = RenderingApi::Allocator::Create({m_instance.get(), m_device.get()});
+		m_allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_device.get()});
 
 		m_commandPool = RenderingApi::CommandPool::Create({m_device.get(), m_graphicsQueue.get()});
 
@@ -232,7 +234,7 @@ namespace BetterThanNothing
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const
 	{
-		return m_instance.get();
+		return m_self->instance.get();
 	}
 
 	RenderingApi::Device* RenderingDevice::GetDevice() const
