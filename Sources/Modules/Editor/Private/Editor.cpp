@@ -16,16 +16,15 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../Public/DebugUI/DebugUI.hpp"
-
-#include "Module_Platform/Window.hpp"
-#include "RenderingApi/Core/Device.hpp"
-#include "RenderingApi/Core/Instance.hpp"
-#include "RenderingApi/Core/Queue.hpp"
-#include "RenderingApi/Core/SwapChain.hpp"
-#include "RenderingDevice/RenderingDevice.hpp"
-
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+
+#include <Editor/Editor.hpp>
+#include <Module_Platform/Window.hpp>
+#include <RenderingApi/Core/Device.hpp>
+#include <RenderingApi/Core/Instance.hpp>
+#include <RenderingApi/Core/Queue.hpp>
+#include <RenderingApi/Core/SwapChain.hpp>
+#include <RenderingDevice/RenderingDevice.hpp>
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
@@ -35,14 +34,14 @@
 
 namespace BetterThanNothing
 {
-	struct DebugUIInternals
+	struct EditorInternals
 	{
 		VkDescriptorPool imguiPool = VK_NULL_HANDLE;
 	};
 
-	DebugUI::DebugUI(Window* window, RenderingDevice* renderingDevice) : m_window(window), m_renderingDevice(renderingDevice)
+	Editor::Editor(Window* window, RenderingDevice* renderingDevice) : m_window(window), m_renderingDevice(renderingDevice)
 	{
-		m_internals = std::make_unique<DebugUIInternals>();
+		m_internals = std::make_unique<EditorInternals>();
 
 		const VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
 
@@ -106,7 +105,7 @@ namespace BetterThanNothing
 		});
 	}
 
-	DebugUI::~DebugUI()
+	Editor::~Editor()
 	{
 		m_renderingDevice->WaitIdle();
 
@@ -117,12 +116,12 @@ namespace BetterThanNothing
 		vkDestroyDescriptorPool(m_renderingDevice->GetDevice()->Handle(), m_internals->imguiPool, nullptr);
 	}
 
-	std::unique_ptr<DebugUI> DebugUI::Create(Window* window, RenderingDevice* renderingDevice)
+	std::unique_ptr<Editor> Editor::Create(Window* window, RenderingDevice* renderingDevice)
 	{
-		return std::make_unique<DebugUI>(window, renderingDevice);
+		return std::make_unique<Editor>(window, renderingDevice);
 	}
 
-	void DebugUI::NewFrame() const
+	void Editor::NewFrame() const
 	{
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL3_NewFrame();

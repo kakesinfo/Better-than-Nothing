@@ -16,9 +16,9 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../Public/Renderer/ImGuiPass.hpp"
+#include <Renderer/ImGuiPass.hpp>
 
-#include <DebugUI/DebugUI.hpp>
+#include <Editor/Editor.hpp>
 #include <Module_Platform/Window.hpp>
 #include <Renderer/RenderMetrics.hpp>
 #include <RenderingApi/Core/CommandBuffer.hpp>
@@ -27,7 +27,7 @@
 
 namespace BetterThanNothing
 {
-	ImGuiPass::ImGuiPass(RenderingDevice* renderingDevice, DebugUI* debugUI)
+	ImGuiPass::ImGuiPass(RenderingDevice* renderingDevice, Editor* debugUI)
 		: m_renderingDevice(renderingDevice), m_debugUI(debugUI) { }
 
 	void ImGuiPass::Execute(uint32_t imageIndex) const

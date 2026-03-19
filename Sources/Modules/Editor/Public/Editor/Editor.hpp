@@ -25,21 +25,21 @@ namespace BetterThanNothing
 	class Window;
 	class RenderingDevice;
 
-	struct DebugUIInternals;
+	struct EditorInternals;
 
-	class DebugUI
+	class Editor
 	{
 	public:
-		DebugUI(Window* window, RenderingDevice* renderingDevice);
-		~DebugUI();
+		Editor(Window* window, RenderingDevice* renderingDevice);
+		~Editor();
 
-		static std::unique_ptr<DebugUI> Create(Window* window, RenderingDevice* renderingDevice);
+		static std::unique_ptr<Editor> Create(Window* window, RenderingDevice* renderingDevice);
 
 		void NewFrame() const;
 
 	private:
 		Window*							  m_window;
 		RenderingDevice*				  m_renderingDevice;
-		std::unique_ptr<DebugUIInternals> m_internals;
+		std::unique_ptr<EditorInternals> m_internals;
 	};
 }

@@ -18,7 +18,7 @@
 
 #include "Renderer/Renderer.hpp"
 
-#include "../../DebugUI/Public/DebugUI/DebugUI.hpp"
+#include "../../Editor/Public/Editor/Editor.hpp"
 #include "../Public/Renderer/ImGuiPass.hpp"
 #include "Module_Data/Graphics/CameraData.hpp"
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
@@ -49,7 +49,7 @@ namespace BetterThanNothing
 {
 	constexpr uint32_t MAX_LIGHT_COUNT = 1000;
 
-	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, DebugUI* debugUI)
+	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI)
 		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager), m_debugUI(debugUI)
 	{
 		m_imGuiPass = std::make_unique<ImGuiPass>(m_renderingDevice, debugUI);
@@ -80,7 +80,7 @@ namespace BetterThanNothing
 			m_renderingDevice->GetDevice()->WaitIdle();
 	}
 
-	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, DebugUI* debugUI)
+	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI)
 	{
 		return std::make_unique<Renderer>(renderingDevice, resourceManager, debugUI);
 	}

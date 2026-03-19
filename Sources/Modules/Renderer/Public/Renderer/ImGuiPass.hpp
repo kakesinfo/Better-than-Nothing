@@ -21,18 +21,18 @@
 namespace BetterThanNothing
 {
 	class RenderingDevice;
-	class DebugUI;
+	class Editor;
 
 	class ImGuiPass
 	{
 	public:
-		explicit ImGuiPass(RenderingDevice* renderingDevice, DebugUI* debugUI);
+		explicit ImGuiPass(RenderingDevice* renderingDevice, Editor* debugUI);
 		~ImGuiPass() = default;
 
 		void Execute(uint32_t imageIndex) const;
 
 	private:
 		RenderingDevice* m_renderingDevice;
-		DebugUI* m_debugUI;
+		Editor* m_debugUI;
 	};
 }
