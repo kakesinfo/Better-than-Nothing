@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingDevice/Handle.hpp"
@@ -112,11 +113,11 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::GetOrCreateTextureSampler(const SamplerDescription& desc)
 	{
-		if (m_samplersLUT.contains(desc))
-			return m_samplersLUT[desc];
+		if (m_self->samplersLUT.contains(desc))
+			return m_self->samplersLUT[desc];
 
-		const Handle		   handle = m_samplers.Allocate();
-		RenderingApi::Sampler* newSampler = m_samplers.Get(handle);
+		const Handle		   handle = m_self->samplers.Allocate();
+		RenderingApi::Sampler* newSampler = m_self->samplers.Get(handle);
 
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -126,7 +127,7 @@ namespace BetterThanNothing
 		samplerInfo.addressModeV = Internal_RetrieveSamplerAddressMode(desc.addressModeV);
 		samplerInfo.addressModeW = Internal_RetrieveSamplerAddressMode(desc.addressModeW);
 		samplerInfo.anisotropyEnable = desc.anisotropyEnable;
-		samplerInfo.maxAnisotropy = desc.maxAnisotropy == -1 ? m_device->GetMaxAnisotropy() : desc.maxAnisotropy;
+		samplerInfo.maxAnisotropy = desc.maxAnisotropy == -1 ? m_self->device->GetMaxAnisotropy() : desc.maxAnisotropy;
 		samplerInfo.borderColor = Internal_RetrieveBolderColor(desc.borderColor);
 		samplerInfo.compareEnable = desc.compareEnable;
 		samplerInfo.compareOp = Internal_RetrieveCompareOp(desc.compareOp);
@@ -135,29 +136,29 @@ namespace BetterThanNothing
 		samplerInfo.maxLod = desc.maxLod;
 		samplerInfo.mipLodBias = desc.mipLodBias;
 
-		if (m_device->CreateSampler(samplerInfo, &newSampler->value) != VK_SUCCESS)
+		if (m_self->device->CreateSampler(samplerInfo, &newSampler->value) != VK_SUCCESS)
 			throw std::runtime_error("failed to create vulkan sampler");
 
-		m_samplersLUT[desc] = handle;
+		m_self->samplersLUT[desc] = handle;
 
 		return handle;
 	}
 
 	void RenderingDevice::DestroyTextureSampler(const Handle& handle)
 	{
-		if (!m_samplers.Has(handle))
+		if (!m_self->samplers.Has(handle))
 			throw std::runtime_error("Invalid sampler handle!");
 
-		const RenderingApi::Sampler* sampler = m_samplers.Get(handle);
-		m_device->DestroySampler(sampler->value);
-		m_samplers.Destroy(handle);
+		const RenderingApi::Sampler* sampler = m_self->samplers.Get(handle);
+		m_self->device->DestroySampler(sampler->value);
+		m_self->samplers.Destroy(handle);
 	}
 
 	RenderingApi::Sampler* RenderingDevice::GetSampler(const Handle& handle)
 	{
-		if (!m_samplers.Has(handle))
+		if (!m_self->samplers.Has(handle))
 			throw std::runtime_error("Invalid sampler handle!");
 
-		return m_samplers.Get(handle);
+		return m_self->samplers.Get(handle);
 	}
 }

@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingDevice/BufferDescription.hpp"
@@ -77,11 +78,11 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::CreateBuffer(const BufferDescription& desc)
 	{
-		const Handle handle = m_buffers.Allocate();
+		const Handle handle = m_self->buffers.Allocate();
 
-		if (!Internal_CreateBuffer(desc, m_buffers.Get(handle), m_allocator.get()))
+		if (!Internal_CreateBuffer(desc, m_self->buffers.Get(handle), m_self->allocator.get()))
 		{
-			m_buffers.Destroy(handle);
+			m_self->buffers.Destroy(handle);
 			throw std::runtime_error("Failed to vulkan create buffer!");
 		}
 
@@ -145,18 +146,18 @@ namespace BetterThanNothing
 		if (data == nullptr || size == 0)
 			return false;
 
-		const uint64_t offset = m_stagingBuffer->Stage(data, size);
+		const uint64_t offset = m_self->stagingBuffer->Stage(data, size);
 
 		// clang-format off
 		RenderingApi::CommandBuffer::SingleTimeCommands([&](const std::unique_ptr<RenderingApi::CommandBuffer>& cmd) {
-			const auto srcBuffer = m_stagingBuffer->GetBuffer();
-			const auto dstBuffer = m_buffers.Get(dstBufferHandle)->value;
+			const auto srcBuffer = m_self->stagingBuffer->GetBuffer();
+			const auto dstBuffer = m_self->buffers.Get(dstBufferHandle)->value;
 
 			cmd->CopyBuffer(srcBuffer, dstBuffer, size, offset);
-		}, m_device.get(), m_commandPool.get(), m_graphicsQueue.get());
+		}, m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get());
 		// clang-format on
 
-		m_stagingBuffer->Reset();
+		m_self->stagingBuffer->Reset();
 
 		return true;
 	}
@@ -166,7 +167,7 @@ namespace BetterThanNothing
 		if (data == nullptr || size == 0)
 			return false;
 
-		void* dst = m_buffers.Get(dstBufferHandle)->allocInfo.pMappedData;
+		void* dst = m_self->buffers.Get(dstBufferHandle)->allocInfo.pMappedData;
 		std::memcpy(dst, data, size);
 
 		return true;
@@ -174,26 +175,26 @@ namespace BetterThanNothing
 
 	void RenderingDevice::DestroyBuffer(const Handle& handle)
 	{
-		if (!m_buffers.Has(handle))
+		if (!m_self->buffers.Has(handle))
 			throw std::runtime_error("Invalid buffer handle!");
 
-		const RenderingApi::Buffer* buffer = m_buffers.Get(handle);
-		m_allocator->DestroyBuffer(buffer->value, buffer->allocation);
-		m_buffers.Destroy(handle);
+		const RenderingApi::Buffer* buffer = m_self->buffers.Get(handle);
+		m_self->allocator->DestroyBuffer(buffer->value, buffer->allocation);
+		m_self->buffers.Destroy(handle);
 	}
 
 	RenderingApi::Buffer* RenderingDevice::GetBuffer(const Handle& handle)
 	{
-		if (!m_buffers.Has(handle))
+		if (!m_self->buffers.Has(handle))
 			throw std::runtime_error("Invalid buffer handle!");
-		return m_buffers.Get(handle);
+		return m_self->buffers.Get(handle);
 	}
 
 	void* RenderingDevice::GetBufferData(const Handle& handle)
 	{
-		if (!m_buffers.Has(handle))
+		if (!m_self->buffers.Has(handle))
 			throw std::runtime_error("Invalid buffer handle!");
 
-		return m_buffers.Get(handle)->allocInfo.pMappedData;
+		return m_self->buffers.Get(handle)->allocInfo.pMappedData;
 	}
 }

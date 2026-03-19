@@ -17,12 +17,12 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
-#include "StagingBuffer.hpp"
-
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
+#include "RenderingDevice_Internals.hpp"
+#include "StagingBuffer.hpp"
 #include <Module_Base/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
@@ -36,46 +36,48 @@ namespace BetterThanNothing
 		const auto& window = WindowManager::GetWindow();
 		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
 
-		m_instance = RenderingApi::Instance::Create({.enableValidation = true});
-		m_surface = RenderingApi::Surface::Create({window->Handle(), m_instance.get()});
-		m_device = RenderingApi::Device::Create({m_instance.get(), m_surface.get()});
-		m_graphicsQueue = m_device->CreateGraphicsQueue();
-		m_presentQueue = m_device->CreatePresentQueue();
-		m_allocator = RenderingApi::Allocator::Create({m_instance.get(), m_device.get()});
+		m_self = std::make_unique<RenderingDeviceInternals>();
 
-		m_commandPool = RenderingApi::CommandPool::Create({m_device.get(), m_graphicsQueue.get()});
+		m_self->instance = RenderingApi::Instance::Create({.enableValidation = true});
+		m_self->surface = RenderingApi::Surface::Create({window->Handle(), m_self->instance.get()});
+		m_self->device = RenderingApi::Device::Create({m_self->instance.get(), m_self->surface.get()});
+		m_self->graphicsQueue = m_self->device->CreateGraphicsQueue();
+		m_self->presentQueue = m_self->device->CreatePresentQueue();
+		m_self->allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_self->device.get()});
 
-		m_swapChain = RenderingApi::SwapChain::Create({
-			m_surface.get(),
-			m_device.get(),
-			m_allocator.get(),
+		m_self->commandPool = RenderingApi::CommandPool::Create({m_self->device.get(), m_self->graphicsQueue.get()});
+
+		m_self->swapChain = RenderingApi::SwapChain::Create({
+			m_self->surface.get(),
+			m_self->device.get(),
+			m_self->allocator.get(),
 			windowWidth,
 			windowHeight,
 			createInfo.bufferingMode,
 		});
 
-		m_maxFramesInFlight = m_swapChain->GetImageCount();
+		m_maxFramesInFlight = m_self->swapChain->GetImageCount();
 
-		Logger::Log<INFO>("Vendor: {}", m_device->GetVendorName());
-		Logger::Log<INFO>("Device: {}", m_device->GetDeviceName());
-		Logger::Log<INFO>("API Version: {}", m_device->GetApiVersion());
+		Logger::Log<INFO>("Vendor: {}", m_self->device->GetVendorName());
+		Logger::Log<INFO>("Device: {}", m_self->device->GetDeviceName());
+		Logger::Log<INFO>("API Version: {}", m_self->device->GetApiVersion());
 		Logger::Log<INFO>("Buffering mode: {}", static_cast<uint8_t>(createInfo.bufferingMode));
 		Logger::Log<INFO>("Max frame in-flight: {}", m_maxFramesInFlight);
 		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode != EBufferingMode::Immediate ? "enabled" : "disabled");
-		Logger::Log<INFO>("Anisotropy: {}x", m_device->GetMaxAnisotropy());
-		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_device->GetMaxMsaaSamples()));
+		Logger::Log<INFO>("Anisotropy: {}x", m_self->device->GetMaxAnisotropy());
+		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples()));
 
-		m_descriptorPool = RenderingApi::DescriptorPool::Builder(m_device.get())
-							   .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)
-							   .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
-							   .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
-							   .Build();
+		m_self->descriptorPool = RenderingApi::DescriptorPool::Builder(m_self->device.get())
+									 .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)
+									 .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
+									 .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
+									 .Build();
 
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		m_stagingBuffer = StagingBuffer::Create(m_allocator.get(), 128);
+		m_self->stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();
@@ -83,35 +85,35 @@ namespace BetterThanNothing
 
 	RenderingDevice::~RenderingDevice()
 	{
-		m_device->WaitIdle();
+		m_self->device->WaitIdle();
 
-		m_samplersLUT.clear();
+		m_self->samplersLUT.clear();
 
-		for (std::uint32_t i = 0; i < m_samplers.Size(); i++)
+		for (std::uint32_t i = 0; i < m_self->samplers.Size(); i++)
 		{
-			m_device->DestroySampler(m_samplers.Get(i)->value);
-			m_samplers.Destroy(i);
+			m_self->device->DestroySampler(m_self->samplers.Get(i)->value);
+			m_self->samplers.Destroy(i);
 		}
 
-		for (std::uint32_t i = 0; i < m_buffers.Size(); i++)
+		for (std::uint32_t i = 0; i < m_self->buffers.Size(); i++)
 		{
-			const auto buffer = m_buffers.Get(i);
-			m_allocator->DestroyBuffer(buffer->value, buffer->allocation);
-			m_buffers.Destroy(i);
+			const auto buffer = m_self->buffers.Get(i);
+			m_self->allocator->DestroyBuffer(buffer->value, buffer->allocation);
+			m_self->buffers.Destroy(i);
 		}
 
-		for (std::uint32_t i = 0; i < m_textures.Size(); i++)
+		for (std::uint32_t i = 0; i < m_self->textures.Size(); i++)
 		{
-			const auto texture = m_textures.Get(i);
-			m_device->DestroyImageView(texture->defaultView);
-			m_allocator->DestroyImage(texture->value, texture->allocation);
-			m_textures.Destroy(i);
+			const auto texture = m_self->textures.Get(i);
+			m_self->device->DestroyImageView(texture->defaultView);
+			m_self->allocator->DestroyImage(texture->value, texture->allocation);
+			m_self->textures.Destroy(i);
 		}
 	};
 
 	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
-		m_descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_device.get(), type, 1, stageFlags});
+		m_self->descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
 	}
 
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
@@ -121,22 +123,22 @@ namespace BetterThanNothing
 
 	void RenderingDevice::Internal_CreateCommandBuffers()
 	{
-		m_commandBuffers.resize(m_maxFramesInFlight);
+		m_self->commandBuffers.resize(m_maxFramesInFlight);
 		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
-			m_commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_device.get(), m_commandPool.get()});
+			m_self->commandBuffers[i] = RenderingApi::CommandBuffer::Create({m_self->device.get(), m_self->commandPool.get()});
 
 		Logger::Log<SUCCESS>("Vulkan command buffers: ok");
 	}
 
 	void RenderingDevice::Internal_CreateSyncObjects()
 	{
-		m_imageAvailableSemaphores.resize(m_maxFramesInFlight);
-		m_inFlightFences.resize(m_maxFramesInFlight);
+		m_self->imageAvailableSemaphores.resize(m_maxFramesInFlight);
+		m_self->inFlightFences.resize(m_maxFramesInFlight);
 
 		for (uint32_t i = 0; i < m_maxFramesInFlight; i++)
 		{
-			m_imageAvailableSemaphores[i] = RenderingApi::Semaphore::Create({m_device.get()});
-			m_inFlightFences[i] = RenderingApi::Fence::Create({m_device.get(), true});
+			m_self->imageAvailableSemaphores[i] = RenderingApi::Semaphore::Create({m_self->device.get()});
+			m_self->inFlightFences[i] = RenderingApi::Fence::Create({m_self->device.get(), true});
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
@@ -144,36 +146,36 @@ namespace BetterThanNothing
 
 	std::optional<uint32_t> RenderingDevice::BeginFrame()
 	{
-		m_inFlightFences.at(m_currentFrameIndex)->Wait();
+		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();
 		FlushDescriptorSetUpdateRequests();
 
-		const auto acquireResult = m_swapChain->AcquireNextImage(m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
+		const auto acquireResult = m_self->swapChain->AcquireNextImage(m_self->imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
 
 		if (!acquireResult.has_value())
 		{
 			const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
-			m_device->WaitIdle();
-			m_swapChain->RecreateSwapChain(windowWidth, windowHeight);
+			m_self->device->WaitIdle();
+			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 			return std::nullopt;
 		}
 
 		const uint32_t imageIndex = acquireResult.value();
 
-		m_inFlightFences.at(m_currentFrameIndex)->Reset();
-		m_commandBuffers.at(m_currentFrameIndex)->Reset();
-		m_commandBuffers.at(m_currentFrameIndex)->BeginRecording();
+		m_self->inFlightFences.at(m_currentFrameIndex)->Reset();
+		m_self->commandBuffers.at(m_currentFrameIndex)->Reset();
+		m_self->commandBuffers.at(m_currentFrameIndex)->BeginRecording();
 
 		return imageIndex;
 	}
 
 	void RenderingDevice::EndFrame(const uint32_t imageIndex)
 	{
-		m_commandBuffers.at(m_currentFrameIndex)->EndRecording();
+		m_self->commandBuffers.at(m_currentFrameIndex)->EndRecording();
 
-		const auto					   commandBuffer = m_commandBuffers.at(m_currentFrameIndex)->Handle();
-		const VkSemaphore			   waitSemaphores[] = {m_imageAvailableSemaphores.at(m_currentFrameIndex)->Handle()};
+		const auto					   commandBuffer = m_self->commandBuffers.at(m_currentFrameIndex)->Handle();
+		const VkSemaphore			   waitSemaphores[] = {m_self->imageAvailableSemaphores.at(m_currentFrameIndex)->Handle()};
 		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-		const VkSemaphore			   signalSemaphores[] = {m_swapChain->GetImageFinishedSemaphore(imageIndex)};
+		const VkSemaphore			   signalSemaphores[] = {m_self->swapChain->GetImageFinishedSemaphore(imageIndex)};
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -185,11 +187,11 @@ namespace BetterThanNothing
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		auto graphicsQueue = m_graphicsQueue->Handle();
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_inFlightFences.at(m_currentFrameIndex)->Handle()) != VK_SUCCESS)
+		auto graphicsQueue = m_self->graphicsQueue->Handle();
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, m_self->inFlightFences.at(m_currentFrameIndex)->Handle()) != VK_SUCCESS)
 			throw std::runtime_error("failed to submit draw command buffer!");
 
-		const VkSwapchainKHR swapChains[] = {m_swapChain->Handle()};
+		const VkSwapchainKHR swapChains[] = {m_self->swapChain->Handle()};
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -199,15 +201,15 @@ namespace BetterThanNothing
 		presentInfo.pSwapchains = swapChains;
 		presentInfo.pImageIndices = &imageIndex;
 
-		const VkResult presentResult = vkQueuePresentKHR(m_presentQueue->Handle(), &presentInfo);
+		const VkResult presentResult = vkQueuePresentKHR(m_self->presentQueue->Handle(), &presentInfo);
 
 		auto& window = WindowManager::GetWindow();
 		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || window->IsResized())
 		{
 			const auto [windowWidth, windowHeight] = window->GetFramebufferSize();
 			window->SetResized(false);
-			m_device->WaitIdle();
-			m_swapChain->RecreateSwapChain(windowWidth, windowHeight);
+			m_self->device->WaitIdle();
+			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 		}
 		else if (presentResult != VK_SUCCESS)
 			throw std::runtime_error("failed to present swap chain image!");
@@ -217,7 +219,7 @@ namespace BetterThanNothing
 
 	void RenderingDevice::WaitIdle() const
 	{
-		m_device->WaitIdle();
+		m_self->device->WaitIdle();
 	}
 
 	[[nodiscard]] uint32_t RenderingDevice::GetCurrentFrameIndex() const
@@ -227,32 +229,32 @@ namespace BetterThanNothing
 
 	RenderingApi::CommandBuffer* RenderingDevice::GetCurrentCommandBuffer() const
 	{
-		return m_commandBuffers[m_currentFrameIndex].get();
+		return m_self->commandBuffers[m_currentFrameIndex].get();
 	}
 
 	RenderingApi::Instance* RenderingDevice::GetInstance() const
 	{
-		return m_instance.get();
+		return m_self->instance.get();
 	}
 
 	RenderingApi::Device* RenderingDevice::GetDevice() const
 	{
-		return m_device.get();
+		return m_self->device.get();
 	}
 
 	RenderingApi::Queue* RenderingDevice::GetGraphicsQueue() const
 	{
-		return m_graphicsQueue.get();
+		return m_self->graphicsQueue.get();
 	}
 
 	RenderingApi::Allocator* RenderingDevice::GetAllocator() const
 	{
-		return m_allocator.get();
+		return m_self->allocator.get();
 	}
 
 	RenderingApi::SwapChain* RenderingDevice::GetSwapChain() const
 	{
-		return m_swapChain.get();
+		return m_self->swapChain.get();
 	}
 
 	auto RenderingDevice::GetMaxFramesInFlight() const -> uint32_t
@@ -262,18 +264,13 @@ namespace BetterThanNothing
 
 	auto RenderingDevice::GetAspectRatio() const -> float
 	{
-		return m_swapChain->GetAspectRatio();
-	}
-
-	RenderingApi::DescriptorPool* RenderingDevice::GetDescriptorPool() const
-	{
-		return m_descriptorPool.get();
+		return m_self->swapChain->GetAspectRatio();
 	}
 
 	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
 	{
-		if (!m_descriptorLayouts.contains(key))
+		if (!m_self->descriptorLayouts.contains(key))
 			throw std::runtime_error("Cannot find descriptorSetLayout");
-		return m_descriptorLayouts.at(key).get();
+		return m_self->descriptorLayouts.at(key).get();
 	}
 }
