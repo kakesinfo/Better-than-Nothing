@@ -47,9 +47,9 @@ namespace BetterThanNothing
 			updateTimer = 0.0f;
 		}
 
-		ImGui::SetNextWindowSize(ImVec2(200, 250), ImGuiCond_Always);
-		ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-		ImGui::Begin("Debug Info", nullptr, ImGuiWindowFlags_NoResize);
+		ImGui::SetNextWindowSize(ImVec2(200, 250), ImGuiCond_Appearing);
+		ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Appearing);
+		ImGui::Begin("Debug Info", nullptr);
 		ImGui::SeparatorText("Rendering");
 		ImGui::Text("Vertices: %d", cachedMetrics.verticesRendered);
 		ImGui::Text("Draw calls: %d", cachedMetrics.drawCalls);
