@@ -43,14 +43,15 @@ namespace BetterThanNothing
 	class ResourceManager;
 	class RenderingDevice;
 	class Scene;
+	class DebugUI;
 
 	class Renderer final
 	{
 	public:
-		explicit Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager);
+		explicit Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, DebugUI* debugUI);
 		~Renderer();
 
-		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager);
+		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, DebugUI* debugUI);
 
 		void RenderFrame(const RenderList* renderList, const CameraData& camera) const;
 		void RenderFrame_Scene(const Scene* renderList) const;
@@ -80,6 +81,7 @@ namespace BetterThanNothing
 	private:
 		RenderingDevice*			m_renderingDevice = nullptr;
 		ResourceManager*			m_resourceManager = nullptr;
+		DebugUI*					m_debugUI = nullptr;
 		std::unique_ptr<DrawStream> m_drawStream;
 		std::unique_ptr<ImGuiPass>	m_imGuiPass;
 

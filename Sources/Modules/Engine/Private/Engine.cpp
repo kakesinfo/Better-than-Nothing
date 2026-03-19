@@ -23,6 +23,7 @@
 #include <Module_Base/EKey.hpp>
 #include <Module_Engine/Engine.hpp>
 
+#include "DebugUI/DebugUI.hpp"
 #include "Module_Math/Matrix4.hpp"
 #include "ResourceManager/ResourceManager.hpp"
 
@@ -56,7 +57,10 @@ namespace BetterThanNothing
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
-		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get());
+
+		m_debugUI = std::make_unique<DebugUI>(WindowManager::GetWindow().get(), m_renderingDevice.get());
+
+		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_debugUI.get());
 
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 

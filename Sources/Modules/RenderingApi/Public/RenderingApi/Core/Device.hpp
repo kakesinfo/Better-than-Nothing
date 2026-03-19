@@ -20,6 +20,7 @@
 
 #include <optional>
 #include <vector>
+#include <memory>
 
 namespace BetterThanNothing::RenderingApi
 {

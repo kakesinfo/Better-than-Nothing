@@ -21,6 +21,7 @@
 #include <Module_Base/EBufferingMode.hpp>
 #include <optional>
 #include <vector>
+#include <vma/vk_mem_alloc.h>
 
 namespace BetterThanNothing::RenderingApi
 {

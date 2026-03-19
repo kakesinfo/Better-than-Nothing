@@ -59,7 +59,8 @@ namespace BetterThanNothing
 
 		ImGui_ImplSDL3_InitForVulkan(window->Handle());
 
-		const std::vector formats = {renderingDevice->GetSwapChain()->GetImageFormat()};
+		static std::vector<VkFormat> formats;
+		formats = {renderingDevice->GetSwapChain()->GetImageFormat()};
 
 		VkPipelineRenderingCreateInfoKHR pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -82,7 +83,8 @@ namespace BetterThanNothing
 		initInfo.PipelineInfoMain.RenderPass = VK_NULL_HANDLE;
 		initInfo.UseDynamicRendering = true;
 
-		ImGui_ImplVulkan_Init(&initInfo);
+		if (!ImGui_ImplVulkan_Init(&initInfo))
+			throw std::runtime_error("failed to initialize ImGui");
 
 		m_window->SetEventCallback([](const SDL_Event& event) -> bool {
 			ImGui_ImplSDL3_ProcessEvent(&event);
