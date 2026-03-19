@@ -113,8 +113,8 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::GetOrCreateTextureSampler(const SamplerDescription& desc)
 	{
-		if (m_samplersLUT.contains(desc))
-			return m_samplersLUT[desc];
+		if (m_self->samplersLUT.contains(desc))
+			return m_self->samplersLUT[desc];
 
 		const Handle		   handle = m_self->samplers.Allocate();
 		RenderingApi::Sampler* newSampler = m_self->samplers.Get(handle);
@@ -139,7 +139,7 @@ namespace BetterThanNothing
 		if (m_self->device->CreateSampler(samplerInfo, &newSampler->value) != VK_SUCCESS)
 			throw std::runtime_error("failed to create vulkan sampler");
 
-		m_samplersLUT[desc] = handle;
+		m_self->samplersLUT[desc] = handle;
 
 		return handle;
 	}

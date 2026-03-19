@@ -146,18 +146,18 @@ namespace BetterThanNothing
 
 	void RenderingDevice::RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request)
 	{
-		m_descriptorsUpdateRequests.push_back(request);
+		m_self->descriptorsUpdateRequests.push_back(request);
 	}
 
 	void RenderingDevice::FlushDescriptorSetUpdateRequests()
 	{
-		if (m_descriptorsUpdateRequests.empty())
+		if (m_self->descriptorsUpdateRequests.empty())
 			return;
 
-		m_descriptorsWrites.clear();
-		m_descriptorsWrites.reserve(m_descriptorsUpdateRequests.size());
+		m_self->descriptorsWrites.clear();
+		m_self->descriptorsWrites.reserve(m_self->descriptorsUpdateRequests.size());
 
-		for (const auto& request : m_descriptorsUpdateRequests)
+		for (const auto& request : m_self->descriptorsUpdateRequests)
 		{
 			VkWriteDescriptorSet write = request.write;
 
@@ -185,18 +185,18 @@ namespace BetterThanNothing
 					throw std::runtime_error("Invalid descriptor type!");
 			}
 
-			m_descriptorsWrites.push_back(write);
+			m_self->descriptorsWrites.push_back(write);
 		}
 
-		if (!m_descriptorsWrites.empty())
+		if (!m_self->descriptorsWrites.empty())
 		{
-			const auto					writesCount = static_cast<std::uint32_t>(m_descriptorsWrites.size());
-			const VkWriteDescriptorSet* writesData = m_descriptorsWrites.data();
+			const auto					writesCount = static_cast<std::uint32_t>(m_self->descriptorsWrites.size());
+			const VkWriteDescriptorSet* writesData = m_self->descriptorsWrites.data();
 
 			vkUpdateDescriptorSets(m_self->device->Handle(), writesCount, writesData, 0, nullptr);
 		}
 
-		m_descriptorsUpdateRequests.clear();
+		m_self->descriptorsUpdateRequests.clear();
 	}
 
 	void RenderingDevice::DestroyDescriptorSet(const Handle& handle)

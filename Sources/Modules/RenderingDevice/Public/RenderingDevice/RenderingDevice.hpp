@@ -151,12 +151,7 @@ namespace BetterThanNothing
 	private:
 		RenderingDeviceCreateInfo				  m_createInfo;
 		std::unique_ptr<RenderingDeviceInternals> m_self;
-
 		std::unique_ptr<StagingBuffer> m_stagingBuffer;
-
-		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> m_samplersLUT;
-		std::vector<DescriptorSetUpdateRequest>															m_descriptorsUpdateRequests;
-		std::vector<VkWriteDescriptorSet>																m_descriptorsWrites;
 
 		uint32_t m_maxFramesInFlight;
 		uint32_t m_currentFrameIndex = 0;

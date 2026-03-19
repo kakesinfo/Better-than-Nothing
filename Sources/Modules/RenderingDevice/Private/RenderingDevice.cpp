@@ -87,7 +87,7 @@ namespace BetterThanNothing
 	{
 		m_self->device->WaitIdle();
 
-		m_samplersLUT.clear();
+		m_self->samplersLUT.clear();
 
 		for (std::uint32_t i = 0; i < m_self->samplers.Size(); i++)
 		{

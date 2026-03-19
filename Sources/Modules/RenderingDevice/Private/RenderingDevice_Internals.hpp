@@ -44,5 +44,9 @@ namespace BetterThanNothing
 		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   textures;
 		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   samplers;
 		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> descriptors;
+
+		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> samplersLUT;
+		std::vector<DescriptorSetUpdateRequest>															descriptorsUpdateRequests;
+		std::vector<VkWriteDescriptorSet>																descriptorsWrites;
 	};
 }
