@@ -32,6 +32,8 @@
 
 namespace BetterThanNothing
 {
+	struct RenderingDeviceInternals;
+
 	namespace RenderingApi
 	{
 		class Instance;
@@ -42,16 +44,13 @@ namespace BetterThanNothing
 		class SwapChain;
 		class CommandPool;
 		class Pipeline;
+		class CommandBuffer;
 		class DescriptorPool;
 		class DescriptorSetLayout;
-		struct DescriptorSetLayoutCreateInfo;
-		struct Sampler;
 		struct Buffer;
+		struct Sampler;
 		struct Texture;
 		struct DescriptorSet;
-		class CommandBuffer;
-		class Semaphore;
-		class Fence;
 	}
 
 	class StagingBuffer;
@@ -147,35 +146,9 @@ namespace BetterThanNothing
 		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetLayoutType key) const;
 
 	private:
-		RenderingDeviceCreateInfo					  m_createInfo;
-		std::unique_ptr<RenderingApi::Instance>		  m_instance;
-		std::unique_ptr<RenderingApi::Surface>		  m_surface;
-		std::unique_ptr<RenderingApi::Device>		  m_device;
-		std::unique_ptr<RenderingApi::Queue>		  m_graphicsQueue;
-		std::unique_ptr<RenderingApi::Queue>		  m_presentQueue;
-		std::unique_ptr<RenderingApi::Allocator>	  m_allocator;
-		std::unique_ptr<RenderingApi::SwapChain>	  m_swapChain;
-		std::unique_ptr<RenderingApi::CommandPool>	  m_commandPool;
-		std::unique_ptr<RenderingApi::DescriptorPool> m_descriptorPool;
-
-		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> m_commandBuffers;
-		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  m_imageAvailableSemaphores;
-		std::vector<std::unique_ptr<RenderingApi::Fence>>		  m_inFlightFences;
-
-		std::unique_ptr<StagingBuffer> m_stagingBuffer;
-
-		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> m_descriptorLayouts;
-
-		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>			   m_buffers;
-		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   m_textures;
-		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   m_samplers;
-		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> m_descriptors;
-
-		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> m_samplersLUT;
-		std::vector<DescriptorSetUpdateRequest>															m_descriptorsUpdateRequests;
-		std::vector<VkWriteDescriptorSet>																m_descriptorsWrites;
-
-		uint32_t m_maxFramesInFlight;
-		uint32_t m_currentFrameIndex = 0;
+		RenderingDeviceCreateInfo				  m_createInfo;
+		std::unique_ptr<RenderingDeviceInternals> m_self;
+		uint32_t								  m_maxFramesInFlight;
+		uint32_t								  m_currentFrameIndex = 0;
 	};
 };

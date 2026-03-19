@@ -18,6 +18,7 @@
 
 #include "Module_Data/Graphics/GlobalUniformData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 
 #include "../Public/RenderingDevice/DescriptorSetUpdateRequest.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
@@ -39,20 +40,20 @@ namespace BetterThanNothing
 
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = m_descriptorPool->Handle();
+		allocInfo.descriptorPool = m_self->descriptorPool->Handle();
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &layout;
 
-		return vkAllocateDescriptorSets(m_device->Handle(), &allocInfo, &newDescriptorSet->value) == VK_SUCCESS;
+		return vkAllocateDescriptorSets(m_self->device->Handle(), &allocInfo, &newDescriptorSet->value) == VK_SUCCESS;
 	}
 
 	Handle RenderingDevice::CreateDescriptorSet(DescriptorSetLayoutType layoutType)
 	{
-		const Handle handle = m_descriptors.Allocate();
+		const Handle handle = m_self->descriptors.Allocate();
 
-		if (!Internal_CreateDescriptorSet(layoutType, m_descriptors.Get(handle)))
+		if (!Internal_CreateDescriptorSet(layoutType, m_self->descriptors.Get(handle)))
 		{
-			m_descriptors.Destroy(handle);
+			m_self->descriptors.Destroy(handle);
 			throw std::runtime_error("Failed to allocate descriptor set");
 		}
 
@@ -145,18 +146,18 @@ namespace BetterThanNothing
 
 	void RenderingDevice::RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request)
 	{
-		m_descriptorsUpdateRequests.push_back(request);
+		m_self->descriptorsUpdateRequests.push_back(request);
 	}
 
 	void RenderingDevice::FlushDescriptorSetUpdateRequests()
 	{
-		if (m_descriptorsUpdateRequests.empty())
+		if (m_self->descriptorsUpdateRequests.empty())
 			return;
 
-		m_descriptorsWrites.clear();
-		m_descriptorsWrites.reserve(m_descriptorsUpdateRequests.size());
+		m_self->descriptorsWrites.clear();
+		m_self->descriptorsWrites.reserve(m_self->descriptorsUpdateRequests.size());
 
-		for (const auto& request : m_descriptorsUpdateRequests)
+		for (const auto& request : m_self->descriptorsUpdateRequests)
 		{
 			VkWriteDescriptorSet write = request.write;
 
@@ -184,33 +185,33 @@ namespace BetterThanNothing
 					throw std::runtime_error("Invalid descriptor type!");
 			}
 
-			m_descriptorsWrites.push_back(write);
+			m_self->descriptorsWrites.push_back(write);
 		}
 
-		if (!m_descriptorsWrites.empty())
+		if (!m_self->descriptorsWrites.empty())
 		{
-			const auto					writesCount = static_cast<std::uint32_t>(m_descriptorsWrites.size());
-			const VkWriteDescriptorSet* writesData = m_descriptorsWrites.data();
+			const auto					writesCount = static_cast<std::uint32_t>(m_self->descriptorsWrites.size());
+			const VkWriteDescriptorSet* writesData = m_self->descriptorsWrites.data();
 
-			vkUpdateDescriptorSets(m_device->Handle(), writesCount, writesData, 0, nullptr);
+			vkUpdateDescriptorSets(m_self->device->Handle(), writesCount, writesData, 0, nullptr);
 		}
 
-		m_descriptorsUpdateRequests.clear();
+		m_self->descriptorsUpdateRequests.clear();
 	}
 
 	void RenderingDevice::DestroyDescriptorSet(const Handle& handle)
 	{
-		if (!m_descriptors.Has(handle))
+		if (!m_self->descriptors.Has(handle))
 			throw std::runtime_error("Invalid descriptor set handle!");
 
-		m_descriptors.Destroy(handle);
+		m_self->descriptors.Destroy(handle);
 	}
 
 	RenderingApi::DescriptorSet* RenderingDevice::GetDescriptorSet(const Handle& handle)
 	{
-		if (!m_descriptors.Has(handle))
+		if (!m_self->descriptors.Has(handle))
 			throw std::runtime_error("Invalid descriptor set handle!");
 
-		return m_descriptors.Get(handle);
+		return m_self->descriptors.Get(handle);
 	}
 }

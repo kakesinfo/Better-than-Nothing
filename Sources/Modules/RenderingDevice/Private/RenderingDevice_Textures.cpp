@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
@@ -36,7 +37,7 @@ namespace BetterThanNothing
 
 	bool RenderingDevice::Internal_CreateTextureImage(const TextureImageDescription& desc)
 	{
-		RenderingApi::Texture* texture = m_textures.Get(desc.destination);
+		RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
 
 		VkImageCreateInfo imageInfo{};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -56,7 +57,7 @@ namespace BetterThanNothing
 		allocCreateInfo.flags = desc.dedicated ? VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT : 0;
 		allocCreateInfo.priority = 1.0f;
 
-		if (m_allocator->CreateImage(&imageInfo, &allocCreateInfo, &texture->value, &texture->allocation, nullptr) != VK_SUCCESS)
+		if (m_self->allocator->CreateImage(&imageInfo, &allocCreateInfo, &texture->value, &texture->allocation, nullptr) != VK_SUCCESS)
 			return false;
 
 		texture->width = desc.width;
@@ -69,7 +70,7 @@ namespace BetterThanNothing
 
 	bool RenderingDevice::Internal_CreateTextureImageView(const TextureImageViewDescription& desc)
 	{
-		RenderingApi::Texture* texture = m_textures.Get(desc.destination);
+		RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
 
 		VkImageViewCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -88,7 +89,7 @@ namespace BetterThanNothing
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 
-		if (m_device->CreateImageView(createInfo, &texture->defaultView) != VK_SUCCESS)
+		if (m_self->device->CreateImageView(createInfo, &texture->defaultView) != VK_SUCCESS)
 			return false;
 
 		return true;
@@ -96,34 +97,34 @@ namespace BetterThanNothing
 
 	void RenderingDevice::Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc)
 	{
-		const RenderingApi::Texture* texture = m_textures.Get(desc.destination);
+		const RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
 
 		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 		bufferInfo.size = desc.dataSize;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-		const uint64_t offset = m_stagingBuffer->Stage(desc.data, desc.dataSize);
+		const uint64_t offset = m_self->stagingBuffer->Stage(desc.data, desc.dataSize);
 
 		RenderingApi::CommandBuffer::SingleTimeCommands(
 			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
 				commandBuffer->TransitionImageLayout(texture->value, desc.format, desc.oldLayout, desc.newLayout, texture->mipLevels);
-				commandBuffer->CopyBufferToImage(m_stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, offset);
+				commandBuffer->CopyBufferToImage(m_self->stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, offset);
 
 				// Transition to TRANSFER_DST_OPTIMAL is done in mipmap generation _createMipmaps
 				// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB,
 				// VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 			},
-			m_device.get(), m_commandPool.get(), m_graphicsQueue.get()
+			m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get()
 		);
 
-		m_stagingBuffer->Reset();
+		m_self->stagingBuffer->Reset();
 	}
 
 	bool RenderingDevice::Internal_CreateTextureMipmaps(const Handle& destination)
 	{
-		const RenderingApi::Texture* texture = m_textures.Get(destination);
+		const RenderingApi::Texture* texture = m_self->textures.Get(destination);
 
-		if (!m_device->IsSupportedFormatFeature(texture->format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+		if (!m_self->device->IsSupportedFormatFeature(texture->format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 			return false;
 
 		RenderingApi::CommandBuffer::SingleTimeCommands(
@@ -187,7 +188,7 @@ namespace BetterThanNothing
 
 				commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 			},
-			m_device.get(), m_commandPool.get(), m_graphicsQueue.get()
+			m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get()
 		);
 
 		return true;
@@ -195,7 +196,7 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::CreateTextureFromData(const TextureFromDataDescription& desc)
 	{
-		const Handle	   handle = m_textures.Allocate();
+		const Handle	   handle = m_self->textures.Allocate();
 		const std::uint8_t mipLevels = Internal_CalculateMipLevels(desc.width, desc.height);
 
 		TextureImageDescription imageDesc{};
@@ -235,19 +236,19 @@ namespace BetterThanNothing
 
 	void RenderingDevice::DestroyTexture(const Handle& handle)
 	{
-		if (!m_textures.Has(handle))
+		if (!m_self->textures.Has(handle))
 			throw std::runtime_error("Invalid texture handle!");
 
-		const RenderingApi::Texture* texture = m_textures.Get(handle);
-		m_device->DestroyImageView(texture->defaultView);
-		m_allocator->DestroyImage(texture->value, texture->allocation);
-		m_textures.Destroy(handle);
+		const RenderingApi::Texture* texture = m_self->textures.Get(handle);
+		m_self->device->DestroyImageView(texture->defaultView);
+		m_self->allocator->DestroyImage(texture->value, texture->allocation);
+		m_self->textures.Destroy(handle);
 	}
 
 	RenderingApi::Texture* RenderingDevice::GetTexture(const Handle& handle)
 	{
-		if (!m_textures.Has(handle))
+		if (!m_self->textures.Has(handle))
 			throw std::runtime_error("Invalid texture handle!");
-		return m_textures.Get(handle);
+		return m_self->textures.Get(handle);
 	}
 }
