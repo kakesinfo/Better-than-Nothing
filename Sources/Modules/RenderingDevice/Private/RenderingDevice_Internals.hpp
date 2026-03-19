@@ -25,5 +25,6 @@ namespace BetterThanNothing
 	struct RenderingDeviceInternals
 	{
 		std::unique_ptr<RenderingApi::Instance> instance;
+		std::unique_ptr<RenderingApi::Surface>	surface;
 	};
 }

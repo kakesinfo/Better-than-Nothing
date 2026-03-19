@@ -39,8 +39,8 @@ namespace BetterThanNothing
 		m_self = std::make_unique<RenderingDeviceInternals>();
 
 		m_self->instance = RenderingApi::Instance::Create({.enableValidation = true});
-		m_surface = RenderingApi::Surface::Create({window->Handle(), m_self->instance.get()});
-		m_device = RenderingApi::Device::Create({m_self->instance.get(), m_surface.get()});
+		m_self->surface = RenderingApi::Surface::Create({window->Handle(), m_self->instance.get()});
+		m_device = RenderingApi::Device::Create({m_self->instance.get(), m_self->surface.get()});
 		m_graphicsQueue = m_device->CreateGraphicsQueue();
 		m_presentQueue = m_device->CreatePresentQueue();
 		m_allocator = RenderingApi::Allocator::Create({m_self->instance.get(), m_device.get()});
@@ -48,7 +48,7 @@ namespace BetterThanNothing
 		m_commandPool = RenderingApi::CommandPool::Create({m_device.get(), m_graphicsQueue.get()});
 
 		m_swapChain = RenderingApi::SwapChain::Create({
-			m_surface.get(),
+			m_self->surface.get(),
 			m_device.get(),
 			m_allocator.get(),
 			windowWidth,
