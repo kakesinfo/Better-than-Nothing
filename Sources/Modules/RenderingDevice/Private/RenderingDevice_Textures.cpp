@@ -37,7 +37,7 @@ namespace BetterThanNothing
 
 	bool RenderingDevice::Internal_CreateTextureImage(const TextureImageDescription& desc)
 	{
-		RenderingApi::Texture* texture = m_textures.Get(desc.destination);
+		RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
 
 		VkImageCreateInfo imageInfo{};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -70,7 +70,7 @@ namespace BetterThanNothing
 
 	bool RenderingDevice::Internal_CreateTextureImageView(const TextureImageViewDescription& desc)
 	{
-		RenderingApi::Texture* texture = m_textures.Get(desc.destination);
+		RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
 
 		VkImageViewCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -97,7 +97,7 @@ namespace BetterThanNothing
 
 	void RenderingDevice::Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc)
 	{
-		const RenderingApi::Texture* texture = m_textures.Get(desc.destination);
+		const RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
 
 		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 		bufferInfo.size = desc.dataSize;
@@ -122,7 +122,7 @@ namespace BetterThanNothing
 
 	bool RenderingDevice::Internal_CreateTextureMipmaps(const Handle& destination)
 	{
-		const RenderingApi::Texture* texture = m_textures.Get(destination);
+		const RenderingApi::Texture* texture = m_self->textures.Get(destination);
 
 		if (!m_self->device->IsSupportedFormatFeature(texture->format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 			return false;
@@ -196,7 +196,7 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::CreateTextureFromData(const TextureFromDataDescription& desc)
 	{
-		const Handle	   handle = m_textures.Allocate();
+		const Handle	   handle = m_self->textures.Allocate();
 		const std::uint8_t mipLevels = Internal_CalculateMipLevels(desc.width, desc.height);
 
 		TextureImageDescription imageDesc{};
@@ -236,19 +236,19 @@ namespace BetterThanNothing
 
 	void RenderingDevice::DestroyTexture(const Handle& handle)
 	{
-		if (!m_textures.Has(handle))
+		if (!m_self->textures.Has(handle))
 			throw std::runtime_error("Invalid texture handle!");
 
-		const RenderingApi::Texture* texture = m_textures.Get(handle);
+		const RenderingApi::Texture* texture = m_self->textures.Get(handle);
 		m_self->device->DestroyImageView(texture->defaultView);
 		m_self->allocator->DestroyImage(texture->value, texture->allocation);
-		m_textures.Destroy(handle);
+		m_self->textures.Destroy(handle);
 	}
 
 	RenderingApi::Texture* RenderingDevice::GetTexture(const Handle& handle)
 	{
-		if (!m_textures.Has(handle))
+		if (!m_self->textures.Has(handle))
 			throw std::runtime_error("Invalid texture handle!");
-		return m_textures.Get(handle);
+		return m_self->textures.Get(handle);
 	}
 }

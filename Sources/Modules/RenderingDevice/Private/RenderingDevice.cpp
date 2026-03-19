@@ -89,25 +89,25 @@ namespace BetterThanNothing
 
 		m_samplersLUT.clear();
 
-		for (std::uint32_t i = 0; i < m_samplers.Size(); i++)
+		for (std::uint32_t i = 0; i < m_self->samplers.Size(); i++)
 		{
-			m_self->device->DestroySampler(m_samplers.Get(i)->value);
-			m_samplers.Destroy(i);
+			m_self->device->DestroySampler(m_self->samplers.Get(i)->value);
+			m_self->samplers.Destroy(i);
 		}
 
-		for (std::uint32_t i = 0; i < m_buffers.Size(); i++)
+		for (std::uint32_t i = 0; i < m_self->buffers.Size(); i++)
 		{
-			const auto buffer = m_buffers.Get(i);
+			const auto buffer = m_self->buffers.Get(i);
 			m_self->allocator->DestroyBuffer(buffer->value, buffer->allocation);
-			m_buffers.Destroy(i);
+			m_self->buffers.Destroy(i);
 		}
 
-		for (std::uint32_t i = 0; i < m_textures.Size(); i++)
+		for (std::uint32_t i = 0; i < m_self->textures.Size(); i++)
 		{
-			const auto texture = m_textures.Get(i);
+			const auto texture = m_self->textures.Get(i);
 			m_self->device->DestroyImageView(texture->defaultView);
 			m_self->allocator->DestroyImage(texture->value, texture->allocation);
-			m_textures.Destroy(i);
+			m_self->textures.Destroy(i);
 		}
 	};
 

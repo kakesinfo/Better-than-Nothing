@@ -49,11 +49,11 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::CreateDescriptorSet(DescriptorSetLayoutType layoutType)
 	{
-		const Handle handle = m_descriptors.Allocate();
+		const Handle handle = m_self->descriptors.Allocate();
 
-		if (!Internal_CreateDescriptorSet(layoutType, m_descriptors.Get(handle)))
+		if (!Internal_CreateDescriptorSet(layoutType, m_self->descriptors.Get(handle)))
 		{
-			m_descriptors.Destroy(handle);
+			m_self->descriptors.Destroy(handle);
 			throw std::runtime_error("Failed to allocate descriptor set");
 		}
 
@@ -201,17 +201,17 @@ namespace BetterThanNothing
 
 	void RenderingDevice::DestroyDescriptorSet(const Handle& handle)
 	{
-		if (!m_descriptors.Has(handle))
+		if (!m_self->descriptors.Has(handle))
 			throw std::runtime_error("Invalid descriptor set handle!");
 
-		m_descriptors.Destroy(handle);
+		m_self->descriptors.Destroy(handle);
 	}
 
 	RenderingApi::DescriptorSet* RenderingDevice::GetDescriptorSet(const Handle& handle)
 	{
-		if (!m_descriptors.Has(handle))
+		if (!m_self->descriptors.Has(handle))
 			throw std::runtime_error("Invalid descriptor set handle!");
 
-		return m_descriptors.Get(handle);
+		return m_self->descriptors.Get(handle);
 	}
 }

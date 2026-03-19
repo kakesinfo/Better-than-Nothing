@@ -154,12 +154,6 @@ namespace BetterThanNothing
 
 		std::unique_ptr<StagingBuffer> m_stagingBuffer;
 
-
-		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>			   m_buffers;
-		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   m_textures;
-		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   m_samplers;
-		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> m_descriptors;
-
 		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> m_samplersLUT;
 		std::vector<DescriptorSetUpdateRequest>															m_descriptorsUpdateRequests;
 		std::vector<VkWriteDescriptorSet>																m_descriptorsWrites;

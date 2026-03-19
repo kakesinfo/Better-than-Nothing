@@ -39,5 +39,10 @@ namespace BetterThanNothing
 		std::vector<std::unique_ptr<RenderingApi::Fence>>		  inFlightFences;
 
 		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts;
+
+		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>			   buffers;
+		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   textures;
+		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   samplers;
+		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> descriptors;
 	};
 }

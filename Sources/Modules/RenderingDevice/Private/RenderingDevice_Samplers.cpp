@@ -116,8 +116,8 @@ namespace BetterThanNothing
 		if (m_samplersLUT.contains(desc))
 			return m_samplersLUT[desc];
 
-		const Handle		   handle = m_samplers.Allocate();
-		RenderingApi::Sampler* newSampler = m_samplers.Get(handle);
+		const Handle		   handle = m_self->samplers.Allocate();
+		RenderingApi::Sampler* newSampler = m_self->samplers.Get(handle);
 
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -146,19 +146,19 @@ namespace BetterThanNothing
 
 	void RenderingDevice::DestroyTextureSampler(const Handle& handle)
 	{
-		if (!m_samplers.Has(handle))
+		if (!m_self->samplers.Has(handle))
 			throw std::runtime_error("Invalid sampler handle!");
 
-		const RenderingApi::Sampler* sampler = m_samplers.Get(handle);
+		const RenderingApi::Sampler* sampler = m_self->samplers.Get(handle);
 		m_self->device->DestroySampler(sampler->value);
-		m_samplers.Destroy(handle);
+		m_self->samplers.Destroy(handle);
 	}
 
 	RenderingApi::Sampler* RenderingDevice::GetSampler(const Handle& handle)
 	{
-		if (!m_samplers.Has(handle))
+		if (!m_self->samplers.Has(handle))
 			throw std::runtime_error("Invalid sampler handle!");
 
-		return m_samplers.Get(handle);
+		return m_self->samplers.Get(handle);
 	}
 }
