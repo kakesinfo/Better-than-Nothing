@@ -48,7 +48,7 @@ namespace BetterThanNothing
 	class Renderer final
 	{
 	public:
-		explicit Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI);
+		explicit Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor);
 		~Renderer();
 
 		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI);
@@ -71,6 +71,7 @@ namespace BetterThanNothing
 		void DrawPointLights_Scene(const Scene* scene, uint32_t frameIndex) const;
 
 		void ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const;
+		void ExecuteEditorPass(uint32_t imageIndex) const;
 
 		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
 		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();
@@ -81,9 +82,8 @@ namespace BetterThanNothing
 	private:
 		RenderingDevice*			m_renderingDevice = nullptr;
 		ResourceManager*			m_resourceManager = nullptr;
-		Editor*					m_debugUI = nullptr;
+		Editor*						m_editor = nullptr;
 		std::unique_ptr<DrawStream> m_drawStream;
-		std::unique_ptr<ImGuiPass>	m_imGuiPass;
 
 		std::unique_ptr<RenderingApi::Pipeline> m_defaultPipeline;
 		std::vector<Handle>						m_globalUniformBuffer;
