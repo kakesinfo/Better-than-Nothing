@@ -49,7 +49,7 @@ build-and-test-windows:
     extends: .build-template
     before_script:
         - git config --global --add safe.directory $CI_PROJECT_DIR
-        - $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+        - $vcvars = "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
         - if (Test-Path $vcvars) {
           cmd.exe /c "`"$vcvars`" && set" | Foreach-Object {
           if ($_ -match '^([^=]+)=(.*)$') {
