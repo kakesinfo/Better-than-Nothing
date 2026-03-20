@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <vector>
+#include <concepts>
 
 namespace BetterThanNothing
 {
@@ -43,7 +44,7 @@ namespace BetterThanNothing
 		static std::unique_ptr<Editor> Create(Window* window, RenderingDevice* renderingDevice);
 
 		template<typename T>
-		void AddPanel(std::string_view name)
+		void AddPanel(std::string_view name) requires std::derived_from<T, Panel>
 		{
 			m_panels.push_back(std::make_unique<T>(name));
 		}
