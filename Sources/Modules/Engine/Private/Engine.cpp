@@ -16,15 +16,15 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <RenderingApi.hpp>
-
-#include <RenderingDevice/RenderingDevice.hpp>
-
 #include <Editor/Editor.hpp>
 #include <Module_Base/EKey.hpp>
+#include <Module_Base/Metrics.hpp>
 #include <Module_Data/Graphics/CameraData.hpp>
 #include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/Engine.hpp>
+
+#include "../../Editor/Private/DebugPanel.hpp"
+
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
@@ -33,8 +33,8 @@
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <Renderer/RenderList.hpp>
-#include <Renderer/RenderMetrics.hpp>
 #include <Renderer/Renderer.hpp>
+#include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <Scene/Camera.hpp>
 #include <Scene/Scene.hpp>
@@ -52,9 +52,14 @@ namespace BetterThanNothing
 		InputManager::Initialize();
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
+
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
+
 		m_debugUI = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
+		m_debugUI->AddPanel<DebugPanel>("Debug Panel");
+
 		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_debugUI.get());
+
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 
 		m_defaultScene = Scene::Create(1000);
@@ -141,14 +146,14 @@ namespace BetterThanNothing
 
 		while (!WindowManager::GetWindow()->ShouldClose() && !shouldClose)
 		{
-			RenderMetrics::BeginRecording();
+			Metrics::BeginRecording();
 
 			const auto					 currentTime = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<float> elapsed = currentTime - lastTime;
 			lastTime = currentTime;
 
-			RenderMetrics::SetFrameTime(elapsed.count() * 1000.0f);
-			RenderMetrics::SetFps(1.0f / elapsed.count());
+			Metrics::SetFrameTime(elapsed.count() * 1000.0f);
+			Metrics::SetFps(1.0f / elapsed.count());
 
 			WindowManager::GetWindow()->PollEvents();
 
@@ -162,7 +167,7 @@ namespace BetterThanNothing
 
 			InputManager::ResetMousePosition();
 
-			RenderMetrics::EndRecording();
+			Metrics::EndRecording();
 		}
 
 		m_application->OnDisable();

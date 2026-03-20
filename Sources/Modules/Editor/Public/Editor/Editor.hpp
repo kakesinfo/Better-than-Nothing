@@ -19,6 +19,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 namespace BetterThanNothing
 {
@@ -26,6 +27,8 @@ namespace BetterThanNothing
 	class RenderingDevice;
 
 	struct EditorInternals;
+
+	class Panel;
 
 	class Editor
 	{
@@ -35,11 +38,19 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<Editor> Create(Window* window, RenderingDevice* renderingDevice);
 
-		void NewFrame() const;
+		template<typename T>
+		void AddPanel(std::string_view name)
+		{
+			m_panels.push_back(std::make_unique<T>(name));
+		}
+
+		void OnRender() const;
 
 	private:
 		Window*							 m_window;
 		RenderingDevice*				 m_renderingDevice;
 		std::unique_ptr<EditorInternals> m_internals;
+
+		std::vector<std::unique_ptr<Panel>> m_panels;
 	};
 }

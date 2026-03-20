@@ -1,5 +1,5 @@
 /*
- *	Better than Nothing
+*	Better than Nothing
  *	Copyright (C) 2026 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -16,12 +16,18 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <Renderer/RenderMetrics.hpp>
+#pragma once
+
+#include <Editor/Panel.hpp>
 
 namespace BetterThanNothing
 {
+	class DebugPanel final: public Panel
+	{
+	public:
+		explicit DebugPanel(std::string_view name);
+		~DebugPanel() override;
 
-	RenderMetricsData RenderMetrics::s_currentFrameMetrics = {};
-	RenderMetricsData RenderMetrics::s_lastFrameMetrics = {};
-	std::mutex		  RenderMetrics::s_mutex = {};
+		void OnRender() override;
+	};
 }

@@ -19,6 +19,9 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 
 #include <Editor/Editor.hpp>
+
+#include "Editor/Panel.hpp"
+
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi/Core/Device.hpp>
 #include <RenderingApi/Core/Instance.hpp>
@@ -124,10 +127,22 @@ namespace BetterThanNothing
 		return std::make_unique<Editor>(window, renderingDevice);
 	}
 
-	void Editor::NewFrame() const
+	void Editor::OnRender() const
 	{
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
+
+		for (const auto& panel : m_panels)
+		{
+			if (!panel->IsOpen())
+				continue;
+
+			ImGui::Begin(panel->GetName().c_str(), nullptr);
+			panel->OnRender();
+			ImGui::End();
+		}
+
+		ImGui::Render();
 	}
 }

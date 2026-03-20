@@ -18,9 +18,9 @@
 
 #include <Renderer/ImGuiPass.hpp>
 
+#include <Module_Base/Metrics.hpp>
 #include <Editor/Editor.hpp>
 #include <Module_Platform/Window.hpp>
-#include <Renderer/RenderMetrics.hpp>
 #include <RenderingApi/Core/CommandBuffer.hpp>
 #include <RenderingApi/Core/SwapChain.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
@@ -35,34 +35,7 @@ namespace BetterThanNothing
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
-		m_debugUI->NewFrame();
-
-		static float updateTimer = 0.0f;
-		static auto	 cachedMetrics = RenderMetrics::GetLastFrameMetrics();
-
-		updateTimer += ImGui::GetIO().DeltaTime;
-		if (updateTimer > 0.1f)
-		{
-			cachedMetrics = RenderMetrics::GetLastFrameMetrics();
-			updateTimer = 0.0f;
-		}
-
-		ImGui::SetNextWindowSize(ImVec2(200, 250), ImGuiCond_Appearing);
-		ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Appearing);
-		ImGui::Begin("Debug Info", nullptr);
-		ImGui::SeparatorText("Rendering");
-		ImGui::Text("Vertices: %d", cachedMetrics.verticesRendered);
-		ImGui::Text("Draw calls: %d", cachedMetrics.drawCalls);
-		ImGui::Text("Total draw calls: %zu", cachedMetrics.totalDrawCalls);
-		ImGui::SeparatorText("Frames");
-		ImGui::Text("Frame count: %d", cachedMetrics.frameCount);
-		ImGui::Text("Frame time: %.2f ms", cachedMetrics.frameTime);
-		ImGui::Text("FPS: %d", cachedMetrics.fps);
-		ImGui::SeparatorText("Camera");
-		ImGui::Text("Pos: x=%.1f y=%.1f z=%.1f", cachedMetrics.cameraX, cachedMetrics.cameraY, cachedMetrics.cameraZ);
-		ImGui::End();
-
-		ImGui::Render();
+		m_debugUI->OnRender();
 
 		{
 			VkImageMemoryBarrier barrier{};
