@@ -69,7 +69,9 @@ namespace BetterThanNothing
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAttachment;
 
-		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) { m_debugUI->RenderDrawData(cmd); }, renderingInfo);
+		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) {
+			m_debugUI->RenderDrawData(cmd);
+		}, renderingInfo);
 
 		{
 			VkImageMemoryBarrier presentationBarrier{};
