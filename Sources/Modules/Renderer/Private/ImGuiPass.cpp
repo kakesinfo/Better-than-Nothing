@@ -35,7 +35,7 @@ namespace BetterThanNothing
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
-		m_debugUI->OnRender();
+		m_debugUI->Render();
 
 		{
 			VkImageMemoryBarrier barrier{};

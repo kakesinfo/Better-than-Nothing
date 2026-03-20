@@ -44,7 +44,7 @@ namespace BetterThanNothing
 			m_panels.push_back(std::make_unique<T>(name));
 		}
 
-		void OnRender() const;
+		void Render() const;
 
 	private:
 		Window*							 m_window;

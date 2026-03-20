@@ -55,10 +55,10 @@ namespace BetterThanNothing
 
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
-		m_debugUI = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
-		m_debugUI->AddPanel<DebugPanel>("Debug Panel");
+		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
+		m_editor->AddPanel<DebugPanel>("Debug Panel");
 
-		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_debugUI.get());
+		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_editor.get());
 
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 

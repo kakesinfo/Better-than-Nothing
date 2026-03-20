@@ -127,7 +127,7 @@ namespace BetterThanNothing
 		return std::make_unique<Editor>(window, renderingDevice);
 	}
 
-	void Editor::OnRender() const
+	void Editor::Render() const
 	{
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
