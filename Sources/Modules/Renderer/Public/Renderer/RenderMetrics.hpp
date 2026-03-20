@@ -84,8 +84,8 @@ namespace BetterThanNothing
 		}
 
 	private:
-		static inline RenderMetricsData s_currentFrameMetrics = {};
-		static inline RenderMetricsData s_lastFrameMetrics = {};
-		static inline std::mutex		s_mutex = {};
+		static RenderMetricsData s_currentFrameMetrics;
+		static RenderMetricsData s_lastFrameMetrics;
+		static std::mutex		 s_mutex;
 	};
 }
