@@ -27,14 +27,14 @@
 
 namespace BetterThanNothing
 {
-	ImGuiPass::ImGuiPass(RenderingDevice* renderingDevice, Editor* debugUI) : m_renderingDevice(renderingDevice), m_debugUI(debugUI) {}
+	ImGuiPass::ImGuiPass(RenderingDevice* renderingDevice, Editor* editor) : m_renderingDevice(renderingDevice), editor(editor) {}
 
 	void ImGuiPass::Execute(uint32_t imageIndex) const
 	{
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
-		m_debugUI->RenderPanels();
+		editor->RenderPanels();
 
 		{
 			VkImageMemoryBarrier barrier{};
@@ -70,7 +70,7 @@ namespace BetterThanNothing
 		renderingInfo.pColorAttachments = &colorAttachment;
 
 		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) {
-			m_debugUI->RenderDrawData(cmd);
+			editor->RenderDrawData(cmd);
 		}, renderingInfo);
 
 		{
