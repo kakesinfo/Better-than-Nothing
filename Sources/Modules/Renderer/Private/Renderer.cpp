@@ -18,14 +18,14 @@
 
 #include "Renderer/Renderer.hpp"
 
-#include "../../Editor/Public/Editor/Editor.hpp"
-#include "../Public/Renderer/ImGuiPass.hpp"
+#include "Module_Base/Metrics.hpp"
+#include "Editor/Editor.hpp"
+#include "Renderer/ImGuiPass.hpp"
 #include "Module_Data/Graphics/CameraData.hpp"
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Data/Graphics/DynamicUniformData.hpp"
 #include "Module_Data/Graphics/GlobalUniformData.hpp"
 #include "Renderer/RenderList.hpp"
-#include "Renderer/RenderMetrics.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingDevice/DrawStream.hpp"
@@ -118,7 +118,7 @@ namespace BetterThanNothing
 
 		DrawPointLights(renderList, frameIndex);
 
-		RenderMetrics::SetCameraCoordinates(camera.position.GetX(), camera.position.GetY(), camera.position.GetZ());
+		Metrics::SetCameraCoordinates(camera.position.GetX(), camera.position.GetY(), camera.position.GetZ());
 
 		m_drawStream->Reset(renderList->Size());
 
@@ -152,7 +152,7 @@ namespace BetterThanNothing
 			});
 			// clang-format on
 
-			RenderMetrics::AddDrawCall(meshData->vertexCount);
+			Metrics::AddDrawCall(meshData->vertexCount);
 		}
 
 		const auto drawStream = m_drawStream->Build();
@@ -208,7 +208,7 @@ namespace BetterThanNothing
 
 		DrawPointLights_Scene(scene, frameIndex);
 
-		RenderMetrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
+		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
 		m_drawStream->Reset(scene->GetObjectsCount());
 
@@ -245,7 +245,7 @@ namespace BetterThanNothing
 			});
 			// clang-format on
 
-			RenderMetrics::AddDrawCall(meshData->vertexCount);
+			Metrics::AddDrawCall(meshData->vertexCount);
 		}
 
 		const auto drawStream = m_drawStream->Build();

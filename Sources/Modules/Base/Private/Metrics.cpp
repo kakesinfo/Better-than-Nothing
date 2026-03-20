@@ -16,12 +16,12 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <Renderer/RenderMetrics.hpp>
+#include <Module_Base/Metrics.hpp>
 
 namespace BetterThanNothing
 {
 
-	RenderMetricsData RenderMetrics::s_currentFrameMetrics = {};
-	RenderMetricsData RenderMetrics::s_lastFrameMetrics = {};
-	std::mutex		  RenderMetrics::s_mutex = {};
+	RenderMetricsData Metrics::s_currentFrameMetrics = {};
+	RenderMetricsData Metrics::s_lastFrameMetrics = {};
+	std::mutex		  Metrics::s_mutex = {};
 }
