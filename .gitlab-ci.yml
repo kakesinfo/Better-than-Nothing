@@ -49,25 +49,14 @@ build-and-test-windows:
     extends: .build-template
     before_script:
         - git config --global --add safe.directory $CI_PROJECT_DIR
-        - |
-            $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-            if ($vsPath) {
-                $vcvars = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
-                if (Test-Path $vcvars) {
-                    cmd.exe /c "`"$vcvars`" && set" | Foreach-Object {
-                        if ($_ -match '^([^=]+)=(.*)$') {
-                            $name = $Matches[1]
-                            $value = $Matches[2]
-                            if ($name -ne 'Path') {
-                                Set-Item "env:$name" $value
-                            } else {
-                                # On ajoute le path VS au path existant
-                                $env:Path = "$value;$env:Path"
-                            }
-                        }
-                    }
-                }
+        - $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+            - if (Test-Path $vcvars) {
+            cmd.exe /c "`"$vcvars`" && set" | Foreach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+            Set-Item "env:$($Matches[1])" $Matches[2]
             }
+            }
+            } else { Write-Error "vcvars64.bat introuvable ! Vérifiez le chemin." }
     tags:
         - windows
     rules:
