@@ -26,7 +26,6 @@
 namespace BetterThanNothing
 {
 	DebugPanel::DebugPanel(const std::string_view name) : Panel(name) {}
-	DebugPanel::~DebugPanel() = default;
 
 	void DebugPanel::OnRender()
 	{

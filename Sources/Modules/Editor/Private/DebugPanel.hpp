@@ -26,7 +26,7 @@ namespace BetterThanNothing
 	{
 	public:
 		explicit DebugPanel(std::string_view name);
-		~DebugPanel() override;
+		~DebugPanel() override = default;
 
 		void OnRender() override;
 	};
