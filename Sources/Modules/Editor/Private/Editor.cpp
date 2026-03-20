@@ -37,6 +37,8 @@ namespace BetterThanNothing
 	struct EditorInternals
 	{
 		VkDescriptorPool imguiPool = VK_NULL_HANDLE;
+		VkPipelineRenderingCreateInfoKHR pipelineInfo = {};
+		std::vector<VkFormat> formats;
 	};
 
 	Editor::Editor(Window* window, RenderingDevice* renderingDevice) : m_window(window), m_renderingDevice(renderingDevice)
@@ -59,16 +61,17 @@ namespace BetterThanNothing
 		ImGui::CreateContext();
 		ImGui::StyleColorsDark();
 
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
 		ImGui_ImplSDL3_InitForVulkan(window->Handle());
 
-		static std::vector<VkFormat> formats;
-		formats = {renderingDevice->GetSwapChain()->GetImageFormat()};
+		m_internals->formats = {renderingDevice->GetSwapChain()->GetImageFormat()};
 
-		VkPipelineRenderingCreateInfoKHR pipelineInfo = {};
-		pipelineInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-		pipelineInfo.colorAttachmentCount = static_cast<uint32_t>(formats.size());
-		pipelineInfo.pColorAttachmentFormats = formats.data();
-		pipelineInfo.depthAttachmentFormat = renderingDevice->GetSwapChain()->GetDepthFormat();
+		m_internals->pipelineInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+		m_internals->pipelineInfo.colorAttachmentCount = static_cast<uint32_t>(m_internals->formats.size());
+		m_internals->pipelineInfo.pColorAttachmentFormats = m_internals->formats.data();
+		m_internals->pipelineInfo.depthAttachmentFormat = renderingDevice->GetSwapChain()->GetDepthFormat();
 
 		ImGui_ImplVulkan_InitInfo initInfo = {};
 		initInfo.ApiVersion = renderingDevice->GetInstance()->GetApiVersion();
@@ -81,7 +84,7 @@ namespace BetterThanNothing
 		initInfo.ImageCount = renderingDevice->GetSwapChain()->GetImageCount();
 		// Note: Stencil format can be added if needed
 		initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-		initInfo.PipelineInfoMain.PipelineRenderingCreateInfo = pipelineInfo;
+		initInfo.PipelineInfoMain.PipelineRenderingCreateInfo = m_internals->pipelineInfo;
 		initInfo.PipelineInfoMain.RenderPass = VK_NULL_HANDLE;
 		initInfo.UseDynamicRendering = true;
 
