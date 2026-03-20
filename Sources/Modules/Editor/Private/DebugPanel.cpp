@@ -29,7 +29,7 @@ namespace BetterThanNothing
 
 	void DebugPanel::OnRender()
 	{
-		auto cachedMetrics = Metrics::GetLastFrameMetrics();
+		const auto cachedMetrics = Metrics::GetLastFrameMetrics();
 
 		ImGui::SeparatorText("Rendering");
 		ImGui::Text("Vertices: %d", cachedMetrics.verticesRendered);
