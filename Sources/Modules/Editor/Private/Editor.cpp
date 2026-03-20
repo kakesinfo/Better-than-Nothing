@@ -67,6 +67,7 @@ namespace BetterThanNothing
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		io.IniFilename = nullptr;
 
 		ImGui_ImplSDL3_InitForVulkan(window->Handle());
 
