@@ -52,14 +52,12 @@ namespace BetterThanNothing
 		InputManager::Initialize();
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
-
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
 		m_editor->AddPanel<DebugPanel>("Debug Panel");
 
 		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_editor.get());
-
 		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 
 		m_defaultScene = Scene::Create(1000);
