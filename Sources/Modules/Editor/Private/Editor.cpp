@@ -21,6 +21,7 @@
 #include <Editor/Editor.hpp>
 
 #include "Editor/Panel.hpp"
+#include "RenderingApi/Core/CommandBuffer.hpp"
 
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi/Core/Device.hpp>
@@ -127,7 +128,7 @@ namespace BetterThanNothing
 		return std::make_unique<Editor>(window, renderingDevice);
 	}
 
-	void Editor::Render() const
+	void Editor::RenderPanels() const
 	{
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
@@ -145,5 +146,10 @@ namespace BetterThanNothing
 		}
 
 		ImGui::Render();
+	}
+
+	void Editor::RenderDrawData(const RenderingApi::CommandBuffer* commandBuffer) const
+	{
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer->Handle());
 	}
 }

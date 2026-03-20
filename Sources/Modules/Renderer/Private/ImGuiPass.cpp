@@ -18,8 +18,8 @@
 
 #include <Renderer/ImGuiPass.hpp>
 
-#include <Module_Base/Metrics.hpp>
 #include <Editor/Editor.hpp>
+#include <Module_Base/Metrics.hpp>
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi/Core/CommandBuffer.hpp>
 #include <RenderingApi/Core/SwapChain.hpp>
@@ -27,15 +27,14 @@
 
 namespace BetterThanNothing
 {
-	ImGuiPass::ImGuiPass(RenderingDevice* renderingDevice, Editor* debugUI)
-		: m_renderingDevice(renderingDevice), m_debugUI(debugUI) { }
+	ImGuiPass::ImGuiPass(RenderingDevice* renderingDevice, Editor* debugUI) : m_renderingDevice(renderingDevice), m_debugUI(debugUI) {}
 
 	void ImGuiPass::Execute(uint32_t imageIndex) const
 	{
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
-		m_debugUI->Render();
+		m_debugUI->RenderPanels();
 
 		{
 			VkImageMemoryBarrier barrier{};
@@ -70,11 +69,7 @@ namespace BetterThanNothing
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAttachment;
 
-		// clang-format off
-		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) {
-			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd->Handle());
-		}, renderingInfo);
-		// clang-format on
+		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) { m_debugUI->RenderDrawData(cmd); }, renderingInfo);
 
 		{
 			VkImageMemoryBarrier presentationBarrier{};

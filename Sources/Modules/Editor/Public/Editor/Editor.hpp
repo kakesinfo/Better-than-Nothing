@@ -25,10 +25,14 @@ namespace BetterThanNothing
 {
 	class Window;
 	class RenderingDevice;
+	class Panel;
+
+	namespace RenderingApi
+	{
+		class CommandBuffer;
+	}
 
 	struct EditorInternals;
-
-	class Panel;
 
 	class Editor
 	{
@@ -44,7 +48,8 @@ namespace BetterThanNothing
 			m_panels.push_back(std::make_unique<T>(name));
 		}
 
-		void Render() const;
+		void RenderPanels() const;
+		void RenderDrawData(const RenderingApi::CommandBuffer* commandBuffer) const;
 
 	private:
 		Window*							 m_window;
