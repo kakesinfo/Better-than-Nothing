@@ -33,6 +33,6 @@ namespace BetterThanNothing
 
 	private:
 		RenderingDevice* m_renderingDevice;
-		Editor* editor;
+		Editor* m_editor;
 	};
 }
