@@ -19,6 +19,8 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>
+#include <mutex>
 
 namespace BetterThanNothing
 {
@@ -37,7 +39,7 @@ namespace BetterThanNothing
 		float cameraZ;
 	};
 
-	class RenderMetrics
+	class Metrics
 	{
 	public:
 		static void AddDrawCall(uint32_t vertexCount)
