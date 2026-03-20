@@ -18,9 +18,8 @@
 
 #include "Renderer/Renderer.hpp"
 
-#include "Module_Base/Metrics.hpp"
 #include "Editor/Editor.hpp"
-#include "Renderer/ImGuiPass.hpp"
+#include "Module_Base/Metrics.hpp"
 #include "Module_Data/Graphics/CameraData.hpp"
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Data/Graphics/DynamicUniformData.hpp"
@@ -49,11 +48,9 @@ namespace BetterThanNothing
 {
 	constexpr uint32_t MAX_LIGHT_COUNT = 1000;
 
-	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI)
-		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager), m_debugUI(debugUI)
+	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
+		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager), m_editor(editor)
 	{
-		m_imGuiPass = std::make_unique<ImGuiPass>(m_renderingDevice, debugUI);
-
 		CreateGlobalUniformBuffers();
 		CreateGlobalUniformDescriptorSets();
 		CreatePointLightBuffers();
@@ -104,7 +101,7 @@ namespace BetterThanNothing
 	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const uint32_t imageIndex) const
 	{
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
-		const auto directionalLight = renderList->GetDirectionalLight();
+		const auto	   directionalLight = renderList->GetDirectionalLight();
 
 		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
 		globalUniform->view = camera.view;
@@ -132,10 +129,7 @@ namespace BetterThanNothing
 			if (!meshData || !textureData)
 				continue;
 
-			const float distance = Vector3::Distance2(
-				camera.position,
-				Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2])
-			);
+			const float distance = Vector3::Distance2(camera.position, Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2]));
 
 			// clang-format off
 			m_drawStream->Draw({
@@ -158,7 +152,7 @@ namespace BetterThanNothing
 		const auto drawStream = m_drawStream->Build();
 
 		ExecuteForwardPass(imageIndex, drawStream);
-		m_imGuiPass->Execute(imageIndex);
+		ExecuteEditorPass(imageIndex);
 	}
 
 	void Renderer::DrawPointLights(const RenderList* renderList, const uint32_t frameIndex) const
@@ -191,7 +185,7 @@ namespace BetterThanNothing
 	void Renderer::RecordCommandBuffer_Scene(const Scene* scene, const uint32_t imageIndex) const
 	{
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
-		const float aspectRatio = m_renderingDevice->GetAspectRatio();
+		const float	   aspectRatio = m_renderingDevice->GetAspectRatio();
 
 		const auto& directionalLight = scene->GetDirectionalLight();
 		const auto& camera = scene->GetCamera();
@@ -225,10 +219,8 @@ namespace BetterThanNothing
 
 			const auto transform = sceneObject.localMatrix;
 
-			const float distance = Vector3::Distance2(
-				camera->GetPosition(),
-				Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2])
-			);
+			const float distance =
+				Vector3::Distance2(camera->GetPosition(), Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2]));
 
 			// clang-format off
 			m_drawStream->Draw({
@@ -251,7 +243,7 @@ namespace BetterThanNothing
 		const auto drawStream = m_drawStream->Build();
 
 		ExecuteForwardPass(imageIndex, drawStream);
-		m_imGuiPass->Execute(imageIndex);
+		ExecuteEditorPass(imageIndex);
 	}
 
 	void Renderer::DrawPointLights_Scene(const Scene* scene, const uint32_t frameIndex) const
@@ -281,7 +273,7 @@ namespace BetterThanNothing
 		m_globalDescriptorSets.resize(frameCount);
 		for (size_t i = 0; i < frameCount; i++)
 		{
-			const auto handle = m_globalUniformBuffer.at(i);
+			const auto	   handle = m_globalUniformBuffer.at(i);
 			constexpr auto size = sizeof(GlobalUniformData);
 			constexpr auto layout = DescriptorSetLayoutType::GlobalUniforms;
 
@@ -299,7 +291,7 @@ namespace BetterThanNothing
 
 	void Renderer::CreatePointLightBuffers()
 	{
-		const uint32_t count = m_renderingDevice->GetMaxFramesInFlight();
+		const uint32_t	   count = m_renderingDevice->GetMaxFramesInFlight();
 		constexpr uint32_t bufferSize = MAX_LIGHT_COUNT * sizeof(PointLightData);
 
 		m_pointLightBuffer.resize(count);
@@ -317,7 +309,7 @@ namespace BetterThanNothing
 
 		for (size_t i = 0; i < m_renderingDevice->GetMaxFramesInFlight(); i++)
 		{
-			const auto handle = m_pointLightBuffer.at(i);
+			const auto	   handle = m_pointLightBuffer.at(i);
 			constexpr auto size = MAX_LIGHT_COUNT * sizeof(PointLightData);
 			constexpr auto layout = DescriptorSetLayoutType::PointLights;
 
@@ -416,10 +408,10 @@ namespace BetterThanNothing
 				cmd->SetScissor(0, 0, m_renderingDevice->GetSwapChain()->GetExtent());
 
 				VkPipeline lastPipeline = VK_NULL_HANDLE;
-				Handle lastSamplerHandle = {};
+				Handle	   lastSamplerHandle = {};
 
-				bool	   boundGlobalDescriptor = false;
-				bool	   boundPointLightDescriptor = false;
+				bool boundGlobalDescriptor = false;
+				bool boundPointLightDescriptor = false;
 
 				for (const DrawPacket& drawPacket : drawStream)
 				{
@@ -464,7 +456,68 @@ namespace BetterThanNothing
 			},
 			renderingInfo
 		);
+	}
 
+	void Renderer::ExecuteEditorPass(uint32_t imageIndex) const
+	{
+		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
+		const auto swapChain = m_renderingDevice->GetSwapChain();
+
+		m_editor->RenderPanels();
+
+		{
+			VkImageMemoryBarrier barrier{};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.image = swapChain->GetImage(imageIndex);
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = 1;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 1;
+
+			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+		}
+
+		VkRenderingAttachmentInfo colorAttachment = {};
+		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		colorAttachment.imageView = swapChain->GetImageView(imageIndex);
+		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+		VkRenderingInfo renderingInfo = {};
+		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+		renderingInfo.renderArea = {{0, 0}, swapChain->GetExtent()};
+		renderingInfo.layerCount = 1;
+		renderingInfo.colorAttachmentCount = 1;
+		renderingInfo.pColorAttachments = &colorAttachment;
+
+		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) { m_editor->RenderDrawData(cmd); }, renderingInfo);
+
+		{
+			VkImageMemoryBarrier presentationBarrier{};
+			presentationBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			presentationBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			presentationBarrier.dstAccessMask = 0;
+			presentationBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			presentationBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			presentationBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			presentationBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			presentationBarrier.image = swapChain->GetImage(imageIndex);
+			presentationBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			presentationBarrier.subresourceRange.baseMipLevel = 0;
+			presentationBarrier.subresourceRange.levelCount = 1;
+			presentationBarrier.subresourceRange.baseArrayLayer = 0;
+			presentationBarrier.subresourceRange.layerCount = 1;
+
+			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
+		}
 	}
 
 	void Renderer::AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback)
