@@ -50,13 +50,13 @@ build-and-test-windows:
     before_script:
         - git config --global --add safe.directory $CI_PROJECT_DIR
         - $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-            - if (Test-Path $vcvars) {
-            cmd.exe /c "`"$vcvars`" && set" | Foreach-Object {
-            if ($_ -match '^([^=]+)=(.*)$') {
-            Set-Item "env:$($Matches[1])" $Matches[2]
-            }
-            }
-            } else { Write-Error "vcvars64.bat introuvable ! Vérifiez le chemin." }
+        - if (Test-Path $vcvars) {
+          cmd.exe /c "`"$vcvars`" && set" | Foreach-Object {
+          if ($_ -match '^([^=]+)=(.*)$') {
+          Set-Item "env:$($Matches[1])" $Matches[2]
+          }
+          }
+          } else { Write-Error "vcvars64.bat introuvable ! Vérifiez le chemin." }
     tags:
         - windows
     rules:
