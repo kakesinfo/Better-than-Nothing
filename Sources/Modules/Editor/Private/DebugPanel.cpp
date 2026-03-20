@@ -29,15 +29,7 @@ namespace BetterThanNothing
 
 	void DebugPanel::OnRender()
 	{
-		static float updateTimer = 0.0f;
-		static auto	 cachedMetrics = Metrics::GetLastFrameMetrics();
-
-		updateTimer += ImGui::GetIO().DeltaTime;
-		if (updateTimer > 0.1f)
-		{
-			cachedMetrics = Metrics::GetLastFrameMetrics();
-			updateTimer = 0.0f;
-		}
+		auto cachedMetrics = Metrics::GetLastFrameMetrics();
 
 		ImGui::SeparatorText("Rendering");
 		ImGui::Text("Vertices: %d", cachedMetrics.verticesRendered);

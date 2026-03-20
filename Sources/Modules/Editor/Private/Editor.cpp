@@ -138,8 +138,9 @@ namespace BetterThanNothing
 			if (!panel->IsOpen())
 				continue;
 
-			ImGui::Begin(panel->GetName().c_str(), nullptr);
-			panel->OnRender();
+			if (ImGui::Begin(panel->GetName().c_str(), nullptr))
+				panel->OnRender();
+
 			ImGui::End();
 		}
 
