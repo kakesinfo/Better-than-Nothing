@@ -58,9 +58,8 @@ namespace BetterThanNothing
 		m_editor->AddPanel<DebugPanel>("Debug Panel");
 
 		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_editor.get());
-		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 
-		m_defaultScene = Scene::Create(1000);
+		m_defaultScene = Scene::Create(m_resourceManager.get());
 		m_defaultScene->InitCamera(45.0f, 0.1f, 1000.0f);
 
 		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
@@ -71,7 +70,6 @@ namespace BetterThanNothing
 		directionalLight.intensity = 5.0f;
 
 		m_defaultScene->SetDirectionalLight(directionalLight);
-		m_renderList->SetDirectionalLight(directionalLight);
 
 		float kConstant = 1.0f;
 		float kLinear = 0.09f;
@@ -105,32 +103,17 @@ namespace BetterThanNothing
 		m_defaultScene->AddPointLight(redLight);
 		m_defaultScene->AddPointLight(greenLight);
 		m_defaultScene->AddPointLight(blueLight);
-
-		m_renderList->AddPointLight(redLight);
-		m_renderList->AddPointLight(greenLight);
-		m_renderList->AddPointLight(blueLight);
 	}
 
 	void Engine::OnUpdate(const float deltaTime) const
 	{
-		const UpdateContext updateContext(m_camera.get(), deltaTime);
+		const UpdateContext updateContext(m_defaultScene->GetCamera(), deltaTime);
 		m_application->OnUpdate(&updateContext);
 	}
 
 	void Engine::OnRender() const
 	{
-		const RenderContext renderContext(m_renderList.get());
-		m_application->OnRender(&renderContext);
-
-		const float aspectRatio = m_renderingDevice->GetAspectRatio();
-
-		CameraData cameraData{};
-		cameraData.view = m_camera->GetViewMatrix();
-		cameraData.projection = m_camera->GetProjectionMatrix(aspectRatio);
-		cameraData.position = m_camera->GetPosition();
-		cameraData.exposure = 0.5f;
-
-		m_renderer->RenderFrame(m_renderList.get(), cameraData);
+		m_renderer->RenderFrame_Scene(m_defaultScene.get());
 	}
 
 	void Engine::Run() const
@@ -138,7 +121,7 @@ namespace BetterThanNothing
 		bool shouldClose = false;
 		auto lastTime = std::chrono::high_resolution_clock::now();
 
-		m_application->OnEnable();
+		m_application->OnEnable(m_defaultScene.get());
 
 		WindowManager::GetWindow()->Show();
 
@@ -160,8 +143,6 @@ namespace BetterThanNothing
 
 			OnUpdate(elapsed.count());
 			OnRender();
-
-			m_renderList->Clear();
 
 			InputManager::ResetMousePosition();
 

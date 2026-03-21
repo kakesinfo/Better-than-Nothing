@@ -24,13 +24,14 @@ namespace BetterThanNothing
 {
 	class UpdateContext;
 	class RenderContext;
+	class Scene;
 
 	class IEngineApplication
 	{
 	public:
 		virtual ~IEngineApplication() = default;
 
-		virtual void OnEnable() = 0;
+		virtual void OnEnable(Scene* scene) = 0;
 		virtual void OnUpdate(const UpdateContext* ctx) = 0;
 		virtual void OnRender(const RenderContext* ctx) = 0;
 		virtual void OnDisable() = 0;

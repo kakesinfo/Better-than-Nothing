@@ -43,6 +43,7 @@
 #include "Scene/Camera.hpp"
 #include "Scene/Scene.hpp"
 #include "Scene/SceneObject.hpp"
+#include "Scene/SceneObject_Components.hpp"
 
 namespace BetterThanNothing
 {
@@ -182,6 +183,37 @@ namespace BetterThanNothing
 		m_renderingDevice->EndFrame(imageIndex);
 	}
 
+	struct RenderObject
+	{
+		ResourceId meshId;
+		ResourceId textureId;
+		Matrix4	   localMatrix;
+	};
+
+	static std::vector<RenderObject> FlattenScene(const Scene* scene)
+	{
+		auto view = scene->GetView<TransformComponent, ModelComponent>();
+
+		std::vector<RenderObject> objects;
+
+		for (auto [entity, transform, model] : view.each())
+		{
+			objects.resize(objects.size() + model.meshes.size());
+
+			for (auto [meshId, textureId] : model.meshes)
+			{
+				RenderObject renderObject;
+				renderObject.localMatrix = transform.localTransform;
+				renderObject.meshId = meshId;
+				renderObject.textureId = textureId;
+
+				objects.push_back(renderObject);
+			}
+		}
+
+		return objects;
+	}
+
 	void Renderer::RecordCommandBuffer_Scene(const Scene* scene, const uint32_t imageIndex) const
 	{
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
@@ -204,15 +236,17 @@ namespace BetterThanNothing
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
-		m_drawStream->Reset(scene->GetObjectsCount());
+		const auto flattenedScene = FlattenScene(scene);
 
-		for (const auto& sceneObject : scene->GetObjects())
+		m_drawStream->Reset(flattenedScene.size());
+
+		for (const auto& sceneObject : flattenedScene)
 		{
 			if (!sceneObject.meshId || !sceneObject.textureId)
 				continue;
 
-			const auto meshData = m_resourceManager->GetMeshData(sceneObject.meshId.value());
-			const auto textureData = m_resourceManager->GetTextureData(sceneObject.textureId.value());
+			const auto meshData = m_resourceManager->GetMeshData(sceneObject.meshId);
+			const auto textureData = m_resourceManager->GetTextureData(sceneObject.textureId);
 
 			if (!meshData || !textureData)
 				continue;

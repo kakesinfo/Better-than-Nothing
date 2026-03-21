@@ -31,16 +31,25 @@
 #include <Module_Math/Vector2.hpp>
 #include <Module_Math/Vector3.hpp>
 
+
 #include <memory>
 
 namespace BetterThanNothing
 {
-	Matrix4 m_transform[2];
+	// Matrix4 m_transform[2];
 
-	void Runtime::OnEnable()
+	void Runtime::OnEnable(Scene* scene)
 	{
-		m_transform[0] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f).Scale(0.01f);
-		m_transform[1] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
+		auto sponza = scene->CreateObject();
+		sponza.AddComponent<TransformComponent>().localTransform = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f).Scale(0.01f);
+		sponza.LoadModel("../../../.assets/sponza/sponza.obj", true);
+
+		auto robot = scene->CreateObject();
+		robot.AddComponent<TransformComponent>().localTransform = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
+		robot.LoadModel("../../../.assets/robot/robot.obj", true);
+
+		// m_transform[0] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f).Scale(0.01f);
+		// m_transform[1] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
 	}
 
 	void Runtime::OnUpdate(const UpdateContext* ctx)
@@ -72,13 +81,14 @@ namespace BetterThanNothing
 
 		ctx->MoveCamera(deltaPos);
 
-		m_transform[1] = m_transform[1].Rotate(20.0f * deltaTime, Vector3::Up);
+		// m_transform[1] = m_transform[1].Rotate(20.0f * deltaTime, Vector3::Up);
 	}
 
 	void Runtime::OnRender(const RenderContext* ctx)
 	{
-		ctx->SubmitModel("../../../.assets/sponza/sponza.obj", m_transform[0], true);
-		ctx->SubmitModel("../../../.assets/robot/robot.obj", m_transform[1]);
+		(void) ctx;
+		// ctx->SubmitModel("../../../.assets/sponza/sponza.obj", m_transform[0], true);
+		// ctx->SubmitModel("../../../.assets/robot/robot.obj", m_transform[1]);
 	}
 
 	void Runtime::OnDisable() {}
