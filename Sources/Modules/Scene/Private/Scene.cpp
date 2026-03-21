@@ -47,7 +47,12 @@ namespace BetterThanNothing
 
 	SceneObject Scene::CreateObject()
 	{
-		return SceneObject(m_resourceManager, &m_registry, m_registry.create());
+		return GetObject(m_registry.create());
+	}
+
+	SceneObject Scene::GetObject(const entt::entity entity)
+	{
+		return SceneObject(m_resourceManager, &m_registry, entity);
 	}
 
 	void Scene::SetDirectionalLight(const DirectionalLightData& data)

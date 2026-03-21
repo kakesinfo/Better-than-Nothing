@@ -23,16 +23,15 @@
 #include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/Engine.hpp>
 
-#include "../../Editor/Private/DebugPanel.hpp"
+#include "Scene/SceneObject.hpp"
+#include "Scene/SceneObject_Components.hpp"
 
+#include <Editor/DebugPanel.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
-#include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
-#include <Module_Math/Matrix4.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-#include <Renderer/RenderList.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
@@ -109,11 +108,18 @@ namespace BetterThanNothing
 	{
 		const UpdateContext updateContext(m_defaultScene->GetCamera(), deltaTime);
 		m_application->OnUpdate(&updateContext);
+
+		const auto sceneObjects = m_defaultScene->GetView<UpdateComponent>();
+		for (auto [entity, update] : sceneObjects.each())
+		{
+			auto sceneObject = m_defaultScene->GetObject(entity);
+			update.onUpdate(sceneObject, deltaTime);
+		}
 	}
 
 	void Engine::OnRender() const
 	{
-		m_renderer->RenderFrame_Scene(m_defaultScene.get());
+		m_renderer->RenderFrame(m_defaultScene.get());
 	}
 
 	void Engine::Run() const

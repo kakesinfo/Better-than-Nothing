@@ -24,7 +24,6 @@
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Data/Graphics/DynamicUniformData.hpp"
 #include "Module_Data/Graphics/GlobalUniformData.hpp"
-#include "Renderer/RenderList.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingDevice/DrawStream.hpp"
@@ -83,7 +82,7 @@ namespace BetterThanNothing
 		return std::make_unique<Renderer>(renderingDevice, resourceManager, debugUI);
 	}
 
-	void Renderer::RenderFrame(const RenderList* renderList, const CameraData& camera) const
+	void Renderer::RenderFrame(const Scene* scene) const
 	{
 		if (!m_defaultPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
@@ -94,91 +93,7 @@ namespace BetterThanNothing
 
 		const uint32_t imageIndex = imageIndexOpt.value();
 
-		RecordCommandBuffer(renderList, camera, imageIndex);
-
-		m_renderingDevice->EndFrame(imageIndex);
-	}
-
-	void Renderer::RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, const uint32_t imageIndex) const
-	{
-		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
-		const auto	   directionalLight = renderList->GetDirectionalLight();
-
-		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
-		globalUniform->view = camera.view;
-		globalUniform->projection = camera.projection;
-		globalUniform->cameraPosition = camera.position;
-		globalUniform->cameraExposure = camera.exposure;
-		globalUniform->lightDirection = directionalLight.revDirection;
-		globalUniform->lightColor = directionalLight.color;
-		globalUniform->lightIntensity = directionalLight.intensity;
-		globalUniform->pointLightCount = renderList->GetPointLightCount();
-
-		DrawPointLights(renderList, frameIndex);
-
-		Metrics::SetCameraCoordinates(camera.position.GetX(), camera.position.GetY(), camera.position.GetZ());
-
-		m_drawStream->Reset(renderList->Size());
-
-		for (uint32_t i = 0; i < renderList->Size(); i++)
-		{
-			const auto& [meshId, textureId, transform] = renderList->Get(i);
-
-			const auto meshData = m_resourceManager->GetMeshData(meshId);
-			const auto textureData = m_resourceManager->GetTextureData(textureId);
-
-			if (!meshData || !textureData)
-				continue;
-
-			const float distance = Vector3::Distance2(camera.position, Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2]));
-
-			// clang-format off
-			m_drawStream->Draw({
-				.pipeline = m_defaultPipeline->Handle(),
-				.pipelineLayout = m_defaultPipeline->GetLayout(),
-				.vertexBuffer = meshData->vertexBuffer,
-				.indexBuffer = meshData->indexBuffer,
-				.indexCount = meshData->indexCount,
-				.globalDescriptorSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value,
-				.samplerDescriptorSet = textureData->descriptorSetHandle,
-				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
-				.transform = transform,
-				.distanceToCamera = distance
-			});
-			// clang-format on
-
-			Metrics::AddDrawCall(meshData->vertexCount);
-		}
-
-		const auto drawStream = m_drawStream->Build();
-
-		ExecuteForwardPass(imageIndex, drawStream);
-		ExecuteEditorPass(imageIndex);
-	}
-
-	void Renderer::DrawPointLights(const RenderList* renderList, const uint32_t frameIndex) const
-	{
-		const uint32_t count = renderList->GetPointLightCount();
-
-		if (count == 0)
-			return;
-
-		const auto handle = m_pointLightBuffer.at(frameIndex);
-		m_renderingDevice->CopyDataToBuffer(handle, renderList->GetPointLights().data(), count * sizeof(PointLightData));
-	}
-
-	void Renderer::RenderFrame_Scene(const Scene* scene) const
-	{
-		if (!m_defaultPipeline)
-			throw std::runtime_error("No pipeline set for rendering!");
-
-		const auto imageIndexOpt = m_renderingDevice->BeginFrame();
-		if (!imageIndexOpt)
-			return;
-
-		const uint32_t imageIndex = imageIndexOpt.value();
-
-		RecordCommandBuffer_Scene(scene, imageIndex);
+		RecordCommandBuffer(scene, imageIndex);
 
 		m_renderingDevice->EndFrame(imageIndex);
 	}
@@ -214,7 +129,7 @@ namespace BetterThanNothing
 		return objects;
 	}
 
-	void Renderer::RecordCommandBuffer_Scene(const Scene* scene, const uint32_t imageIndex) const
+	void Renderer::RecordCommandBuffer(const Scene* scene, const uint32_t imageIndex) const
 	{
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
 		const float	   aspectRatio = m_renderingDevice->GetAspectRatio();
@@ -232,7 +147,7 @@ namespace BetterThanNothing
 		globalUniform->lightIntensity = directionalLight.intensity;
 		globalUniform->pointLightCount = scene->GetPointLightCount();
 
-		DrawPointLights_Scene(scene, frameIndex);
+		DrawPointLights(scene, frameIndex);
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
@@ -280,7 +195,7 @@ namespace BetterThanNothing
 		ExecuteEditorPass(imageIndex);
 	}
 
-	void Renderer::DrawPointLights_Scene(const Scene* scene, const uint32_t frameIndex) const
+	void Renderer::DrawPointLights(const Scene* scene, const uint32_t frameIndex) const
 	{
 		const uint32_t count = scene->GetPointLightCount();
 

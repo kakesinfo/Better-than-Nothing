@@ -23,7 +23,6 @@
 namespace BetterThanNothing
 {
 	class UpdateContext;
-	class RenderContext;
 	class Scene;
 
 	class Runtime final : public IEngineApplication
@@ -33,7 +32,7 @@ namespace BetterThanNothing
 
 		void OnEnable(Scene* scene) override;
 		void OnUpdate(const UpdateContext* ctx) override;
-		void OnRender(const RenderContext* ctx) override;
+		void OnRender() override;
 		void OnDisable() override;
 	};
 };

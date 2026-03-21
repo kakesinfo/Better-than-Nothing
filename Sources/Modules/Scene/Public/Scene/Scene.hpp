@@ -44,6 +44,7 @@ namespace BetterThanNothing
 		[[nodiscard]] Camera* GetCamera() const;
 
 		SceneObject CreateObject();
+		SceneObject GetObject(entt::entity entity);
 
 		template<typename... Components>
 		[[nodiscard]] auto GetView()

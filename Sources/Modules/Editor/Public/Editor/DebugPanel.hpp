@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <Editor/Panel.hpp>
+#include "Panel.hpp"
 
 namespace BetterThanNothing
 {

@@ -23,6 +23,8 @@
 
 namespace BetterThanNothing
 {
+	class SceneObject;
+
 	struct Component
 	{};
 
@@ -38,5 +40,10 @@ namespace BetterThanNothing
 		std::string				  path;
 		bool					  preTransform = false;
 		std::vector<MeshResource> meshes;
+	};
+
+	struct UpdateComponent : Component
+	{
+		std::function<void(SceneObject&, float)> onUpdate;
 	};
 }

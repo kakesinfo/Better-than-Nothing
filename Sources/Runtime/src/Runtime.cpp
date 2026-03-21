@@ -25,7 +25,6 @@
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Engine/EntryPoint.hpp>
-#include <Module_Engine/RenderContext.hpp>
 #include <Module_Engine/UpdateContext.hpp>
 #include <Module_Math/Matrix4.hpp>
 #include <Module_Math/Vector2.hpp>
@@ -36,8 +35,6 @@
 
 namespace BetterThanNothing
 {
-	// Matrix4 m_transform[2];
-
 	void Runtime::OnEnable(Scene* scene)
 	{
 		auto sponza = scene->CreateObject();
@@ -47,9 +44,13 @@ namespace BetterThanNothing
 		auto robot = scene->CreateObject();
 		robot.AddComponent<TransformComponent>().localTransform = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
 		robot.LoadModel("../../../.assets/robot/robot.obj", true);
+		robot.AddComponent<UpdateComponent>().onUpdate = [](const SceneObject& obj, const float deltaTime) -> void {
+			if (!obj.HasComponent<TransformComponent>())
+				return;
 
-		// m_transform[0] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f).Scale(0.01f);
-		// m_transform[1] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
+			auto& transform = obj.GetComponent<TransformComponent>();
+			transform.localTransform = transform.localTransform.Rotate(20.0f * deltaTime, Vector3::Up);
+		};
 	}
 
 	void Runtime::OnUpdate(const UpdateContext* ctx)
@@ -80,15 +81,11 @@ namespace BetterThanNothing
 			deltaPos -= Vector3::Up * moveSpeed;
 
 		ctx->MoveCamera(deltaPos);
-
-		// m_transform[1] = m_transform[1].Rotate(20.0f * deltaTime, Vector3::Up);
 	}
 
-	void Runtime::OnRender(const RenderContext* ctx)
+	void Runtime::OnRender()
 	{
-		(void) ctx;
-		// ctx->SubmitModel("../../../.assets/sponza/sponza.obj", m_transform[0], true);
-		// ctx->SubmitModel("../../../.assets/robot/robot.obj", m_transform[1]);
+
 	}
 
 	void Runtime::OnDisable() {}
