@@ -32,7 +32,6 @@ namespace BetterThanNothing
 
 		virtual void OnEnable(Scene* scene) = 0;
 		virtual void OnUpdate(const UpdateContext* ctx) = 0;
-		virtual void OnRender() = 0;
 		virtual void OnDisable() = 0;
 	};
 

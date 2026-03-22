@@ -32,7 +32,6 @@ namespace BetterThanNothing
 
 		void OnEnable(Scene* scene) override;
 		void OnUpdate(const UpdateContext* ctx) override;
-		void OnRender() override;
 		void OnDisable() override;
 	};
 };

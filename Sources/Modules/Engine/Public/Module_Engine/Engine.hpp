@@ -37,7 +37,6 @@ namespace BetterThanNothing
 
 	private:
 		void OnUpdate(float deltaTime) const;
-		void OnRender() const;
 
 	public:
 		void Run() const;
@@ -48,7 +47,6 @@ namespace BetterThanNothing
 		std::unique_ptr<Scene>			 m_defaultScene;
 		std::unique_ptr<Editor>			 m_editor;
 		std::unique_ptr<Renderer>		 m_renderer;
-		std::unique_ptr<Camera>			 m_camera;
 
 		IEngineApplication* m_application;
 	};

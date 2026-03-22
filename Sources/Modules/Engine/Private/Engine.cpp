@@ -50,7 +50,7 @@ namespace BetterThanNothing
 		WindowManager::Initialize({"Better Than Nothing", 1280, 720});
 		InputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
+		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
@@ -59,49 +59,6 @@ namespace BetterThanNothing
 		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_editor.get());
 
 		m_defaultScene = Scene::Create(m_resourceManager.get());
-		m_defaultScene->InitCamera(45.0f, 0.1f, 1000.0f);
-
-		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
-
-		DirectionalLightData directionalLight{};
-		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();
-		directionalLight.color = Vector3(1.0f, 0.95f, 0.8f);
-		directionalLight.intensity = 5.0f;
-
-		m_defaultScene->SetDirectionalLight(directionalLight);
-
-		float kConstant = 1.0f;
-		float kLinear = 0.09f;
-		float kQuadratic = 0.032f;
-		float kIntensity = 10.0f;
-
-		PointLightData redLight{};
-		redLight.color = Vector3(1.0f, 0.0f, 0.0f);
-		redLight.position = Vector3(15.0f, 0.0f, 5.0f);
-		redLight.constant = kConstant;
-		redLight.linear = kLinear;
-		redLight.quadratic = kQuadratic;
-		redLight.intensity = kIntensity;
-
-		PointLightData greenLight{};
-		greenLight.color = Vector3(0.0f, 1.0f, 0.0f);
-		greenLight.position = Vector3(0.0f, 0.0f, -5.0f);
-		greenLight.constant = kConstant;
-		greenLight.linear = kLinear;
-		greenLight.quadratic = kQuadratic;
-		greenLight.intensity = kIntensity;
-
-		PointLightData blueLight{};
-		blueLight.color = Vector3(0.0f, 0.0f, 1.0f);
-		blueLight.position = Vector3(-10.0f, 0.0f, 5.0f);
-		blueLight.constant = kConstant;
-		blueLight.linear = kLinear;
-		blueLight.quadratic = kQuadratic;
-		blueLight.intensity = kIntensity;
-
-		m_defaultScene->AddPointLight(redLight);
-		m_defaultScene->AddPointLight(greenLight);
-		m_defaultScene->AddPointLight(blueLight);
 	}
 
 	void Engine::OnUpdate(const float deltaTime) const
@@ -115,11 +72,6 @@ namespace BetterThanNothing
 			auto sceneObject = m_defaultScene->GetObject(entity);
 			update.onUpdate(sceneObject, deltaTime);
 		}
-	}
-
-	void Engine::OnRender() const
-	{
-		m_renderer->RenderFrame(m_defaultScene.get());
 	}
 
 	void Engine::Run() const
@@ -148,7 +100,7 @@ namespace BetterThanNothing
 				shouldClose = true;
 
 			OnUpdate(elapsed.count());
-			OnRender();
+			m_renderer->RenderFrame(m_defaultScene.get());
 
 			InputManager::ResetMousePosition();
 
