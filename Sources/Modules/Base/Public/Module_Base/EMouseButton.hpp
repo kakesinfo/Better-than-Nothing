@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace BetterThanNothing
 {
 	enum class EMouseButton : int16_t
