@@ -24,6 +24,7 @@ add_subdirectory("ThirdParty/glslang")
 add_subdirectory("ThirdParty/spirv_cross")
 add_subdirectory("ThirdParty/stb")
 add_subdirectory("ThirdParty/imgui")
+add_subdirectory("ThirdParty/entt")
 
 # ==================================================================================================
 # Modules

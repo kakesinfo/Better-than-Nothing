@@ -17,25 +17,19 @@
  */
 
 #include "Scene/Scene.hpp"
-
 #include "Scene/Camera.hpp"
 #include "Scene/SceneObject.hpp"
 
 namespace BetterThanNothing
 {
-	Scene::Scene(const uint64_t size) : m_size(size)
+	Scene::Scene(ResourceManager* resourceManager): m_resourceManager(resourceManager)
 	{
-		m_objects.resize(size);
+
 	}
 
-	Scene::~Scene()
+	std::unique_ptr<Scene> Scene::Create(ResourceManager* resourceManager)
 	{
-		m_objects.clear();
-	}
-
-	std::unique_ptr<Scene> Scene::Create(uint64_t size)
-	{
-		return std::make_unique<Scene>(size);
+		return std::make_unique<Scene>(resourceManager);
 	}
 
 	void Scene::InitCamera(const float fov, const float nearPlane, const float farPlane)
@@ -50,54 +44,14 @@ namespace BetterThanNothing
 		return m_camera.get();
 	}
 
-	uint64_t Scene::CreateObject()
+	SceneObject Scene::CreateObject()
 	{
-		uint64_t id = m_objects.size();
-		if (!m_freeIds.empty())
-		{
-			id = m_freeIds.back();
-			m_freeIds.pop_back();
-		}
-
-		m_objects[id].id = id;
-
-		return id;
+		return GetObject(m_registry.create());
 	}
 
-	void Scene::DestroyObject(const uint64_t id)
+	SceneObject Scene::GetObject(const entt::entity entity)
 	{
-		if (id >= m_objects.size())
-			throw std::out_of_range("No scene object with that id");
-		m_freeIds.push_back(id);
-	}
-
-	SceneObject& Scene::GetObject(const uint64_t id)
-	{
-		if (id >= m_objects.size())
-			throw std::out_of_range("No scene object with that id");
-		return m_objects[id];
-	}
-
-	const SceneObject& Scene::GetObject(const uint64_t id) const
-	{
-		if (id >= m_objects.size())
-			throw std::out_of_range("No scene object with that id");
-		return m_objects[id];
-	}
-
-	std::vector<SceneObject>& Scene::GetObjects()
-	{
-		return m_objects;
-	}
-
-	const std::vector<SceneObject>& Scene::GetObjects() const
-	{
-		return m_objects;
-	}
-
-	uint64_t Scene::GetObjectsCount() const
-	{
-		return m_size;
+		return SceneObject(m_resourceManager, &m_registry, entity);
 	}
 
 	void Scene::SetDirectionalLight(const DirectionalLightData& data)

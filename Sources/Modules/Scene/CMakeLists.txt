@@ -22,6 +22,8 @@ target_link_libraries(${PROJECT_NAME}
         Module_Data
         Module_Math
         Module_ResourceManager
+    PUBLIC
+        EnTT::EnTT
 )
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")

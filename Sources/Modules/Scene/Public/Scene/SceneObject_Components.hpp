@@ -18,35 +18,32 @@
 
 #pragma once
 
+#include "ResourceManager/ResourceId.hpp"
+#include <Module_Math/Matrix4.hpp>
+
 namespace BetterThanNothing
 {
-	class Camera;
-	class Vector2;
-	class Vector3;
+	class SceneObject;
 
-	enum class EKey : int16_t;
-	enum class EMouseButton : int16_t;
+	struct Component
+	{};
 
-	class UpdateContext
+	struct TransformComponent : Component
 	{
-	public:
-		explicit UpdateContext(Camera* camera, const float deltaTime) : m_camera(camera), m_deltaTime(deltaTime) {}
-		~UpdateContext() = default;
+		Matrix4 localTransform;
+		// TODO: add global and inverse matrices
+		// TODO: add a dirty flag
+	};
 
-		void RotateCamera(float yaw, float pitch) const;
-		void MoveCamera(const Vector3& delta) const;
+	struct ModelComponent : Component
+	{
+		std::string				  path;
+		bool					  preTransform = false;
+		std::vector<MeshResource> meshes;
+	};
 
-		[[nodiscard]] Vector3 GetCameraForward() const;
-		[[nodiscard]] Vector3 GetCameraRight() const;
-
-		[[nodiscard]] bool	  IsKeyPressed(EKey key) const;
-		[[nodiscard]] bool	  IsMouseButtonPressed(EMouseButton button) const;
-		[[nodiscard]] Vector2 GetMouseDelta() const;
-
-		[[nodiscard]] float GetDeltaTime() const;
-
-	private:
-		Camera* m_camera;
-		float	m_deltaTime;
+	struct UpdateComponent : Component
+	{
+		std::function<void(SceneObject&, float)> onUpdate;
 	};
 }

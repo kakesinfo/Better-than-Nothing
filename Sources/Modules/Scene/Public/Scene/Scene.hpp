@@ -18,53 +18,59 @@
 
 #pragma once
 
+#include <entt/entt.hpp>
 #include <memory>
-#include <vector>
 #include <optional>
+#include <vector>
 
 #include "Module_Data/Graphics/DirectionalLightData.hpp"
 #include "Module_Data/Graphics/PointLightData.hpp"
 
 namespace BetterThanNothing
 {
+	class ResourceManager;
 	class Camera;
-	struct SceneObject;
+	class SceneObject;
 
 	class Scene
 	{
 	public:
-		explicit Scene(uint64_t size);
-		~Scene();
+		explicit Scene(ResourceManager* resourceManager);
+		~Scene() = default;
 
-		static std::unique_ptr<Scene> Create(uint64_t size);
+		static std::unique_ptr<Scene> Create(ResourceManager* resourceManager);
 
-		void InitCamera(float fov, float nearPlane, float farPlane);
+		void				  InitCamera(float fov, float nearPlane, float farPlane);
 		[[nodiscard]] Camera* GetCamera() const;
 
-		uint64_t CreateObject();
-		void DestroyObject(uint64_t id);
+		SceneObject CreateObject();
+		SceneObject GetObject(entt::entity entity);
 
-		[[nodiscard]] SceneObject& GetObject(uint64_t id);
-		[[nodiscard]] const SceneObject& GetObject(uint64_t id) const;
-		[[nodiscard]] std::vector<SceneObject>& GetObjects();
-		[[nodiscard]] const std::vector<SceneObject>& GetObjects() const;
-		[[nodiscard]] uint64_t GetObjectsCount() const;
+		template<typename... Components>
+		[[nodiscard]] auto GetView()
+		{
+			return m_registry.view<Components...>();
+		}
+
+		template<typename... Components>
+		[[nodiscard]] auto GetView() const
+		{
+			return m_registry.view<Components...>();
+		}
 
 		void SetDirectionalLight(const DirectionalLightData& data);
 		void AddPointLight(const PointLightData& data);
 
-		[[nodiscard]] const DirectionalLightData& GetDirectionalLight() const;
-		[[nodiscard]] uint32_t GetPointLightCount() const;
+		[[nodiscard]] const DirectionalLightData&		 GetDirectionalLight() const;
+		[[nodiscard]] uint32_t							 GetPointLightCount() const;
 		[[nodiscard]] const std::vector<PointLightData>& GetPointLights() const;
-		[[nodiscard]] const PointLightData& GetPointLight(uint32_t index) const;
+		[[nodiscard]] const PointLightData&				 GetPointLight(uint32_t index) const;
 
 	private:
-		uint64_t m_size;
-		std::unique_ptr<Camera> m_camera;
-		std::vector<SceneObject> m_objects;
-		std::vector<uint64_t> m_freeIds;
-
+		ResourceManager*					m_resourceManager;
+		entt::registry						m_registry;
+		std::unique_ptr<Camera>				m_camera;
 		std::optional<DirectionalLightData> m_directionalLight;
-		std::vector<PointLightData> m_pointLights;
+		std::vector<PointLightData>			m_pointLights;
 	};
 }

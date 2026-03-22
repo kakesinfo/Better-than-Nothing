@@ -16,28 +16,22 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <Editor/DebugPanel.hpp>
 #include <Editor/Editor.hpp>
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/Metrics.hpp>
-#include <Module_Data/Graphics/CameraData.hpp>
-#include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/Engine.hpp>
-
-#include "../../Editor/Private/DebugPanel.hpp"
-
 #include <Module_Engine/IEngineApplication.hpp>
-#include <Module_Engine/RenderContext.hpp>
-#include <Module_Engine/UpdateContext.hpp>
-#include <Module_Math/Matrix4.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
-#include <Renderer/RenderList.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <Scene/Camera.hpp>
 #include <Scene/Scene.hpp>
+#include <Scene/SceneObject.hpp>
+#include <Scene/SceneObject_Components.hpp>
 #include <chrono>
 #include <format>
 
@@ -51,86 +45,27 @@ namespace BetterThanNothing
 		WindowManager::Initialize({"Better Than Nothing", 1280, 720});
 		InputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
+		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
 		m_editor->AddPanel<DebugPanel>("Debug Panel");
 
 		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_editor.get());
-		m_renderList = std::make_unique<RenderList>(m_resourceManager.get());
 
-		m_defaultScene = Scene::Create(1000);
-		m_defaultScene->InitCamera(45.0f, 0.1f, 1000.0f);
-
-		m_camera = std::make_unique<Camera>(45.0f, 0.1f, 1000.0f);
-
-		DirectionalLightData directionalLight{};
-		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();
-		directionalLight.color = Vector3(1.0f, 0.95f, 0.8f);
-		directionalLight.intensity = 5.0f;
-
-		m_defaultScene->SetDirectionalLight(directionalLight);
-		m_renderList->SetDirectionalLight(directionalLight);
-
-		float kConstant = 1.0f;
-		float kLinear = 0.09f;
-		float kQuadratic = 0.032f;
-		float kIntensity = 10.0f;
-
-		PointLightData redLight{};
-		redLight.color = Vector3(1.0f, 0.0f, 0.0f);
-		redLight.position = Vector3(15.0f, 0.0f, 5.0f);
-		redLight.constant = kConstant;
-		redLight.linear = kLinear;
-		redLight.quadratic = kQuadratic;
-		redLight.intensity = kIntensity;
-
-		PointLightData greenLight{};
-		greenLight.color = Vector3(0.0f, 1.0f, 0.0f);
-		greenLight.position = Vector3(0.0f, 0.0f, -5.0f);
-		greenLight.constant = kConstant;
-		greenLight.linear = kLinear;
-		greenLight.quadratic = kQuadratic;
-		greenLight.intensity = kIntensity;
-
-		PointLightData blueLight{};
-		blueLight.color = Vector3(0.0f, 0.0f, 1.0f);
-		blueLight.position = Vector3(-10.0f, 0.0f, 5.0f);
-		blueLight.constant = kConstant;
-		blueLight.linear = kLinear;
-		blueLight.quadratic = kQuadratic;
-		blueLight.intensity = kIntensity;
-
-		m_defaultScene->AddPointLight(redLight);
-		m_defaultScene->AddPointLight(greenLight);
-		m_defaultScene->AddPointLight(blueLight);
-
-		m_renderList->AddPointLight(redLight);
-		m_renderList->AddPointLight(greenLight);
-		m_renderList->AddPointLight(blueLight);
+		m_defaultScene = Scene::Create(m_resourceManager.get());
 	}
 
 	void Engine::OnUpdate(const float deltaTime) const
 	{
-		const UpdateContext updateContext(m_camera.get(), deltaTime);
-		m_application->OnUpdate(&updateContext);
-	}
+		m_application->OnUpdate(m_defaultScene.get(), deltaTime);
 
-	void Engine::OnRender() const
-	{
-		const RenderContext renderContext(m_renderList.get());
-		m_application->OnRender(&renderContext);
-
-		const float aspectRatio = m_renderingDevice->GetAspectRatio();
-
-		CameraData cameraData{};
-		cameraData.view = m_camera->GetViewMatrix();
-		cameraData.projection = m_camera->GetProjectionMatrix(aspectRatio);
-		cameraData.position = m_camera->GetPosition();
-		cameraData.exposure = 0.5f;
-
-		m_renderer->RenderFrame(m_renderList.get(), cameraData);
+		const auto sceneObjects = m_defaultScene->GetView<UpdateComponent>();
+		for (auto [entity, update] : sceneObjects.each())
+		{
+			auto sceneObject = m_defaultScene->GetObject(entity);
+			update.onUpdate(sceneObject, deltaTime);
+		}
 	}
 
 	void Engine::Run() const
@@ -138,7 +73,7 @@ namespace BetterThanNothing
 		bool shouldClose = false;
 		auto lastTime = std::chrono::high_resolution_clock::now();
 
-		m_application->OnEnable();
+		m_application->OnEnable(m_defaultScene.get());
 
 		WindowManager::GetWindow()->Show();
 
@@ -146,22 +81,20 @@ namespace BetterThanNothing
 		{
 			Metrics::BeginRecording();
 
-			const auto					 currentTime = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<float> elapsed = currentTime - lastTime;
+			const auto currentTime = std::chrono::high_resolution_clock::now();
+			const auto elapsedCount = static_cast<std::chrono::duration<float>>(currentTime - lastTime).count();
 			lastTime = currentTime;
 
-			Metrics::SetFrameTime(elapsed.count() * 1000.0f);
-			Metrics::SetFps(1.0f / elapsed.count());
+			Metrics::SetFrameTime(elapsedCount * 1000.0f);
+			Metrics::SetFps(1.0f / elapsedCount);
 
 			WindowManager::GetWindow()->PollEvents();
 
 			if (InputManager::IsKeyPressed(EKey::Escape))
 				shouldClose = true;
 
-			OnUpdate(elapsed.count());
-			OnRender();
-
-			m_renderList->Clear();
+			OnUpdate(elapsedCount);
+			m_renderer->RenderFrame(m_defaultScene.get());
 
 			InputManager::ResetMousePosition();
 
