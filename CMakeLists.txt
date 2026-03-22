@@ -25,6 +25,7 @@ add_subdirectory("ThirdParty/spirv_cross")
 add_subdirectory("ThirdParty/stb")
 add_subdirectory("ThirdParty/imgui")
 add_subdirectory("ThirdParty/entt")
+add_subdirectory("ThirdParty/meshoptimizer")
 
 # ==================================================================================================
 # Modules

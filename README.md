@@ -41,6 +41,7 @@ Contributions are welcome. Both new features and bug fixes. Just open a merge re
 - [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) _v2.0_: A header only wavefront obj loader.
 - [imgui](https://github.com/ocornut/imgui) _v1.92.5_: A bloat-free Graphical User interface for C++ with minimal dependencies.
 - [entt](https://github.com/skypjack/entt) _v3.16_: A fast and reliable entity component system (ECS).
+- [meshoptimizer](https://github.com/zeux/meshoptimizer) _v1.0_: A mesh optimization library that makes meshes smaller and faster to render.
 
 ### 📜 Licence
 
