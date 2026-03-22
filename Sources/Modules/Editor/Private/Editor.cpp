@@ -67,7 +67,6 @@ namespace BetterThanNothing
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		io.IniFilename = nullptr;
 
 		ImGui_ImplSDL3_InitForVulkan(window->Handle());
 
@@ -129,7 +128,7 @@ namespace BetterThanNothing
 		return std::make_unique<Editor>(window, renderingDevice);
 	}
 
-	void Editor::RenderPanels() const
+	void Editor::RenderPanels(Scene* scene) const
 	{
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
@@ -140,8 +139,14 @@ namespace BetterThanNothing
 			if (!panel->IsOpen())
 				continue;
 
+			if (panel->HasSize())
+				ImGui::SetNextWindowSize(ImVec2(panel->GetWidth(), panel->GetHeight()), ImGuiCond_Appearing);
+
+			if (panel->HasPosition())
+				ImGui::SetNextWindowPos(ImVec2(panel->GetX(), panel->GetY()), ImGuiCond_Appearing);
+
 			if (ImGui::Begin(panel->GetName().c_str(), nullptr))
-				panel->OnRender();
+				panel->OnRender(scene);
 
 			ImGui::End();
 		}

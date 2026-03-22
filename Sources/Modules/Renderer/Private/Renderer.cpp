@@ -84,7 +84,7 @@ namespace BetterThanNothing
 		return std::make_unique<Renderer>(renderingDevice, resourceManager, debugUI);
 	}
 
-	void Renderer::RenderFrame(const Scene* scene) const
+	void Renderer::RenderFrame(Scene* scene) const
 	{
 		if (!m_defaultPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
@@ -132,7 +132,7 @@ namespace BetterThanNothing
 		return objects;
 	}
 
-	void Renderer::RecordCommandBuffer(const Scene* scene, const uint32_t imageIndex) const
+	void Renderer::RecordCommandBuffer(Scene* scene, const uint32_t imageIndex) const
 	{
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
 		const float	   aspectRatio = m_renderingDevice->GetAspectRatio();
@@ -193,7 +193,7 @@ namespace BetterThanNothing
 		const auto drawStream = m_drawStream->Build();
 
 		ExecuteForwardPass(imageIndex, drawStream);
-		ExecuteEditorPass(imageIndex);
+		ExecuteEditorPass(scene, imageIndex);
 	}
 
 	void Renderer::DrawPointLights(const Scene* scene, const uint32_t frameIndex) const
@@ -408,12 +408,12 @@ namespace BetterThanNothing
 		);
 	}
 
-	void Renderer::ExecuteEditorPass(uint32_t imageIndex) const
+	void Renderer::ExecuteEditorPass(Scene* scene, uint32_t imageIndex) const
 	{
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
-		m_editor->RenderPanels();
+		m_editor->RenderPanels(scene);
 
 		{
 			VkImageMemoryBarrier barrier{};

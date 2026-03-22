@@ -21,6 +21,9 @@
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/Metrics.hpp>
 #include <Module_Engine/Engine.hpp>
+
+#include "Editor/ScenePanel.hpp"
+
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
@@ -49,7 +52,8 @@ namespace BetterThanNothing
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
-		m_editor->AddPanel<DebugPanel>("Debug Panel");
+		m_editor->AddPanel<DebugPanel>();
+		m_editor->AddPanel<ScenePanel>();
 
 		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_editor.get());
 

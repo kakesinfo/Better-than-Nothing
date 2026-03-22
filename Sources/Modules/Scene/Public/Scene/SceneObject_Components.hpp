@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <ResourceManager/ResourceId.hpp>
+#include <Module_Base/ResourceId.hpp>
 #include <Module_Math/Matrix4.hpp>
 
 namespace BetterThanNothing

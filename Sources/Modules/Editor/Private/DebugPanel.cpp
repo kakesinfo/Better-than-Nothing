@@ -19,16 +19,24 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 
 #include <Editor/DebugPanel.hpp>
+#include "Module_Platform/Window.hpp"
+
 #include <Editor/Panel.hpp>
 #include <Module_Base/Metrics.hpp>
 #include <imgui.h>
 
 namespace BetterThanNothing
 {
-	DebugPanel::DebugPanel(const std::string_view name) : Panel(name) {}
-
-	void DebugPanel::OnRender()
+	DebugPanel::DebugPanel() : Panel("Debug Panel")
 	{
+		SetPosition(0, 0);
+		SetSize(200, 250);
+	}
+
+	void DebugPanel::OnRender(Scene* scene)
+	{
+		(void) scene;
+
 		static auto updateTimed = 0.0f;
 		static auto cachedMetrics = Metrics::GetLastFrameMetrics();
 
