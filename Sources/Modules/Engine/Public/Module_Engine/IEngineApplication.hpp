@@ -31,7 +31,7 @@ namespace BetterThanNothing
 		virtual ~IEngineApplication() = default;
 
 		virtual void OnEnable(Scene* scene) = 0;
-		virtual void OnUpdate(const UpdateContext* ctx) = 0;
+		virtual void OnUpdate(Scene* scene, float deltaTime) = 0;
 		virtual void OnDisable() = 0;
 	};
 

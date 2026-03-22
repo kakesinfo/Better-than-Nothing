@@ -31,7 +31,7 @@ namespace BetterThanNothing
 		Runtime() = default;
 
 		void OnEnable(Scene* scene) override;
-		void OnUpdate(const UpdateContext* ctx) override;
+		void OnUpdate(Scene* scene, float deltaTime) override;
 		void OnDisable() override;
 	};
 };

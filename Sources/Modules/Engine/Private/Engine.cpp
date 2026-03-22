@@ -22,7 +22,6 @@
 #include <Module_Base/Metrics.hpp>
 #include <Module_Engine/Engine.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
-#include <Module_Engine/UpdateContext.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
@@ -59,8 +58,7 @@ namespace BetterThanNothing
 
 	void Engine::OnUpdate(const float deltaTime) const
 	{
-		const UpdateContext updateContext(m_defaultScene->GetCamera(), deltaTime);
-		m_application->OnUpdate(&updateContext);
+		m_application->OnUpdate(m_defaultScene.get(), deltaTime);
 
 		const auto sceneObjects = m_defaultScene->GetView<UpdateComponent>();
 		for (auto [entity, update] : sceneObjects.each())

@@ -18,14 +18,15 @@
 
 #include "Runtime.hpp"
 
+#include "../../Modules/Platform/Public/Module_Platform/Manager/InputManager.hpp"
 #include "Module_Base/Logger.hpp"
+#include "Scene/Camera.hpp"
 #include "Scene/Scene.hpp"
 #include "Scene/SceneObject.hpp"
 
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Engine/EntryPoint.hpp>
-#include <Module_Engine/UpdateContext.hpp>
 #include <Module_Math/Matrix4.hpp>
 #include <Module_Math/Vector2.hpp>
 #include <Module_Math/Vector3.hpp>
@@ -94,34 +95,33 @@ namespace BetterThanNothing
 		};
 	}
 
-	void Runtime::OnUpdate(const UpdateContext* ctx)
+	void Runtime::OnUpdate(Scene* scene, const float deltaTime)
 	{
-		if (ctx->IsMouseButtonPressed(EMouseButton::Left))
+		if (InputManager::IsMouseButtonPressed(EMouseButton::Left))
 		{
 			constexpr float rotateSpeed = 0.1f;
-			const Vector2	delta = ctx->GetMouseDelta();
-			ctx->RotateCamera(-delta.GetX() * rotateSpeed, -delta.GetY() * rotateSpeed);
+			const Vector2	delta = InputManager::GetMouseDelta();
+			scene->GetCamera()->Rotate(-delta.GetX() * rotateSpeed, -delta.GetY() * rotateSpeed);
 		}
 
-		const float deltaTime = ctx->GetDeltaTime();
 		const float moveSpeed = 5.0f * deltaTime;
 
 		auto deltaPos = Vector3::Zero;
 
-		if (ctx->IsKeyPressed(EKey::W))
-			deltaPos += ctx->GetCameraForward() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::S))
-			deltaPos -= ctx->GetCameraForward() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::D))
-			deltaPos += ctx->GetCameraRight() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::A))
-			deltaPos -= ctx->GetCameraRight() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::Space))
+		if (InputManager::IsKeyPressed(EKey::W))
+			deltaPos += scene->GetCamera()->GetForward() * moveSpeed;
+		if (InputManager::IsKeyPressed(EKey::S))
+			deltaPos -= scene->GetCamera()->GetForward() * moveSpeed;
+		if (InputManager::IsKeyPressed(EKey::D))
+			deltaPos += scene->GetCamera()->GetRight() * moveSpeed;
+		if (InputManager::IsKeyPressed(EKey::A))
+			deltaPos -= scene->GetCamera()->GetRight() * moveSpeed;
+		if (InputManager::IsKeyPressed(EKey::Space))
 			deltaPos += Vector3::Up * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::LeftShift))
+		if (InputManager::IsKeyPressed(EKey::LeftShift))
 			deltaPos -= Vector3::Up * moveSpeed;
 
-		ctx->MoveCamera(deltaPos);
+		scene->GetCamera()->Move(deltaPos);
 	}
 
 	void Runtime::OnDisable() {}
