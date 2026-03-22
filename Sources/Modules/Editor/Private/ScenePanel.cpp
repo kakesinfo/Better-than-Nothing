@@ -36,7 +36,7 @@ namespace BetterThanNothing
 
 	static void DrawEntityNode(const SceneObject& obj)
 	{
-		std::string name = "Entity " + std::to_string(static_cast<uint32_t>(obj.GetEntity()));
+		std::string name = "SceneObject_" + std::to_string(static_cast<uint32_t>(obj.GetEntity()));
 		if (obj.HasComponent<NameComponent>())
 			name = obj.GetComponent<NameComponent>().name;
 
