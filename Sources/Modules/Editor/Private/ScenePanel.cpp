@@ -42,14 +42,12 @@ namespace BetterThanNothing
 
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-		if (const bool hasChildren = obj.HasComponent<ModelComponent>() && !obj.GetComponent<ModelComponent>().children.empty(); !hasChildren)
+		if (!obj.HasComponent<ModelComponent>() && !obj.GetComponent<ModelComponent>().children.empty())
 		{
 			flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 			ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(obj.GetEntity())), flags, "%s", name.c_str());
-			return;
 		}
-
-		if (ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(obj.GetEntity())), flags, "%s", name.c_str()))
+		else if (ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(obj.GetEntity())), flags, "%s", name.c_str()))
 		{
 			for (const auto& child : obj.GetComponent<ModelComponent>().children)
 				DrawEntityNode(child);
