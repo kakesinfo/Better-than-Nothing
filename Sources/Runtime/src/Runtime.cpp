@@ -42,7 +42,7 @@ namespace BetterThanNothing
 
 	void Runtime::OnEnable(Scene* scene)
 	{
-		scene->InitCamera(45.0f, 0.1f, 1000.0f);
+		scene->InitCamera(50.0f, 0.1f, 1000.0f);
 
 		DirectionalLightData directionalLight{};
 		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();
