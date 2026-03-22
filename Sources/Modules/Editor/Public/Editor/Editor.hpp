@@ -27,6 +27,7 @@ namespace BetterThanNothing
 	class Window;
 	class RenderingDevice;
 	class Panel;
+	class Scene;
 
 	namespace RenderingApi
 	{
@@ -44,12 +45,12 @@ namespace BetterThanNothing
 		static std::unique_ptr<Editor> Create(Window* window, RenderingDevice* renderingDevice);
 
 		template<typename T>
-		void AddPanel(std::string_view name) requires std::derived_from<T, Panel>
+		void AddPanel() requires std::derived_from<T, Panel>
 		{
-			m_panels.push_back(std::make_unique<T>(name));
+			m_panels.push_back(std::make_unique<T>());
 		}
 
-		void RenderPanels() const;
+		void RenderPanels(Scene* scene) const;
 		void RenderDrawData(const RenderingApi::CommandBuffer* commandBuffer) const;
 
 	private:

@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "ResourceId.hpp"
+#include "../../../Base/Public/Module_Base/ResourceId.hpp"
 #include <memory>
 #include <unordered_map>
 #include <vector>

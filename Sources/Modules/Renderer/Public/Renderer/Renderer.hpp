@@ -52,7 +52,7 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI);
 
-		void RenderFrame(const Scene* renderList) const;
+		void RenderFrame(Scene* scene) const;
 
 	private:
 		auto CreateGlobalUniformBuffers() -> void;
@@ -62,11 +62,11 @@ namespace BetterThanNothing
 		void CreatePointLightBuffers();
 		void CreatePointLightDescriptorSets();
 
-		void RecordCommandBuffer(const Scene* scene, uint32_t imageIndex) const;
+		void RecordCommandBuffer(Scene* scene, uint32_t imageIndex) const;
 		void DrawPointLights(const Scene* scene, uint32_t frameIndex) const;
 
 		void ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const;
-		void ExecuteEditorPass(uint32_t imageIndex) const;
+		void ExecuteEditorPass(Scene* scene, uint32_t imageIndex) const;
 
 		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
 		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();

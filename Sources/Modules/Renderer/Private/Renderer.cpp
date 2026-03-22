@@ -44,6 +44,8 @@
 #include "Scene/SceneObject.hpp"
 #include "Scene/SceneObject_Components.hpp"
 
+#include <iostream>
+
 namespace BetterThanNothing
 {
 	constexpr uint32_t MAX_LIGHT_COUNT = 1000;
@@ -82,7 +84,7 @@ namespace BetterThanNothing
 		return std::make_unique<Renderer>(renderingDevice, resourceManager, debugUI);
 	}
 
-	void Renderer::RenderFrame(const Scene* scene) const
+	void Renderer::RenderFrame(Scene* scene) const
 	{
 		if (!m_defaultPipeline)
 			throw std::runtime_error("No pipeline set for rendering!");
@@ -107,29 +109,30 @@ namespace BetterThanNothing
 
 	static std::vector<RenderObject> FlattenScene(const Scene* scene)
 	{
-		auto view = scene->GetView<TransformComponent, ModelComponent>();
+		const auto modelView = scene->GetView<TransformComponent, ModelComponent>();
 
 		std::vector<RenderObject> objects;
-
-		for (auto [entity, transform, model] : view.each())
+		for (auto [entity, transform, model] : modelView.each())
 		{
-			objects.resize(objects.size() + model.meshes.size());
-
-			for (auto [meshId, textureId] : model.meshes)
+			for (const auto& sceneObj : model.children)
 			{
-				RenderObject renderObject;
-				renderObject.localMatrix = transform.localTransform;
-				renderObject.meshId = meshId;
-				renderObject.textureId = textureId;
+				if (!sceneObj.HasComponent<MeshComponent>())
+					continue;
 
-				objects.push_back(renderObject);
+				const auto& meshComp = sceneObj.GetComponent<MeshComponent>();
+
+				objects.emplace_back(RenderObject{
+					.meshId = meshComp.meshId,
+					.textureId = meshComp.textureId,
+					.localMatrix = transform.localTransform
+				});
 			}
 		}
 
 		return objects;
 	}
 
-	void Renderer::RecordCommandBuffer(const Scene* scene, const uint32_t imageIndex) const
+	void Renderer::RecordCommandBuffer(Scene* scene, const uint32_t imageIndex) const
 	{
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
 		const float	   aspectRatio = m_renderingDevice->GetAspectRatio();
@@ -155,21 +158,19 @@ namespace BetterThanNothing
 
 		m_drawStream->Reset(flattenedScene.size());
 
-		for (const auto& sceneObject : flattenedScene)
+		for (const auto& [meshId, textureId, localMatrix] : flattenedScene)
 		{
-			if (!sceneObject.meshId || !sceneObject.textureId)
+			if (!meshId || !textureId)
 				continue;
 
-			const auto meshData = m_resourceManager->GetMeshData(sceneObject.meshId);
-			const auto textureData = m_resourceManager->GetTextureData(sceneObject.textureId);
+			const auto meshData = m_resourceManager->GetMeshData(meshId);
+			const auto textureData = m_resourceManager->GetTextureData(textureId);
 
 			if (!meshData || !textureData)
 				continue;
 
-			const auto transform = sceneObject.localMatrix;
-
 			const float distance =
-				Vector3::Distance2(camera->GetPosition(), Vector3(transform.Value()[3][0], transform.Value()[3][1], transform.Value()[3][2]));
+				Vector3::Distance2(camera->GetPosition(), Vector3(localMatrix.Value()[3][0], localMatrix.Value()[3][1], localMatrix.Value()[3][2]));
 
 			// clang-format off
 			m_drawStream->Draw({
@@ -181,7 +182,7 @@ namespace BetterThanNothing
 				.globalDescriptorSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value,
 				.samplerDescriptorSet = textureData->descriptorSetHandle,
 				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
-				.transform = transform,
+				.transform = localMatrix,
 				.distanceToCamera = distance
 			});
 			// clang-format on
@@ -192,7 +193,7 @@ namespace BetterThanNothing
 		const auto drawStream = m_drawStream->Build();
 
 		ExecuteForwardPass(imageIndex, drawStream);
-		ExecuteEditorPass(imageIndex);
+		ExecuteEditorPass(scene, imageIndex);
 	}
 
 	void Renderer::DrawPointLights(const Scene* scene, const uint32_t frameIndex) const
@@ -407,12 +408,12 @@ namespace BetterThanNothing
 		);
 	}
 
-	void Renderer::ExecuteEditorPass(uint32_t imageIndex) const
+	void Renderer::ExecuteEditorPass(Scene* scene, uint32_t imageIndex) const
 	{
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
-		m_editor->RenderPanels();
+		m_editor->RenderPanels(scene);
 
 		{
 			VkImageMemoryBarrier barrier{};

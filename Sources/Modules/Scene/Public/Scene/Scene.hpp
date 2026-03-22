@@ -23,8 +23,8 @@
 #include <optional>
 #include <vector>
 
-#include "Module_Data/Graphics/DirectionalLightData.hpp"
-#include "Module_Data/Graphics/PointLightData.hpp"
+#include <Module_Data/Graphics/DirectionalLightData.hpp>
+#include <Module_Data/Graphics/PointLightData.hpp>
 
 namespace BetterThanNothing
 {
@@ -45,6 +45,7 @@ namespace BetterThanNothing
 
 		SceneObject CreateObject();
 		SceneObject GetObject(entt::entity entity);
+		SceneObject LoadModel(const std::string& path, bool preTransform = false);
 
 		template<typename... Components>
 		[[nodiscard]] auto GetView()

@@ -23,6 +23,7 @@ target_link_libraries(${PROJECT_NAME}
             Module_Platform
             Module_RenderingApi
             Module_RenderingDevice
+            Module_Scene
             imgui
             Vulkan::Headers
 )
