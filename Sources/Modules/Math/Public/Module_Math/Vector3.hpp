@@ -56,6 +56,10 @@ namespace BetterThanNothing
 		[[nodiscard]] float GetY() const { return m_data.y; }
 		[[nodiscard]] float GetZ() const { return m_data.z; }
 
+		[[nodiscard]] float& x() { return m_data.x; }
+		[[nodiscard]] float& y() { return m_data.y; }
+		[[nodiscard]] float& z() { return m_data.z; }
+
 		void SetX(float x) { m_data.x = x; }
 		void SetY(float y) { m_data.y = y; }
 		void SetZ(float z) { m_data.z = z; }

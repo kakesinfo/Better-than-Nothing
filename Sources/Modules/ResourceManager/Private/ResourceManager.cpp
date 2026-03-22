@@ -227,6 +227,7 @@ namespace BetterThanNothing
 		meshopt_remapIndexBuffer(new_indices.data(), nullptr, vertex_count_in, remap.data());
 
 		meshopt_optimizeVertexCache(new_indices.data(), new_indices.data(), vertex_count_in, unique_vertex_count);
+		meshopt_optimizeOverdraw(new_indices.data(), new_indices.data(), vertex_count_in, &new_vertices[0].position.x(), unique_vertex_count, sizeof(VertexData), 1.05f);
 		meshopt_optimizeVertexFetch(new_vertices.data(), new_indices.data(), vertex_count_in, new_vertices.data(), unique_vertex_count, sizeof(VertexData));
 
 		const uint32_t vertexBufferSize = sizeof(new_vertices[0]) * new_vertices.size();
