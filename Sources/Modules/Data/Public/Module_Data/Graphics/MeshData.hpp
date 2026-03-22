@@ -25,8 +25,8 @@ namespace BetterThanNothing
 {
 	struct MeshData
 	{
-		std::vector<VertexData>	   vertices;
-		std::vector<uint32_t> indices;
-		std::string				   texturePath;
+		std::vector<VertexData> vertices;
+		std::vector<uint32_t>	indices;
+		std::string				texturePath;
 	};
 }

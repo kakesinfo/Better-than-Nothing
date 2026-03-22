@@ -28,10 +28,11 @@
 #include "ResourceManager/ResourceManager_Types.hpp"
 #include <Module_Base/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
-#include <RenderingApi/Data/ShaderGpuData.hpp>
 #include <RenderingApi/Core/ShaderModule.hpp>
+#include <RenderingApi/Data/ShaderGpuData.hpp>
 #include <filesystem>
 #include <future>
+#include <meshoptimizer.h>
 #include <stb_image.h>
 #include <tiny_obj_loader.h>
 
@@ -93,8 +94,7 @@ namespace BetterThanNothing
 		std::vector<MeshData> loadedMeshes;
 		for (const auto& shape : shapes)
 		{
-			MeshData														  currentMesh;
-			std::unordered_map<VertexData, uint32_t, VertexHash, VertexEqual> uniqueVertices{};
+			MeshData currentMesh;
 
 			if (!shape.mesh.material_ids.empty())
 			{
@@ -160,28 +160,21 @@ namespace BetterThanNothing
 					vertex.normal = {0.0f, 0.0f, 0.0f};
 				}
 
-				if (!uniqueVertices.contains(vertex))
-				{
-					uniqueVertices[vertex] = static_cast<uint32_t>(currentMesh.vertices.size());
+				if (vertex.position.GetX() < minX)
+					minX = vertex.position.GetX();
+				if (vertex.position.GetY() < minY)
+					minY = vertex.position.GetY();
+				if (vertex.position.GetZ() < minZ)
+					minZ = vertex.position.GetZ();
 
-					if (vertex.position.GetX() < minX)
-						minX = vertex.position.GetX();
-					if (vertex.position.GetY() < minY)
-						minY = vertex.position.GetY();
-					if (vertex.position.GetZ() < minZ)
-						minZ = vertex.position.GetZ();
+				if (vertex.position.GetX() > maxX)
+					maxX = vertex.position.GetX();
+				if (vertex.position.GetY() > maxY)
+					maxY = vertex.position.GetY();
+				if (vertex.position.GetZ() > maxZ)
+					maxZ = vertex.position.GetZ();
 
-					if (vertex.position.GetX() > maxX)
-						maxX = vertex.position.GetX();
-					if (vertex.position.GetY() > maxY)
-						maxY = vertex.position.GetY();
-					if (vertex.position.GetZ() > maxZ)
-						maxZ = vertex.position.GetZ();
-
-					currentMesh.vertices.push_back(vertex);
-				}
-
-				currentMesh.indices.push_back(uniqueVertices[vertex]);
+				currentMesh.vertices.push_back(vertex);
 			}
 
 			loadedMeshes.push_back(currentMesh);
@@ -216,18 +209,36 @@ namespace BetterThanNothing
 		auto meshId = GenerateUniqueResourceId();
 		auto meshGpuData = std::make_unique<MeshResourceCache>();
 
-		if (mesh.vertices.empty() || mesh.indices.empty())
-			throw std::runtime_error("Mesh has no vertices or indices!");
+		if (!mesh.indices.empty())
+			throw std::runtime_error("Mesh should not have indices!");
 
-		const uint32_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
-		const void*	   vertexBufferData = mesh.vertices.data();
+		if (mesh.vertices.empty())
+			throw std::runtime_error("Mesh has no vertices!");
+
+		const size_t vertex_count_in = mesh.vertices.size();
+
+		std::vector<unsigned int> remap(vertex_count_in);
+		const size_t unique_vertex_count = meshopt_generateVertexRemap(remap.data(), nullptr, vertex_count_in, mesh.vertices.data(), vertex_count_in, sizeof(VertexData));
+
+		std::vector<VertexData> new_vertices(unique_vertex_count);
+		std::vector<uint32_t>	new_indices(vertex_count_in);
+
+		meshopt_remapVertexBuffer(new_vertices.data(), mesh.vertices.data(), vertex_count_in, sizeof(VertexData), remap.data());
+		meshopt_remapIndexBuffer(new_indices.data(), nullptr, vertex_count_in, remap.data());
+
+		meshopt_optimizeVertexCache(new_indices.data(), new_indices.data(), vertex_count_in, unique_vertex_count);
+		meshopt_optimizeOverdraw(new_indices.data(), new_indices.data(), vertex_count_in, &new_vertices[0].position.x(), unique_vertex_count, sizeof(VertexData), 1.05f);
+		meshopt_optimizeVertexFetch(new_vertices.data(), new_indices.data(), vertex_count_in, new_vertices.data(), unique_vertex_count, sizeof(VertexData));
+
+		const uint32_t vertexBufferSize = sizeof(new_vertices[0]) * new_vertices.size();
+		const void*	   vertexBufferData = new_vertices.data();
 		meshGpuData->vertexBuffer = m_renderingDevice->CreateVertexBuffer(vertexBufferData, vertexBufferSize);
-		meshGpuData->vertexCount = static_cast<uint32_t>(mesh.vertices.size());
+		meshGpuData->vertexCount = static_cast<uint32_t>(new_vertices.size());
 
-		const uint32_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
-		const void*	   indexBufferData = mesh.indices.data();
+		const uint32_t indexBufferSize = sizeof(new_indices[0]) * new_indices.size();
+		const void*	   indexBufferData = new_indices.data();
 		meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(indexBufferData, indexBufferSize);
-		meshGpuData->indexCount = static_cast<uint32_t>(mesh.indices.size());
+		meshGpuData->indexCount = static_cast<uint32_t>(new_indices.size());
 
 		m_meshes[meshId] = std::move(meshGpuData);
 

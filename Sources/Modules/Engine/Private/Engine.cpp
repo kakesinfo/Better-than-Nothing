@@ -45,7 +45,7 @@ namespace BetterThanNothing
 		WindowManager::Initialize({"Better Than Nothing", 1280, 720});
 		InputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
+		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
