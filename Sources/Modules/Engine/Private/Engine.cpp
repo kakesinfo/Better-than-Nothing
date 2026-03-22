@@ -16,17 +16,11 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <Editor/DebugPanel.hpp>
 #include <Editor/Editor.hpp>
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/Metrics.hpp>
-#include <Module_Data/Graphics/CameraData.hpp>
-#include <Module_Data/Graphics/DirectionalLightData.hpp>
 #include <Module_Engine/Engine.hpp>
-
-#include "Scene/SceneObject.hpp"
-#include "Scene/SceneObject_Components.hpp"
-
-#include <Editor/DebugPanel.hpp>
 #include <Module_Engine/IEngineApplication.hpp>
 #include <Module_Engine/UpdateContext.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
@@ -37,6 +31,8 @@
 #include <ResourceManager/ResourceManager.hpp>
 #include <Scene/Camera.hpp>
 #include <Scene/Scene.hpp>
+#include <Scene/SceneObject.hpp>
+#include <Scene/SceneObject_Components.hpp>
 #include <chrono>
 #include <format>
 
@@ -87,19 +83,19 @@ namespace BetterThanNothing
 		{
 			Metrics::BeginRecording();
 
-			const auto					 currentTime = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<float> elapsed = currentTime - lastTime;
+			const auto currentTime = std::chrono::high_resolution_clock::now();
+			const auto elapsedCount = static_cast<std::chrono::duration<float>>(currentTime - lastTime).count();
 			lastTime = currentTime;
 
-			Metrics::SetFrameTime(elapsed.count() * 1000.0f);
-			Metrics::SetFps(1.0f / elapsed.count());
+			Metrics::SetFrameTime(elapsedCount * 1000.0f);
+			Metrics::SetFps(1.0f / elapsedCount);
 
 			WindowManager::GetWindow()->PollEvents();
 
 			if (InputManager::IsKeyPressed(EKey::Escape))
 				shouldClose = true;
 
-			OnUpdate(elapsed.count());
+			OnUpdate(elapsedCount);
 			m_renderer->RenderFrame(m_defaultScene.get());
 
 			InputManager::ResetMousePosition();

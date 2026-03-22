@@ -17,7 +17,6 @@
  */
 
 #include "Scene/Scene.hpp"
-
 #include "Scene/Camera.hpp"
 #include "Scene/SceneObject.hpp"
 

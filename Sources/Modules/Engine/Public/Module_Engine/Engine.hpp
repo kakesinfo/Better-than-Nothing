@@ -23,9 +23,7 @@
 namespace BetterThanNothing
 {
 	class ResourceManager;
-	class RenderCache;
 	class Renderer;
-	class Camera;
 	class Scene;
 	class Editor;
 
