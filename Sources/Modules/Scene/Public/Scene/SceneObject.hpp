@@ -18,9 +18,7 @@
 
 #pragma once
 
-#include "ResourceManager/ResourceManager.hpp"
 #include "SceneObject_Components.hpp"
-
 #include <entt/entt.hpp>
 
 namespace BetterThanNothing
@@ -29,25 +27,17 @@ namespace BetterThanNothing
 	class SceneObject
 	{
 	public:
-		SceneObject() : m_resourceManager(nullptr), m_registry(nullptr), m_entity(entt::null) {}
+		SceneObject() : m_registry(nullptr), m_entity(entt::null) {}
 
-		explicit SceneObject(ResourceManager* resourceManager, entt::registry* registry, entt::entity entity)
-			: m_resourceManager(resourceManager), m_registry(registry), m_entity(entity)
+		explicit SceneObject(entt::registry* registry, entt::entity entity)
+			: m_registry(registry), m_entity(entity)
 		{}
 
 		~SceneObject() = default;
 
-		void LoadModel(const std::string& path, const bool preTransform = false)
+		void SetName(const std::string_view& name)
 		{
-			auto& modelComp = AddComponent<ModelComponent>();
-			modelComp.path = path;
-
-			const ResourceId modelId = m_resourceManager->LoadModel(path, preTransform);
-			const ModelResource* model = m_resourceManager->GetModel(modelId);
-
-			modelComp.meshes.resize(model->meshes.size());
-			for (const auto& mesh : model->meshes)
-				modelComp.meshes.push_back(mesh);
+			m_name = name;
 		}
 
 		template <typename T, typename... Args>
@@ -84,11 +74,11 @@ namespace BetterThanNothing
 		[[nodiscard]] entt::entity GetEntity() const { return m_entity; }
 
 		bool operator==(const SceneObject& other) const { return m_registry == other.m_registry && m_entity == other.m_entity; }
-		bool operator!=(const SceneObject& other) const { return m_registry == other.m_registry || m_entity != other.m_entity; }
+		bool operator!=(const SceneObject& other) const { return !(*this == other); }
 
 	private:
-		ResourceManager* m_resourceManager;
 		entt::registry*	 m_registry;
 		entt::entity	 m_entity;
+		std::string		 m_name;
 	};
 }

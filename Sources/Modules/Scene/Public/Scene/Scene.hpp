@@ -45,6 +45,7 @@ namespace BetterThanNothing
 
 		SceneObject CreateObject();
 		SceneObject GetObject(entt::entity entity);
+		SceneObject LoadModel(const std::string& path, bool preTransform = false);
 
 		template<typename... Components>
 		[[nodiscard]] auto GetView()

@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "ResourceManager/ResourceId.hpp"
+#include <ResourceManager/ResourceId.hpp>
 #include <Module_Math/Matrix4.hpp>
 
 namespace BetterThanNothing
@@ -27,6 +27,11 @@ namespace BetterThanNothing
 
 	struct Component
 	{};
+
+	struct NameComponent : Component
+	{
+		std::string name;
+	};
 
 	struct TransformComponent : Component
 	{
@@ -37,9 +42,15 @@ namespace BetterThanNothing
 
 	struct ModelComponent : Component
 	{
-		std::string				  path;
-		bool					  preTransform = false;
-		std::vector<MeshResource> meshes;
+		std::string				 path;
+		bool					 preTransform = false;
+		std::vector<SceneObject> children;
+	};
+
+	struct MeshComponent : Component
+	{
+		ResourceId meshId;
+		ResourceId textureId;
 	};
 
 	struct UpdateComponent : Component
