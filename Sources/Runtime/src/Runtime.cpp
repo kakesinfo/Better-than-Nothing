@@ -18,15 +18,15 @@
 
 #include "Runtime.hpp"
 
+#include "../../Modules/Platform/Public/Module_Platform/Manager/InputManager.hpp"
 #include "Module_Base/Logger.hpp"
+#include "Scene/Camera.hpp"
 #include "Scene/Scene.hpp"
 #include "Scene/SceneObject.hpp"
 
 #include <Module_Base/EKey.hpp>
 #include <Module_Base/EMouseButton.hpp>
 #include <Module_Engine/EntryPoint.hpp>
-#include <Module_Engine/RenderContext.hpp>
-#include <Module_Engine/UpdateContext.hpp>
 #include <Module_Math/Matrix4.hpp>
 #include <Module_Math/Vector2.hpp>
 #include <Module_Math/Vector3.hpp>
@@ -35,50 +35,93 @@
 
 namespace BetterThanNothing
 {
-	Matrix4 m_transform[2];
+	static constexpr float kConstant = 1.0f;
+	static constexpr float kLinear = 0.09f;
+	static constexpr float kQuadratic = 0.032f;
+	static constexpr float kIntensity = 10.0f;
 
-	void Runtime::OnEnable()
+	void Runtime::OnEnable(Scene* scene)
 	{
-		m_transform[0] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f).Scale(0.01f);
-		m_transform[1] = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
+		scene->InitCamera(50.0f, 0.1f, 1000.0f);
+
+		DirectionalLightData directionalLight{};
+		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();
+		directionalLight.color = Vector3(1.0f, 0.95f, 0.8f);
+		directionalLight.intensity = 5.0f;
+
+		scene->SetDirectionalLight(directionalLight);
+
+		PointLightData redLight{};
+		redLight.color = Vector3(1.0f, 0.0f, 0.0f);
+		redLight.position = Vector3(15.0f, 0.0f, 5.0f);
+		redLight.constant = kConstant;
+		redLight.linear = kLinear;
+		redLight.quadratic = kQuadratic;
+		redLight.intensity = kIntensity;
+
+		PointLightData greenLight{};
+		greenLight.color = Vector3(0.0f, 1.0f, 0.0f);
+		greenLight.position = Vector3(0.0f, 0.0f, -5.0f);
+		greenLight.constant = kConstant;
+		greenLight.linear = kLinear;
+		greenLight.quadratic = kQuadratic;
+		greenLight.intensity = kIntensity;
+
+		PointLightData blueLight{};
+		blueLight.color = Vector3(0.0f, 0.0f, 1.0f);
+		blueLight.position = Vector3(-10.0f, 0.0f, 5.0f);
+		blueLight.constant = kConstant;
+		blueLight.linear = kLinear;
+		blueLight.quadratic = kQuadratic;
+		blueLight.intensity = kIntensity;
+
+		scene->AddPointLight(redLight);
+		scene->AddPointLight(greenLight);
+		scene->AddPointLight(blueLight);
+
+		auto sponza = scene->CreateObject();
+		sponza.AddComponent<TransformComponent>().localTransform = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f).Scale(0.01f);
+		sponza.LoadModel("../../../.assets/sponza/sponza.obj", true);
+
+		auto robot = scene->CreateObject();
+		robot.AddComponent<TransformComponent>().localTransform = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
+		robot.LoadModel("../../../.assets/robot/robot.obj", true);
+		robot.AddComponent<UpdateComponent>().onUpdate = [](const SceneObject& obj, const float deltaTime) -> void {
+			if (!obj.HasComponent<TransformComponent>())
+				return;
+
+			auto& transform = obj.GetComponent<TransformComponent>();
+			transform.localTransform = transform.localTransform.Rotate(20.0f * deltaTime, Vector3::Up);
+		};
 	}
 
-	void Runtime::OnUpdate(const UpdateContext* ctx)
+	void Runtime::OnUpdate(Scene* scene, const float deltaTime)
 	{
-		if (ctx->IsMouseButtonPressed(EMouseButton::Left))
+		if (InputManager::IsMouseButtonPressed(EMouseButton::Left))
 		{
 			constexpr float rotateSpeed = 0.1f;
-			const Vector2	delta = ctx->GetMouseDelta();
-			ctx->RotateCamera(-delta.GetX() * rotateSpeed, -delta.GetY() * rotateSpeed);
+			const Vector2	delta = InputManager::GetMouseDelta();
+			scene->GetCamera()->Rotate(-delta.GetX() * rotateSpeed, -delta.GetY() * rotateSpeed);
 		}
 
-		const float deltaTime = ctx->GetDeltaTime();
 		const float moveSpeed = 5.0f * deltaTime;
 
 		auto deltaPos = Vector3::Zero;
 
-		if (ctx->IsKeyPressed(EKey::W))
-			deltaPos += ctx->GetCameraForward() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::S))
-			deltaPos -= ctx->GetCameraForward() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::D))
-			deltaPos += ctx->GetCameraRight() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::A))
-			deltaPos -= ctx->GetCameraRight() * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::Space))
+		if (InputManager::IsKeyPressed(EKey::W))
+			deltaPos += scene->GetCamera()->GetForward() * moveSpeed;
+		if (InputManager::IsKeyPressed(EKey::S))
+			deltaPos -= scene->GetCamera()->GetForward() * moveSpeed;
+		if (InputManager::IsKeyPressed(EKey::D))
+			deltaPos += scene->GetCamera()->GetRight() * moveSpeed;
+		if (InputManager::IsKeyPressed(EKey::A))
+			deltaPos -= scene->GetCamera()->GetRight() * moveSpeed;
+		if (InputManager::IsKeyPressed(EKey::Space))
 			deltaPos += Vector3::Up * moveSpeed;
-		if (ctx->IsKeyPressed(EKey::LeftShift))
+		if (InputManager::IsKeyPressed(EKey::LeftShift))
 			deltaPos -= Vector3::Up * moveSpeed;
 
-		ctx->MoveCamera(deltaPos);
-
-		m_transform[1] = m_transform[1].Rotate(20.0f * deltaTime, Vector3::Up);
-	}
-
-	void Runtime::OnRender(const RenderContext* ctx)
-	{
-		ctx->SubmitModel("../../../.assets/sponza/sponza.obj", m_transform[0], true);
-		ctx->SubmitModel("../../../.assets/robot/robot.obj", m_transform[1]);
+		scene->GetCamera()->Move(deltaPos);
 	}
 
 	void Runtime::OnDisable() {}

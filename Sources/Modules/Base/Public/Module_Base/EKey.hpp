@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace BetterThanNothing
 {
 	enum class EKey : int16_t

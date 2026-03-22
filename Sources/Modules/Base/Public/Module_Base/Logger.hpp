@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <format>
 #include <mutex>
 #include <source_location>

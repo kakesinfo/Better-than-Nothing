@@ -18,7 +18,7 @@
 
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 
-#include "DebugPanel.hpp"
+#include <Editor/DebugPanel.hpp>
 #include <Editor/Panel.hpp>
 #include <Module_Base/Metrics.hpp>
 #include <imgui.h>

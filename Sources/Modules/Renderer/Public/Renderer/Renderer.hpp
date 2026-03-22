@@ -32,7 +32,6 @@ namespace BetterThanNothing
 		class Semaphore;
 	}
 
-	class RenderList;
 	class RenderCache;
 	class Camera;
 	struct CameraData;
@@ -53,8 +52,7 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI);
 
-		void RenderFrame(const RenderList* renderList, const CameraData& camera) const;
-		void RenderFrame_Scene(const Scene* renderList) const;
+		void RenderFrame(const Scene* renderList) const;
 
 	private:
 		auto CreateGlobalUniformBuffers() -> void;
@@ -64,11 +62,8 @@ namespace BetterThanNothing
 		void CreatePointLightBuffers();
 		void CreatePointLightDescriptorSets();
 
-		void RecordCommandBuffer(const RenderList* renderList, const CameraData& camera, uint32_t imageIndex) const;
-		void DrawPointLights(const RenderList* renderList, uint32_t frameIndex) const;
-
-		void RecordCommandBuffer_Scene(const Scene* scene, uint32_t imageIndex) const;
-		void DrawPointLights_Scene(const Scene* scene, uint32_t frameIndex) const;
+		void RecordCommandBuffer(const Scene* scene, uint32_t imageIndex) const;
+		void DrawPointLights(const Scene* scene, uint32_t frameIndex) const;
 
 		void ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const;
 		void ExecuteEditorPass(uint32_t imageIndex) const;

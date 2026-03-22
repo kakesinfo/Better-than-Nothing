@@ -32,14 +32,15 @@ Contributions are welcome. Both new features and bug fixes. Just open a merge re
 
 
 - [sdl3](https://github.com/libsdl-org/SDL): A cross-platform library designed to make it easy to write multi-media softwares.
-- [vulkan](https://github.com/KhronosGroup/Vulkan-Headers): A low-overhead, cross-platform API and open standard for 3D graphics and computing.
-- [vulkan memory allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator): Easy to integrate Vulkan memory allocation library that help to manage memory allocations and resource creation.
+- [vulkan](https://github.com/KhronosGroup/Vulkan-Headers) _v1.4_: A low-overhead, cross-platform API and open standard for 3D graphics and computing.
+- [vulkan memory allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator) _v3.3_: Easy to integrate Vulkan memory allocation library that help to manage memory allocations and resource creation.
 - [glslang](https://github.com/KhronosGroup/glslang): A library used for JIT shader compilation from OpenGL Shading Language (GLSL) to SPIR-V format.
 - [spirv-cross](https://github.com/KhronosGroup/SPIRV-Cross): A practical tool and library for performing reflection on SPIR-V and disassembling SPIR-V back to high level languages.
 - [glm](https://github.com/g-truc/glm): An header only mathematics library based on the OpenGL Shading Language (GLSL) specifications.
-- [stb](https://github.com/nothings/stb): Single-file public domain (or MIT licensed) libraries for C/C++.
-- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader): A header only wavefront obj loader.
-- [imgui](https://github.com/ocornut/imgui): A bloat-free Graphical User interface for C++ with minimal dependencies.
+- [stb](https://github.com/nothings/stb) _v2.28_: Single-file public domain (or MIT licensed) libraries for C/C++.
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) _v2.0_: A header only wavefront obj loader.
+- [imgui](https://github.com/ocornut/imgui) _v1.92.5_: A bloat-free Graphical User interface for C++ with minimal dependencies.
+- [entt](https://github.com/skypjack/entt) _v3.16_: A fast and reliable entity component system (ECS).
 
 ### 📜 Licence
 
