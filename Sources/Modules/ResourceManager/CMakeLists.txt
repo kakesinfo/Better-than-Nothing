@@ -32,6 +32,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_RenderingApi
         Module_RenderingDevice
         stb
+        meshoptimizer
     PUBLIC
         glslang
         glslang-default-resource-limits
