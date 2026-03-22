@@ -19,6 +19,8 @@
 #include "Scene/Scene.hpp"
 #include "Scene/Camera.hpp"
 #include "Scene/SceneObject.hpp"
+#include <ResourceManager/ResourceManager.hpp>
+#include <filesystem>
 
 namespace BetterThanNothing
 {
@@ -51,7 +53,36 @@ namespace BetterThanNothing
 
 	SceneObject Scene::GetObject(const entt::entity entity)
 	{
-		return SceneObject(m_resourceManager, &m_registry, entity);
+		return SceneObject(&m_registry, entity);
+	}
+
+	SceneObject Scene::LoadModel(const std::string& path, const bool preTransform)
+	{
+		const std::string filename = std::filesystem::path(path).filename().string();
+
+		SceneObject root = CreateObject();
+		root.AddComponent<NameComponent>().name = filename + "_root";
+		root.AddComponent<TransformComponent>();
+
+		const ResourceId modelId = m_resourceManager->LoadModel(path, preTransform);
+		const ModelResource* model = m_resourceManager->GetModel(modelId);
+
+		auto& modelComp = root.AddComponent<ModelComponent>();
+		modelComp.children.reserve(model->meshes.size());
+
+		for (const auto& [meshId, textureId] : model->meshes)
+		{
+			SceneObject child = CreateObject();
+			child.AddComponent<NameComponent>().name = filename + "_child_" + std::to_string(meshId);
+
+			auto& meshComp = child.AddComponent<MeshComponent>();
+			meshComp.meshId = meshId;
+			meshComp.textureId = textureId;
+
+			modelComp.children.push_back(child);
+		}
+
+		return root;
 	}
 
 	void Scene::SetDirectionalLight(const DirectionalLightData& data)

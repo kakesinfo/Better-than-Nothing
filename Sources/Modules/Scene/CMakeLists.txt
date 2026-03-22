@@ -19,11 +19,11 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Module_Base
-        Module_Data
         Module_Math
         Module_ResourceManager
     PUBLIC
         EnTT::EnTT
+        Module_Data
 )
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")
