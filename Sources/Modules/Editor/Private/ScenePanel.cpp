@@ -58,13 +58,11 @@ namespace BetterThanNothing
 	void ScenePanel::OnRender(Scene* scene)
 	{
 		std::unordered_set<entt::entity> childEntities;
-		auto modelView = scene->GetView<ModelComponent>();
-		for (auto [entity, modelComp] : modelView.each())
+		for (auto [entity, modelComp] : scene->GetView<ModelComponent>().each())
 			for (const auto& child : modelComp.children)
 				childEntities.insert(child.GetEntity());
 
-		auto allEntitiesView = scene->GetView<NameComponent>();
-		for (auto [entity, nameComp] : allEntitiesView.each())
+		for (auto [entity, nameComp] : scene->GetView<NameComponent>().each())
 		{
 			if (childEntities.contains(entity))
 				continue;
