@@ -60,7 +60,7 @@ namespace BetterThanNothing
 		return importedMaterial;
 	}
 
-	ImportedModel ObjModelImporter::Import(const ModelImportInfo& input)
+	ImportedModel ObjModelImporter::Import(const ObjModelImportInfo& input)
 	{
 		ImportedModel model;
 

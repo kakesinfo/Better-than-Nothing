@@ -23,18 +23,18 @@
 
 namespace BetterThanNothing
 {
-	struct ModelImportInfo
+	struct ObjModelImportInfo
 	{
 		std::string path;
 		bool		preTransform = true;
 	};
 
-	class ObjModelImporter final : public Importer<ModelImportInfo, ImportedModel>
+	class ObjModelImporter final : public Importer<ObjModelImportInfo, ImportedModel>
 	{
 	public:
 		ObjModelImporter() = default;
 		~ObjModelImporter() override = default;
 
-		ImportedModel Import(const ModelImportInfo& input) override;
+		ImportedModel Import(const ObjModelImportInfo& input) override;
 	};
 }
