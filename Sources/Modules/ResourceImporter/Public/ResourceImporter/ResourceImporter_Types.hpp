@@ -1,0 +1,69 @@
+/*
+ *	Better than Nothing
+ *	Copyright (C) 2026 kakesinfo
+ *
+ *	This program is free software: you can redistribute it and/or modify
+ *	it under the terms of the GNU General Public License as published by
+ * 	the Free Software Foundation, either version 3 of the License, or
+ *	(at your option) any later version.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *	GNU General Public License for more details.
+ *
+ *	You should have received a copy of the GNU General Public License
+ * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+#include <Module_Data/Graphics/VertexData.hpp>
+#include <Module_Math/Matrix4.hpp>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace BetterThanNothing
+{
+	using ImportedId = uint32_t;
+
+	struct ImportedTexture
+	{
+		std::string				   name;
+		std::optional<std::string> path;
+		std::vector<uint8_t>	   data;
+	};
+
+	struct ImportedMaterial
+	{
+		std::optional<ImportedId> diffuseTextureId;
+		std::optional<ImportedId> normalTextureId;
+	};
+
+	struct ImportedMesh
+	{
+		std::vector<VertexData> vertices;
+		std::vector<uint32_t>	indices;
+
+		std::optional<ImportedId> materialId;
+	};
+
+	struct ImportedNode
+	{
+		Matrix4					  transform;
+		std::optional<ImportedId> mesh;
+	};
+
+	struct ImportedModel
+	{
+		std::string path;
+
+		std::vector<ImportedMesh>	  meshes;
+		std::vector<ImportedMaterial> materials;
+		std::vector<ImportedTexture>  textures;
+
+		std::vector<ImportedNode> children;
+	};
+}
