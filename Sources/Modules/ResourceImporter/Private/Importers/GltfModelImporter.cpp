@@ -44,8 +44,8 @@ namespace BetterThanNothing
 		std::filesystem::path filePath(input.path);
 		bool				  ret = loader.LoadASCIIFromFile(&gltfModel, &err, &warn, input.path);
 
-		// if (!warn.empty())
-			// Logger::Log<WARNING>("TinyGLTF warning: {}", warn);
+		if (!warn.empty())
+			throw std::runtime_error("TinyGLTF warning: " + warn);
 
 		if (!err.empty())
 			throw std::runtime_error("TinyGLTF error: " + err);
@@ -188,7 +188,7 @@ namespace BetterThanNothing
 				// clang-format on
 
 				std::vector<VertexData> new_vertices(unique_vertex_count);
-				std::vector<uint32_t>	new_indices(vertex_count_in);
+				std::vector<uint32_t>	new_indices(index_count_in);
 
 				meshopt_remapVertexBuffer(new_vertices.data(), currentMesh.vertices.data(), vertex_count_in, sizeof(VertexData), remap.data());
 				meshopt_remapIndexBuffer(new_indices.data(), isIndexed ? currentMesh.indices.data() : nullptr, index_count_in, remap.data());
