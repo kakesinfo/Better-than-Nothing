@@ -16,18 +16,14 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define STB_IMAGE_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
 
+#include <Module_Base/Logger.hpp>
 #include <ResourceImporter/ObjModelImporter.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
-#include <sstream>
-
-#define TINYOBJLOADER_IMPLEMENTATION
-#include "Module_Base/Logger.hpp"
-#include "meshoptimizer.h"
-
 #include <filesystem>
+#include <meshoptimizer.h>
 #include <tiny_obj_loader.h>
 
 namespace BetterThanNothing
@@ -94,7 +90,7 @@ namespace BetterThanNothing
 
 		for (const auto& shape : shapes)
 		{
-			uint32_t currentMeshIndex = model.meshes.size();
+			uint32_t	 currentMeshIndex = model.meshes.size();
 			ImportedMesh currentMesh;
 			ImportedNode currentNode;
 
