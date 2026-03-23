@@ -125,7 +125,7 @@ namespace BetterThanNothing
 		if (const auto it = m_texturesLUT.find(texturePath); it != m_texturesLUT.end())
 			return it->second;
 
-		auto importedTexture = m_importer->ImportTexture(texturePath);
+		const ImportedTexture importedTexture = m_importer->ImportTexture(texturePath);
 
 		auto gpuData = std::make_unique<TextureResourceCache>();
 		gpuData->channels = importedTexture.channels;
