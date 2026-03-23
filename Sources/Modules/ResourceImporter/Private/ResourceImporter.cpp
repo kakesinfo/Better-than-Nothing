@@ -16,12 +16,10 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <ResourceImporter/ResourceImporter.hpp>
-
 #include "Importers/GltfModelImporter.hpp"
 #include "Importers/ObjModelImporter.hpp"
-
-#include <Importers/TextureImporter.hpp>
+#include "Importers/TextureImporter.hpp"
+#include <ResourceImporter/ResourceImporter.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 
 namespace BetterThanNothing
@@ -33,10 +31,7 @@ namespace BetterThanNothing
 		m_gltfImporter = std::make_unique<GltfModelImporter>();
 	}
 
-	ResourceImporter::~ResourceImporter()
-	{
-
-	}
+	ResourceImporter::~ResourceImporter() {}
 
 	ImportedTexture ResourceImporter::ImportTexture(const std::string& input) const
 	{
