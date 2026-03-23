@@ -113,6 +113,8 @@ namespace BetterThanNothing
 		m_modelsLUT[path] = model.id;
 		m_models[model.id] = model;
 
+		Logger::Log<INFO>("MeshResourceCache created and cached for {} submeshes", model.meshes.size());
+
 		return model.id;
 	}
 
@@ -149,7 +151,7 @@ namespace BetterThanNothing
 		m_textures[textureId] = std::move(gpuData);
 		m_texturesLUT[texturePath] = textureId;
 
-		Logger::Log<INFO>("TextureGpuData created and cached for Texture: {}", texturePath);
+		Logger::Log<INFO>("TextureResourceCache created and cached for Texture: {}", texturePath);
 
 		return textureId;
 	}
