@@ -77,6 +77,7 @@ namespace BetterThanNothing::RenderingApi
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampling.rasterizationSamples = m_params.device->GetMaxMsaaSamples();
 		multisampling.sampleShadingEnable = VK_TRUE;
+		multisampling.alphaToCoverageEnable = VK_TRUE;
 		multisampling.minSampleShading = 0.8f; // closer to one is better quality
 
 		// Fallback: If no color attachment format is defined, we take the one from the Swapchain

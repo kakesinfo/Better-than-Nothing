@@ -32,7 +32,8 @@ namespace BetterThanNothing
 
 	void PerfPanel::OnRender(Scene* scene)
 	{
-		static float values[90] = {0};
+		constexpr int value_count = 100;
+		static float values[value_count] = {0};
 		static int	 values_offset = 0;
 
 		static auto updateTimed = 0.0f;
@@ -45,7 +46,7 @@ namespace BetterThanNothing
 			updateTimed = 0.0f;
 
 			values[values_offset] = static_cast<float>(cachedMetrics.fps);
-			values_offset = (values_offset + 1) % 90;
+			values_offset = (values_offset + 1) % value_count;
 		}
 
 		const ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -53,7 +54,7 @@ namespace BetterThanNothing
 
 		char overlay[32];
 		sprintf(overlay, "FPS: %d", cachedMetrics.fps);
-		ImGui::PlotLines("##FPS", values, 90, values_offset, overlay, 120, 360, ImVec2(-1, 80));
+		ImGui::PlotLines("##FPS", values, value_count, values_offset, overlay, 120, 360, ImVec2(-1, 80));
 
 		const float lineY = pos.y + size.y * 0.5f;
 		ImGui::GetWindowDrawList()->AddLine(ImVec2(pos.x, lineY), ImVec2(pos.x + size.x, lineY), IM_COL32(255, 255, 0, 100));

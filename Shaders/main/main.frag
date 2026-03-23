@@ -95,9 +95,8 @@ void main() {
     vec4 textureColor = texture(texSampler, fragTexCoord);
     textureColor.rgb = pow(textureColor.rgb, vec3(gammaCorrection));
 
-    if (textureColor.a < 0.1) {
+    if (textureColor.a < 0.1)
         discard;
-    }
 
     const vec3 norm = normalize(fragNormal);
     const vec3 viewDir = normalize(globalUniforms.cameraPosition - fragPosition);
