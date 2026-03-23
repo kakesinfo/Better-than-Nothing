@@ -17,6 +17,9 @@
  */
 
 #include <ResourceImporter/ResourceImporter.hpp>
+
+#include "ResourceImporter/ModelImporter_Obj.hpp"
+
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <ResourceImporter/TextureImporter.hpp>
 
@@ -25,6 +28,7 @@ namespace BetterThanNothing
 	ResourceImporter::ResourceImporter()
 	{
 		m_textureImporter = std::make_unique<TextureImporter>();
+		m_modelImporter = std::make_unique<ModelImporter_Obj>();
 	}
 
 	ResourceImporter::~ResourceImporter()
@@ -35,5 +39,10 @@ namespace BetterThanNothing
 	ImportedTexture ResourceImporter::ImportTexture(const std::string& input) const
 	{
 		return m_textureImporter->Import(input);
+	}
+
+	ImportedModel ResourceImporter::ImportModel(const std::string& path, bool preTransform) const
+	{
+		return m_modelImporter->Import({path, preTransform});
 	}
 }

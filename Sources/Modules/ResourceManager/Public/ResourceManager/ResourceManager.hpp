@@ -61,7 +61,6 @@ namespace BetterThanNothing
 		ResourceId GenerateUniqueResourceId();
 
 	public:
-		ResourceId LoadMesh(const MeshData& mesh);
 		ResourceId LoadTexture(const std::string& path);
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
 		ResourceId LoadShader(const std::string& path, EShaderType type);

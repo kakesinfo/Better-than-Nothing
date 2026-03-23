@@ -21,22 +21,19 @@
 #include <ResourceImporter/Importer.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 
-// #define TINYOBJLOADER_IMPLEMENTATION
-// #include <meshoptimizer.h>
-// #include <tiny_obj_loader.h>
-
 namespace BetterThanNothing
 {
 	struct ModelImportInfo
 	{
-
+		std::string path;
+		bool		preTransform = true;
 	};
 
-	class ModelImporter final : public Importer<ModelImportInfo, ImportedModel>
+	class ModelImporter_Obj final : public Importer<ModelImportInfo, ImportedModel>
 	{
 	public:
-		ModelImporter();
-		~ModelImporter() override;
+		ModelImporter_Obj() = default;
+		~ModelImporter_Obj() override = default;
 
 		ImportedModel Import(const ModelImportInfo& input) override;
 	};

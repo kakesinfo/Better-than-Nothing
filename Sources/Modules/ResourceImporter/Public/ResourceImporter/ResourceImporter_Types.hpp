@@ -43,8 +43,9 @@ namespace BetterThanNothing
 
 	struct ImportedMaterial
 	{
-		std::optional<ImportedId> diffuseTextureId;
-		std::optional<ImportedId> normalTextureId;
+		uint32_t				   id;
+		std::optional<std::string> diffuseTexturePath;
+		std::optional<std::string> normalTexturePath;
 	};
 
 	struct ImportedMesh
@@ -53,6 +54,9 @@ namespace BetterThanNothing
 		std::vector<uint32_t>	indices;
 
 		std::optional<ImportedId> materialId;
+
+		Vector3 min;
+		Vector3 max;
 	};
 
 	struct ImportedNode
@@ -67,7 +71,6 @@ namespace BetterThanNothing
 
 		std::vector<ImportedMesh>	  meshes;
 		std::vector<ImportedMaterial> materials;
-		std::vector<ImportedTexture>  textures;
 
 		std::vector<ImportedNode> children;
 	};

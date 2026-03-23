@@ -26,6 +26,7 @@
 namespace BetterThanNothing
 {
 	class TextureImporter;
+	class ModelImporter_Obj;
 
 	class ResourceImporter
 	{
@@ -33,9 +34,11 @@ namespace BetterThanNothing
 		ResourceImporter();
 		~ResourceImporter();
 
-		ImportedTexture ImportTexture(const std::string& input) const;
+		[[nodiscard]] ImportedTexture ImportTexture(const std::string& input) const;
+		[[nodiscard]] ImportedModel ImportModel(const std::string& path, bool preTransform = true) const;
 
 	private:
 		std::unique_ptr<TextureImporter> m_textureImporter;
+		std::unique_ptr<ModelImporter_Obj> m_modelImporter;
 	};
 }

@@ -32,7 +32,6 @@ target_link_libraries(${PROJECT_NAME}
         Module_RenderingApi
         Module_RenderingDevice
         ResourceImporter
-        stb
         meshoptimizer
     PUBLIC
         glslang
