@@ -26,6 +26,7 @@ add_subdirectory("ThirdParty/stb")
 add_subdirectory("ThirdParty/imgui")
 add_subdirectory("ThirdParty/entt")
 add_subdirectory("ThirdParty/meshoptimizer")
+add_subdirectory("ThirdParty/tinygltf")
 
 # ==================================================================================================
 # Modules

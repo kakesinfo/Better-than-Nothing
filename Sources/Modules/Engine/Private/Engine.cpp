@@ -22,6 +22,7 @@
 #include <Module_Base/Metrics.hpp>
 #include <Module_Engine/Engine.hpp>
 
+#include "Editor/PerfPanel.hpp"
 #include "Editor/ScenePanel.hpp"
 
 #include <Module_Engine/IEngineApplication.hpp>
@@ -48,12 +49,13 @@ namespace BetterThanNothing
 		WindowManager::Initialize({"Better Than Nothing", 1280, 720});
 		InputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Triple});
+		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
 		m_editor->AddPanel<DebugPanel>();
 		m_editor->AddPanel<ScenePanel>();
+		m_editor->AddPanel<PerfPanel>();
 
 		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_editor.get());
 

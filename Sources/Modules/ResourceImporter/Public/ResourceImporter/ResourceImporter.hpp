@@ -21,12 +21,12 @@
 #include "ResourceImporter_Types.hpp"
 
 #include <memory>
-#include <unordered_map>
 
 namespace BetterThanNothing
 {
 	class TextureImporter;
 	class ObjModelImporter;
+	class GltfModelImporter;
 
 	class ResourceImporter
 	{
@@ -39,6 +39,7 @@ namespace BetterThanNothing
 
 	private:
 		std::unique_ptr<TextureImporter> m_textureImporter;
-		std::unique_ptr<ObjModelImporter> m_modelImporter;
+		std::unique_ptr<ObjModelImporter> m_objImporter;
+		std::unique_ptr<GltfModelImporter> m_gltfImporter;
 	};
 }

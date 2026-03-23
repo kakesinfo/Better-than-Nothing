@@ -1,5 +1,5 @@
 /*
- *	Better than Nothing
+*	Better than Nothing
  *	Copyright (C) 2026 kakesinfo
  *
  *	This program is free software: you can redistribute it and/or modify
@@ -18,17 +18,18 @@
 
 #pragma once
 
-#include <ResourceImporter/Importer.hpp>
-#include <ResourceImporter/ResourceImporter_Types.hpp>
+#include "Panel.hpp"
 
 namespace BetterThanNothing
 {
-	class TextureImporter final : public Importer<std::string, ImportedTexture>
+	class Scene;
+
+	class PerfPanel final: public Panel
 	{
 	public:
-		TextureImporter() = default;
-		~TextureImporter() override = default;
+		explicit PerfPanel();
+		~PerfPanel() override = default;
 
-		ImportedTexture Import(const std::string& input) override;
+		void OnRender(Scene* scene) override;
 	};
 }
