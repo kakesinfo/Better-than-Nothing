@@ -16,10 +16,10 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
+// #define TINYOBJLOADER_IMPLEMENTATION
 
 #include "ResourceManager/ResourceManager.hpp"
+
 #include "Module_Data/Graphics/MeshData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingDevice/SamplerDescription.hpp"
@@ -30,17 +30,19 @@
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Core/ShaderModule.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>
+#include <ResourceImporter/ResourceImporter.hpp>
 #include <filesystem>
 #include <future>
+#include <iostream>
 #include <meshoptimizer.h>
-#include <stb_image.h>
-#include <tiny_obj_loader.h>
+// #include <tiny_obj_loader.h>
 
 namespace BetterThanNothing
 {
 	ResourceManager::ResourceManager(RenderingDevice* renderingDevice) : m_renderingDevice(renderingDevice)
 	{
 		m_shaderLoader = std::make_unique<ShaderLoader>(m_renderingDevice);
+		m_importer = std::make_unique<ResourceImporter>();
 	}
 
 	ResourceManager::~ResourceManager() = default;
@@ -69,182 +71,51 @@ namespace BetterThanNothing
 		if (const auto it = m_modelsLUT.find(path); it != m_modelsLUT.end())
 			return it->second;
 
-		tinyobj::attrib_t				 attrib;
-		std::vector<tinyobj::shape_t>	 shapes;
-		std::vector<tinyobj::material_t> materials;
-		std::string						 warn;
-		std::string						 err;
-
-		std::filesystem::path parentFolder = std::filesystem::path(path).parent_path();
-
-		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(), parentFolder.string().c_str()))
-			throw std::runtime_error(err);
-
-		if (!warn.empty())
-			Logger::Log<WARNING>("TinyObjLoader warning: {}", warn);
-
-		float minX = std::numeric_limits<float>::max();
-		float minY = std::numeric_limits<float>::max();
-		float minZ = std::numeric_limits<float>::max();
-
-		float maxX = std::numeric_limits<float>::lowest();
-		float maxY = std::numeric_limits<float>::lowest();
-		float maxZ = std::numeric_limits<float>::lowest();
-
-		std::vector<MeshData> loadedMeshes;
-		for (const auto& shape : shapes)
-		{
-			MeshData currentMesh;
-
-			if (!shape.mesh.material_ids.empty())
-			{
-				const int materialId = shape.mesh.material_ids[0];
-
-				if (materialId >= 0 && materialId < materials.size())
-				{
-					const auto& material = materials[materialId];
-
-					if (!material.diffuse_texname.empty())
-					{
-						std::filesystem::path texPath = parentFolder / material.diffuse_texname;
-						currentMesh.texturePath = texPath.string();
-					}
-				}
-			}
-
-			for (const auto& index : shape.mesh.indices)
-			{
-				VertexData vertex{};
-
-				float rawX = attrib.vertices[3 * index.vertex_index + 0];
-				float rawY = attrib.vertices[3 * index.vertex_index + 1];
-				float rawZ = attrib.vertices[3 * index.vertex_index + 2];
-
-				// Coordinate system transformation:
-				// If preTransform is false, convert from Y-up (OBJ/Blender) to Z-up (engine) coordinate system.
-				// This maps (X, Y, Z) -> (X, Z, -Y):
-				//   - X remains the same.
-				//   - Y becomes Z (up axis).
-				//   - Z becomes -Y (to maintain right-handedness).
-				if (preTransform)
-				{
-					vertex.position = {rawX, rawY, rawZ};
-				}
-				else
-				{
-					vertex.position = {rawX, rawZ, -rawY};
-				}
-
-				vertex.color = {1.0f, 1.0f, 1.0f};
-
-				if (!attrib.texcoords.empty() && index.texcoord_index != -1)
-				{
-					vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
-				}
-				else
-				{
-					vertex.uv = {0.0f, 0.0f};
-				}
-
-				// Load normals
-				if (!attrib.normals.empty() && index.normal_index != -1)
-				{
-					auto xNormal = attrib.normals[3 * index.normal_index + 0];
-					auto yNormal = attrib.normals[3 * index.normal_index + 1];
-					auto zNormal = attrib.normals[3 * index.normal_index + 2];
-
-					vertex.normal = preTransform ? Vector3{xNormal, yNormal, zNormal} : Vector3{xNormal, zNormal, -yNormal};
-				}
-				else
-				{
-					vertex.normal = {0.0f, 0.0f, 0.0f};
-				}
-
-				if (vertex.position.GetX() < minX)
-					minX = vertex.position.GetX();
-				if (vertex.position.GetY() < minY)
-					minY = vertex.position.GetY();
-				if (vertex.position.GetZ() < minZ)
-					minZ = vertex.position.GetZ();
-
-				if (vertex.position.GetX() > maxX)
-					maxX = vertex.position.GetX();
-				if (vertex.position.GetY() > maxY)
-					maxY = vertex.position.GetY();
-				if (vertex.position.GetZ() > maxZ)
-					maxZ = vertex.position.GetZ();
-
-				currentMesh.vertices.push_back(vertex);
-			}
-
-			loadedMeshes.push_back(currentMesh);
-		}
-
-		float centerX = (minX + maxX) / 2.0f;
-		float centerY = (minY + maxY) / 2.0f;
-		float centerZ = (minZ + maxZ) / 2.0f;
+		const ImportedModel importedModel = m_importer->ImportModel(path, preTransform);
 
 		ModelResource model;
-		for (auto& mesh : loadedMeshes)
-		{
-			for (auto& vert : mesh.vertices)
-				vert.position -= {centerX, centerY, centerZ};
+		model.id = GenerateUniqueResourceId();
 
+		for (auto& mesh : importedModel.meshes)
+		{
 			MeshResource meshResource{};
-			meshResource.id = LoadMesh(mesh);
-			meshResource.textureId = LoadTexture(mesh.texturePath);
+
+			if (!mesh.vertices.empty() && !mesh.indices.empty())
+			{
+				auto meshId = GenerateUniqueResourceId();
+				auto meshGpuData = std::make_unique<MeshResourceCache>();
+
+				const uint32_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
+				const void*	   vertexBufferData = mesh.vertices.data();
+				meshGpuData->vertexBuffer = m_renderingDevice->CreateVertexBuffer(vertexBufferData, vertexBufferSize);
+				meshGpuData->vertexCount = static_cast<uint32_t>(mesh.vertices.size());
+
+				const uint32_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
+				const void*	   indexBufferData = mesh.indices.data();
+				meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(indexBufferData, indexBufferSize);
+				meshGpuData->indexCount = static_cast<uint32_t>(mesh.indices.size());
+
+				m_meshes[meshId] = std::move(meshGpuData);
+				meshResource.id = meshId;
+			}
+
+			if (mesh.materialId.has_value())
+			{
+				const ImportedMaterial material = importedModel.materials.at(mesh.materialId.value());
+
+				if (material.diffuseTexturePath.has_value())
+					meshResource.textureId = LoadTexture(material.diffuseTexturePath.value());
+			}
 
 			model.meshes.push_back(meshResource);
 		}
 
-		model.id = GenerateUniqueResourceId();
 		m_modelsLUT[path] = model.id;
 		m_models[model.id] = model;
 
+		Logger::Log<INFO>("MeshResourceCache created and cached for {} submeshes", model.meshes.size());
+
 		return model.id;
-	}
-
-	ResourceId ResourceManager::LoadMesh(const MeshData& mesh)
-	{
-		auto meshId = GenerateUniqueResourceId();
-		auto meshGpuData = std::make_unique<MeshResourceCache>();
-
-		if (!mesh.indices.empty())
-			throw std::runtime_error("Mesh should not have indices!");
-
-		if (mesh.vertices.empty())
-			throw std::runtime_error("Mesh has no vertices!");
-
-		const size_t vertex_count_in = mesh.vertices.size();
-
-		std::vector<unsigned int> remap(vertex_count_in);
-		const size_t unique_vertex_count = meshopt_generateVertexRemap(remap.data(), nullptr, vertex_count_in, mesh.vertices.data(), vertex_count_in, sizeof(VertexData));
-
-		std::vector<VertexData> new_vertices(unique_vertex_count);
-		std::vector<uint32_t>	new_indices(vertex_count_in);
-
-		meshopt_remapVertexBuffer(new_vertices.data(), mesh.vertices.data(), vertex_count_in, sizeof(VertexData), remap.data());
-		meshopt_remapIndexBuffer(new_indices.data(), nullptr, vertex_count_in, remap.data());
-
-		meshopt_optimizeVertexCache(new_indices.data(), new_indices.data(), vertex_count_in, unique_vertex_count);
-		meshopt_optimizeOverdraw(new_indices.data(), new_indices.data(), vertex_count_in, &new_vertices[0].position.x(), unique_vertex_count, sizeof(VertexData), 1.05f);
-		meshopt_optimizeVertexFetch(new_vertices.data(), new_indices.data(), vertex_count_in, new_vertices.data(), unique_vertex_count, sizeof(VertexData));
-
-		const uint32_t vertexBufferSize = sizeof(new_vertices[0]) * new_vertices.size();
-		const void*	   vertexBufferData = new_vertices.data();
-		meshGpuData->vertexBuffer = m_renderingDevice->CreateVertexBuffer(vertexBufferData, vertexBufferSize);
-		meshGpuData->vertexCount = static_cast<uint32_t>(new_vertices.size());
-
-		const uint32_t indexBufferSize = sizeof(new_indices[0]) * new_indices.size();
-		const void*	   indexBufferData = new_indices.data();
-		meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(indexBufferData, indexBufferSize);
-		meshGpuData->indexCount = static_cast<uint32_t>(new_indices.size());
-
-		m_meshes[meshId] = std::move(meshGpuData);
-
-		Logger::Log<DEBUG>("MeshGpuData created and cached for Mesh ID: {}", meshId);
-
-		return meshId;
 	}
 
 	ResourceId ResourceManager::LoadTexture(const std::string& path)
@@ -256,24 +127,16 @@ namespace BetterThanNothing
 		if (const auto it = m_texturesLUT.find(texturePath); it != m_texturesLUT.end())
 			return it->second;
 
-		const auto textureId = GenerateUniqueResourceId();
+		ImportedTexture importedTexture = m_importer->ImportTexture(texturePath);
 
 		auto gpuData = std::make_unique<TextureResourceCache>();
-
-		stbi_uc* pixels = stbi_load(texturePath.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels, STBI_rgb_alpha);
-
-		if (!pixels)
-		{
-			std::stringstream ss;
-			ss << "Failed to load texture image from path: " << texturePath << " - " << stbi_failure_reason() << std::endl;
-			throw std::runtime_error(ss.str());
-		}
-
-		gpuData->channels = STBI_rgb_alpha; // Override with 4 channels
-		gpuData->size = gpuData->width * gpuData->height * gpuData->channels;
+		gpuData->channels = importedTexture.channels;
+		gpuData->size = importedTexture.size;
+		gpuData->width = importedTexture.width;
+		gpuData->height = importedTexture.height;
 
 		TextureFromDataDescription desc{};
-		desc.data = pixels;
+		desc.data = importedTexture.data.data();
 		desc.dataSize = gpuData->size;
 		desc.width = gpuData->width;
 		desc.height = gpuData->height;
@@ -283,12 +146,12 @@ namespace BetterThanNothing
 		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{}); // Default sampler description
 		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle);
 
-		stbi_image_free(pixels);
+		const auto textureId = GenerateUniqueResourceId();
 
 		m_textures[textureId] = std::move(gpuData);
 		m_texturesLUT[texturePath] = textureId;
 
-		Logger::Log<INFO>("TextureGpuData created and cached for Texture: {}", texturePath);
+		Logger::Log<INFO>("TextureResourceCache created and cached for Texture: {}", texturePath);
 
 		return textureId;
 	}
