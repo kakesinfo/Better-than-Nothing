@@ -18,12 +18,14 @@
 
 #pragma once
 
+#include "ResourceImporter_Types.hpp"
+
 #include <memory>
 #include <unordered_map>
 
 namespace BetterThanNothing
 {
-	class Importer;
+	class TextureImporter;
 
 	class ResourceImporter
 	{
@@ -31,7 +33,9 @@ namespace BetterThanNothing
 		ResourceImporter();
 		~ResourceImporter();
 
+		ImportedTexture ImportTexture(const std::string& input) const;
+
 	private:
-		std::unordered_map<std::string, std::unique_ptr<Importer>> m_importers;
+		std::unique_ptr<TextureImporter> m_textureImporter;
 	};
 }

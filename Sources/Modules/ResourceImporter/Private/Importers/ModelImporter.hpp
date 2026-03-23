@@ -18,8 +18,12 @@
 
 #pragma once
 
-#include "Importer.hpp"
-#include "ResourceImporter_Types.hpp"
+#include <ResourceImporter/Importer.hpp>
+#include <ResourceImporter/ResourceImporter_Types.hpp>
+
+// #define TINYOBJLOADER_IMPLEMENTATION
+// #include <meshoptimizer.h>
+// #include <tiny_obj_loader.h>
 
 namespace BetterThanNothing
 {

@@ -16,14 +16,24 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-
-#include <meshoptimizer.h>
-#include <stb_image.h>
-#include <tiny_obj_loader.h>
+#include <ResourceImporter/ResourceImporter.hpp>
+#include <ResourceImporter/ResourceImporter_Types.hpp>
+#include <ResourceImporter/TextureImporter.hpp>
 
 namespace BetterThanNothing
 {
+	ResourceImporter::ResourceImporter()
+	{
+		m_textureImporter = std::make_unique<TextureImporter>();
+	}
 
+	ResourceImporter::~ResourceImporter()
+	{
+
+	}
+
+	ImportedTexture ResourceImporter::ImportTexture(const std::string& input) const
+	{
+		return m_textureImporter->Import(input);
+	}
 }

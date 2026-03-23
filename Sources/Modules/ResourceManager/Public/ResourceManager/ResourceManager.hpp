@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "../../../Base/Public/Module_Base/ResourceId.hpp"
+#include <Module_Base/ResourceId.hpp>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -47,6 +47,7 @@ namespace BetterThanNothing
 	class ShaderLoader;
 	enum class EShaderType;
 	class RenderingDevice;
+	class ResourceImporter;
 
 	class ResourceManager
 	{
@@ -73,6 +74,7 @@ namespace BetterThanNothing
 	private:
 		RenderingDevice*													  m_renderingDevice;
 		std::unique_ptr<ShaderLoader>										  m_shaderLoader;
+		std::unique_ptr<ResourceImporter> 									  m_importer;
 		std::unordered_map<ResourceId, std::unique_ptr<MeshResourceCache>>	  m_meshes;
 		std::unordered_map<ResourceId, std::unique_ptr<TextureResourceCache>> m_textures;
 		std::unordered_map<ResourceId, std::unique_ptr<ShaderGpuData>>		  m_shaders;

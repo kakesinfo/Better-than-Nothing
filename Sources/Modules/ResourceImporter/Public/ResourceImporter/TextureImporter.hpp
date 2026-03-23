@@ -18,22 +18,17 @@
 
 #pragma once
 
-#include "Importer.hpp"
-#include "ResourceImporter_Types.hpp"
+#include <ResourceImporter/Importer.hpp>
+#include <ResourceImporter/ResourceImporter_Types.hpp>
 
 namespace BetterThanNothing
 {
-	struct TextureImportInfo
-	{
-
-	};
-
-	class TextureImporter final : public Importer<TextureImportInfo, ImportedTexture>
+	class TextureImporter final : public Importer<std::string, ImportedTexture>
 	{
 	public:
-		TextureImporter();
-		~TextureImporter() override;
+		TextureImporter() = default;
+		~TextureImporter() override = default;
 
-		ImportedTexture Import(const TextureImportInfo& input) override;
+		ImportedTexture Import(const std::string& input) override;
 	};
 }

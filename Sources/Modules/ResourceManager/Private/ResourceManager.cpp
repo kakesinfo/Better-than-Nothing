@@ -17,9 +17,10 @@
  */
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
 
 #include "ResourceManager/ResourceManager.hpp"
+
+#include <ResourceImporter/ResourceImporter.hpp>
 #include "Module_Data/Graphics/MeshData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingDevice/SamplerDescription.hpp"
@@ -33,7 +34,6 @@
 #include <filesystem>
 #include <future>
 #include <meshoptimizer.h>
-#include <stb_image.h>
 #include <tiny_obj_loader.h>
 
 namespace BetterThanNothing
@@ -41,6 +41,7 @@ namespace BetterThanNothing
 	ResourceManager::ResourceManager(RenderingDevice* renderingDevice) : m_renderingDevice(renderingDevice)
 	{
 		m_shaderLoader = std::make_unique<ShaderLoader>(m_renderingDevice);
+		m_importer = std::make_unique<ResourceImporter>();
 	}
 
 	ResourceManager::~ResourceManager() = default;
@@ -256,24 +257,16 @@ namespace BetterThanNothing
 		if (const auto it = m_texturesLUT.find(texturePath); it != m_texturesLUT.end())
 			return it->second;
 
-		const auto textureId = GenerateUniqueResourceId();
+		auto importedTexture = m_importer->ImportTexture(texturePath);
 
 		auto gpuData = std::make_unique<TextureResourceCache>();
-
-		stbi_uc* pixels = stbi_load(texturePath.c_str(), &gpuData->width, &gpuData->height, &gpuData->channels, STBI_rgb_alpha);
-
-		if (!pixels)
-		{
-			std::stringstream ss;
-			ss << "Failed to load texture image from path: " << texturePath << " - " << stbi_failure_reason() << std::endl;
-			throw std::runtime_error(ss.str());
-		}
-
-		gpuData->channels = STBI_rgb_alpha; // Override with 4 channels
-		gpuData->size = gpuData->width * gpuData->height * gpuData->channels;
+		gpuData->channels = importedTexture.channels;
+		gpuData->size = importedTexture.size;
+		gpuData->width = importedTexture.width;
+		gpuData->height = importedTexture.height;
 
 		TextureFromDataDescription desc{};
-		desc.data = pixels;
+		desc.data = importedTexture.data.data();
 		desc.dataSize = gpuData->size;
 		desc.width = gpuData->width;
 		desc.height = gpuData->height;
@@ -283,7 +276,7 @@ namespace BetterThanNothing
 		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{}); // Default sampler description
 		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle);
 
-		stbi_image_free(pixels);
+		const auto textureId = GenerateUniqueResourceId();
 
 		m_textures[textureId] = std::move(gpuData);
 		m_texturesLUT[texturePath] = textureId;

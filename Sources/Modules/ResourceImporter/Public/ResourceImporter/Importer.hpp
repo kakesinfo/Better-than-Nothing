@@ -23,7 +23,8 @@ namespace BetterThanNothing
 	template <typename InputType, typename OutputType>
 	class Importer
 	{
-		virtual ~Importer() = 0;
+	public:
+		virtual ~Importer() = default;
 		virtual OutputType Import(const InputType& input) = 0;
 	};
 }

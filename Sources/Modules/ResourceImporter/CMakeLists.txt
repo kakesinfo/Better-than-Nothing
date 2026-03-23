@@ -15,8 +15,9 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
 
 add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES}
         Public/ResourceImporter/Importer.hpp
-        Public/ResourceImporter/ModelImporter.hpp
-        Public/ResourceImporter/ResourceImporter_Types.hpp)
+        Private/importers/ModelImporter.hpp
+        Public/ResourceImporter/ResourceImporter_Types.hpp
+        Private/Importers/TextureImporter.cpp)
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC Public
