@@ -18,7 +18,7 @@
 
 #include <ResourceImporter/ResourceImporter.hpp>
 
-#include "ResourceImporter/ModelImporter_Obj.hpp"
+#include "ResourceImporter/ObjModelImporter.hpp"
 
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <ResourceImporter/TextureImporter.hpp>
@@ -28,7 +28,7 @@ namespace BetterThanNothing
 	ResourceImporter::ResourceImporter()
 	{
 		m_textureImporter = std::make_unique<TextureImporter>();
-		m_modelImporter = std::make_unique<ModelImporter_Obj>();
+		m_modelImporter = std::make_unique<ObjModelImporter>();
 	}
 
 	ResourceImporter::~ResourceImporter()

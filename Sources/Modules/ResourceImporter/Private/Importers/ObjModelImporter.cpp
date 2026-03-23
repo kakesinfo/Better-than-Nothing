@@ -18,8 +18,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 
+#include <ResourceImporter/ObjModelImporter.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
-#include <ResourceImporter/ModelImporter_Obj.hpp>
 #include <cstring>
 #include <sstream>
 
@@ -64,7 +64,7 @@ namespace BetterThanNothing
 		return importedMaterial;
 	}
 
-	ImportedModel ModelImporter_Obj::Import(const ModelImportInfo& input)
+	ImportedModel ObjModelImporter::Import(const ModelImportInfo& input)
 	{
 		ImportedModel model;
 

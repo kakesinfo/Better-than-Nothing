@@ -29,11 +29,11 @@ namespace BetterThanNothing
 		bool		preTransform = true;
 	};
 
-	class ModelImporter_Obj final : public Importer<ModelImportInfo, ImportedModel>
+	class ObjModelImporter final : public Importer<ModelImportInfo, ImportedModel>
 	{
 	public:
-		ModelImporter_Obj() = default;
-		~ModelImporter_Obj() override = default;
+		ObjModelImporter() = default;
+		~ObjModelImporter() override = default;
 
 		ImportedModel Import(const ModelImportInfo& input) override;
 	};
