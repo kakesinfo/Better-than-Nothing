@@ -5,7 +5,7 @@ Everything is in the title, it is a better-than-nothing Game Engine.
 
  - Support for Linux and Windows.
  - Use C++23 and Vulkan 1.4 features.
- - In-house GLM wrapper (Vector2, Vector3, Quaternion, Matrix4)
+ - In-house GLM wrapper (Vector2, Vector3, Quaternion, Matrix4).
  - In-house JIT shader compilation.
  - Blinn-Phong forward rendering with:
    - Colored directional light
@@ -13,8 +13,9 @@ Everything is in the title, it is a better-than-nothing Game Engine.
    - Accurate energy conservation
    - Reinhard tone mapping with exposure
    - Gamma correction
- - Render hundreds of models and textures
- - Display real-time metrics using ImGui
+ - Support for .obj and .gltf model formats.
+ - Render hundreds of models and textures.
+ - Display real-time metrics using ImGui.
 
 ### 🧠 Road map
 
@@ -39,6 +40,7 @@ Contributions are welcome. Both new features and bug fixes. Just open a merge re
 - [glm](https://github.com/g-truc/glm): An header only mathematics library based on the OpenGL Shading Language (GLSL) specifications.
 - [stb](https://github.com/nothings/stb) _v2.28_: Single-file public domain (or MIT licensed) libraries for C/C++.
 - [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) _v2.0_: A header only wavefront obj loader.
+- [tinygltf](https://github.com/syoyo/tinygltf) _v2.9.7_: A header only C++11 glTF 2.0 loader.
 - [imgui](https://github.com/ocornut/imgui) _v1.92.5_: A bloat-free Graphical User interface for C++ with minimal dependencies.
 - [entt](https://github.com/skypjack/entt) _v3.16_: A fast and reliable entity component system (ECS).
 - [meshoptimizer](https://github.com/zeux/meshoptimizer) _v1.0_: A mesh optimization library that makes meshes smaller and faster to render.

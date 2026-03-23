@@ -50,6 +50,8 @@ namespace BetterThanNothing
 
 	struct ImportedMesh
 	{
+		uint32_t id;
+
 		std::vector<VertexData> vertices;
 		std::vector<uint32_t>	indices;
 

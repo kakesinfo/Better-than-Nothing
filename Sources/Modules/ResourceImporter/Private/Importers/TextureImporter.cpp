@@ -18,8 +18,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 
+#include "TextureImporter.hpp"
 #include <ResourceImporter/ResourceImporter_Types.hpp>
-#include <ResourceImporter/TextureImporter.hpp>
 #include <cstring>
 #include <sstream>
 #include <stb_image.h>

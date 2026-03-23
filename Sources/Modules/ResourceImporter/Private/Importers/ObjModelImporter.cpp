@@ -18,8 +18,8 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 
+#include "ObjModelImporter.hpp"
 #include <Module_Base/Logger.hpp>
-#include <ResourceImporter/ObjModelImporter.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
 #include <filesystem>
@@ -60,7 +60,7 @@ namespace BetterThanNothing
 		return importedMaterial;
 	}
 
-	ImportedModel ObjModelImporter::Import(const ModelImportInfo& input)
+	ImportedModel ObjModelImporter::Import(const ObjModelImportInfo& input)
 	{
 		ImportedModel model;
 

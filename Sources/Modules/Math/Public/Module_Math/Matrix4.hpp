@@ -87,6 +87,11 @@ namespace BetterThanNothing
 			return Rotate(angleInDegrees, axis.GetX(), axis.GetY(), axis.GetZ());
 		}
 
+		[[nodiscard]] Matrix4 Rotate(const Quaternion& quat) const
+		{
+			return Matrix4(glm::mat4_cast(quat.Value()) * m_data);
+		}
+
 		[[nodiscard]] Matrix4	Translate(float x, float y, float z) const { return Matrix4(glm::translate(m_data, glm::vec3(x, y, z))); }
 		[[nodiscard]] Matrix4	Translate(const Vector3& vec) const { return Translate(vec.GetX(), vec.GetY(), vec.GetZ()); }
 		[[nodiscard]] Matrix4	Scale(float x, float y, float z) const { return Matrix4(glm::scale(m_data, glm::vec3(x, y, z))); }
