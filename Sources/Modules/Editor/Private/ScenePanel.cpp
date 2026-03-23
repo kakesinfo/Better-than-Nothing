@@ -25,7 +25,6 @@
 #include <Scene/SceneObject_Components.hpp>
 #include <imgui.h>
 
-
 namespace BetterThanNothing
 {
 	ScenePanel::ScenePanel() : Panel("Scene Panel")
@@ -40,9 +39,10 @@ namespace BetterThanNothing
 		if (obj.HasComponent<NameComponent>())
 			name = obj.GetComponent<NameComponent>().name;
 
+		const bool hasChildren = obj.HasComponent<ModelComponent>() && !obj.GetComponent<ModelComponent>().children.empty();
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-		if (!obj.HasComponent<ModelComponent>() && !obj.GetComponent<ModelComponent>().children.empty())
+		if (!hasChildren)
 		{
 			flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 			ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(obj.GetEntity())), flags, "%s", name.c_str());

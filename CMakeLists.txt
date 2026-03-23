@@ -39,6 +39,7 @@ add_subdirectory("Sources/Modules/RenderingApi")
 add_subdirectory("Sources/Modules/RenderingDevice")
 add_subdirectory("Sources/Modules/Editor")
 add_subdirectory("Sources/Modules/Renderer")
+add_subdirectory("Sources/Modules/ResourceImporter")
 add_subdirectory("Sources/Modules/ResourceManager")
 add_subdirectory("Sources/Modules/Engine")
 
