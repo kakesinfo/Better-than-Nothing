@@ -52,10 +52,13 @@ namespace BetterThanNothing
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
+
+#ifndef NDEBUG
 		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
 		m_editor->AddPanel<DebugPanel>();
 		m_editor->AddPanel<ScenePanel>();
 		m_editor->AddPanel<PerfPanel>();
+#endif
 
 		m_renderer = Renderer::Create(m_renderingDevice.get(), m_resourceManager.get(), m_editor.get());
 

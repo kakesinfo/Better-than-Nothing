@@ -413,7 +413,9 @@ namespace BetterThanNothing
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
+#ifndef NDEBUG
 		m_editor->RenderPanels(scene);
+#endif
 
 		{
 			VkImageMemoryBarrier barrier{};
@@ -434,6 +436,7 @@ namespace BetterThanNothing
 			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 		}
 
+#ifndef NDEBUG
 		VkRenderingAttachmentInfo colorAttachment = {};
 		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		colorAttachment.imageView = swapChain->GetImageView(imageIndex);
@@ -449,6 +452,7 @@ namespace BetterThanNothing
 		renderingInfo.pColorAttachments = &colorAttachment;
 
 		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) { m_editor->RenderDrawData(cmd); }, renderingInfo);
+#endif
 
 		{
 			VkImageMemoryBarrier presentationBarrier{};
