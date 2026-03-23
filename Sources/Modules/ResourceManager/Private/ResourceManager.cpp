@@ -74,11 +74,13 @@ namespace BetterThanNothing
 		const ImportedModel importedModel = m_importer->ImportModel(path, preTransform);
 
 		ModelResource model;
+		model.id = GenerateUniqueResourceId();
+
 		for (auto& mesh : importedModel.meshes)
 		{
 			MeshResource meshResource{};
 
-			if (!mesh.vertices.empty())
+			if (!mesh.vertices.empty() && !mesh.indices.empty())
 			{
 				auto meshId = GenerateUniqueResourceId();
 				auto meshGpuData = std::make_unique<MeshResourceCache>();
@@ -99,7 +101,7 @@ namespace BetterThanNothing
 
 			if (mesh.materialId.has_value())
 			{
-				ImportedMaterial material = importedModel.materials.at(mesh.materialId.value());
+				const ImportedMaterial material = importedModel.materials.at(mesh.materialId.value());
 
 				if (material.diffuseTexturePath.has_value())
 					meshResource.textureId = LoadTexture(material.diffuseTexturePath.value());
@@ -108,7 +110,6 @@ namespace BetterThanNothing
 			model.meshes.push_back(meshResource);
 		}
 
-		model.id = GenerateUniqueResourceId();
 		m_modelsLUT[path] = model.id;
 		m_models[model.id] = model;
 
