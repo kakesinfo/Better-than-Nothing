@@ -71,6 +71,9 @@ namespace BetterThanNothing
 		{
 			for (const auto& primitive : gltfMesh.primitives)
 			{
+				if (primitive.mode != TINYGLTF_MODE_TRIANGLES)
+					continue;
+
 				ImportedMesh currentMesh{};
 				currentMesh.id = importedModel.meshes.size();
 
