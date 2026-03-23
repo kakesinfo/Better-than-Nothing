@@ -33,6 +33,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Data
         stb
         meshoptimizer
+        tinygltf
     PUBLIC
         glslang
         glslang-default-resource-limits
