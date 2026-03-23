@@ -24,8 +24,6 @@
 #include <ResourceImporter/GltfModelImporter.hpp>
 #include <tiny_gltf.h>
 
-#include "Module_Base/Logger.hpp"
-
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
 #include <filesystem>
@@ -46,8 +44,8 @@ namespace BetterThanNothing
 		std::filesystem::path filePath(input.path);
 		bool				  ret = loader.LoadASCIIFromFile(&gltfModel, &err, &warn, input.path);
 
-		if (!warn.empty())
-			Logger::Log<WARNING>("TinyGLTF warning: {}", warn);
+		// if (!warn.empty())
+			// Logger::Log<WARNING>("TinyGLTF warning: {}", warn);
 
 		if (!err.empty())
 			throw std::runtime_error("TinyGLTF error: " + err);

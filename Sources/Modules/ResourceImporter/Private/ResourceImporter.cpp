@@ -19,6 +19,7 @@
 #include <ResourceImporter/ResourceImporter.hpp>
 
 #include "ResourceImporter/ObjModelImporter.hpp"
+#include "ResourceImporter/GltfModelImporter.hpp"
 
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <ResourceImporter/TextureImporter.hpp>
@@ -28,7 +29,8 @@ namespace BetterThanNothing
 	ResourceImporter::ResourceImporter()
 	{
 		m_textureImporter = std::make_unique<TextureImporter>();
-		m_modelImporter = std::make_unique<ObjModelImporter>();
+		m_objImporter = std::make_unique<ObjModelImporter>();
+		m_gltfImporter = std::make_unique<GltfModelImporter>();
 	}
 
 	ResourceImporter::~ResourceImporter()
@@ -43,6 +45,12 @@ namespace BetterThanNothing
 
 	ImportedModel ResourceImporter::ImportModel(const std::string& path, bool preTransform) const
 	{
-		return m_modelImporter->Import({path, preTransform});
+		if (path.find(".obj") != std::string::npos)
+			return m_objImporter->Import({path, preTransform});
+
+		if (path.find(".gltf") != std::string::npos)
+			return m_gltfImporter->Import({path, preTransform});
+
+		throw std::runtime_error("Unsupported file type");
 	}
 }
