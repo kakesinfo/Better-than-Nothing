@@ -28,7 +28,12 @@ namespace BetterThanNothing::RenderingApi
 	Instance::Instance(InstanceCreateInfo createInfo) : m_createInfo(std::move(createInfo))
 	{
 		const bool validationLayersAvailable = CheckValidationLayerSupport();
+
+#ifndef NDEBUG
 		const bool validationLayersEnabled = m_createInfo.enableValidation;
+#else
+		constexpr bool validationLayersEnabled = false;
+#endif
 
 		if (validationLayersEnabled && !validationLayersAvailable)
 			Logger::Log<WARNING>("Validation layers are enabled but not available on this system");
