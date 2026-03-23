@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <ResourceImporter/Importer.hpp>
+#include "Importer.hpp"
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 
 namespace BetterThanNothing

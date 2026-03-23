@@ -13,11 +13,7 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
     "*.hpp"
 )
 
-add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES}
-        Public/ResourceImporter/Importer.hpp
-        Public/ResourceImporter/ObjModelImporter.hpp
-        Public/ResourceImporter/ResourceImporter_Types.hpp
-        Private/Importers/TextureImporter.cpp)
+add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC Public

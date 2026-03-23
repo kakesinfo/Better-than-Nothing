@@ -21,7 +21,7 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 
-#include <ResourceImporter/GltfModelImporter.hpp>
+#include "GltfModelImporter.hpp"
 #include <tiny_gltf.h>
 
 #include <ResourceImporter/ResourceImporter_Types.hpp>

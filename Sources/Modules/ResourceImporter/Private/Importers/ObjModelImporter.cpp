@@ -18,8 +18,8 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 
+#include "ObjModelImporter.hpp"
 #include <Module_Base/Logger.hpp>
-#include <ResourceImporter/ObjModelImporter.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
 #include <filesystem>

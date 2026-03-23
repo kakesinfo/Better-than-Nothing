@@ -18,23 +18,17 @@
 
 #pragma once
 
-#include <ResourceImporter/Importer.hpp>
+#include "Importer.hpp"
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 
 namespace BetterThanNothing
 {
-	struct GltfModelImportInfo
-	{
-		std::string path;
-		bool		preTransform = true;
-	};
-
-	class GltfModelImporter final : public Importer<GltfModelImportInfo, ImportedModel>
+	class TextureImporter final : public Importer<std::string, ImportedTexture>
 	{
 	public:
-		GltfModelImporter() = default;
-		~GltfModelImporter() override = default;
+		TextureImporter() = default;
+		~TextureImporter() override = default;
 
-		ImportedModel Import(const GltfModelImportInfo& input) override;
+		ImportedTexture Import(const std::string& input) override;
 	};
 }

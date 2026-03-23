@@ -18,11 +18,11 @@
 
 #include <ResourceImporter/ResourceImporter.hpp>
 
-#include "ResourceImporter/ObjModelImporter.hpp"
-#include "ResourceImporter/GltfModelImporter.hpp"
+#include "Importers/GltfModelImporter.hpp"
+#include "Importers/ObjModelImporter.hpp"
 
+#include <Importers/TextureImporter.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
-#include <ResourceImporter/TextureImporter.hpp>
 
 namespace BetterThanNothing
 {
