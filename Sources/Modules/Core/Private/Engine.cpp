@@ -16,16 +16,16 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <Editor/DebugPanel.hpp>
-#include <Editor/Editor.hpp>
 #include <Common/EKey.hpp>
 #include <Common/Metrics.hpp>
-#include <Module_Engine/Engine.hpp>
+#include <Core/Engine.hpp>
+#include <Editor/DebugPanel.hpp>
+#include <Editor/Editor.hpp>
 
 #include "Editor/PerfPanel.hpp"
 #include "Editor/ScenePanel.hpp"
 
-#include <Module_Engine/IEngineApplication.hpp>
+#include <Core/IEngineApplication.hpp>
 #include <Module_Platform/Manager/InputManager.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>

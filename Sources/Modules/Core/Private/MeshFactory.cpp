@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Engine/MeshFactory.hpp"
-#include "Module_Engine/MeshBuilder.hpp"
+#include "Core/MeshFactory.hpp"
+#include "Core/MeshBuilder.hpp"
 
 namespace BetterThanNothing
 {

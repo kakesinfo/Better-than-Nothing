@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Engine/MeshBuilder.hpp"
+#include "Core/MeshBuilder.hpp"
 #include "Module_Math/Vector2.hpp"
 #include "Module_Math/Vector3.hpp"
 

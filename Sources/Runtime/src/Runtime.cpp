@@ -26,7 +26,7 @@
 
 #include <Common/EKey.hpp>
 #include <Common/EMouseButton.hpp>
-#include <Module_Engine/EntryPoint.hpp>
+#include <Core/EntryPoint.hpp>
 #include <Module_Math/Matrix4.hpp>
 #include <Module_Math/Vector2.hpp>
 #include <Module_Math/Vector3.hpp>
