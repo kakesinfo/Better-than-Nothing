@@ -20,7 +20,7 @@
 
 #include <Common/EKey.hpp>
 #include <Common/EMouseButton.hpp>
-#include <Module_Math/Vector2.hpp>
+#include <Math/Vector2.hpp>
 #include <algorithm>
 
 namespace BetterThanNothing

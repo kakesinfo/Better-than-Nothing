@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Math/Matrix4.hpp"
-#include "Module_Math/Vector3.hpp"
+#include "Math/Matrix4.hpp"
+#include "Math/Vector3.hpp"
 #include <gtest/gtest.h>
 
 using namespace BetterThanNothing;

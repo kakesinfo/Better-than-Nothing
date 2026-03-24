@@ -28,7 +28,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Engine::Common
         Engine::Data
-        Module_Math
+        Engine::Math
         Module_RenderingApi
         Module_RenderingDevice
         ResourceImporter

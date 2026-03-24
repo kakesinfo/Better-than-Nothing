@@ -19,7 +19,7 @@
 #pragma once
 
 #include <Data/Graphics/VertexData.hpp>
-#include <Module_Math/Matrix4.hpp>
+#include <Math/Matrix4.hpp>
 #include <cstdint>
 #include <optional>
 #include <string>

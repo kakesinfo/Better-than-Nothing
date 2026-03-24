@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Math/Quaternion.hpp"
+#include "Math/Quaternion.hpp"
 
 namespace BetterThanNothing
 {

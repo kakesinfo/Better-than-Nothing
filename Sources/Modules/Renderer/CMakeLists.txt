@@ -22,13 +22,13 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Engine::Common
         Engine::Data
-        Module_Math
-        Module_Scene
-        Module_Platform
         Engine::Editor
+        Engine::Math
+        Module_Platform
         Module_ResourceManager
         Module_RenderingApi
         Module_RenderingDevice
+        Module_Scene
         SDL3::SDL3
         stb
         imgui

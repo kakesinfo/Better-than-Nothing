@@ -17,8 +17,8 @@
  */
 
 #include "Core/MeshBuilder.hpp"
-#include "Module_Math/Vector2.hpp"
-#include "Module_Math/Vector3.hpp"
+#include "Math/Vector2.hpp"
+#include "Math/Vector3.hpp"
 
 #include <stdexcept>
 

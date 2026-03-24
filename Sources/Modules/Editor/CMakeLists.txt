@@ -20,7 +20,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
             Engine::Common
-            Module_Math
+            Engine::Math
             Module_Platform
             Module_RenderingApi
             Module_RenderingDevice

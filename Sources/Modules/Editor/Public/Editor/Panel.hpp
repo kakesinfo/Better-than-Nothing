@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Module_Math/Vector2.hpp"
+#include "Math/Vector2.hpp"
 
 #include <string>
 

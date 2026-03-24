@@ -12,7 +12,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
         Engine::Common
-        Module_Math
+        Engine::Math
 )
 
 install(DIRECTORY Public/ DESTINATION include)

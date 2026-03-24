@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Math/Vector4.hpp"
+#include "Math/Vector4.hpp"
 
 namespace BetterThanNothing
 {
