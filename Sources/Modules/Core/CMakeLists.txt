@@ -25,7 +25,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Module_RenderingApi
         Module_RenderingDevice
-        Module_Renderer
+        Engine::Renderer
         Engine::Editor
         SDL3::SDL3
         Vulkan::Vulkan
