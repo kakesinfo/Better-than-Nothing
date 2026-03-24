@@ -27,7 +27,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Data
         Engine::Math
         Engine::Platform
-        Module_RenderingApi
+        Engine::RenderingApi
 )
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-project(Module_RenderingApi)
+project("EngineRenderingApi")
 
 find_package(Vulkan REQUIRED)
 
@@ -12,6 +12,7 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
 )
 
 add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
+add_library(Engine::RenderingApi ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC Public

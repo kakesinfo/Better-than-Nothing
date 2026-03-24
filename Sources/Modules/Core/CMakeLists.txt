@@ -23,7 +23,7 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        Module_RenderingApi
+        Engine::RenderingApi
         Module_RenderingDevice
         Engine::Renderer
         Engine::Editor

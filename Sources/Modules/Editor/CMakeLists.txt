@@ -22,7 +22,7 @@ target_link_libraries(${PROJECT_NAME}
             Engine::Common
             Engine::Math
             Engine::Platform
-            Module_RenderingApi
+            Engine::RenderingApi
             Module_RenderingDevice
             Module_Scene
             imgui
