@@ -29,7 +29,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::ResourceManager
         Engine::RenderingApi
         Engine::RenderingDevice
-        Module_Scene
+        Engine::Scene
         SDL3::SDL3
         stb
         imgui

@@ -24,7 +24,7 @@ target_link_libraries(${PROJECT_NAME}
             Engine::Platform
             Engine::RenderingApi
             Engine::RenderingDevice
-            Module_Scene
+            Engine::Scene
             imgui
             Vulkan::Headers
 )
