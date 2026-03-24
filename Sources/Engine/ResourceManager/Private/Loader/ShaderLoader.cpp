@@ -1,0 +1,148 @@
+/*
+ *	Better than Nothing
+ *	Copyright (C) 2026 kakesinfo
+ *
+ *	This program is free software: you can redistribute it and/or modify
+ *	it under the terms of the GNU General Public License as published by
+ * 	the Free Software Foundation, either version 3 of the License, or
+ *	(at your option) any later version.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *	GNU General Public License for more details.
+ *
+ *	You should have received a copy of the GNU General Public License
+ * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include "ResourceManager/Loader/ShaderLoader.hpp"
+
+#include "RenderingDevice/RenderingDevice.hpp"
+
+#include <Common/EShaderType.hpp>
+#include <Common/Logger.hpp>
+#include <RenderingApi.hpp>
+#include <fstream>
+
+namespace BetterThanNothing
+{
+	ShaderLoader::ShaderLoader(RenderingDevice* renderingDevice) : m_renderingDevice(renderingDevice)
+	{
+		glslang_initialize_process();
+	}
+
+	ShaderLoader::~ShaderLoader()
+	{
+		glslang_finalize_process();
+	}
+
+	std::unique_ptr<ShaderGpuData> ShaderLoader::Load(const ShaderData& input) const
+	{
+		auto shaderGpuData = std::make_unique<ShaderGpuData>();
+
+		const std::vector<char> shaderSource = ReadFile(input.filePath);
+		const glslang_stage_t	shaderStage = GetShaderStage(input.type);
+		glslang_program_t*		shaderProgram = GetShaderProgram(shaderSource, shaderStage);
+
+		shaderGpuData->type = input.type;
+		shaderGpuData->shaderModule = GetShaderModule(shaderProgram);
+
+		glslang_program_delete(shaderProgram);
+
+		return shaderGpuData;
+	}
+
+	std::vector<char> ShaderLoader::ReadFile(const std::string& filename)
+	{
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open())
+			throw std::runtime_error("failed to open file!");
+
+		const std::streampos endPos = file.tellg();
+		if (endPos < 0)
+			throw std::runtime_error("failed to determine file size!");
+
+		const std::streamsize fileSize = endPos;
+
+		std::vector<char> buffer(fileSize + 1);
+		if (fileSize > 0)
+		{
+			file.seekg(0, std::ios::beg);
+			file.read(buffer.data(), fileSize);
+			if (!file)
+				throw std::runtime_error("failed to read file!");
+		}
+
+		buffer[fileSize] = '\0';
+		file.close();
+
+		return buffer;
+	}
+
+	glslang_stage_t ShaderLoader::GetShaderStage(const EShaderType type)
+	{
+		switch (type)
+		{
+			case EShaderType::Vertex:
+				return GLSLANG_STAGE_VERTEX;
+			case EShaderType::Fragment:
+				return GLSLANG_STAGE_FRAGMENT;
+			default:
+				throw std::runtime_error("Invalid shader type");
+		}
+	}
+
+	glslang_program_t* ShaderLoader::GetShaderProgram(const std::vector<char>& source, glslang_stage_t stage)
+	{
+		const glslang_input_t input =
+			{.language = GLSLANG_SOURCE_GLSL,
+			 .stage = stage,
+			 .client = GLSLANG_CLIENT_VULKAN,
+			 .client_version = GLSLANG_TARGET_VULKAN_1_3,
+			 .target_language = GLSLANG_TARGET_SPV,
+			 .target_language_version = GLSLANG_TARGET_SPV_1_0,
+			 .code = source.data(),
+			 .default_version = 450,
+			 .default_profile = GLSLANG_NO_PROFILE,
+			 .force_default_version_and_profile = false,
+			 .forward_compatible = false,
+			 .messages = GLSLANG_MSG_DEFAULT_BIT,
+			 .resource = glslang_default_resource(),
+			 .callbacks = {},
+			 .callbacks_ctx = nullptr};
+
+		using shader_ptr_t = std::unique_ptr<glslang_shader_t, decltype(&glslang_shader_delete)>;
+		const shader_ptr_t shader(glslang_shader_create(&input), glslang_shader_delete);
+
+		if (!glslang_shader_preprocess(shader.get(), &input))
+			throw std::runtime_error("failed to preprocess shader: " + std::string(glslang_shader_get_info_log(shader.get())));
+
+		if (!glslang_shader_parse(shader.get(), &input))
+			throw std::runtime_error("failed to parse shader: " + std::string(glslang_shader_get_info_log(shader.get())));
+
+		glslang_program_t* program = glslang_program_create();
+		glslang_program_add_shader(program, shader.get());
+
+		if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT))
+			throw std::runtime_error("failed to compile shader program: " + std::string(glslang_program_get_info_log(program)));
+
+		glslang_program_SPIRV_generate(program, input.stage);
+
+		if (glslang_program_SPIRV_get_messages(program))
+			Logger::Log<WARNING>("Shader warnings: {}", glslang_program_SPIRV_get_messages(program));
+
+		return program;
+	}
+
+	std::unique_ptr<RenderingApi::ShaderModule> ShaderLoader::GetShaderModule(glslang_program_t* program) const
+	{
+		VkShaderModuleCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		createInfo.codeSize = glslang_program_SPIRV_get_size(program) * sizeof(unsigned int);
+		createInfo.pCode = glslang_program_SPIRV_get_ptr(program);
+
+		return std::make_unique<RenderingApi::ShaderModule>(m_renderingDevice->GetDevice(), &createInfo);
+	}
+}
