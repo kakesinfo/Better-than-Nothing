@@ -35,7 +35,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Math
         Engine::Platform
         Module_Scene
-        Module_ResourceManager
+        Engine::ResourceManager
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

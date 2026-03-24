@@ -20,7 +20,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Engine::Common
         Engine::Math
-        Module_ResourceManager
+        Engine::ResourceManager
     PUBLIC
         Engine::Data
         EnTT::EnTT
