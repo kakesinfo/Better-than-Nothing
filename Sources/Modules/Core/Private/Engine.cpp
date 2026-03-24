@@ -26,9 +26,9 @@
 #include "Editor/ScenePanel.hpp"
 
 #include <Core/IEngineApplication.hpp>
-#include <Module_Platform/Manager/InputManager.hpp>
-#include <Module_Platform/Manager/WindowManager.hpp>
-#include <Module_Platform/Window.hpp>
+#include <Platform/Manager/InputManager.hpp>
+#include <Platform/Manager/WindowManager.hpp>
+#include <Platform/Window.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>

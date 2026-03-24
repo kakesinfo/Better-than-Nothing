@@ -18,9 +18,9 @@
 
 #include "RenderingApi.hpp"
 
-#include <Module_Platform/Manager/WindowManager.hpp>
-#include <Module_Platform/Window.hpp>
 #include <Common/Logger.hpp>
+#include <Platform/Manager/WindowManager.hpp>
+#include <Platform/Window.hpp>
 #include <SDL3/SDL_vulkan.h>
 
 namespace BetterThanNothing::RenderingApi

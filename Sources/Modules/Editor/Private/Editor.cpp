@@ -23,7 +23,7 @@
 #include "Editor/Panel.hpp"
 #include "RenderingApi/Core/CommandBuffer.hpp"
 
-#include <Module_Platform/Window.hpp>
+#include <Platform/Window.hpp>
 #include <RenderingApi/Core/Device.hpp>
 #include <RenderingApi/Core/Instance.hpp>
 #include <RenderingApi/Core/Queue.hpp>

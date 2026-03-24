@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Platform/WindowBuilder.hpp"
-#include "Module_Platform/Window.hpp"
+#include "Platform/WindowBuilder.hpp"
+#include "Platform/Window.hpp"
 
 namespace BetterThanNothing
 {

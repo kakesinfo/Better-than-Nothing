@@ -22,7 +22,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Engine::Common
         Engine::Data
-        Module_Platform
+        Engine::Platform
         SDL3::SDL3
         Vulkan::Vulkan # Replace with https://github.com/zeux/volk
     PUBLIC

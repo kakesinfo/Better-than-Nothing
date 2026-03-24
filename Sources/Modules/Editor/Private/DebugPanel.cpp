@@ -19,10 +19,8 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 
 #include <Editor/DebugPanel.hpp>
-#include "Module_Platform/Window.hpp"
-
-#include <Editor/Panel.hpp>
 #include <Common/Metrics.hpp>
+#include <Editor/Panel.hpp>
 #include <imgui.h>
 
 namespace BetterThanNothing

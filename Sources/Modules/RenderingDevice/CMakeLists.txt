@@ -26,7 +26,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Common
         Engine::Data
         Engine::Math
-        Module_Platform
+        Engine::Platform
         Module_RenderingApi
 )
 

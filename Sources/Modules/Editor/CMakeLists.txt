@@ -21,7 +21,7 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
             Engine::Common
             Engine::Math
-            Module_Platform
+            Engine::Platform
             Module_RenderingApi
             Module_RenderingDevice
             Module_Scene
