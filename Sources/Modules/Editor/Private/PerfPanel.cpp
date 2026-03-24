@@ -20,8 +20,7 @@
 
 #include "Editor/PerfPanel.hpp"
 
-#include "Module_Base/Metrics.hpp"
-
+#include <Common/Metrics.hpp>
 #include <Editor/Panel.hpp>
 #include <Scene/Scene.hpp>
 #include <imgui.h>
@@ -33,8 +32,8 @@ namespace BetterThanNothing
 	void PerfPanel::OnRender(Scene* scene)
 	{
 		constexpr int value_count = 100;
-		static float values[value_count] = {0};
-		static int	 values_offset = 0;
+		static float  values[value_count] = {0};
+		static int	  values_offset = 0;
 
 		static auto updateTimed = 0.0f;
 		static auto cachedMetrics = Metrics::GetLastFrameMetrics();

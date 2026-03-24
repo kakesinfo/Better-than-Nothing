@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "Module_Base/EShaderType.hpp"
 #include "RenderingApi/Data/VertexInputDescription.hpp"
+#include <Common/EShaderType.hpp>
 #include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
@@ -51,7 +51,7 @@ namespace BetterThanNothing::RenderingApi
 
 		VertexInputDescription vertexInputDescription;
 
-		Device* device;
+		Device*	   device;
 		SwapChain* swapChain;
 	};
 

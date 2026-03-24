@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Module_Base/EShaderType.hpp"
+#include <Common/EShaderType.hpp>
 #include <memory>
 
 namespace BetterThanNothing

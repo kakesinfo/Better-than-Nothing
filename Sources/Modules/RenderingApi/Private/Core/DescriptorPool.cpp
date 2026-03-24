@@ -19,7 +19,7 @@
 #include "RenderingApi/Core/DescriptorPool.hpp"
 #include "RenderingApi/Core/Device.hpp"
 
-#include <Module_Base/Logger.hpp>
+#include <Common/Logger.hpp>
 #include <utility>
 
 namespace BetterThanNothing::RenderingApi

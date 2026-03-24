@@ -18,8 +18,8 @@
 
 #include <Editor/DebugPanel.hpp>
 #include <Editor/Editor.hpp>
-#include <Module_Base/EKey.hpp>
-#include <Module_Base/Metrics.hpp>
+#include <Common/EKey.hpp>
+#include <Common/Metrics.hpp>
 #include <Module_Engine/Engine.hpp>
 
 #include "Editor/PerfPanel.hpp"

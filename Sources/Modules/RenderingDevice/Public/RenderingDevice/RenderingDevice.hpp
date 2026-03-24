@@ -25,7 +25,7 @@
 #include "TextureDescription.hpp"
 #include "Types.hpp"
 
-#include <Module_Base/EBufferingMode.hpp>
+#include <Common/EBufferingMode.hpp>
 #include <memory>
 #include <optional>
 #include <unordered_map>

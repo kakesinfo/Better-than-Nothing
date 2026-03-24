@@ -18,14 +18,14 @@
 
 #include "Runtime.hpp"
 
-#include "../../Modules/Platform/Public/Module_Platform/Manager/InputManager.hpp"
-#include "Module_Base/Logger.hpp"
-#include "Scene/Camera.hpp"
-#include "Scene/Scene.hpp"
-#include "Scene/SceneObject.hpp"
+#include <Module_Platform/Manager/InputManager.hpp>
+#include <Common/Logger.hpp>
+#include <Scene/Camera.hpp>
+#include <Scene/Scene.hpp>
+#include <Scene/SceneObject.hpp>
 
-#include <Module_Base/EKey.hpp>
-#include <Module_Base/EMouseButton.hpp>
+#include <Common/EKey.hpp>
+#include <Common/EMouseButton.hpp>
 #include <Module_Engine/EntryPoint.hpp>
 #include <Module_Math/Matrix4.hpp>
 #include <Module_Math/Vector2.hpp>

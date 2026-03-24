@@ -17,8 +17,8 @@
  */
 
 #pragma once
-#include <Module_Base/EKey.hpp>
-#include <Module_Base/EMouseButton.hpp>
+#include <Common/EKey.hpp>
+#include <Common/EMouseButton.hpp>
 
 namespace BetterThanNothing
 {

@@ -18,8 +18,8 @@
 
 #include "Module_Platform/Manager/InputManager.hpp"
 
-#include <Module_Base/EKey.hpp>
-#include <Module_Base/EMouseButton.hpp>
+#include <Common/EKey.hpp>
+#include <Common/EMouseButton.hpp>
 #include <Module_Math/Vector2.hpp>
 #include <algorithm>
 

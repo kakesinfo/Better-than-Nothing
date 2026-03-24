@@ -18,7 +18,7 @@
 
 #include "StagingBuffer.hpp"
 
-#include "Module_Base/Logger.hpp"
+#include "Common/Logger.hpp"
 #include "RenderingApi/Core/Allocator.hpp"
 
 namespace BetterThanNothing

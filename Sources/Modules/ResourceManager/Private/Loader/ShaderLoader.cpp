@@ -20,8 +20,8 @@
 
 #include "RenderingDevice/RenderingDevice.hpp"
 
-#include <Module_Base/EShaderType.hpp>
-#include <Module_Base/Logger.hpp>
+#include <Common/EShaderType.hpp>
+#include <Common/Logger.hpp>
 #include <RenderingApi.hpp>
 #include <fstream>
 

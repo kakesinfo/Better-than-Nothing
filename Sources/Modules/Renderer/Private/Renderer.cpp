@@ -18,31 +18,29 @@
 
 #include "Renderer/Renderer.hpp"
 
-#include "Editor/Editor.hpp"
-#include "Module_Base/Metrics.hpp"
-#include "Module_Data/Graphics/CameraData.hpp"
-#include "Module_Data/Graphics/DirectionalLightData.hpp"
-#include "Module_Data/Graphics/DynamicUniformData.hpp"
-#include "Module_Data/Graphics/GlobalUniformData.hpp"
-#include "RenderingApi/Resources/Buffer.hpp"
-#include "RenderingApi/Resources/DescriptorSet.hpp"
-#include "RenderingDevice/DrawStream.hpp"
-#include "ResourceManager/ResourceManager_Types.hpp"
-#include <Module_Base/Logger.hpp>
+#include <Common/Logger.hpp>
+#include <Common/Metrics.hpp>
+#include <Editor/Editor.hpp>
+#include <Module_Data/Graphics/CameraData.hpp>
+#include <Module_Data/Graphics/DirectionalLightData.hpp>
+#include <Module_Data/Graphics/DynamicUniformData.hpp>
+#include <Module_Data/Graphics/GlobalUniformData.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>
 #include <RenderingApi/Data/VertexInputDescription.hpp>
+#include <RenderingApi/Resources/Buffer.hpp>
+#include <RenderingApi/Resources/DescriptorSet.hpp>
+#include <RenderingDevice/DrawStream.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
-#include <cstring>
+#include <ResourceManager/ResourceManager_Types.hpp>
+#include <Scene/Camera.hpp>
+#include <Scene/Scene.hpp>
+#include <Scene/SceneObject.hpp>
+#include <Scene/SceneObject_Components.hpp>
 #include <optional>
-
-#include "Scene/Camera.hpp"
-#include "Scene/Scene.hpp"
-#include "Scene/SceneObject.hpp"
-#include "Scene/SceneObject_Components.hpp"
 
 #include <iostream>
 
@@ -121,11 +119,7 @@ namespace BetterThanNothing
 
 				const auto& meshComp = sceneObj.GetComponent<MeshComponent>();
 
-				objects.emplace_back(RenderObject{
-					.meshId = meshComp.meshId,
-					.textureId = meshComp.textureId,
-					.localMatrix = transform.localTransform
-				});
+				objects.emplace_back(RenderObject{.meshId = meshComp.meshId, .textureId = meshComp.textureId, .localMatrix = transform.localTransform});
 			}
 		}
 

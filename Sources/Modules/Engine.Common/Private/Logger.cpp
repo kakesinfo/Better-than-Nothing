@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Base/Logger.hpp"
+#include <Common/Logger.hpp>
 
 #include <chrono>
 #include <filesystem>

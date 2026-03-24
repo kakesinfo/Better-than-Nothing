@@ -26,7 +26,7 @@
 #include "RenderingDevice/TextureDescription.hpp"
 #include "ResourceManager/Loader/ShaderLoader.hpp"
 #include "ResourceManager/ResourceManager_Types.hpp"
-#include <Module_Base/Logger.hpp>
+#include <Common/Logger.hpp>
 #include <Module_Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Core/ShaderModule.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>

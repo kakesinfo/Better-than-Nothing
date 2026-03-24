@@ -19,8 +19,8 @@
 #include "Module_Platform/Window.hpp"
 #include "Module_Platform/Manager/InputManager.hpp"
 
-#include <Module_Base/EKey.hpp>
-#include <Module_Base/Logger.hpp>
+#include <Common/EKey.hpp>
+#include <Common/Logger.hpp>
 
 #include <format>
 

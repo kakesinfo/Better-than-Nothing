@@ -20,7 +20,7 @@
 #include <Module_Data/Graphics/DynamicUniformData.hpp>
 #include <iostream>
 
-#include <Module_Base/Logger.hpp>
+#include <Common/Logger.hpp>
 
 namespace BetterThanNothing::RenderingApi
 {

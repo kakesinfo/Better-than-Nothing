@@ -23,7 +23,7 @@
 #include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice_Internals.hpp"
 #include "StagingBuffer.hpp"
-#include <Module_Base/Logger.hpp>
+#include <Common/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>

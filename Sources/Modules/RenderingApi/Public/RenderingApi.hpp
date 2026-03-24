@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Module_Base/EBufferingMode.hpp"
+#include <Common/EBufferingMode.hpp>
 #include "RenderingApi/Core/Allocator.hpp"
 #include "RenderingApi/Core/CommandBuffer.hpp"
 #include "RenderingApi/Core/CommandPool.hpp"

@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <Module_Base/EBufferingMode.hpp>
+#include <Common/EBufferingMode.hpp>
 #include <optional>
 #include <vector>
 #include <vulkan/vulkan.h>

@@ -27,7 +27,7 @@
 #include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice/Handle.hpp"
 
-#include <Module_Base/Logger.hpp>
+#include <Common/Logger.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>

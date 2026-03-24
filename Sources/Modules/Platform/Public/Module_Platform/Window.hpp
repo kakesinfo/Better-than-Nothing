@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <Module_Base/EKey.hpp>
-#include <Module_Base/EMouseButton.hpp>
+#include <Common/EKey.hpp>
+#include <Common/EMouseButton.hpp>
 
 #include <SDL3/SDL.h>
 #include <string>
