@@ -31,7 +31,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Math
         Engine::RenderingApi
         Engine::RenderingDevice
-        ResourceImporter
+        Engine::ResourceImporter
         meshoptimizer
     PUBLIC
         glslang

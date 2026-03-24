@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-project(ResourceImporter)
+project("EngineResourceImporter")
 
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
     "Private/*.cpp"
@@ -14,6 +14,7 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
 )
 
 add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
+add_library(Engine::ResourceImporter ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC Public
