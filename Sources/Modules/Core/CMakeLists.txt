@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-project(Module_Engine)
+project("EngineCore")
 
 find_package(Vulkan REQUIRED)
 
@@ -12,6 +12,7 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
 )
 
 add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
+add_library(Engine::Core ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC Public
@@ -22,18 +23,19 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
+        Module_RenderingApi
+        Module_RenderingDevice
+        Module_Renderer
+        Engine::Editor
+        SDL3::SDL3
+        Vulkan::Vulkan
+    PUBLIC
         Engine::Common
         Engine::Data
         Module_Math
-        Module_Scene
         Module_Platform
-        Module_RenderingApi
-        Module_RenderingDevice
-        Engine::Editor
-        Module_Renderer
+        Module_Scene
         Module_ResourceManager
-        SDL3::SDL3
-        Vulkan::Vulkan
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

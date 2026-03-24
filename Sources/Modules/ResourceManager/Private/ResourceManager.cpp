@@ -16,26 +16,19 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// #define TINYOBJLOADER_IMPLEMENTATION
-
 #include "ResourceManager/ResourceManager.hpp"
-
-#include "Data/Graphics/MeshData.hpp"
-#include "RenderingDevice/RenderingDevice.hpp"
-#include "RenderingDevice/SamplerDescription.hpp"
-#include "RenderingDevice/TextureDescription.hpp"
-#include "ResourceManager/Loader/ShaderLoader.hpp"
-#include "ResourceManager/ResourceManager_Types.hpp"
+#include <Common/Logger.hpp>
+#include <Data/Graphics/MeshData.hpp>
 #include <Data/Graphics/VertexData.hpp>
-#include <Module_Base/Logger.hpp>
 #include <RenderingApi/Core/ShaderModule.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>
+#include <RenderingDevice/RenderingDevice.hpp>
+#include <RenderingDevice/SamplerDescription.hpp>
+#include <RenderingDevice/TextureDescription.hpp>
 #include <ResourceImporter/ResourceImporter.hpp>
+#include <ResourceManager/Loader/ShaderLoader.hpp>
+#include <ResourceManager/ResourceManager_Types.hpp>
 #include <filesystem>
-#include <future>
-#include <iostream>
-#include <meshoptimizer.h>
-// #include <tiny_obj_loader.h>
 
 namespace BetterThanNothing
 {

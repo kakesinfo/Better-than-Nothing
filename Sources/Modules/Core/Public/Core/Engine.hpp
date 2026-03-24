@@ -26,6 +26,7 @@ namespace BetterThanNothing
 	class Renderer;
 	class Scene;
 	class Editor;
+	class RenderingDevice;
 
 	class Engine
 	{
