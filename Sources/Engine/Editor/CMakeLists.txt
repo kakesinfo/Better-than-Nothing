@@ -23,7 +23,7 @@ target_link_libraries(${PROJECT_NAME}
             Engine::Math
             Engine::Platform
             Engine::RenderingApi
-            Module_RenderingDevice
+            Engine::RenderingDevice
             Module_Scene
             imgui
             Vulkan::Headers

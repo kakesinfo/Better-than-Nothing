@@ -28,7 +28,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Platform
         Module_ResourceManager
         Engine::RenderingApi
-        Module_RenderingDevice
+        Engine::RenderingDevice
         Module_Scene
         SDL3::SDL3
         stb

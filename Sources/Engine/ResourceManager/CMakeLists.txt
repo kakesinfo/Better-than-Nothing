@@ -30,7 +30,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Data
         Engine::Math
         Engine::RenderingApi
-        Module_RenderingDevice
+        Engine::RenderingDevice
         ResourceImporter
         meshoptimizer
     PUBLIC

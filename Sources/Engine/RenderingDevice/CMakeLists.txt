@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-project(Module_RenderingDevice)
+project("EngineRenderingDevice")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,6 +15,7 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
 )
 
 add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
+add_library(Engine::RenderingDevice ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC Public
