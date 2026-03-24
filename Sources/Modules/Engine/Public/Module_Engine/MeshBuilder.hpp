@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <Module_Data/Graphics/MeshData.hpp>
-#include <Module_Data/Graphics/VertexData.hpp>
+#include <Data/Graphics/MeshData.hpp>
+#include <Data/Graphics/VertexData.hpp>
 
 namespace BetterThanNothing
 {

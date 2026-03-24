@@ -23,8 +23,8 @@
 #include <optional>
 #include <vector>
 
-#include <Module_Data/Graphics/DirectionalLightData.hpp>
-#include <Module_Data/Graphics/PointLightData.hpp>
+#include <Data/Graphics/DirectionalLightData.hpp>
+#include <Data/Graphics/PointLightData.hpp>
 
 namespace BetterThanNothing
 {

@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module_Data/Graphics/GlobalUniformData.hpp"
+#include "Data/Graphics/GlobalUniformData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingDevice_Internals.hpp"
 

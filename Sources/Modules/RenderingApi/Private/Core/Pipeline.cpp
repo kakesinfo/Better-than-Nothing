@@ -17,7 +17,7 @@
  */
 
 #include "RenderingApi.hpp"
-#include <Module_Data/Graphics/DynamicUniformData.hpp>
+#include <Data/Graphics/DynamicUniformData.hpp>
 #include <iostream>
 
 #include <Common/Logger.hpp>

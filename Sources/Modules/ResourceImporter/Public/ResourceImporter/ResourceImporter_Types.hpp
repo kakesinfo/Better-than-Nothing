@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <Module_Data/Graphics/VertexData.hpp>
+#include <Data/Graphics/VertexData.hpp>
 #include <Module_Math/Matrix4.hpp>
 #include <cstdint>
 #include <optional>

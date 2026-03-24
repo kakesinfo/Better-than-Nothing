@@ -20,12 +20,12 @@
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
+#include <Data/Graphics/CameraData.hpp>
+#include <Data/Graphics/DirectionalLightData.hpp>
+#include <Data/Graphics/DynamicUniformData.hpp>
+#include <Data/Graphics/GlobalUniformData.hpp>
+#include <Data/Graphics/VertexData.hpp>
 #include <Editor/Editor.hpp>
-#include <Module_Data/Graphics/CameraData.hpp>
-#include <Module_Data/Graphics/DirectionalLightData.hpp>
-#include <Module_Data/Graphics/DynamicUniformData.hpp>
-#include <Module_Data/Graphics/GlobalUniformData.hpp>
-#include <Module_Data/Graphics/VertexData.hpp>
 #include <Module_Platform/Manager/WindowManager.hpp>
 #include <Module_Platform/Window.hpp>
 #include <RenderingApi.hpp>

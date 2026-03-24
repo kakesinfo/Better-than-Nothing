@@ -20,14 +20,14 @@
 
 #include "ResourceManager/ResourceManager.hpp"
 
-#include "Module_Data/Graphics/MeshData.hpp"
+#include "Data/Graphics/MeshData.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingDevice/SamplerDescription.hpp"
 #include "RenderingDevice/TextureDescription.hpp"
 #include "ResourceManager/Loader/ShaderLoader.hpp"
 #include "ResourceManager/ResourceManager_Types.hpp"
-#include <Common/Logger.hpp>
-#include <Module_Data/Graphics/VertexData.hpp>
+#include <Data/Graphics/VertexData.hpp>
+#include <Module_Base/Logger.hpp>
 #include <RenderingApi/Core/ShaderModule.hpp>
 #include <RenderingApi/Data/ShaderGpuData.hpp>
 #include <ResourceImporter/ResourceImporter.hpp>
