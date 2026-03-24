@@ -20,8 +20,8 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        Module_Base
-        Module_Data
+        Engine::Common
+        Engine::Data
         Module_Platform
         SDL3::SDL3
         Vulkan::Vulkan

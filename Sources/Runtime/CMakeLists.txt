@@ -13,9 +13,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror)
 
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE
-		Module_Base
+        Engine::Common
+        Engine::Data
 		Module_Math
-		Module_Data
         Module_Platform
         Module_Scene
 		Module_Engine

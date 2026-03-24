@@ -24,9 +24,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE ../../../ThirdParty/tinyobjlo
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        Module_Base
+        Engine::Common
+        Engine::Data
         Module_Math
-        Module_Data
         stb
         meshoptimizer
         tinygltf

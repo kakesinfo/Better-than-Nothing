@@ -18,12 +18,12 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        Module_Base
+        Engine::Common
         Module_Math
         Module_ResourceManager
     PUBLIC
+        Engine::Data
         EnTT::EnTT
-        Module_Data
 )
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")

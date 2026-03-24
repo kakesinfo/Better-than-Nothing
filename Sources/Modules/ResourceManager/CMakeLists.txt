@@ -26,9 +26,9 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        Module_Base
+        Engine::Common
+        Engine::Data
         Module_Math
-        Module_Data
         Module_RenderingApi
         Module_RenderingDevice
         ResourceImporter

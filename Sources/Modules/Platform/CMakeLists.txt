@@ -17,8 +17,11 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-        PRIVATE Module_Base Module_Math
-        PUBLIC SDL3::SDL3
+        PRIVATE
+            Engine::Common
+            Module_Math
+        PUBLIC
+            SDL3::SDL3
 )
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")

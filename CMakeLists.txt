@@ -31,7 +31,7 @@ add_subdirectory("ThirdParty/tinygltf")
 # ==================================================================================================
 # Modules
 # ==================================================================================================
-add_subdirectory("Sources/Modules/Engine.Common")
+add_subdirectory("Sources/Modules/Common")
 add_subdirectory("Sources/Modules/Math")
 add_subdirectory("Sources/Modules/Data")
 add_subdirectory("Sources/Modules/Scene")

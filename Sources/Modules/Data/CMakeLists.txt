@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.19)
 
-project(Module_Data)
+project("EngineData")
 
 add_library(${PROJECT_NAME} INTERFACE)
+add_library(Engine::Data ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME}
     INTERFACE Public
@@ -10,7 +11,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
-        Module_Base
+        Engine::Common
         Module_Math
 )
 

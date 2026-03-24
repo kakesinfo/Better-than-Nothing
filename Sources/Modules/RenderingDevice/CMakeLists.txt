@@ -23,8 +23,8 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        Module_Base
-        Module_Data
+        Engine::Common
+        Engine::Data
         Module_Math
         Module_Platform
         Module_RenderingApi
