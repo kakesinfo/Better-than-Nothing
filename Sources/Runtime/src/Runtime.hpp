@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Module_Engine/IEngineApplication.hpp"
+#include "Core/IEngineApplication.hpp"
 
 namespace BetterThanNothing
 {

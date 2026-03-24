@@ -13,12 +13,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror)
 
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE
-		Module_Base
-		Module_Math
-		Module_Data
-        Module_Scene
-		Module_Engine
-        Module_ResourceManager
+		Engine::Core
 )
 
 install(TARGETS ${PROJECT_NAME}
