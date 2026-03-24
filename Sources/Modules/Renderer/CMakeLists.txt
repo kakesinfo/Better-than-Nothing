@@ -25,7 +25,7 @@ target_link_libraries(${PROJECT_NAME}
         Module_Math
         Module_Scene
         Module_Platform
-        Module_Editor
+        Engine::Editor
         Module_ResourceManager
         Module_RenderingApi
         Module_RenderingDevice
