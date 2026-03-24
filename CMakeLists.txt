@@ -14,7 +14,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 project("better-than-nothing" VERSION 0.3.0 LANGUAGES C CXX)
 
 # ==================================================================================================
-# Dependencies
+# Engine Dependencies
 # ==================================================================================================
 add_subdirectory("ThirdParty/sdl")
 add_subdirectory("ThirdParty/vulkan")
@@ -29,22 +29,22 @@ add_subdirectory("ThirdParty/meshoptimizer")
 add_subdirectory("ThirdParty/tinygltf")
 
 # ==================================================================================================
-# Modules
+# Engine Modules
 # ==================================================================================================
-add_subdirectory("Sources/Modules/Common")
-add_subdirectory("Sources/Modules/Math")
-add_subdirectory("Sources/Modules/Data")
-add_subdirectory("Sources/Modules/Scene")
-add_subdirectory("Sources/Modules/Platform")
-add_subdirectory("Sources/Modules/RenderingApi")
-add_subdirectory("Sources/Modules/RenderingDevice")
-add_subdirectory("Sources/Modules/Editor")
-add_subdirectory("Sources/Modules/Renderer")
-add_subdirectory("Sources/Modules/ResourceImporter")
-add_subdirectory("Sources/Modules/ResourceManager")
-add_subdirectory("Sources/Modules/Core")
+add_subdirectory("Sources/Engine/Common")
+add_subdirectory("Sources/Engine/Math")
+add_subdirectory("Sources/Engine/Data")
+add_subdirectory("Sources/Engine/Scene")
+add_subdirectory("Sources/Engine/Platform")
+add_subdirectory("Sources/Engine/RenderingApi")
+add_subdirectory("Sources/Engine/RenderingDevice")
+add_subdirectory("Sources/Engine/Editor")
+add_subdirectory("Sources/Engine/Renderer")
+add_subdirectory("Sources/Engine/ResourceImporter")
+add_subdirectory("Sources/Engine/ResourceManager")
+add_subdirectory("Sources/Engine/Core")
 
 # ==================================================================================================
-# Sources
+# Applications
 # ==================================================================================================
 add_subdirectory("Sources/Runtime")
