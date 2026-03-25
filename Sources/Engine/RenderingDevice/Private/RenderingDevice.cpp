@@ -23,7 +23,7 @@
 #include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice_Internals.hpp"
 #include "StagingBuffer.hpp"
-#include <../../Platform/Public/Platform/WindowManager.hpp>
+#include <../../Platform/Public/Platform/LegacyWindowManager.hpp>
 #include <Common/Logger.hpp>
 #include <Platform/Window.hpp>
 #include <RenderingApi.hpp>
@@ -33,8 +33,8 @@ namespace BetterThanNothing
 {
 	RenderingDevice::RenderingDevice(const RenderingDeviceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
-		const auto& window = WindowManager::GetWindow();
-		const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
+		const auto& window = LegacyWindowManager::GetWindow();
+		const auto [windowWidth, windowHeight] = LegacyWindowManager::GetWindow()->GetFramebufferSize();
 
 		m_self = std::make_unique<RenderingDeviceInternals>();
 
@@ -153,7 +153,7 @@ namespace BetterThanNothing
 
 		if (!acquireResult.has_value())
 		{
-			const auto [windowWidth, windowHeight] = WindowManager::GetWindow()->GetFramebufferSize();
+			const auto [windowWidth, windowHeight] = LegacyWindowManager::GetWindow()->GetFramebufferSize();
 			m_self->device->WaitIdle();
 			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 			return std::nullopt;
@@ -203,7 +203,7 @@ namespace BetterThanNothing
 
 		const VkResult presentResult = vkQueuePresentKHR(m_self->presentQueue->Handle(), &presentInfo);
 
-		auto& window = WindowManager::GetWindow();
+		auto& window = LegacyWindowManager::GetWindow();
 		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || window->IsResized())
 		{
 			const auto [windowWidth, windowHeight] = window->GetFramebufferSize();

@@ -26,7 +26,7 @@
 #include "Editor/ScenePanel.hpp"
 
 #include <../../Platform/Public/Platform/InputManager.hpp>
-#include <../../Platform/Public/Platform/WindowManager.hpp>
+#include <../../Platform/Public/Platform/LegacyWindowManager.hpp>
 #include <Core/IEngineApplication.hpp>
 #include <Platform/Window.hpp>
 #include <Renderer/Renderer.hpp>
@@ -46,7 +46,7 @@ namespace BetterThanNothing
 		if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
 			throw std::runtime_error(std::format("Cannot init SDL: {}", SDL_GetError()));
 
-		WindowManager::Initialize({"Better Than Nothing", 1280, 720});
+		LegacyWindowManager::Initialize({"Better Than Nothing", 1280, 720});
 		InputManager::Initialize();
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
@@ -54,7 +54,7 @@ namespace BetterThanNothing
 
 
 #ifndef NDEBUG
-		m_editor = Editor::Create(WindowManager::GetWindow().get(), m_renderingDevice.get());
+		m_editor = Editor::Create(LegacyWindowManager::GetWindow().get(), m_renderingDevice.get());
 		m_editor->AddPanel<DebugPanel>();
 		m_editor->AddPanel<ScenePanel>();
 		m_editor->AddPanel<PerfPanel>();
@@ -84,9 +84,9 @@ namespace BetterThanNothing
 
 		m_application->OnEnable(m_defaultScene.get());
 
-		WindowManager::GetWindow()->Show();
+		LegacyWindowManager::GetWindow()->Show();
 
-		while (!WindowManager::GetWindow()->ShouldClose() && !shouldClose)
+		while (!LegacyWindowManager::GetWindow()->ShouldClose() && !shouldClose)
 		{
 			Metrics::BeginRecording();
 
@@ -97,7 +97,7 @@ namespace BetterThanNothing
 			Metrics::SetFrameTime(elapsedCount * 1000.0f);
 			Metrics::SetFps(1.0f / elapsedCount);
 
-			WindowManager::GetWindow()->PollEvents();
+			LegacyWindowManager::GetWindow()->PollEvents();
 
 			if (InputManager::IsKeyPressed(EKey::Escape))
 				shouldClose = true;
@@ -111,7 +111,7 @@ namespace BetterThanNothing
 		}
 
 		m_application->OnDisable();
-		WindowManager::Shutdown();
+		LegacyWindowManager::Shutdown();
 	}
 
 	int BootEngine(IEngineApplication* app)

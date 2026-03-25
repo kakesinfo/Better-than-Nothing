@@ -24,7 +24,7 @@
 #include "RenderingDevice/Handle.hpp"
 #include "StagingBuffer.hpp"
 
-#include <Platform/WindowManager.hpp>
+#include <Platform/LegacyWindowManager.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
 

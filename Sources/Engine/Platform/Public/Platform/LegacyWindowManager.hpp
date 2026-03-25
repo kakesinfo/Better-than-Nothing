@@ -25,13 +25,13 @@ namespace BetterThanNothing
 {
 	class Window;
 
-	class WindowManagerError final : public std::runtime_error
+	class LegacyWindowManagerError final : public std::runtime_error
 	{
 	public:
-		explicit WindowManagerError(const std::string& message) : std::runtime_error(message) {}
+		explicit LegacyWindowManagerError(const std::string& message) : std::runtime_error(message) {}
 	};
 
-	struct WindowManagerParams
+	struct LegacyWindowManagerParams
 	{
 		std::string title;
 		uint32_t	width = 0;
@@ -40,13 +40,13 @@ namespace BetterThanNothing
 		bool		resizable = false;
 	};
 
-	class WindowManager
+	class LegacyWindowManager
 	{
 	public:
-		WindowManager() = default;
-		~WindowManager() = default;
+		LegacyWindowManager() = default;
+		~LegacyWindowManager() = default;
 
-		static void						Initialize(const WindowManagerParams& params);
+		static void						Initialize(const LegacyWindowManagerParams& params);
 		static std::unique_ptr<Window>& GetWindow();
 		static void						Shutdown();
 
