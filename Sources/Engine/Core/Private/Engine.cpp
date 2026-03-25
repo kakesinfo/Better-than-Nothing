@@ -50,7 +50,7 @@ namespace BetterThanNothing
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 #ifndef NDEBUG
-		m_editor = Editor::Create(m_platform->GetWindow(), m_renderingDevice.get());
+		m_editor = Editor::Create(m_platform.get(), m_renderingDevice.get());
 		m_editor->AddPanel<DebugPanel>();
 		m_editor->AddPanel<ScenePanel>();
 		m_editor->AddPanel<PerfPanel>();

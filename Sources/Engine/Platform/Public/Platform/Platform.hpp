@@ -20,12 +20,14 @@
 
 #include <Common/EKey.hpp>
 #include <Common/EMouseButton.hpp>
+#include <functional>
 #include <memory>
+
+struct SDL_Window;
+union SDL_Event;
 
 namespace BetterThanNothing
 {
-	struct PlatformInternals;
-
 	struct PlatformCreateInfo
 	{
 		std::string windowTitle;
@@ -52,6 +54,8 @@ namespace BetterThanNothing
 		[[nodiscard]] void* GetWindow() const;
 		[[nodiscard]] bool	IsRunning() const;
 
+		void SetEventCallback(const std::function<bool(const SDL_Event&)>& callback);
+
 	protected:
 		void OnQuitEvent();
 		void OnWindowResizeEvent();
@@ -61,11 +65,12 @@ namespace BetterThanNothing
 		void OnMouseButtonEvent(int32_t button, EMouseButtonAction action);
 
 	private:
-		std::unique_ptr<PlatformInternals> m_self;
-		const PlatformCreateInfo		   m_createInfo;
-		bool							   m_running;
-		int32_t							   m_windowWidth;
-		int32_t							   m_windowHeight;
-		bool							   m_windowResized;
+		const PlatformCreateInfo			  m_createInfo;
+		SDL_Window*							  m_window;
+		std::function<bool(const SDL_Event&)> m_eventCallback;
+		bool								  m_running;
+		int32_t								  m_windowWidth;
+		int32_t								  m_windowHeight;
+		bool								  m_windowResized;
 	};
 }

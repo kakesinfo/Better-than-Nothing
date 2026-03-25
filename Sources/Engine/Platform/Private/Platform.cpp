@@ -26,14 +26,8 @@
 
 namespace BetterThanNothing
 {
-	struct PlatformInternals
-	{
-		SDL_Window* window;
-	};
-
 	Platform::Platform(const PlatformCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
-		m_self = std::make_unique<PlatformInternals>();
 		m_running = true;
 		m_windowWidth = createInfo.windowWidth;
 		m_windowHeight = createInfo.windowHeight;
@@ -46,15 +40,15 @@ namespace BetterThanNothing
 		flags |= createInfo.windowFullscreen ? SDL_WINDOW_FULLSCREEN : 0;
 		flags |= createInfo.windowResizable ? SDL_WINDOW_RESIZABLE : 0;
 
-		m_self->window = SDL_CreateWindow(createInfo.windowTitle.c_str(), createInfo.windowWidth, createInfo.windowHeight, flags);
+		m_window = SDL_CreateWindow(createInfo.windowTitle.c_str(), createInfo.windowWidth, createInfo.windowHeight, flags);
 
-		if (!m_self->window)
+		if (!m_window)
 			throw std::runtime_error("Cannot create SDL window: " + std::string(SDL_GetError()));
 	}
 
 	Platform::~Platform()
 	{
-		SDL_DestroyWindow(m_self->window);
+		SDL_DestroyWindow(m_window);
 		SDL_Quit();
 	}
 
@@ -75,7 +69,8 @@ namespace BetterThanNothing
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
-			// TODO: Add event callback for ImGUI
+			if (m_eventCallback && m_eventCallback(event))
+			continue;
 
 			switch (event.type)
 			{
@@ -111,7 +106,7 @@ namespace BetterThanNothing
 
 	void Platform::ShowWindow() const
 	{
-		if (!SDL_ShowWindow(m_self->window))
+		if (!SDL_ShowWindow(m_window))
 			throw std::runtime_error("Cannot show SDL window: " + std::string(SDL_GetError()));
 	}
 
@@ -128,18 +123,23 @@ namespace BetterThanNothing
 	auto Platform::GetWindowSize() const -> std::pair<int32_t, int32_t>
 	{
 		int32_t width, height;
-		SDL_GetWindowSizeInPixels(m_self->window, &width, &height);
+		SDL_GetWindowSizeInPixels(m_window, &width, &height);
 		return {width, height};
 	}
 
 	void* Platform::GetWindow() const
 	{
-		return m_self->window;
+		return m_window;
 	}
 
 	bool Platform::IsRunning() const
 	{
 		return m_running;
+	}
+
+	void Platform::SetEventCallback(const std::function<bool(const SDL_Event&)>& callback)
+	{
+		m_eventCallback = callback;
 	}
 
 	void Platform::OnQuitEvent()

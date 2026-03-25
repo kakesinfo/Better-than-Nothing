@@ -46,7 +46,7 @@ namespace BetterThanNothing
 		std::vector<VkFormat> formats;
 	};
 
-	Editor::Editor(Platform* window, RenderingDevice* renderingDevice) : m_platform(m_platform), m_renderingDevice(renderingDevice)
+	Editor::Editor(Platform* platform, RenderingDevice* renderingDevice) : m_platform(platform), m_renderingDevice(renderingDevice)
 	{
 		m_internals = std::make_unique<EditorInternals>();
 
@@ -96,22 +96,21 @@ namespace BetterThanNothing
 		if (!ImGui_ImplVulkan_Init(&initInfo))
 			throw std::runtime_error("failed to initialize ImGui");
 
-		// TODO: Set platform callback for ImGui
-		// m_window->SetEventCallback([](const SDL_Event& event) -> bool {
-		// 	ImGui_ImplSDL3_ProcessEvent(&event);
-		//
-		// 	const ImGuiIO& io = ImGui::GetIO();
-		//
-		// 	const bool isMouseEvent = (event.type >= SDL_EVENT_MOUSE_MOTION && event.type <= SDL_EVENT_MOUSE_WHEEL);
-		// 	if (isMouseEvent && io.WantCaptureMouse)
-		// 		return true;
-		//
-		// 	const bool isKeyboardEvent = (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP || event.type == SDL_EVENT_TEXT_INPUT);
-		// 	if (isKeyboardEvent && io.WantCaptureKeyboard)
-		// 		return true;
-		//
-		// 	return false;
-		// });
+		m_platform->SetEventCallback([](const SDL_Event& event) -> bool {
+			ImGui_ImplSDL3_ProcessEvent(&event);
+
+			const ImGuiIO& io = ImGui::GetIO();
+
+			const bool isMouseEvent = (event.type >= SDL_EVENT_MOUSE_MOTION && event.type <= SDL_EVENT_MOUSE_WHEEL);
+			if (isMouseEvent && io.WantCaptureMouse)
+				return true;
+
+			const bool isKeyboardEvent = (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP || event.type == SDL_EVENT_TEXT_INPUT);
+			if (isKeyboardEvent && io.WantCaptureKeyboard)
+				return true;
+
+			return false;
+		});
 	}
 
 	Editor::~Editor()
