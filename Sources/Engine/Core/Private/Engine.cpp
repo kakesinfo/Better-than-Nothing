@@ -25,7 +25,7 @@
 #include "Editor/PerfPanel.hpp"
 #include "Editor/ScenePanel.hpp"
 
-#include <../../Platform/Public/Platform/InputManager.hpp>
+#include <../../Platform/Public/Platform/LegacyInputManager.hpp>
 #include <../../Platform/Public/Platform/LegacyWindowManager.hpp>
 #include <Core/IEngineApplication.hpp>
 #include <Platform/Window.hpp>
@@ -47,7 +47,7 @@ namespace BetterThanNothing
 			throw std::runtime_error(std::format("Cannot init SDL: {}", SDL_GetError()));
 
 		LegacyWindowManager::Initialize({"Better Than Nothing", 1280, 720});
-		InputManager::Initialize();
+		LegacyInputManager::Initialize();
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
@@ -99,13 +99,13 @@ namespace BetterThanNothing
 
 			LegacyWindowManager::GetWindow()->PollEvents();
 
-			if (InputManager::IsKeyPressed(EKey::Escape))
+			if (LegacyInputManager::IsKeyPressed(EKey::Escape))
 				shouldClose = true;
 
 			OnUpdate(elapsedCount);
 			m_renderer->RenderFrame(m_defaultScene.get());
 
-			InputManager::ResetMousePosition();
+			LegacyInputManager::ResetMousePosition();
 
 			Metrics::EndRecording();
 		}

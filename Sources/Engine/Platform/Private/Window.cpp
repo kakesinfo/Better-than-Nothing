@@ -17,7 +17,7 @@
  */
 
 #include "Platform/Window.hpp"
-#include "../Public/Platform/InputManager.hpp"
+#include "../Public/Platform/LegacyInputManager.hpp"
 
 #include <Common/EKey.hpp>
 #include <Common/Logger.hpp>
@@ -152,22 +152,22 @@ namespace BetterThanNothing
 
 	void Window::KeyCallback(const int32_t key, const EKeyAction action)
 	{
-		InputManager::UpdateKey(key, action);
+		LegacyInputManager::UpdateKey(key, action);
 	}
 
 	void Window::MouseCursorCallback(const double xpos, const double ypos)
 	{
-		InputManager::UpdateMousePosition(xpos, ypos);
+		LegacyInputManager::UpdateMousePosition(xpos, ypos);
 	}
 
 	void Window::MouseScrollCallback(const double yoffset)
 	{
-		InputManager::UpdateMouseScroll(yoffset);
+		LegacyInputManager::UpdateMouseScroll(yoffset);
 	}
 
 	void Window::MouseButtonCallback(const int32_t button, const EMouseButtonAction action)
 	{
 
-		InputManager::UpdateMouseButton(button, action);
+		LegacyInputManager::UpdateMouseButton(button, action);
 	}
 };

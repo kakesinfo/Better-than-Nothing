@@ -19,7 +19,7 @@
 #include "Runtime.hpp"
 
 #include <Common/Logger.hpp>
-#include <Platform/InputManager.hpp>
+#include <Platform/LegacyInputManager.hpp>
 #include <Scene/Camera.hpp>
 #include <Scene/Scene.hpp>
 #include <Scene/SceneObject.hpp>
@@ -95,10 +95,10 @@ namespace BetterThanNothing
 
 	void Runtime::OnUpdate(Scene* scene, const float deltaTime)
 	{
-		if (InputManager::IsMouseButtonPressed(EMouseButton::Left))
+		if (LegacyInputManager::IsMouseButtonPressed(EMouseButton::Left))
 		{
 			constexpr float rotateSpeed = 0.1f;
-			const Vector2	delta = InputManager::GetMouseDelta();
+			const Vector2	delta = LegacyInputManager::GetMouseDelta();
 			scene->GetCamera()->Rotate(-delta.GetX() * rotateSpeed, -delta.GetY() * rotateSpeed);
 		}
 
@@ -106,17 +106,17 @@ namespace BetterThanNothing
 
 		auto deltaPos = Vector3::Zero;
 
-		if (InputManager::IsKeyPressed(EKey::W))
+		if (LegacyInputManager::IsKeyPressed(EKey::W))
 			deltaPos += scene->GetCamera()->GetForward() * moveSpeed;
-		if (InputManager::IsKeyPressed(EKey::S))
+		if (LegacyInputManager::IsKeyPressed(EKey::S))
 			deltaPos -= scene->GetCamera()->GetForward() * moveSpeed;
-		if (InputManager::IsKeyPressed(EKey::D))
+		if (LegacyInputManager::IsKeyPressed(EKey::D))
 			deltaPos += scene->GetCamera()->GetRight() * moveSpeed;
-		if (InputManager::IsKeyPressed(EKey::A))
+		if (LegacyInputManager::IsKeyPressed(EKey::A))
 			deltaPos -= scene->GetCamera()->GetRight() * moveSpeed;
-		if (InputManager::IsKeyPressed(EKey::Space))
+		if (LegacyInputManager::IsKeyPressed(EKey::Space))
 			deltaPos += Vector3::Up * moveSpeed;
-		if (InputManager::IsKeyPressed(EKey::LeftShift))
+		if (LegacyInputManager::IsKeyPressed(EKey::LeftShift))
 			deltaPos -= Vector3::Up * moveSpeed;
 
 		scene->GetCamera()->Move(deltaPos);
