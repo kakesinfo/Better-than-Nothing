@@ -17,7 +17,7 @@
  */
 
 #include "Platform/Window.hpp"
-#include "Platform/Manager/InputManager.hpp"
+#include "../Public/Platform/InputManager.hpp"
 
 #include <Common/EKey.hpp>
 #include <Common/Logger.hpp>

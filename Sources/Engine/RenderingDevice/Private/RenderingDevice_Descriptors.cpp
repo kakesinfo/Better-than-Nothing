@@ -28,7 +28,7 @@
 #include "RenderingDevice/Handle.hpp"
 
 #include <Common/Logger.hpp>
-#include <Platform/Manager/WindowManager.hpp>
+#include <Platform/WindowManager.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
 

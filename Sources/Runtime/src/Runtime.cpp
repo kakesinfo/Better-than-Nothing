@@ -19,7 +19,7 @@
 #include "Runtime.hpp"
 
 #include <Common/Logger.hpp>
-#include <Platform/Manager/InputManager.hpp>
+#include <Platform/InputManager.hpp>
 #include <Scene/Camera.hpp>
 #include <Scene/Scene.hpp>
 #include <Scene/SceneObject.hpp>

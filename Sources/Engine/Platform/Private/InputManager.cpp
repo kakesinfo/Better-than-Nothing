@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Platform/Manager/InputManager.hpp"
+#include "Platform/InputManager.hpp"
 
 #include <Common/EKey.hpp>
 #include <Common/EMouseButton.hpp>

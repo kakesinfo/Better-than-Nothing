@@ -21,7 +21,7 @@
 
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingDevice/Handle.hpp"
-#include <Platform/Manager/WindowManager.hpp>
+#include <Platform/WindowManager.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
 
