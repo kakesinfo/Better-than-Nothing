@@ -28,7 +28,6 @@
 #include <Editor/PerfPanel.hpp>
 #include <Editor/ScenePanel.hpp>
 #include <Platform/LegacyInputManager.hpp>
-#include <Platform/LegacyWindow.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
