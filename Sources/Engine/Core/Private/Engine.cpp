@@ -19,16 +19,14 @@
 #include <Common/EKey.hpp>
 #include <Common/Metrics.hpp>
 #include <Core/Engine.hpp>
+#include <Core/IEngineApplication.hpp>
 #include <Editor/DebugPanel.hpp>
 #include <Editor/Editor.hpp>
-
-#include "Editor/PerfPanel.hpp"
-#include "Editor/ScenePanel.hpp"
-
-#include <../../Platform/Public/Platform/LegacyInputManager.hpp>
-#include <../../Platform/Public/Platform/LegacyWindowManager.hpp>
-#include <Core/IEngineApplication.hpp>
+#include <Editor/PerfPanel.hpp>
+#include <Editor/ScenePanel.hpp>
+#include <Platform/LegacyInputManager.hpp>
 #include <Platform/LegacyWindow.hpp>
+#include <Platform/LegacyWindowManager.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
@@ -51,7 +49,6 @@ namespace BetterThanNothing
 
 		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
-
 
 #ifndef NDEBUG
 		m_editor = Editor::Create(LegacyWindowManager::GetWindow().get(), m_renderingDevice.get());
