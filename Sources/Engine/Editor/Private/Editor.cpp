@@ -21,6 +21,7 @@
 #include <Editor/Editor.hpp>
 
 #include "Editor/Panel.hpp"
+#include "Platform/Platform.hpp"
 #include "RenderingApi/Core/CommandBuffer.hpp"
 
 #include <Platform/LegacyWindow.hpp>
@@ -45,7 +46,7 @@ namespace BetterThanNothing
 		std::vector<VkFormat> formats;
 	};
 
-	Editor::Editor(LegacyWindow* window, RenderingDevice* renderingDevice) : m_window(window), m_renderingDevice(renderingDevice)
+	Editor::Editor(Platform* window, RenderingDevice* renderingDevice) : m_platform(m_platform), m_renderingDevice(renderingDevice)
 	{
 		m_internals = std::make_unique<EditorInternals>();
 
@@ -68,7 +69,7 @@ namespace BetterThanNothing
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-		ImGui_ImplSDL3_InitForVulkan(window->Handle());
+		ImGui_ImplSDL3_InitForVulkan(static_cast<SDL_Window*>(m_platform->GetWindow()));
 
 		m_internals->formats = {renderingDevice->GetSwapChain()->GetImageFormat()};
 
@@ -95,21 +96,22 @@ namespace BetterThanNothing
 		if (!ImGui_ImplVulkan_Init(&initInfo))
 			throw std::runtime_error("failed to initialize ImGui");
 
-		m_window->SetEventCallback([](const SDL_Event& event) -> bool {
-			ImGui_ImplSDL3_ProcessEvent(&event);
-
-			const ImGuiIO& io = ImGui::GetIO();
-
-			const bool isMouseEvent = (event.type >= SDL_EVENT_MOUSE_MOTION && event.type <= SDL_EVENT_MOUSE_WHEEL);
-			if (isMouseEvent && io.WantCaptureMouse)
-				return true;
-
-			const bool isKeyboardEvent = (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP || event.type == SDL_EVENT_TEXT_INPUT);
-			if (isKeyboardEvent && io.WantCaptureKeyboard)
-				return true;
-
-			return false;
-		});
+		// TODO: Set platform callback for ImGui
+		// m_window->SetEventCallback([](const SDL_Event& event) -> bool {
+		// 	ImGui_ImplSDL3_ProcessEvent(&event);
+		//
+		// 	const ImGuiIO& io = ImGui::GetIO();
+		//
+		// 	const bool isMouseEvent = (event.type >= SDL_EVENT_MOUSE_MOTION && event.type <= SDL_EVENT_MOUSE_WHEEL);
+		// 	if (isMouseEvent && io.WantCaptureMouse)
+		// 		return true;
+		//
+		// 	const bool isKeyboardEvent = (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP || event.type == SDL_EVENT_TEXT_INPUT);
+		// 	if (isKeyboardEvent && io.WantCaptureKeyboard)
+		// 		return true;
+		//
+		// 	return false;
+		// });
 	}
 
 	Editor::~Editor()
@@ -123,9 +125,9 @@ namespace BetterThanNothing
 		vkDestroyDescriptorPool(m_renderingDevice->GetDevice()->Handle(), m_internals->imguiPool, nullptr);
 	}
 
-	std::unique_ptr<Editor> Editor::Create(LegacyWindow* window, RenderingDevice* renderingDevice)
+	std::unique_ptr<Editor> Editor::Create(Platform* platform, RenderingDevice* renderingDevice)
 	{
-		return std::make_unique<Editor>(window, renderingDevice);
+		return std::make_unique<Editor>(platform, renderingDevice);
 	}
 
 	void Editor::RenderPanels(Scene* scene) const

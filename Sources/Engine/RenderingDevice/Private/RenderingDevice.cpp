@@ -17,15 +17,15 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "Platform/Platform.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice_Internals.hpp"
 #include "StagingBuffer.hpp"
-#include <Platform/LegacyWindowManager.hpp>
+
 #include <Common/Logger.hpp>
-#include <Platform/LegacyWindow.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
 
@@ -33,13 +33,12 @@ namespace BetterThanNothing
 {
 	RenderingDevice::RenderingDevice(const RenderingDeviceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
-		const auto& window = LegacyWindowManager::GetWindow();
-		const auto [windowWidth, windowHeight] = LegacyWindowManager::GetWindow()->GetFramebufferSize();
+		const auto [windowWidth, windowHeight] = m_createInfo.platform->GetWindowSize();
 
 		m_self = std::make_unique<RenderingDeviceInternals>();
 
 		m_self->instance = RenderingApi::Instance::Create({.enableValidation = true});
-		m_self->surface = RenderingApi::Surface::Create({window->Handle(), m_self->instance.get()});
+		m_self->surface = RenderingApi::Surface::Create({m_createInfo.platform->GetWindow(), m_self->instance.get()});
 		m_self->device = RenderingApi::Device::Create({m_self->instance.get(), m_self->surface.get()});
 		m_self->graphicsQueue = m_self->device->CreateGraphicsQueue();
 		m_self->presentQueue = m_self->device->CreatePresentQueue();
@@ -51,8 +50,8 @@ namespace BetterThanNothing
 			m_self->surface.get(),
 			m_self->device.get(),
 			m_self->allocator.get(),
-			windowWidth,
-			windowHeight,
+			static_cast<uint32_t>(windowWidth),
+			static_cast<uint32_t>(windowHeight),
 			createInfo.bufferingMode,
 		});
 
@@ -153,7 +152,7 @@ namespace BetterThanNothing
 
 		if (!acquireResult.has_value())
 		{
-			const auto [windowWidth, windowHeight] = LegacyWindowManager::GetWindow()->GetFramebufferSize();
+			const auto [windowWidth, windowHeight] = m_createInfo.platform->GetWindowSize();
 			m_self->device->WaitIdle();
 			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 			return std::nullopt;
@@ -203,11 +202,10 @@ namespace BetterThanNothing
 
 		const VkResult presentResult = vkQueuePresentKHR(m_self->presentQueue->Handle(), &presentInfo);
 
-		auto& window = LegacyWindowManager::GetWindow();
-		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || window->IsResized())
+		if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || m_createInfo.platform->IsWindowResized())
 		{
-			const auto [windowWidth, windowHeight] = window->GetFramebufferSize();
-			window->SetResized(false);
+			const auto [windowWidth, windowHeight] = m_createInfo.platform->GetWindowSize();
+			m_createInfo.platform->SetWindowResized(false);
 			m_self->device->WaitIdle();
 			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 		}

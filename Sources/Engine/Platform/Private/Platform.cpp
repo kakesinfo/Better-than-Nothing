@@ -16,16 +16,13 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
 #include "Platform/Platform.hpp"
-
 #include "Platform/LegacyInputManager.hpp"
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <format>
 #include <functional>
+#include <utility>
 
 namespace BetterThanNothing
 {
@@ -59,6 +56,18 @@ namespace BetterThanNothing
 	{
 		SDL_DestroyWindow(m_self->window);
 		SDL_Quit();
+	}
+
+	std::unique_ptr<Platform> Platform::Create(std::string windowTitle, const int32_t windowWidth, const int32_t windowHeight)
+	{
+		PlatformCreateInfo createInfo;
+		createInfo.windowTitle = std::move(windowTitle);
+		createInfo.windowWidth = windowWidth;
+		createInfo.windowHeight = windowHeight;
+		createInfo.windowFullscreen = false;
+		createInfo.windowResizable = false;
+
+		return std::make_unique<Platform>(createInfo);
 	}
 
 	void Platform::PollEvents()

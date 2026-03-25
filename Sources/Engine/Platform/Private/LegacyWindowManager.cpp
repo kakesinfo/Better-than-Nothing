@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../Public/Platform/LegacyWindowManager.hpp"
+#include "Platform/LegacyWindowManager.hpp"
 #include "Platform/LegacyWindow.hpp"
 
 namespace BetterThanNothing

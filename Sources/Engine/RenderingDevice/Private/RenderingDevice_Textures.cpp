@@ -16,15 +16,12 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingDevice/RenderingDevice.hpp"
-#include "RenderingDevice_Internals.hpp"
-
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice/Handle.hpp"
+#include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 #include "StagingBuffer.hpp"
-
-#include <Platform/LegacyWindowManager.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
 

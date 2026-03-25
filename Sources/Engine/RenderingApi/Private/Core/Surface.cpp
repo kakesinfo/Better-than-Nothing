@@ -19,17 +19,13 @@
 #include "RenderingApi.hpp"
 
 #include <Common/Logger.hpp>
-#include <Platform/LegacyWindow.hpp>
-#include <Platform/LegacyWindowManager.hpp>
 #include <SDL3/SDL_vulkan.h>
 
 namespace BetterThanNothing::RenderingApi
 {
 	Surface::Surface(const SurfaceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
-		auto window = static_cast<SDL_Window*>(m_createInfo.window);
-
-		if (!SDL_Vulkan_CreateSurface(window, m_createInfo.instance->Handle(), nullptr, &m_surface))
+		if (!SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_createInfo.window), m_createInfo.instance->Handle(), nullptr, &m_surface))
 			throw std::runtime_error(std::format("Failed to create Vulkan surface: {}", SDL_GetError()));
 	}
 

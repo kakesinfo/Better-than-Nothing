@@ -41,6 +41,8 @@ namespace BetterThanNothing
 		explicit Platform(const PlatformCreateInfo& createInfo);
 		~Platform();
 
+		static std::unique_ptr<Platform> Create(std::string windowTitle, int32_t windowWidth, int32_t windowHeight);
+
 		void PollEvents();
 
 		void				ShowWindow() const;
@@ -48,8 +50,7 @@ namespace BetterThanNothing
 		[[nodiscard]] bool	IsWindowResized() const;
 		[[nodiscard]] auto	GetWindowSize() const -> std::pair<int32_t, int32_t>;
 		[[nodiscard]] void* GetWindow() const;
-
-		[[nodiscard]] bool IsRunning() const;
+		[[nodiscard]] bool	IsRunning() const;
 
 	protected:
 		void OnQuitEvent();

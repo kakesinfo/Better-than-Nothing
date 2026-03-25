@@ -16,14 +16,11 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingDevice/RenderingDevice.hpp"
-#include "RenderingDevice_Internals.hpp"
-
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingDevice/Handle.hpp"
-#include <Platform/LegacyWindowManager.hpp>
+#include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 #include <RenderingApi.hpp>
-#include <cmath>
 
 namespace BetterThanNothing
 {

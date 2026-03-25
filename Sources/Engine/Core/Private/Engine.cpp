@@ -19,6 +19,9 @@
 #include <Common/EKey.hpp>
 #include <Common/Metrics.hpp>
 #include <Core/Engine.hpp>
+
+#include "Platform/Platform.hpp"
+
 #include <Core/IEngineApplication.hpp>
 #include <Editor/DebugPanel.hpp>
 #include <Editor/Editor.hpp>
@@ -26,7 +29,6 @@
 #include <Editor/ScenePanel.hpp>
 #include <Platform/LegacyInputManager.hpp>
 #include <Platform/LegacyWindow.hpp>
-#include <Platform/LegacyWindowManager.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
@@ -41,17 +43,19 @@ namespace BetterThanNothing
 {
 	Engine::Engine(IEngineApplication* application) : m_application(application)
 	{
-		if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
-			throw std::runtime_error(std::format("Cannot init SDL: {}", SDL_GetError()));
+		// if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+		// 	throw std::runtime_error(std::format("Cannot init SDL: {}", SDL_GetError()));
+		//
+		// LegacyWindowManager::Initialize({"Better Than Nothing", 1280, 720});
 
-		LegacyWindowManager::Initialize({"Better Than Nothing", 1280, 720});
+		m_platform = Platform::Create("Better Than Nothing", 1280, 720);
 		LegacyInputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({EBufferingMode::Double});
+		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 #ifndef NDEBUG
-		m_editor = Editor::Create(LegacyWindowManager::GetWindow().get(), m_renderingDevice.get());
+		m_editor = Editor::Create(m_platform->GetWindow(), m_renderingDevice.get());
 		m_editor->AddPanel<DebugPanel>();
 		m_editor->AddPanel<ScenePanel>();
 		m_editor->AddPanel<PerfPanel>();
@@ -62,18 +66,6 @@ namespace BetterThanNothing
 		m_defaultScene = Scene::Create(m_resourceManager.get());
 	}
 
-	void Engine::OnUpdate(const float deltaTime) const
-	{
-		m_application->OnUpdate(m_defaultScene.get(), deltaTime);
-
-		const auto sceneObjects = m_defaultScene->GetView<UpdateComponent>();
-		for (auto [entity, update] : sceneObjects.each())
-		{
-			auto sceneObject = m_defaultScene->GetObject(entity);
-			update.onUpdate(sceneObject, deltaTime);
-		}
-	}
-
 	void Engine::Run() const
 	{
 		bool shouldClose = false;
@@ -81,9 +73,11 @@ namespace BetterThanNothing
 
 		m_application->OnEnable(m_defaultScene.get());
 
-		LegacyWindowManager::GetWindow()->Show();
+		// LegacyWindowManager::GetWindow()->Show();
+		m_platform->ShowWindow();
 
-		while (!LegacyWindowManager::GetWindow()->ShouldClose() && !shouldClose)
+		// while (!LegacyWindowManager::GetWindow()->ShouldClose() && !shouldClose)
+		while (m_platform->IsRunning() && !shouldClose)
 		{
 			Metrics::BeginRecording();
 
@@ -94,12 +88,20 @@ namespace BetterThanNothing
 			Metrics::SetFrameTime(elapsedCount * 1000.0f);
 			Metrics::SetFps(1.0f / elapsedCount);
 
-			LegacyWindowManager::GetWindow()->PollEvents();
+			// LegacyWindowManager::GetWindow()->PollEvents();
+			m_platform->PollEvents();
 
 			if (LegacyInputManager::IsKeyPressed(EKey::Escape))
 				shouldClose = true;
 
-			OnUpdate(elapsedCount);
+			m_application->OnUpdate(m_defaultScene.get(), elapsedCount);
+
+			for (auto [entity, update] : m_defaultScene->GetView<UpdateComponent>().each())
+			{
+				auto sceneObject = m_defaultScene->GetObject(entity);
+				update.onUpdate(sceneObject, elapsedCount);
+			}
+
 			m_renderer->RenderFrame(m_defaultScene.get());
 
 			LegacyInputManager::ResetMousePosition();
@@ -108,7 +110,7 @@ namespace BetterThanNothing
 		}
 
 		m_application->OnDisable();
-		LegacyWindowManager::Shutdown();
+		// LegacyWindowManager::Shutdown();
 	}
 
 	int BootEngine(IEngineApplication* app)
