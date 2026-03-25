@@ -43,11 +43,6 @@ namespace BetterThanNothing
 {
 	Engine::Engine(IEngineApplication* application) : m_application(application)
 	{
-		// if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
-		// 	throw std::runtime_error(std::format("Cannot init SDL: {}", SDL_GetError()));
-		//
-		// LegacyWindowManager::Initialize({"Better Than Nothing", 1280, 720});
-
 		m_platform = Platform::Create("Better Than Nothing", 1280, 720);
 		LegacyInputManager::Initialize();
 
@@ -73,10 +68,8 @@ namespace BetterThanNothing
 
 		m_application->OnEnable(m_defaultScene.get());
 
-		// LegacyWindowManager::GetWindow()->Show();
 		m_platform->ShowWindow();
 
-		// while (!LegacyWindowManager::GetWindow()->ShouldClose() && !shouldClose)
 		while (m_platform->IsRunning() && !shouldClose)
 		{
 			Metrics::BeginRecording();
@@ -110,7 +103,6 @@ namespace BetterThanNothing
 		}
 
 		m_application->OnDisable();
-		// LegacyWindowManager::Shutdown();
 	}
 
 	int BootEngine(IEngineApplication* app)
