@@ -16,8 +16,8 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Platform/Window.hpp"
 #include "../Public/Platform/LegacyInputManager.hpp"
+#include "Platform/LegacyWindow.hpp"
 
 #include <Common/EKey.hpp>
 #include <Common/Logger.hpp>
@@ -26,7 +26,7 @@
 
 namespace BetterThanNothing
 {
-	Window::Window(std::string title, const uint32_t width, const uint32_t height, const bool fullscreen, const bool resizable)
+	LegacyWindow::LegacyWindow(std::string title, const uint32_t width, const uint32_t height, const bool fullscreen, const bool resizable)
 		: m_title(std::move(title)), m_width(width), m_height(height), m_fullscreen(fullscreen), m_resizable(resizable)
 	{
 		uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN;
@@ -39,23 +39,23 @@ namespace BetterThanNothing
 			throw std::runtime_error(std::format("Cannot create SDL window: {}", SDL_GetError()));
 	}
 
-	Window::~Window()
+	LegacyWindow::~LegacyWindow()
 	{
 		SDL_DestroyWindow(m_window);
 		SDL_Quit();
 	}
 
-	SDL_Window* Window::Handle() const
+	SDL_Window* LegacyWindow::Handle() const
 	{
 		return m_window;
 	}
 
-	void Window::SetEventCallback(const std::function<bool(const SDL_Event&)>& callback)
+	void LegacyWindow::SetEventCallback(const std::function<bool(const SDL_Event&)>& callback)
 	{
 		m_eventCallback = callback;
 	}
 
-	void Window::PollEvents()
+	void LegacyWindow::PollEvents()
 	{
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
@@ -103,69 +103,69 @@ namespace BetterThanNothing
 		}
 	}
 
-	void Window::Show() const
+	void LegacyWindow::Show() const
 	{
 		if (!SDL_ShowWindow(m_window))
 			throw std::runtime_error(std::format("Cannot show SDL window: {}", SDL_GetError()));
 	}
 
-	bool Window::ShouldClose() const
+	bool LegacyWindow::ShouldClose() const
 	{
 		if (m_window == nullptr)
 			return true;
 		return m_shouldClose;
 	}
 
-	std::pair<uint32_t, uint32_t> Window::GetFramebufferSize() const
+	std::pair<uint32_t, uint32_t> LegacyWindow::GetFramebufferSize() const
 	{
 		int width, height;
 		SDL_GetWindowSizeInPixels(m_window, &width, &height);
 		return {width, height};
 	}
 
-	bool Window::IsResized() const
+	bool LegacyWindow::IsResized() const
 	{
 		return m_resized;
 	}
 
-	void Window::SetResized(const bool resized)
+	void LegacyWindow::SetResized(const bool resized)
 	{
 		m_resized = resized;
 	}
 
-	void Window::SetWidth(const uint32_t width)
+	void LegacyWindow::SetWidth(const uint32_t width)
 	{
 		m_width = width;
 	}
 
-	void Window::SetHeight(const uint32_t height)
+	void LegacyWindow::SetHeight(const uint32_t height)
 	{
 		m_height = height;
 	}
 
-	void Window::ResizeCallback(Window* window, const int32_t width, const int32_t height)
+	void LegacyWindow::ResizeCallback(LegacyWindow* window, const int32_t width, const int32_t height)
 	{
 		window->SetWidth(width);
 		window->SetHeight(height);
 		window->SetResized(true);
 	}
 
-	void Window::KeyCallback(const int32_t key, const EKeyAction action)
+	void LegacyWindow::KeyCallback(const int32_t key, const EKeyAction action)
 	{
 		LegacyInputManager::UpdateKey(key, action);
 	}
 
-	void Window::MouseCursorCallback(const double xpos, const double ypos)
+	void LegacyWindow::MouseCursorCallback(const double xpos, const double ypos)
 	{
 		LegacyInputManager::UpdateMousePosition(xpos, ypos);
 	}
 
-	void Window::MouseScrollCallback(const double yoffset)
+	void LegacyWindow::MouseScrollCallback(const double yoffset)
 	{
 		LegacyInputManager::UpdateMouseScroll(yoffset);
 	}
 
-	void Window::MouseButtonCallback(const int32_t button, const EMouseButtonAction action)
+	void LegacyWindow::MouseButtonCallback(const int32_t button, const EMouseButtonAction action)
 	{
 
 		LegacyInputManager::UpdateMouseButton(button, action);

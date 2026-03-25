@@ -23,7 +23,7 @@
 namespace BetterThanNothing
 {
 	struct GlobalUniformData;
-	class Window;
+	class LegacyWindow;
 
 	namespace RenderingApi
 	{

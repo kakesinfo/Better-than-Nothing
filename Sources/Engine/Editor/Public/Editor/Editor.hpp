@@ -24,7 +24,7 @@
 
 namespace BetterThanNothing
 {
-	class Window;
+	class LegacyWindow;
 	class RenderingDevice;
 	class Panel;
 	class Scene;
@@ -39,10 +39,10 @@ namespace BetterThanNothing
 	class Editor
 	{
 	public:
-		Editor(Window* window, RenderingDevice* renderingDevice);
+		Editor(LegacyWindow* window, RenderingDevice* renderingDevice);
 		~Editor();
 
-		static std::unique_ptr<Editor> Create(Window* window, RenderingDevice* renderingDevice);
+		static std::unique_ptr<Editor> Create(LegacyWindow* window, RenderingDevice* renderingDevice);
 
 		template<typename T>
 		void AddPanel() requires std::derived_from<T, Panel>
@@ -54,7 +54,7 @@ namespace BetterThanNothing
 		void RenderDrawData(const RenderingApi::CommandBuffer* commandBuffer) const;
 
 	private:
-		Window*							 m_window;
+		LegacyWindow*							 m_window;
 		RenderingDevice*				 m_renderingDevice;
 		std::unique_ptr<EditorInternals> m_internals;
 

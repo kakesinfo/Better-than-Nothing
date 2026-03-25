@@ -23,7 +23,7 @@
 
 namespace BetterThanNothing
 {
-	class Window;
+	class LegacyWindow;
 
 	class LegacyWindowManagerError final : public std::runtime_error
 	{
@@ -47,10 +47,10 @@ namespace BetterThanNothing
 		~LegacyWindowManager() = default;
 
 		static void						Initialize(const LegacyWindowManagerParams& params);
-		static std::unique_ptr<Window>& GetWindow();
+		static std::unique_ptr<LegacyWindow>& GetWindow();
 		static void						Shutdown();
 
 	private:
-		static std::unique_ptr<Window> m_window;
+		static std::unique_ptr<LegacyWindow> m_window;
 	};
 };

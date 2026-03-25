@@ -28,7 +28,7 @@
 #include <../../Platform/Public/Platform/LegacyInputManager.hpp>
 #include <../../Platform/Public/Platform/LegacyWindowManager.hpp>
 #include <Core/IEngineApplication.hpp>
-#include <Platform/Window.hpp>
+#include <Platform/LegacyWindow.hpp>
 #include <Renderer/Renderer.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>

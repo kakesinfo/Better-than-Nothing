@@ -23,7 +23,7 @@
 #include "Editor/Panel.hpp"
 #include "RenderingApi/Core/CommandBuffer.hpp"
 
-#include <Platform/Window.hpp>
+#include <Platform/LegacyWindow.hpp>
 #include <RenderingApi/Core/Device.hpp>
 #include <RenderingApi/Core/Instance.hpp>
 #include <RenderingApi/Core/Queue.hpp>
@@ -45,7 +45,7 @@ namespace BetterThanNothing
 		std::vector<VkFormat> formats;
 	};
 
-	Editor::Editor(Window* window, RenderingDevice* renderingDevice) : m_window(window), m_renderingDevice(renderingDevice)
+	Editor::Editor(LegacyWindow* window, RenderingDevice* renderingDevice) : m_window(window), m_renderingDevice(renderingDevice)
 	{
 		m_internals = std::make_unique<EditorInternals>();
 
@@ -123,7 +123,7 @@ namespace BetterThanNothing
 		vkDestroyDescriptorPool(m_renderingDevice->GetDevice()->Handle(), m_internals->imguiPool, nullptr);
 	}
 
-	std::unique_ptr<Editor> Editor::Create(Window* window, RenderingDevice* renderingDevice)
+	std::unique_ptr<Editor> Editor::Create(LegacyWindow* window, RenderingDevice* renderingDevice)
 	{
 		return std::make_unique<Editor>(window, renderingDevice);
 	}

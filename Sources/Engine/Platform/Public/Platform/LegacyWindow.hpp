@@ -27,7 +27,7 @@
 
 namespace BetterThanNothing
 {
-	class Window
+	class LegacyWindow
 	{
 	private:
 		SDL_Window* m_window = nullptr;
@@ -46,8 +46,8 @@ namespace BetterThanNothing
 		std::function<bool(const SDL_Event&)> m_eventCallback;
 
 	public:
-		explicit Window(std::string title, uint32_t width, uint32_t height, bool fullscreen = false, bool resizable = false);
-		~Window();
+		explicit LegacyWindow(std::string title, uint32_t width, uint32_t height, bool fullscreen = false, bool resizable = false);
+		~LegacyWindow();
 
 		[[nodiscard]] SDL_Window* Handle() const;
 
@@ -67,7 +67,7 @@ namespace BetterThanNothing
 		void SetWidth(uint32_t width);
 		void SetHeight(uint32_t height);
 
-		static void ResizeCallback(Window* window, int32_t width, int32_t height);
+		static void ResizeCallback(LegacyWindow* window, int32_t width, int32_t height);
 		static void KeyCallback(int32_t key, EKeyAction action);
 		static void MouseCursorCallback(double xpos, double ypos);
 		static void MouseScrollCallback(double yoffset);

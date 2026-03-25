@@ -17,21 +17,21 @@
  */
 
 #include "../Public/Platform/LegacyWindowManager.hpp"
-#include "Platform/Window.hpp"
+#include "Platform/LegacyWindow.hpp"
 
 namespace BetterThanNothing
 {
-	std::unique_ptr<Window> LegacyWindowManager::m_window = nullptr;
+	std::unique_ptr<LegacyWindow> LegacyWindowManager::m_window = nullptr;
 
 	void LegacyWindowManager::Initialize(const LegacyWindowManagerParams& params)
 	{
 		if (m_window != nullptr)
 			throw LegacyWindowManagerError("LegacyWindowManager is already initialized.");
 
-		m_window = std::make_unique<Window>(params.title, params.width, params.height, params.fullscreen, params.resizable);
+		m_window = std::make_unique<LegacyWindow>(params.title, params.width, params.height, params.fullscreen, params.resizable);
 	}
 
-	std::unique_ptr<Window>& LegacyWindowManager::GetWindow()
+	std::unique_ptr<LegacyWindow>& LegacyWindowManager::GetWindow()
 	{
 		if (m_window == nullptr)
 			throw LegacyWindowManagerError("LegacyWindowManager is not initialized.");

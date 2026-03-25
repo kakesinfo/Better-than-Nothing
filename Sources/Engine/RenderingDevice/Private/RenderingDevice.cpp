@@ -25,7 +25,7 @@
 #include "StagingBuffer.hpp"
 #include <../../Platform/Public/Platform/LegacyWindowManager.hpp>
 #include <Common/Logger.hpp>
-#include <Platform/Window.hpp>
+#include <Platform/LegacyWindow.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
 
