@@ -77,6 +77,44 @@ namespace BetterThanNothing
 		Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
+
+
+		/*
+
+		// Etape 1 : creer des descriptor set (global uniform, light ssbo, texture sampler, etc)
+		// Etape 2 : par render pass, creer des pipeline layout (deffered, light, forward, etc) qui utilise les descriptor set
+		// Etape 3 : pour chaque pipeline layout et type de shader, creer un pipeline
+
+		enum class DescriptorSetLayoutType
+		{
+			Global,
+			Material,
+			Light
+		}
+
+		enum class RenderPassType
+		{
+			OpaqueDeffered,
+			Light,
+			Transparent
+		}
+
+		auto opaqueDefferedLayout = PipelineLayout::Builder()
+			.AddDescriptor(DescriptorSetLayoutType::Global)
+			.AddDescriptor(DescriptorSetLayoutType::Material)
+			.AddPushConstant(sizeof(DynamicUniformData), VK_SHADER_STAGE_VERTEX_BIT)
+			.Build();
+
+		auto lightLayout = PipelineLayout::Builder()
+			.AddDescriptor(DescriptorSetLayoutType::Global)
+			.AddDescriptor(DescriptorSetLayoutType::Light)
+			.Build();
+
+		RegisterPipelineLayout(RenderPassType::OpaqueDeffered, opaqueDefferedLayout);
+		RegisterPipelineLayout(RenderPassType::Light, lightLayout);
+
+		*/
+
 		m_self->stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
 
 		Internal_CreateCommandBuffers();
