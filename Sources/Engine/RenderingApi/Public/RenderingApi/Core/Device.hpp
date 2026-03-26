@@ -85,6 +85,10 @@ namespace BetterThanNothing::RenderingApi
 		VkResult CreateSampler(const VkSamplerCreateInfo& samplerCreateInfo, VkSampler* sampler) const;
 		void	 DestroySampler(VkSampler sampler) const;
 
+		VkResult CreateShaderModule(const VkShaderModuleCreateInfo& createInfo, VkShaderModule* shaderModule) const;
+		void	 DestroyShaderModule(VkShaderModule shaderModule) const;
+
+
 		[[nodiscard]] VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 		[[nodiscard]] bool IsSupportedFormatFeature(VkFormat format, VkFormatFeatureFlags features) const;
 

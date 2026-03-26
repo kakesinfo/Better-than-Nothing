@@ -199,6 +199,16 @@ namespace BetterThanNothing::RenderingApi
 		vkDestroySampler(m_device, sampler, nullptr);
 	}
 
+	VkResult Device::CreateShaderModule(const VkShaderModuleCreateInfo& createInfo, VkShaderModule* shaderModule) const
+	{
+		return vkCreateShaderModule(m_device, &createInfo, nullptr, shaderModule);
+	}
+
+	void Device::DestroyShaderModule(VkShaderModule shaderModule) const
+	{
+		vkDestroyShaderModule(m_device, shaderModule, nullptr);
+	}
+
 	bool Device::CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept
 	{
 		auto deviceExtensions = m_createInfo.deviceExtensions;

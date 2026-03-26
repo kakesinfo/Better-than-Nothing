@@ -88,7 +88,7 @@ namespace BetterThanNothing
 		createInfo.codeSize = glslang_program_SPIRV_get_size(shaderProgram) * sizeof(unsigned int);
 		createInfo.pCode = glslang_program_SPIRV_get_ptr(shaderProgram);
 
-		if (vkCreateShaderModule(device->Handle(), &createInfo, nullptr, &dstShader->module) != VK_SUCCESS)
+		if (device->CreateShaderModule(createInfo, &dstShader->module) != VK_SUCCESS)
 			throw std::runtime_error("failed to create shader module!");
 
 		glslang_program_delete(shaderProgram);
@@ -113,7 +113,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid buffer handle!");
 
 		const RenderingApi::Shader* shader = m_self->shaders.Get(handle);
-		vkDestroyShaderModule(m_self->device->Handle(), shader->module, nullptr);
+		m_self->device->DestroyShaderModule(shader->module);
 		m_self->buffers.Destroy(handle);
 	}
 }
