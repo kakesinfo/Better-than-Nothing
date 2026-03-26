@@ -245,11 +245,6 @@ namespace BetterThanNothing
 		return m_self->graphicsQueue.get();
 	}
 
-	RenderingApi::Allocator* RenderingDevice::GetAllocator() const
-	{
-		return m_self->allocator.get();
-	}
-
 	RenderingApi::SwapChain* RenderingDevice::GetSwapChain() const
 	{
 		return m_self->swapChain.get();

@@ -137,8 +137,6 @@ namespace BetterThanNothing
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Queue* GetGraphicsQueue() const;
 		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Allocator* GetAllocator() const;
-		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::SwapChain* GetSwapChain() const;
 
 		[[nodiscard]] auto GetMaxFramesInFlight() const -> uint32_t;
