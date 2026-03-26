@@ -117,13 +117,8 @@ namespace BetterThanNothing
 		void						 DestroyDescriptorSet(const Handle& handle);
 		RenderingApi::DescriptorSet* GetDescriptorSet(const Handle& handle);
 
-	private:
-		bool Internal_CreateShaderModule();
-		bool Internal_CreateShaderProgram();
-
-	public:
-		[[nodiscard]] Handle		 CreateShader(const ShaderDescription& desc);
-		void						 DestroyShader(const Handle& handle);
+		[[nodiscard]] Handle CreateShader(const ShaderDescription& desc);
+		void				 DestroyShader(const Handle& handle);
 
 	private:
 		void Internal_CreateCommandBuffers();

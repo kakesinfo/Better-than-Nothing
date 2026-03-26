@@ -91,6 +91,8 @@ namespace BetterThanNothing
 		if (device->CreateShaderModule(createInfo, &dstShader->module) != VK_SUCCESS)
 			throw std::runtime_error("failed to create shader module!");
 
+		dstShader->type = desc.type;
+
 		glslang_program_delete(shaderProgram);
 
 		return true;
