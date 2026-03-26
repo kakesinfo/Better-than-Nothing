@@ -29,6 +29,10 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Math
         Engine::Platform
         Engine::RenderingApi
+        glslang
+        glslang-default-resource-limits
+        SPIRV
+        spirv_cross
 )
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")

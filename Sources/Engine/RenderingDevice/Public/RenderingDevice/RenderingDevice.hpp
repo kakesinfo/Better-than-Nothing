@@ -32,6 +32,7 @@
 
 namespace BetterThanNothing
 {
+	struct ShaderDescription;
 	struct RenderingDeviceInternals;
 
 	class Platform;
@@ -61,7 +62,7 @@ namespace BetterThanNothing
 
 	struct RenderingDeviceCreateInfo
 	{
-		Platform* platform;
+		Platform*	   platform;
 		EBufferingMode bufferingMode = EBufferingMode::Double;
 	};
 
@@ -116,6 +117,9 @@ namespace BetterThanNothing
 		void						 DestroyDescriptorSet(const Handle& handle);
 		RenderingApi::DescriptorSet* GetDescriptorSet(const Handle& handle);
 
+		[[nodiscard]] Handle CreateShader(const ShaderDescription& desc);
+		void				 DestroyShader(const Handle& handle);
+
 	private:
 		void Internal_CreateCommandBuffers();
 		void Internal_CreateSyncObjects();
@@ -136,8 +140,6 @@ namespace BetterThanNothing
 		[[nodiscard]] RenderingApi::Device* GetDevice() const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::Queue* GetGraphicsQueue() const;
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::Allocator* GetAllocator() const;
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::SwapChain* GetSwapChain() const;
 

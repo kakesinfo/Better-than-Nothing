@@ -86,22 +86,27 @@ namespace BetterThanNothing
 	{
 		m_self->device->WaitIdle();
 
-		m_self->samplersLUT.clear();
+		for (uint32_t i = 0; i < m_self->shaders.Size(); i++)
+		{
+			m_self->device->DestroyShaderModule(m_self->shaders.Get(i)->module);
+			m_self->shaders.Destroy(i);
+		}
 
-		for (std::uint32_t i = 0; i < m_self->samplers.Size(); i++)
+		m_self->samplersLUT.clear();
+		for (uint32_t i = 0; i < m_self->samplers.Size(); i++)
 		{
 			m_self->device->DestroySampler(m_self->samplers.Get(i)->value);
 			m_self->samplers.Destroy(i);
 		}
 
-		for (std::uint32_t i = 0; i < m_self->buffers.Size(); i++)
+		for (uint32_t i = 0; i < m_self->buffers.Size(); i++)
 		{
 			const auto buffer = m_self->buffers.Get(i);
 			m_self->allocator->DestroyBuffer(buffer->value, buffer->allocation);
 			m_self->buffers.Destroy(i);
 		}
 
-		for (std::uint32_t i = 0; i < m_self->textures.Size(); i++)
+		for (uint32_t i = 0; i < m_self->textures.Size(); i++)
 		{
 			const auto texture = m_self->textures.Get(i);
 			m_self->device->DestroyImageView(texture->defaultView);
@@ -243,11 +248,6 @@ namespace BetterThanNothing
 	RenderingApi::Queue* RenderingDevice::GetGraphicsQueue() const
 	{
 		return m_self->graphicsQueue.get();
-	}
-
-	RenderingApi::Allocator* RenderingDevice::GetAllocator() const
-	{
-		return m_self->allocator.get();
 	}
 
 	RenderingApi::SwapChain* RenderingDevice::GetSwapChain() const

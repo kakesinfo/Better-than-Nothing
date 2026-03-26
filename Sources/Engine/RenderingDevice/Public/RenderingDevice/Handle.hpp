@@ -28,7 +28,8 @@ namespace BetterThanNothing
 		DescriptorSet,
 		Buffer,
 		Texture,
-		Sampler
+		Sampler,
+		Shader
 	};
 
 	class Handle
