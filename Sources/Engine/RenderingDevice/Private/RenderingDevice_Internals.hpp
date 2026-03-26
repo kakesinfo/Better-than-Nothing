@@ -18,17 +18,22 @@
 
 #pragma once
 
-#include <RenderingApi/Core/Instance.hpp>
-#include <RenderingApi/Core/Surface.hpp>
-#include <RenderingApi/Core/Device.hpp>
-#include <RenderingApi/Core/Queue.hpp>
 #include <RenderingApi/Core/Allocator.hpp>
-#include <RenderingApi/Core/CommandPool.hpp>
-#include <RenderingApi/Core/SwapChain.hpp>
-#include <RenderingApi/Core/DescriptorPool.hpp>
 #include <RenderingApi/Core/CommandBuffer.hpp>
-#include <RenderingApi/Core/Semaphore.hpp>
+#include <RenderingApi/Core/CommandPool.hpp>
+#include <RenderingApi/Core/DescriptorPool.hpp>
+#include <RenderingApi/Core/Device.hpp>
 #include <RenderingApi/Core/Fence.hpp>
+#include <RenderingApi/Core/Instance.hpp>
+#include <RenderingApi/Core/Queue.hpp>
+#include <RenderingApi/Core/Semaphore.hpp>
+#include <RenderingApi/Core/Surface.hpp>
+#include <RenderingApi/Core/SwapChain.hpp>
+#include <RenderingApi/Resources/Buffer.hpp>
+#include <RenderingApi/Resources/DescriptorSet.hpp>
+#include <RenderingApi/Resources/Sampler.hpp>
+#include <RenderingApi/Resources/Shader.hpp>
+#include <RenderingApi/Resources/Texture.hpp>
 
 namespace BetterThanNothing
 {
@@ -56,6 +61,7 @@ namespace BetterThanNothing
 		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   textures;
 		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   samplers;
 		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> descriptors;
+		HandleRegistry<RenderingApi::Shader, HandleType::Shader>			   shaders;
 
 		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> samplersLUT;
 		std::vector<DescriptorSetUpdateRequest>															descriptorsUpdateRequests;
