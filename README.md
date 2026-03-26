@@ -13,6 +13,7 @@ Everything is in the title, it is a better-than-nothing Game Engine.
    - Accurate energy conservation
    - Reinhard tone mapping with exposure
    - Gamma correction
+   - MSAA and SSAA multisampling
  - Support for .obj and .gltf model formats.
  - Render hundreds of models and textures.
  - Display real-time metrics using ImGui.
