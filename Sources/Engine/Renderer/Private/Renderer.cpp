@@ -26,8 +26,6 @@
 #include <Data/Graphics/GlobalUniformData.hpp>
 #include <Data/Graphics/VertexData.hpp>
 #include <Editor/Editor.hpp>
-#include <Platform/Manager/WindowManager.hpp>
-#include <Platform/Window.hpp>
 #include <RenderingApi.hpp>
 #include <RenderingApi/Data/VertexInputDescription.hpp>
 #include <RenderingApi/Resources/Buffer.hpp>
