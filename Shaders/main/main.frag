@@ -95,16 +95,12 @@ void main() {
     vec4 textureColor = texture(texSampler, fragTexCoord);
     textureColor.rgb = pow(textureColor.rgb, vec3(gammaCorrection));
 
-    if (textureColor.a < 0.1)
-        discard;
-
     const vec3 norm = normalize(fragNormal);
     const vec3 viewDir = normalize(globalUniforms.cameraPosition - fragPosition);
 
     vec3 resultColor = CalculateDirectionalLight(norm, viewDir);
     for (int i = 0; i < globalUniforms.pointLightsCount; i++)
         resultColor += CalculatePointLight(pointLights.lights[i], norm, viewDir);
-
 
     const vec3 hdrColor = resultColor * textureColor.rgb;
 
