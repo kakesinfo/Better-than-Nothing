@@ -95,7 +95,7 @@ namespace BetterThanNothing::RenderingApi
 		multisampling.rasterizationSamples = m_params.device->GetMaxMsaaSamples();
 		multisampling.sampleShadingEnable = VK_TRUE;
 		multisampling.alphaToCoverageEnable = VK_TRUE;
-		multisampling.minSampleShading = 0.8f; // closer to one is better quality
+		multisampling.minSampleShading = 1.0f; // closer to one is better quality (SSAA), closer to zero is MSAA
 
 		// Fallback: If no color attachment format is defined, we take the one from the Swapchain
 		if (m_params.colorAttachmentFormats.empty())
