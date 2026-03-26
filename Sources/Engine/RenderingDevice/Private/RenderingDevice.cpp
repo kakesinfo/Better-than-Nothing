@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "Common/EDescriptorSetLayoutType.hpp"
 #include "Platform/Platform.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
@@ -72,9 +73,9 @@ namespace BetterThanNothing
 									 .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
 									 .Build();
 
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 		m_self->stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
 
@@ -115,7 +116,7 @@ namespace BetterThanNothing
 		}
 	};
 
-	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	void RenderingDevice::Internal_RegisterDescriptorLayout(const EDescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
 		m_self->descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
 	}
@@ -265,7 +266,7 @@ namespace BetterThanNothing
 		return m_self->swapChain->GetAspectRatio();
 	}
 
-	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
+	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const EDescriptorSetLayoutType key) const
 	{
 		if (!m_self->descriptorLayouts.contains(key))
 			throw std::runtime_error("Cannot find descriptorSetLayout");

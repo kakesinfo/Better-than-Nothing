@@ -56,6 +56,8 @@ namespace BetterThanNothing
 		struct DescriptorSet;
 	}
 
+	enum class EDescriptorSetLayoutType : uint8_t;
+
 	class StagingBuffer;
 	struct BufferDescription;
 	struct TextureFromDataDescription;
@@ -75,7 +77,7 @@ namespace BetterThanNothing
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
 	private:
-		void Internal_RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		void Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	public:
 		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc);
@@ -105,12 +107,12 @@ namespace BetterThanNothing
 		RenderingApi::Texture* GetTexture(const Handle& handle);
 
 	private:
-		bool Internal_CreateDescriptorSet(const DescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const;
+		bool Internal_CreateDescriptorSet(const EDescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const;
 
 	public:
-		[[nodiscard]] Handle CreateDescriptorSet(DescriptorSetLayoutType type);
-		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, DescriptorSetLayoutType layoutType);
-		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, DescriptorSetLayoutType layoutType);
+		[[nodiscard]] Handle CreateDescriptorSet(EDescriptorSetLayoutType type);
+		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, EDescriptorSetLayoutType layoutType);
+		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, EDescriptorSetLayoutType layoutType);
 		[[nodiscard]] Handle		 CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void						 FlushDescriptorSetUpdateRequests();
@@ -148,7 +150,7 @@ namespace BetterThanNothing
 
 		/// @deprecated Will be removed in the future.
 		[[nodiscard]] RenderingApi::DescriptorPool*		 GetDescriptorPool() const;
-		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetLayoutType key) const;
+		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(EDescriptorSetLayoutType key) const;
 
 	private:
 		RenderingDeviceCreateInfo				  m_createInfo;
