@@ -26,6 +26,23 @@ namespace BetterThanNothing::RenderingApi
 {
 	LegacyPipeline::LegacyPipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders): m_params(params)
 	{
+		VkPushConstantRange dynamicPushConstant{};
+		dynamicPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		dynamicPushConstant.offset = 0;
+		dynamicPushConstant.size = sizeof(DynamicUniformData);
+
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(params.descriptorLayouts.size());
+		pipelineLayoutInfo.pSetLayouts = params.descriptorLayouts.data();
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges = &dynamicPushConstant;
+
+		if (vkCreatePipelineLayout(m_params.device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
+			throw std::runtime_error("Failed to create pipeline layout");
+
+		Logger::Log<SUCCESS>("Vulkan pipeline layout: ok");
+
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		for (const ShaderGpuData* shaderGpuData : shaders)
 		{
@@ -126,23 +143,6 @@ namespace BetterThanNothing::RenderingApi
 		depthStencil.stencilTestEnable = VK_FALSE;
 		depthStencil.front = {}; // Optional
 		depthStencil.back = {};	 // Optional
-
-		VkPushConstantRange dynamicPushConstant{};
-		dynamicPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		dynamicPushConstant.offset = 0;
-		dynamicPushConstant.size = sizeof(DynamicUniformData);
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(params.descriptorLayouts.size());
-		pipelineLayoutInfo.pSetLayouts = params.descriptorLayouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pPushConstantRanges = &dynamicPushConstant;
-
-		if (vkCreatePipelineLayout(m_params.device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
-			throw std::runtime_error("Failed to create pipeline layout");
-
-		Logger::Log<SUCCESS>("Vulkan pipeline layout: ok");
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
