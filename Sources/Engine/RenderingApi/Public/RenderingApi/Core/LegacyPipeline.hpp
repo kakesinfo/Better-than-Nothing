@@ -55,11 +55,11 @@ namespace BetterThanNothing::RenderingApi
 		SwapChain* swapChain;
 	};
 
-	class Pipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
+	class LegacyPipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders);
-		~Pipeline();
+		explicit LegacyPipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders);
+		~LegacyPipeline();
 
 		[[nodiscard]] VkPipeline	   Handle() const;
 		[[nodiscard]] VkPipelineLayout GetLayout() const;

@@ -27,7 +27,7 @@ namespace BetterThanNothing
 
 	namespace RenderingApi
 	{
-		class Pipeline;
+		class LegacyPipeline;
 		class PipelineBuilder;
 		class Semaphore;
 	}
@@ -80,7 +80,7 @@ namespace BetterThanNothing
 		Editor*						m_editor = nullptr;
 		std::unique_ptr<DrawStream> m_drawStream;
 
-		std::unique_ptr<RenderingApi::Pipeline> m_defaultPipeline;
+		std::unique_ptr<RenderingApi::LegacyPipeline> m_defaultPipeline;
 		std::vector<Handle>						m_globalUniformBuffer;
 		std::vector<Handle>						m_globalDescriptorSets;
 		std::vector<Handle>						m_pointLightBuffer;
