@@ -18,13 +18,13 @@
 
 #pragma once
 
+#include <concepts>
 #include <memory>
 #include <vector>
-#include <concepts>
 
 namespace BetterThanNothing
 {
-	class Window;
+	class Platform;
 	class RenderingDevice;
 	class Panel;
 	class Scene;
@@ -39,13 +39,14 @@ namespace BetterThanNothing
 	class Editor
 	{
 	public:
-		Editor(Window* window, RenderingDevice* renderingDevice);
+		Editor(Platform* platform, RenderingDevice* renderingDevice);
 		~Editor();
 
-		static std::unique_ptr<Editor> Create(Window* window, RenderingDevice* renderingDevice);
+		static std::unique_ptr<Editor> Create(Platform* platform, RenderingDevice* renderingDevice);
 
-		template<typename T>
-		void AddPanel() requires std::derived_from<T, Panel>
+		template <typename T>
+		void AddPanel()
+			requires std::derived_from<T, Panel>
 		{
 			m_panels.push_back(std::make_unique<T>());
 		}
@@ -54,10 +55,9 @@ namespace BetterThanNothing
 		void RenderDrawData(const RenderingApi::CommandBuffer* commandBuffer) const;
 
 	private:
-		Window*							 m_window;
-		RenderingDevice*				 m_renderingDevice;
-		std::unique_ptr<EditorInternals> m_internals;
-
+		Platform*							m_platform;
+		RenderingDevice*					m_renderingDevice;
+		std::unique_ptr<EditorInternals>	m_internals;
 		std::vector<std::unique_ptr<Panel>> m_panels;
 	};
 }

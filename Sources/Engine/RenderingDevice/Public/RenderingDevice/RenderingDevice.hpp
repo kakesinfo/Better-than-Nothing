@@ -34,6 +34,8 @@ namespace BetterThanNothing
 {
 	struct RenderingDeviceInternals;
 
+	class Platform;
+
 	namespace RenderingApi
 	{
 		class Instance;
@@ -59,6 +61,7 @@ namespace BetterThanNothing
 
 	struct RenderingDeviceCreateInfo
 	{
+		Platform* platform;
 		EBufferingMode bufferingMode = EBufferingMode::Double;
 	};
 

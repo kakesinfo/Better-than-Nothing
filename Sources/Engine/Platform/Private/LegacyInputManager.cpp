@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Platform/Manager/InputManager.hpp"
+#include "Platform/LegacyInputManager.hpp"
 
 #include <Common/EKey.hpp>
 #include <Common/EMouseButton.hpp>
@@ -25,53 +25,53 @@
 
 namespace BetterThanNothing
 {
-	EKeyAction InputManager::m_keys[KEYBOARD_KEY_COUNT] = {};
+	EKeyAction LegacyInputManager::m_keys[KEYBOARD_KEY_COUNT] = {};
 
-	float InputManager::m_mouseX = 0;
-	float InputManager::m_mouseY = 0;
-	float InputManager::m_lastMouseX = 0;
-	float InputManager::m_lastMouseY = 0;
-	float InputManager::m_mouseScroll = 0;
+	float LegacyInputManager::m_mouseX = 0;
+	float LegacyInputManager::m_mouseY = 0;
+	float LegacyInputManager::m_lastMouseX = 0;
+	float LegacyInputManager::m_lastMouseY = 0;
+	float LegacyInputManager::m_mouseScroll = 0;
 
-	EMouseButtonAction InputManager::m_buttons[MOUSE_BUTTON_COUNT] = {};
+	EMouseButtonAction LegacyInputManager::m_buttons[MOUSE_BUTTON_COUNT] = {};
 
-	void InputManager::Initialize()
+	void LegacyInputManager::Initialize()
 	{
 		std::ranges::fill(m_keys, EKeyAction::Released);
 		std::ranges::fill(m_buttons, EMouseButtonAction::Released);
 	}
 
-	void InputManager::UpdateKey(const int key, const EKeyAction action)
+	void LegacyInputManager::UpdateKey(const int key, const EKeyAction action)
 	{
 		m_keys[key] = action;
 	}
 
-	void InputManager::PressKey(const int key)
+	void LegacyInputManager::PressKey(const int key)
 	{
 		m_keys[key] = EKeyAction::Pressed;
 	}
 
-	void InputManager::ReleaseKey(const int key)
+	void LegacyInputManager::ReleaseKey(const int key)
 	{
 		m_keys[key] = EKeyAction::Released;
 	}
 
-	void InputManager::UpdateMouseButton(const int button, const EMouseButtonAction action)
+	void LegacyInputManager::UpdateMouseButton(const int button, const EMouseButtonAction action)
 	{
 		m_buttons[button] = action;
 	}
 
-	void InputManager::PressMouseButton(const int button)
+	void LegacyInputManager::PressMouseButton(const int button)
 	{
 		m_buttons[button] = EMouseButtonAction::Pressed;
 	}
 
-	void InputManager::ReleaseMouseButton(const int button)
+	void LegacyInputManager::ReleaseMouseButton(const int button)
 	{
 		m_buttons[button] = EMouseButtonAction::Released;
 	}
 
-	void InputManager::UpdateMousePosition(const float x, const float y)
+	void LegacyInputManager::UpdateMousePosition(const float x, const float y)
 	{
 		m_lastMouseX = m_mouseX;
 		m_lastMouseY = m_mouseY;
@@ -79,52 +79,52 @@ namespace BetterThanNothing
 		m_mouseY = y;
 	}
 
-	void InputManager::ResetMousePosition()
+	void LegacyInputManager::ResetMousePosition()
 	{
 		m_lastMouseX = m_mouseX;
 		m_lastMouseY = m_mouseY;
 	}
 
-	Vector2 InputManager::GetMousePosition()
+	Vector2 LegacyInputManager::GetMousePosition()
 	{
 		return {m_mouseX, m_mouseY};
 	}
 
-	Vector2 InputManager::GetLastMousePosition()
+	Vector2 LegacyInputManager::GetLastMousePosition()
 	{
 		return {m_lastMouseX, m_lastMouseY};
 	}
 
-	Vector2 InputManager::GetMouseDelta()
+	Vector2 LegacyInputManager::GetMouseDelta()
 	{
 		return GetMousePosition() - GetLastMousePosition();
 	}
 
-	void InputManager::UpdateMouseScroll(const float y)
+	void LegacyInputManager::UpdateMouseScroll(const float y)
 	{
 		m_mouseScroll = y;
 	}
 
-	float InputManager::GetMouseScroll()
+	float LegacyInputManager::GetMouseScroll()
 	{
 		return m_mouseScroll;
 	}
 
-	bool InputManager::IsKeyPressed(EKey key)
+	bool LegacyInputManager::IsKeyPressed(EKey key)
 	{
 		return IsKeyPressed(static_cast<int16_t>(key));
 	}
 
-	bool InputManager::IsKeyPressed(const int16_t key)
+	bool LegacyInputManager::IsKeyPressed(const int16_t key)
 	{
 		return m_keys[key] == EKeyAction::Pressed; // or repeat ?
 	}
 
-	bool InputManager::IsMouseButtonPressed(EMouseButton button)
+	bool LegacyInputManager::IsMouseButtonPressed(EMouseButton button)
 	{
 		return IsMouseButtonPressed(static_cast<int16_t>(button));
 	}
-	bool InputManager::IsMouseButtonPressed(const int16_t button)
+	bool LegacyInputManager::IsMouseButtonPressed(const int16_t button)
 	{
 		return m_buttons[button] == EMouseButtonAction::Pressed; // or repeat ?
 	}

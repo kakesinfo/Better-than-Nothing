@@ -22,11 +22,12 @@
 
 namespace BetterThanNothing
 {
+	class Platform;
+	class RenderingDevice;
 	class ResourceManager;
+	class Editor;
 	class Renderer;
 	class Scene;
-	class Editor;
-	class RenderingDevice;
 
 	class Engine
 	{
@@ -34,18 +35,15 @@ namespace BetterThanNothing
 		explicit Engine(IEngineApplication* application);
 		~Engine() = default;
 
-	private:
-		void OnUpdate(float deltaTime) const;
-
-	public:
 		void Run() const;
 
 	private:
+		std::unique_ptr<Platform>		 m_platform;
 		std::unique_ptr<RenderingDevice> m_renderingDevice;
 		std::unique_ptr<ResourceManager> m_resourceManager;
-		std::unique_ptr<Scene>			 m_defaultScene;
 		std::unique_ptr<Editor>			 m_editor;
 		std::unique_ptr<Renderer>		 m_renderer;
+		std::unique_ptr<Scene>			 m_defaultScene;
 
 		IEngineApplication* m_application;
 	};

@@ -27,7 +27,7 @@ namespace BetterThanNothing
 	enum class EKey : int16_t;
 	enum class EMouseButton : int16_t;
 
-	struct InputManager
+	struct LegacyInputManager
 	{
 	protected:
 		static constexpr int32_t KEYBOARD_KEY_COUNT = 1024;
@@ -44,8 +44,8 @@ namespace BetterThanNothing
 		static EMouseButtonAction m_buttons[MOUSE_BUTTON_COUNT];
 
 	public:
-		explicit InputManager() = default;
-		~InputManager() = default;
+		explicit LegacyInputManager() = default;
+		~LegacyInputManager() = default;
 
 		static void Initialize();
 

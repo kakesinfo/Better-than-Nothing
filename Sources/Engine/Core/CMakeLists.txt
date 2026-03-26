@@ -27,8 +27,6 @@ target_link_libraries(${PROJECT_NAME}
         Engine::RenderingDevice
         Engine::Renderer
         Engine::Editor
-        SDL3::SDL3
-        Vulkan::Vulkan
     PUBLIC
         Engine::Common
         Engine::Data
