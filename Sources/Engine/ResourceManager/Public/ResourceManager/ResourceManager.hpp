@@ -49,6 +49,7 @@ namespace BetterThanNothing
 	enum class EShaderType;
 	class RenderingDevice;
 	class ResourceImporter;
+	class PipelineBuilder;
 
 	class ResourceManager
 	{
@@ -65,12 +66,16 @@ namespace BetterThanNothing
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
 		ResourceId LoadTexture(const std::string& path);
 		ResourceId LoadShader(const std::string& path);
-		ResourceId LoadShader_Legacy(const std::string& path, EShaderType type);
+		ResourceId CreatePipeline(const std::function<void(PipelineBuilder*)>& callback);
 
 		MeshResourceCache*	  GetMeshData(ResourceId id);
 		TextureResourceCache* GetTextureData(ResourceId id);
 		ModelResource*		  GetModel(ResourceId id);
 		ShaderResourceCache*  GetShader(ResourceId id);
+
+		/// @deprecated
+		ResourceId LoadShader_Legacy(const std::string& path, EShaderType type);
+		/// @deprecated
 		ShaderGpuData_Legacy* GetShader_Legacy(ResourceId id);
 
 	private:
