@@ -27,6 +27,7 @@ namespace BetterThanNothing
 		m_textureImporter = std::make_unique<TextureImporter>();
 		m_objImporter = std::make_unique<ObjImporter>();
 		m_gltfImporter = std::make_unique<GltfImporter>();
+		m_shaderImporter = std::make_unique<ShaderImporter>();
 	}
 
 	ResourceImporter::~ResourceImporter() {}
