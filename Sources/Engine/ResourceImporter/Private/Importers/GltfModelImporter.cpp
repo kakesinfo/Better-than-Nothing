@@ -27,10 +27,22 @@
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
 #include <filesystem>
+#include <iostream>
 #include <meshoptimizer.h>
 
 namespace BetterThanNothing
 {
+	static EImportedAlphaMode Internal_RetrieveAlphaMode(const std::string& value)
+	{
+		if (value == "OPAQUE")
+			return EImportedAlphaMode::Opaque;
+		if (value == "MASK")
+			return EImportedAlphaMode::Mask;
+		if (value == "BLEND")
+			return EImportedAlphaMode::Blend;
+		throw std::runtime_error("Unknown Alpha Mode value: " + value);
+	}
+
 	ImportedModel GltfModelImporter::Import(const GltfModelImportInfo& input)
 	{
 		ImportedModel importedModel;
@@ -56,6 +68,9 @@ namespace BetterThanNothing
 		for (const auto& gltfMat : gltfModel.materials)
 		{
 			ImportedMaterial mat{};
+
+			mat.alphaMode = Internal_RetrieveAlphaMode(gltfMat.alphaMode);
+			mat.alphaCutoff = gltfMat.alphaCutoff;
 
 			if (gltfMat.pbrMetallicRoughness.baseColorTexture.index >= 0)
 			{

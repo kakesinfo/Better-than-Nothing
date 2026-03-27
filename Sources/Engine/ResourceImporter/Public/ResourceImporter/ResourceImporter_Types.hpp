@@ -29,6 +29,14 @@ namespace BetterThanNothing
 {
 	using ImportedId = uint32_t;
 
+	enum class EImportedAlphaMode : uint8_t
+	{
+		NONE = 0,
+		Opaque,
+		Mask,
+		Blend
+	};
+
 	struct ImportedTexture
 	{
 		std::string				   name;
@@ -44,6 +52,8 @@ namespace BetterThanNothing
 	struct ImportedMaterial
 	{
 		uint32_t				   id;
+		EImportedAlphaMode		   alphaMode;
+		float					   alphaCutoff;
 		std::optional<std::string> diffuseTexturePath;
 		std::optional<std::string> normalTexturePath;
 	};
