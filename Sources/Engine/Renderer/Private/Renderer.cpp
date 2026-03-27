@@ -54,6 +54,9 @@ namespace BetterThanNothing
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
 
+		resourceManager->LoadShader("../../../Shaders/main/main.vert");
+		resourceManager->LoadShader("../../../Shaders/main/main.frag");
+
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Shaders/");
 			builder->SetName("main");
@@ -473,13 +476,13 @@ namespace BetterThanNothing
 
 		RenderingApi::PipelineCreateInfo params = builder.GetBuildParams();
 
-		std::vector<const ShaderGpuData*> shaderModules;
+		std::vector<const ShaderGpuData_Legacy*> shaderModules;
 		shaderModules.reserve(params.shadersInfos.size());
 
 		for (auto& [shaderPath, shaderType] : params.shadersInfos)
 		{
-			const ResourceId	 shaderId = m_resourceManager->LoadShader(params.path + shaderPath, shaderType);
-			const ShaderGpuData* shaderGpuData = m_resourceManager->GetShader(shaderId);
+			const auto legacyShaderId = m_resourceManager->LoadShader_Legacy(params.path + shaderPath, shaderType);
+			const auto shaderGpuData = m_resourceManager->GetShader_Legacy(legacyShaderId);
 			shaderModules.push_back(shaderGpuData);
 		}
 

@@ -24,7 +24,7 @@
 
 namespace BetterThanNothing
 {
-	struct ShaderGpuData;
+	struct ShaderGpuData_Legacy;
 }
 
 namespace BetterThanNothing::RenderingApi
@@ -58,7 +58,7 @@ namespace BetterThanNothing::RenderingApi
 	class Pipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
 	{
 	public:
-		explicit Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders);
+		explicit Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData_Legacy*>& shaders);
 		~Pipeline();
 
 		[[nodiscard]] VkPipeline	   Handle() const;

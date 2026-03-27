@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <Common/EBufferingMode.hpp>
 #include "RenderingApi/Core/Allocator.hpp"
 #include "RenderingApi/Core/CommandBuffer.hpp"
 #include "RenderingApi/Core/CommandPool.hpp"
@@ -32,6 +31,7 @@
 #include "RenderingApi/Core/ShaderModule.hpp"
 #include "RenderingApi/Core/Surface.hpp"
 #include "RenderingApi/Core/SwapChain.hpp"
-#include "RenderingApi/Data/ShaderGpuData.hpp"
+#include "RenderingApi/Data/ShaderGpuData_Legacy.hpp"
 #include "RenderingApi/Data/VertexInputDescription.hpp"
+#include <Common/EBufferingMode.hpp>
 #include <RenderingApi/Core/DescriptorSetLayout.hpp>

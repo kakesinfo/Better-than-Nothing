@@ -17,11 +17,14 @@
  */
 
 #include "ResourceManager/ResourceManager.hpp"
+
+#include "RenderingDevice/ShaderDescription.hpp"
+
 #include <Common/Logger.hpp>
 #include <Data/Graphics/MeshData.hpp>
 #include <Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Core/ShaderModule.hpp>
-#include <RenderingApi/Data/ShaderGpuData.hpp>
+#include <RenderingApi/Data/ShaderGpuData_Legacy.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <RenderingDevice/SamplerDescription.hpp>
 #include <RenderingDevice/TextureDescription.hpp>
@@ -140,7 +143,6 @@ namespace BetterThanNothing
 		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle);
 
 		const auto textureId = GenerateUniqueResourceId();
-
 		m_textures[textureId] = std::move(gpuData);
 		m_texturesLUT[texturePath] = textureId;
 
@@ -149,17 +151,37 @@ namespace BetterThanNothing
 		return textureId;
 	}
 
-	ResourceId ResourceManager::LoadShader(const std::string& path, EShaderType type)
+	ResourceId ResourceManager::LoadShader(const std::string& path)
 	{
 		if (const auto it = m_shadersLUT.find(path); it != m_shadersLUT.end())
 			return it->second;
 
-		const auto shaderId = GenerateUniqueResourceId();
+		ImportedShader importedShader = m_importer->ImportShader(path);
 
-		m_shaders[shaderId] = m_shaderLoader->Load({type, path});
+		auto gpuData = std::make_unique<ShaderResourceCache>();
+		gpuData->type = importedShader.type;
+		gpuData->module = m_renderingDevice->CreateShader({importedShader.type, importedShader.data.data()});
+
+		const auto shaderId = GenerateUniqueResourceId();
+		m_shaders[shaderId] = std::move(gpuData);
 		m_shadersLUT[path] = shaderId;
 
-		Logger::Log<DEBUG>("ShaderGpuData created and cached for Shader: {}", path);
+		Logger::Log<INFO>("ShaderResourceCache created and cached for Shader: {}", path);
+
+		return shaderId;
+	}
+
+	ResourceId ResourceManager::LoadShader_Legacy(const std::string& path, EShaderType type)
+	{
+		if (const auto it = m_shadersLegacyLUT.find(path); it != m_shadersLegacyLUT.end())
+			return it->second;
+
+		const auto shaderId = GenerateUniqueResourceId();
+
+		m_shadersLegacy[shaderId] = m_shaderLoader->Load({type, path});
+		m_shadersLegacyLUT[path] = shaderId;
+
+		Logger::Log<INFO>("ShaderGpuData created and cached for Shader: {}", path);
 
 		return shaderId;
 	}
@@ -167,32 +189,36 @@ namespace BetterThanNothing
 	MeshResourceCache* ResourceManager::GetMeshData(ResourceId id)
 	{
 		if (!m_meshes.contains(id))
-			return nullptr;
-
+			throw std::runtime_error("No MeshResourceCache for ResourceId: " + std::to_string(id));
 		return m_meshes[id].get();
 	}
 
 	TextureResourceCache* ResourceManager::GetTextureData(const ResourceId id)
 	{
 		if (!m_textures.contains(id))
-			return nullptr;
-
+			throw std::runtime_error("No TextureResourceCache for ResourceId: " + std::to_string(id));
 		return m_textures[id].get();
 	}
 
 	ModelResource* ResourceManager::GetModel(const ResourceId id)
 	{
 		if (!m_models.contains(id))
-			return nullptr;
-
+			throw std::runtime_error("No ModelResource for ResourceId: " + std::to_string(id));
 		return &m_models[id];
 	}
 
-	ShaderGpuData* ResourceManager::GetShader(const ResourceId id)
+	ShaderResourceCache* ResourceManager::GetShader(ResourceId id)
 	{
 		if (!m_shaders.contains(id))
+			throw std::runtime_error("No ShaderResourceCache for ResourceId: " + std::to_string(id));
+		return m_shaders[id].get();
+	}
+
+	ShaderGpuData_Legacy* ResourceManager::GetShader_Legacy(const ResourceId id)
+	{
+		if (!m_shadersLegacy.contains(id))
 			return nullptr;
 
-		return m_shaders[id].get();
+		return m_shadersLegacy[id].get();
 	}
 }

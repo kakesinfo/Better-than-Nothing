@@ -22,7 +22,7 @@ namespace BetterThanNothing
 {
 	class RenderingDevice;
 
-	struct ShaderGpuData;
+	struct ShaderGpuData_Legacy;
 	class ShaderModule;
 	enum class EShaderType;
 
@@ -50,7 +50,7 @@ namespace BetterThanNothing
 		std::unique_ptr<RenderingApi::ShaderModule> GetShaderModule(glslang_program_t* program) const;
 
 	public:
-		std::unique_ptr<ShaderGpuData> Load(const ShaderData& input) const;
+		std::unique_ptr<ShaderGpuData_Legacy> Load(const ShaderData& input) const;
 
 	private:
 		RenderingDevice* m_renderingDevice = nullptr;
