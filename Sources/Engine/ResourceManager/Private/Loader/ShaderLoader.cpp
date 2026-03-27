@@ -37,9 +37,9 @@ namespace BetterThanNothing
 		glslang_finalize_process();
 	}
 
-	std::unique_ptr<ShaderGpuData> ShaderLoader::Load(const ShaderData& input) const
+	std::unique_ptr<ShaderGpuData_Legacy> ShaderLoader::Load(const ShaderData& input) const
 	{
-		auto shaderGpuData = std::make_unique<ShaderGpuData>();
+		auto shaderGpuData = std::make_unique<ShaderGpuData_Legacy>();
 
 		const std::vector<char> shaderSource = ReadFile(input.filePath);
 		const glslang_stage_t	shaderStage = GetShaderStage(input.type);

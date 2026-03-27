@@ -42,7 +42,7 @@ namespace BetterThanNothing
 	struct MeshResourceCache;
 	struct TextureResourceCache;
 
-	struct ShaderGpuData;
+	struct ShaderGpuData_Legacy;
 	class TextureLoader;
 	class ShaderLoader;
 	enum class EShaderType;
@@ -63,20 +63,20 @@ namespace BetterThanNothing
 	public:
 		ResourceId LoadTexture(const std::string& path);
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
-		ResourceId LoadShader(const std::string& path, EShaderType type);
+		ResourceId LoadShader_Legacy(const std::string& path, EShaderType type);
 
 		MeshResourceCache*	  GetMeshData(ResourceId id);
 		TextureResourceCache* GetTextureData(ResourceId id);
 		ModelResource*		  GetModel(ResourceId id);
-		ShaderGpuData*		  GetShader(ResourceId id);
+		ShaderGpuData_Legacy* GetShader_Legacy(ResourceId id);
 
 	private:
 		RenderingDevice*													  m_renderingDevice;
 		std::unique_ptr<ShaderLoader>										  m_shaderLoader;
-		std::unique_ptr<ResourceImporter> 									  m_importer;
+		std::unique_ptr<ResourceImporter>									  m_importer;
 		std::unordered_map<ResourceId, std::unique_ptr<MeshResourceCache>>	  m_meshes;
 		std::unordered_map<ResourceId, std::unique_ptr<TextureResourceCache>> m_textures;
-		std::unordered_map<ResourceId, std::unique_ptr<ShaderGpuData>>		  m_shaders;
+		std::unordered_map<ResourceId, std::unique_ptr<ShaderGpuData_Legacy>> m_shadersLegacy;
 		std::unordered_map<ResourceId, ModelResource>						  m_models;
 		std::unordered_map<std::string, ResourceId>							  m_texturesLUT;
 		std::unordered_map<std::string, ResourceId>							  m_modelsLUT;

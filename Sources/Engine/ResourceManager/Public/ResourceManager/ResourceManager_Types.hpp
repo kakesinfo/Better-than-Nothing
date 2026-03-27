@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <memory>
 #include <RenderingDevice/Handle.hpp>
+#include <memory>
 
 namespace BetterThanNothing
 {
@@ -33,12 +33,18 @@ namespace BetterThanNothing
 
 	struct TextureResourceCache
 	{
-		int32_t								 width{};
-		int32_t								 height{};
-		int32_t								 channels{};
-		int32_t								 size{};
-		Handle								 textureHandle;
-		Handle								 samplerHandle;
-		Handle								 descriptorSetHandle;
+		int32_t width{};
+		int32_t height{};
+		int32_t channels{};
+		int32_t size{};
+		Handle	textureHandle;
+		Handle	samplerHandle;
+		Handle	descriptorSetHandle;
+	};
+
+	struct ShaderResourceCache
+	{
+		EShaderType type;
+		Handle		module;
 	};
 }

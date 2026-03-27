@@ -473,13 +473,13 @@ namespace BetterThanNothing
 
 		RenderingApi::PipelineCreateInfo params = builder.GetBuildParams();
 
-		std::vector<const ShaderGpuData*> shaderModules;
+		std::vector<const ShaderGpuData_Legacy*> shaderModules;
 		shaderModules.reserve(params.shadersInfos.size());
 
 		for (auto& [shaderPath, shaderType] : params.shadersInfos)
 		{
-			const ResourceId	 shaderId = m_resourceManager->LoadShader(params.path + shaderPath, shaderType);
-			const ShaderGpuData* shaderGpuData = m_resourceManager->GetShader(shaderId);
+			const ResourceId	 shaderId = m_resourceManager->LoadShader_Legacy(params.path + shaderPath, shaderType);
+			const ShaderGpuData_Legacy* shaderGpuData = m_resourceManager->GetShader_Legacy(shaderId);
 			shaderModules.push_back(shaderGpuData);
 		}
 

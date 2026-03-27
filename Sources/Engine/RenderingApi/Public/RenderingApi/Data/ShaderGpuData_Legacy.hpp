@@ -30,7 +30,7 @@ namespace BetterThanNothing
 		class ShaderModule;
 	}
 
-	struct ShaderGpuData
+	struct ShaderGpuData_Legacy
 	{
 		EShaderType									type{};
 		std::unique_ptr<RenderingApi::ShaderModule> shaderModule = VK_NULL_HANDLE;

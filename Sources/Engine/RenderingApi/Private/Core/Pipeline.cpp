@@ -24,7 +24,7 @@
 
 namespace BetterThanNothing::RenderingApi
 {
-	Pipeline::Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders): m_params(params)
+	Pipeline::Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData_Legacy*>& shaders): m_params(params)
 	{
 		VkPushConstantRange dynamicPushConstant{};
 		dynamicPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -44,7 +44,7 @@ namespace BetterThanNothing::RenderingApi
 		Logger::Log<SUCCESS>("Vulkan pipeline layout: ok");
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		for (const ShaderGpuData* shaderGpuData : shaders)
+		for (const ShaderGpuData_Legacy* shaderGpuData : shaders)
 		{
 			VkShaderStageFlagBits shaderStageType = GetShaderStageTypeByShaderType(shaderGpuData->type);
 

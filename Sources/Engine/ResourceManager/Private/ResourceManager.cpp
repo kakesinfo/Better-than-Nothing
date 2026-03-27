@@ -21,7 +21,7 @@
 #include <Data/Graphics/MeshData.hpp>
 #include <Data/Graphics/VertexData.hpp>
 #include <RenderingApi/Core/ShaderModule.hpp>
-#include <RenderingApi/Data/ShaderGpuData.hpp>
+#include <RenderingApi/Data/ShaderGpuData_Legacy.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <RenderingDevice/SamplerDescription.hpp>
 #include <RenderingDevice/TextureDescription.hpp>
@@ -149,14 +149,14 @@ namespace BetterThanNothing
 		return textureId;
 	}
 
-	ResourceId ResourceManager::LoadShader(const std::string& path, EShaderType type)
+	ResourceId ResourceManager::LoadShader_Legacy(const std::string& path, EShaderType type)
 	{
 		if (const auto it = m_shadersLUT.find(path); it != m_shadersLUT.end())
 			return it->second;
 
 		const auto shaderId = GenerateUniqueResourceId();
 
-		m_shaders[shaderId] = m_shaderLoader->Load({type, path});
+		m_shadersLegacy[shaderId] = m_shaderLoader->Load({type, path});
 		m_shadersLUT[path] = shaderId;
 
 		Logger::Log<DEBUG>("ShaderGpuData created and cached for Shader: {}", path);
@@ -188,11 +188,11 @@ namespace BetterThanNothing
 		return &m_models[id];
 	}
 
-	ShaderGpuData* ResourceManager::GetShader(const ResourceId id)
+	ShaderGpuData_Legacy* ResourceManager::GetShader_Legacy(const ResourceId id)
 	{
-		if (!m_shaders.contains(id))
+		if (!m_shadersLegacy.contains(id))
 			return nullptr;
 
-		return m_shaders[id].get();
+		return m_shadersLegacy[id].get();
 	}
 }
