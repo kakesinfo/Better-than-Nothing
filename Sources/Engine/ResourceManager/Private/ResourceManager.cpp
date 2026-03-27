@@ -166,7 +166,7 @@ namespace BetterThanNothing
 		m_shaders[shaderId] = std::move(gpuData);
 		m_shadersLUT[path] = shaderId;
 
-		Logger::Log<DEBUG>("ShaderResourceCache created and cached for Shader: {}", path);
+		Logger::Log<INFO>("ShaderResourceCache created and cached for Shader: {}", path);
 
 		return shaderId;
 	}
@@ -181,7 +181,7 @@ namespace BetterThanNothing
 		m_shadersLegacy[shaderId] = m_shaderLoader->Load({type, path});
 		m_shadersLegacyLUT[path] = shaderId;
 
-		Logger::Log<DEBUG>("ShaderGpuData created and cached for Shader: {}", path);
+		Logger::Log<INFO>("ShaderGpuData created and cached for Shader: {}", path);
 
 		return shaderId;
 	}
