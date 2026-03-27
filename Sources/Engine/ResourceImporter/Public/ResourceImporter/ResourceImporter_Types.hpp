@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "Common/EShaderType.hpp"
+
 #include <Data/Graphics/VertexData.hpp>
 #include <Math/Matrix4.hpp>
 #include <cstdint>
@@ -40,6 +42,7 @@ namespace BetterThanNothing
 	struct ImportedShader
 	{
 		std::string		  path;
+		EShaderType		  type;
 		std::vector<char> data;
 	};
 

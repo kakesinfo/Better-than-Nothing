@@ -23,6 +23,15 @@
 
 namespace BetterThanNothing
 {
+	static EShaderType Internal_GetShaderType(const std::string& path)
+	{
+		if (path.contains(".vert"))
+			return EShaderType::Vertex;
+		if (path.contains(".frag"))
+			return EShaderType::Fragment;
+		throw std::runtime_error("Unknown shader type for: " + path);
+	}
+
 	ImportedShader ShaderImporter::Import(const std::string& input)
 	{
 
@@ -39,7 +48,9 @@ namespace BetterThanNothing
 
 		ImportedShader importedShader;
 		importedShader.path = input;
+		importedShader.type = Internal_GetShaderType(input);
 		importedShader.data.resize(fileSize + 1);
+
 		if (fileSize > 0)
 		{
 			file.seekg(0, std::ios::beg);
