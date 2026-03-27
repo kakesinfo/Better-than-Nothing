@@ -48,4 +48,5 @@ namespace BetterThanNothing
 	DECLARE_IMPORTER(ObjImporter, ModelImportInfo, ImportedModel);
 	DECLARE_IMPORTER(GltfImporter, ModelImportInfo, ImportedModel);
 	DECLARE_IMPORTER(TextureImporter, std::string, ImportedTexture);
+	DECLARE_IMPORTER(ShaderImporter, std::string, ImportedShader);
 }
