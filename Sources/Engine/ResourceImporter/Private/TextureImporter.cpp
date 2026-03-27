@@ -18,7 +18,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 
-#include "TextureImporter.hpp"
+#include <ResourceImporter/Importer.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
 #include <sstream>
