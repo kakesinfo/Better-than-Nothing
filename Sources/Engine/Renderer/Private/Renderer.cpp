@@ -59,7 +59,6 @@ namespace BetterThanNothing
 		resourceManager->LoadShader("../../../Shaders/main/main.frag");
 		std::cout << "Shaders loaded!" << std::endl;
 
-
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Shaders/");
 			builder->SetName("main");
@@ -484,8 +483,8 @@ namespace BetterThanNothing
 
 		for (auto& [shaderPath, shaderType] : params.shadersInfos)
 		{
-			const ResourceId	 shaderId = m_resourceManager->LoadShader_Legacy(params.path + shaderPath, shaderType);
-			const ShaderGpuData_Legacy* shaderGpuData = m_resourceManager->GetShader_Legacy(shaderId);
+			const auto legacyShaderId = m_resourceManager->LoadShader_Legacy(params.path + shaderPath, shaderType);
+			const auto shaderGpuData = m_resourceManager->GetShader_Legacy(legacyShaderId);
 			shaderModules.push_back(shaderGpuData);
 		}
 
