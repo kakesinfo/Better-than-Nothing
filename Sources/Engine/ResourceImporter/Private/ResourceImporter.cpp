@@ -27,6 +27,7 @@ namespace BetterThanNothing
 		m_textureImporter = std::make_unique<TextureImporter>();
 		m_objImporter = std::make_unique<ObjImporter>();
 		m_gltfImporter = std::make_unique<GltfImporter>();
+		m_shaderImporter = std::make_unique<ShaderImporter>();
 	}
 
 	ResourceImporter::~ResourceImporter() {}
@@ -45,5 +46,10 @@ namespace BetterThanNothing
 			return m_gltfImporter->Import({path, preTransform});
 
 		throw std::runtime_error("Unsupported file type");
+	}
+
+	ImportedShader ResourceImporter::ImportShader(const std::string& path) const
+	{
+		return m_shaderImporter->Import(path);
 	}
 }
