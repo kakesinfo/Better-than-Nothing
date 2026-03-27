@@ -54,10 +54,8 @@ namespace BetterThanNothing
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
 
-		std::cout << "Loading shaders..." << std::endl;
 		resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		resourceManager->LoadShader("../../../Shaders/main/main.frag");
-		std::cout << "Shaders loaded!" << std::endl;
 
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Shaders/");
