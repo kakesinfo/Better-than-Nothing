@@ -46,4 +46,9 @@ namespace BetterThanNothing
 
 		throw std::runtime_error("Unsupported file type");
 	}
+
+	ImportedShader ResourceImporter::ImportShader(const std::string& path) const
+	{
+		return m_shaderImporter->Import(path);
+	}
 }
