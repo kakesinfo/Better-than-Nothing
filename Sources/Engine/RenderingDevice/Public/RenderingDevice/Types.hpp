@@ -22,13 +22,6 @@
 
 namespace BetterThanNothing
 {
-	enum class DescriptorSetLayoutType : uint8_t
-	{
-		GlobalUniforms = 0,
-		Textures = 1,
-		PointLights = 2
-	};
-
 	enum class TextureFormat : uint8_t
 	{
 		Undefined = 0,

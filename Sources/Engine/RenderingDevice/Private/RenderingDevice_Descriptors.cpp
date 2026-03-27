@@ -16,6 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "Common/EDescriptorSetLayoutType.hpp"
 #include "Data/Graphics/GlobalUniformData.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
@@ -25,12 +26,13 @@
 #include "RenderingDevice/Handle.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingDevice_Internals.hpp"
+
 #include <Common/Logger.hpp>
 #include <RenderingApi.hpp>
 
 namespace BetterThanNothing
 {
-	bool RenderingDevice::Internal_CreateDescriptorSet(const DescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const
+	bool RenderingDevice::Internal_CreateDescriptorSet(const EDescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const
 	{
 		const auto layout = GetDescriptorSetLayout(type)->Handle();
 
@@ -43,7 +45,7 @@ namespace BetterThanNothing
 		return vkAllocateDescriptorSets(m_self->device->Handle(), &allocInfo, &newDescriptorSet->value) == VK_SUCCESS;
 	}
 
-	Handle RenderingDevice::CreateDescriptorSet(DescriptorSetLayoutType layoutType)
+	Handle RenderingDevice::CreateDescriptorSet(EDescriptorSetLayoutType layoutType)
 	{
 		const Handle handle = m_self->descriptors.Allocate();
 
@@ -58,7 +60,7 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle)
 	{
-		const Handle handle = CreateDescriptorSet(DescriptorSetLayoutType::Textures);
+		const Handle handle = CreateDescriptorSet(EDescriptorSetLayoutType::Textures);
 
 		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
 		const RenderingApi::Texture*	   texture = GetTexture(textureHandle);
@@ -85,7 +87,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const DescriptorSetLayoutType layoutType)
+	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const EDescriptorSetLayoutType layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
 
@@ -113,7 +115,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle RenderingDevice::CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const DescriptorSetLayoutType layoutType)
+	Handle RenderingDevice::CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const EDescriptorSetLayoutType layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
 

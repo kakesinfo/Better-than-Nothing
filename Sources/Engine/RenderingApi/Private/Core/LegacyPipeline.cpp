@@ -24,7 +24,7 @@
 
 namespace BetterThanNothing::RenderingApi
 {
-	Pipeline::Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders): m_params(params)
+	LegacyPipeline::LegacyPipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders): m_params(params)
 	{
 		VkPushConstantRange dynamicPushConstant{};
 		dynamicPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -167,7 +167,7 @@ namespace BetterThanNothing::RenderingApi
 		Logger::Log<SUCCESS>("Vulkan graphics pipeline: ok");
 	}
 
-	Pipeline::~Pipeline()
+	LegacyPipeline::~LegacyPipeline()
 	{
 		if (m_pipelineLayout != VK_NULL_HANDLE)
 			vkDestroyPipelineLayout(m_params.device->Handle(), m_pipelineLayout, nullptr);
@@ -176,17 +176,17 @@ namespace BetterThanNothing::RenderingApi
 			vkDestroyPipeline(m_params.device->Handle(), m_pipeline, nullptr);
 	}
 
-	VkPipeline Pipeline::Handle() const
+	VkPipeline LegacyPipeline::Handle() const
 	{
 		return m_pipeline;
 	}
 
-	VkPipelineLayout Pipeline::GetLayout() const
+	VkPipelineLayout LegacyPipeline::GetLayout() const
 	{
 		return m_pipelineLayout;
 	}
 
-	VkShaderStageFlagBits Pipeline::GetShaderStageTypeByShaderType(const EShaderType type)
+	VkShaderStageFlagBits LegacyPipeline::GetShaderStageTypeByShaderType(const EShaderType type)
 	{
 		switch (type)
 		{

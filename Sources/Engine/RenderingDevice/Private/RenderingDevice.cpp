@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "Common/EDescriptorSetLayoutType.hpp"
 #include "Platform/Platform.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
@@ -72,9 +73,47 @@ namespace BetterThanNothing
 									 .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
 									 .Build();
 
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		Internal_RegisterDescriptorLayout(EDescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+
+
+		/*
+
+		// Etape 1 : creer des descriptor set (global uniform, light ssbo, texture sampler, etc)
+		// Etape 2 : par render pass, creer des pipeline layout (deffered, light, forward, etc) qui utilise les descriptor set
+		// Etape 3 : pour chaque pipeline layout et type de shader, creer un pipeline
+
+		enum class DescriptorSetLayoutType
+		{
+			Global,
+			Material,
+			Light
+		}
+
+		enum class RenderPassType
+		{
+			OpaqueDeffered,
+			Light,
+			Transparent
+		}
+
+		auto opaqueDefferedLayout = PipelineLayout::Builder()
+			.AddDescriptor(DescriptorSetLayoutType::Global)
+			.AddDescriptor(DescriptorSetLayoutType::Material)
+			.AddPushConstant(sizeof(DynamicUniformData), VK_SHADER_STAGE_VERTEX_BIT)
+			.Build();
+
+		auto lightLayout = PipelineLayout::Builder()
+			.AddDescriptor(DescriptorSetLayoutType::Global)
+			.AddDescriptor(DescriptorSetLayoutType::Light)
+			.Build();
+
+		RegisterPipelineLayout(RenderPassType::OpaqueDeffered, opaqueDefferedLayout);
+		RegisterPipelineLayout(RenderPassType::Light, lightLayout);
+
+		*/
 
 		m_self->stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
 
@@ -115,7 +154,7 @@ namespace BetterThanNothing
 		}
 	};
 
-	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	void RenderingDevice::Internal_RegisterDescriptorLayout(const EDescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
 	{
 		m_self->descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
 	}
@@ -265,7 +304,7 @@ namespace BetterThanNothing
 		return m_self->swapChain->GetAspectRatio();
 	}
 
-	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
+	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const EDescriptorSetLayoutType key) const
 	{
 		if (!m_self->descriptorLayouts.contains(key))
 			throw std::runtime_error("Cannot find descriptorSetLayout");

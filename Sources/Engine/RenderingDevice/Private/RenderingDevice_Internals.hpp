@@ -53,7 +53,7 @@ namespace BetterThanNothing
 		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  imageAvailableSemaphores;
 		std::vector<std::unique_ptr<RenderingApi::Fence>>		  inFlightFences;
 
-		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts;
+		std::unordered_map<EDescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts;
 
 		std::unique_ptr<StagingBuffer> stagingBuffer;
 

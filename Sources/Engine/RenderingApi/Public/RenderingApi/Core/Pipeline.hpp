@@ -18,84 +18,33 @@
 
 #pragma once
 
-#include "RenderingApi/Data/VertexInputDescription.hpp"
-#include <Common/EShaderType.hpp>
 #include <vulkan/vulkan.h>
-
-namespace BetterThanNothing
-{
-	struct ShaderGpuData;
-}
 
 namespace BetterThanNothing::RenderingApi
 {
-	class DescriptorSetLayout;
-	class SwapChain;
-
-	struct PipelineShaderInfo
-	{
-		std::string shaderPath;
-		EShaderType shaderType;
-	};
+	class PipelineLayout;
 
 	struct PipelineCreateInfo
 	{
-		const char*						   path;
-		const char*						   name;
-		std::vector<VkDescriptorSetLayout> descriptorLayouts;
-		std::vector<PipelineShaderInfo>	   shadersInfos;
-
-		std::vector<VkFormat> colorAttachmentFormats;
-		VkFormat			  depthAttachmentFormat = VK_FORMAT_UNDEFINED;
-		VkFormat			  stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
-
-		VertexInputDescription vertexInputDescription;
-
-		Device*	   device;
-		SwapChain* swapChain;
+		PipelineLayout* layout;
 	};
 
-	class Pipeline // TODO: Refactor pipelines to enable building Compute and RayTracing pipelines
+	class Pipeline
 	{
 	public:
-		explicit Pipeline(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData*>& shaders);
+		explicit Pipeline(const PipelineCreateInfo& createInfo);
 		~Pipeline();
 
-		[[nodiscard]] VkPipeline	   Handle() const;
-		[[nodiscard]] VkPipelineLayout GetLayout() const;
+		Pipeline(const Pipeline&) = delete;
+		Pipeline& operator=(const Pipeline&) = delete;
+		Pipeline(Pipeline&& other) = delete;
+		Pipeline& operator=(Pipeline&& other) = delete;
+
+		static std::unique_ptr<Pipeline> Create(const PipelineCreateInfo& createInfo);
+
+		[[nodiscard]] VkPipeline Handle() const;
 
 	private:
-		static VkShaderStageFlagBits GetShaderStageTypeByShaderType(EShaderType type);
-
-		PipelineCreateInfo m_params;
-
-		VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
-		VkPipeline		 m_pipeline = VK_NULL_HANDLE;
+		VkPipeline m_pipeline = VK_NULL_HANDLE;
 	};
-
-	class PipelineBuilder final
-	{
-	public:
-		explicit PipelineBuilder() = default;
-		~PipelineBuilder() = default;
-
-		PipelineBuilder& SetPath(const char* path);
-		PipelineBuilder& SetName(const char* name);
-		PipelineBuilder& AddShader(const std::string& shaderPath, EShaderType shaderType);
-		PipelineBuilder& AddVertexShader(const std::string& shaderPath);
-		PipelineBuilder& AddFragmentShader(const std::string& shaderPath);
-		PipelineBuilder& AddDescriptorSetLayout(const VkDescriptorSetLayout& layout);
-
-		PipelineBuilder& AddColorAttachment(VkFormat format);
-		PipelineBuilder& SetDepthAttachment(VkFormat format);
-		PipelineBuilder& SetStencilAttachment(VkFormat format);
-
-		[[nodiscard]] PipelineCreateInfo& GetBuildParams();
-
-	private:
-		PipelineCreateInfo m_params = {};
-
-		bool m_hasVertexShader = false;
-		bool m_hasFragmentShader = false;
-	};
-}; // BetterThanNothing
+}

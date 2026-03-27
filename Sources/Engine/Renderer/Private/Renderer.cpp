@@ -38,9 +38,8 @@
 #include <Scene/Scene.hpp>
 #include <Scene/SceneObject.hpp>
 #include <Scene/SceneObject_Components.hpp>
+#include <Common/EDescriptorSetLayoutType.hpp>
 #include <optional>
-
-#include <iostream>
 
 namespace BetterThanNothing
 {
@@ -59,9 +58,9 @@ namespace BetterThanNothing
 			builder->SetName("main");
 			builder->AddVertexShader("main/main.vert");
 			builder->AddFragmentShader("main/main.frag");
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms)->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::Textures)->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorSetLayoutType::GlobalUniforms)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorSetLayoutType::Textures)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(EDescriptorSetLayoutType::PointLights)->Handle());
 		});
 
 		m_drawStream = std::make_unique<DrawStream>();
@@ -217,7 +216,7 @@ namespace BetterThanNothing
 		{
 			const auto	   handle = m_globalUniformBuffer.at(i);
 			constexpr auto size = sizeof(GlobalUniformData);
-			constexpr auto layout = DescriptorSetLayoutType::GlobalUniforms;
+			constexpr auto layout = EDescriptorSetLayoutType::GlobalUniforms;
 
 			m_globalDescriptorSets[i] = m_renderingDevice->CreateUniformBufferDescriptorSet(handle, size, layout);
 		}
@@ -253,7 +252,7 @@ namespace BetterThanNothing
 		{
 			const auto	   handle = m_pointLightBuffer.at(i);
 			constexpr auto size = MAX_LIGHT_COUNT * sizeof(PointLightData);
-			constexpr auto layout = DescriptorSetLayoutType::PointLights;
+			constexpr auto layout = EDescriptorSetLayoutType::PointLights;
 
 			m_pointLightDescriptorSets[i] = m_renderingDevice->CreateStorageBufferDescriptorSet(handle, size, layout);
 		}
@@ -490,7 +489,7 @@ namespace BetterThanNothing
 		params.device = m_renderingDevice->GetDevice();
 		params.swapChain = m_renderingDevice->GetSwapChain();
 
-		m_defaultPipeline = std::make_unique<RenderingApi::Pipeline>(params, shaderModules);
+		m_defaultPipeline = std::make_unique<RenderingApi::LegacyPipeline>(params, shaderModules);
 	}
 
 	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()
