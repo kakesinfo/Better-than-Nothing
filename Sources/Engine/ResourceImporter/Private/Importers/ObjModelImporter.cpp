@@ -23,6 +23,7 @@
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
 #include <filesystem>
+#include <iostream>
 #include <meshoptimizer.h>
 #include <tiny_obj_loader.h>
 
@@ -31,6 +32,8 @@ namespace BetterThanNothing
 	static std::optional<ImportedMaterial> ImportMaterial(const std::filesystem::path& parentFolder, const tinyobj::shape_t& shape, const std::vector<tinyobj::material_t>& materials)
 	{
 		ImportedMaterial importedMaterial;
+		importedMaterial.alphaMode = EImportedAlphaMode::Opaque;
+		importedMaterial.alphaCutoff = 0.0f;
 
 		if (shape.mesh.material_ids.empty())
 			return std::nullopt;
