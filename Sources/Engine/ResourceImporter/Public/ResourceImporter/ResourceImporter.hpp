@@ -25,8 +25,8 @@
 namespace BetterThanNothing
 {
 	class TextureImporter;
-	class ObjModelImporter;
-	class GltfModelImporter;
+	class ObjImporter;
+	class GltfImporter;
 
 	class ResourceImporter
 	{
@@ -39,7 +39,7 @@ namespace BetterThanNothing
 
 	private:
 		std::unique_ptr<TextureImporter> m_textureImporter;
-		std::unique_ptr<ObjModelImporter> m_objImporter;
-		std::unique_ptr<GltfModelImporter> m_gltfImporter;
+		std::unique_ptr<ObjImporter> m_objImporter;
+		std::unique_ptr<GltfImporter> m_gltfImporter;
 	};
 }

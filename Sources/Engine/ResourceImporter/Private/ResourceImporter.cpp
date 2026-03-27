@@ -16,9 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Importers/GltfModelImporter.hpp"
-#include "Importers/ObjModelImporter.hpp"
-#include "Importers/TextureImporter.hpp"
+#include <ResourceImporter/Importer.hpp>
 #include <ResourceImporter/ResourceImporter.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 
@@ -27,8 +25,8 @@ namespace BetterThanNothing
 	ResourceImporter::ResourceImporter()
 	{
 		m_textureImporter = std::make_unique<TextureImporter>();
-		m_objImporter = std::make_unique<ObjModelImporter>();
-		m_gltfImporter = std::make_unique<GltfModelImporter>();
+		m_objImporter = std::make_unique<ObjImporter>();
+		m_gltfImporter = std::make_unique<GltfImporter>();
 	}
 
 	ResourceImporter::~ResourceImporter() {}

@@ -18,6 +18,17 @@
 
 #pragma once
 
+#include <ResourceImporter/ResourceImporter_Types.hpp>
+
+#define DECLARE_IMPORTER(name, inputType, outputType) \
+	class name final : public Importer<inputType, outputType> \
+	{ \
+		public: \
+		name() = default; \
+		~name() override = default; \
+		outputType Import(const inputType& input) override; \
+	}
+
 namespace BetterThanNothing
 {
 	template <typename InputType, typename OutputType>
@@ -27,4 +38,14 @@ namespace BetterThanNothing
 		virtual ~Importer() = default;
 		virtual OutputType Import(const InputType& input) = 0;
 	};
+
+	struct ModelImportInfo
+	{
+		std::string path;
+		bool		preTransform = true;
+	};
+
+	DECLARE_IMPORTER(ObjImporter, ModelImportInfo, ImportedModel);
+	DECLARE_IMPORTER(GltfImporter, ModelImportInfo, ImportedModel);
+	DECLARE_IMPORTER(TextureImporter, std::string, ImportedTexture);
 }
