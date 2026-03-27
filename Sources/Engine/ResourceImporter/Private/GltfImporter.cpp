@@ -21,13 +21,11 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 
-#include "GltfModelImporter.hpp"
 #include <tiny_gltf.h>
-
+#include <ResourceImporter/Importer.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
 #include <filesystem>
-#include <iostream>
 #include <meshoptimizer.h>
 
 namespace BetterThanNothing
@@ -43,7 +41,7 @@ namespace BetterThanNothing
 		throw std::runtime_error("Unknown Alpha Mode value: " + value);
 	}
 
-	ImportedModel GltfModelImporter::Import(const GltfModelImportInfo& input)
+	ImportedModel GltfImporter::Import(const ModelImportInfo& input)
 	{
 		ImportedModel importedModel;
 		importedModel.path = input.path;
