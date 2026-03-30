@@ -493,7 +493,7 @@ namespace BetterThanNothing
 		params.device = m_renderingDevice->GetDevice();
 		params.swapChain = m_renderingDevice->GetSwapChain();
 
-		m_defaultPipeline = std::make_unique<RenderingApi::Pipeline>(params, shaderModules);
+		m_defaultPipeline = std::make_unique<RenderingApi::Pipeline_Legacy>(params, shaderModules);
 	}
 
 	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()

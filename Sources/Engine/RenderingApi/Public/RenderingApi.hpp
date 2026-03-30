@@ -25,7 +25,7 @@
 #include "RenderingApi/Core/Device.hpp"
 #include "RenderingApi/Core/Fence.hpp"
 #include "RenderingApi/Core/Instance.hpp"
-#include "RenderingApi/Core/Pipeline.hpp"
+#include "RenderingApi/Core/Pipeline_Legacy.hpp"
 #include "RenderingApi/Core/Queue.hpp"
 #include "RenderingApi/Core/Semaphore.hpp"
 #include "RenderingApi/Core/ShaderModule.hpp"

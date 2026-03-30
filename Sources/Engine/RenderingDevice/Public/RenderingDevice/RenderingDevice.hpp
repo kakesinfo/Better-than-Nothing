@@ -46,7 +46,7 @@ namespace BetterThanNothing
 		class Allocator;
 		class SwapChain;
 		class CommandPool;
-		class Pipeline;
+		class Pipeline_Legacy;
 		class CommandBuffer;
 		class DescriptorPool;
 		class DescriptorSetLayout;
