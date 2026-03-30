@@ -56,7 +56,7 @@ namespace BetterThanNothing
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
 
-		auto forwardPipelineLayout = RenderingApi::PipelineLayout::Builder(renderingDevice)
+		auto forwardPipelineLayout = RenderingApi::PipelineLayout::Builder()
 			.AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms))
 			.AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::Textures))
 			.AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights))
