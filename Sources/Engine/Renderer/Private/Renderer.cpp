@@ -67,8 +67,8 @@ namespace BetterThanNothing
 										 .AddPushConstantLayout<DynamicUniformData>(EShaderType::Vertex)
 										 .Build(m_renderingDevice->GetDevice());
 
-		resourceManager->LoadShader("../../../Shaders/main/main.vert");
-		resourceManager->LoadShader("../../../Shaders/main/main.frag");
+		m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
+		m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
 
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Shaders/");
