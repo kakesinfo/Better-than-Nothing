@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace BetterThanNothing
 {
 	enum class EShaderType : uint32_t

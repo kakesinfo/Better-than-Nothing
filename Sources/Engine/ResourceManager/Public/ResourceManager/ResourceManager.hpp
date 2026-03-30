@@ -46,7 +46,7 @@ namespace BetterThanNothing
 	struct ShaderGpuData_Legacy;
 	class TextureLoader;
 	class ShaderLoader;
-	enum class EShaderType;
+	enum class EShaderType : uint32_t;
 	class RenderingDevice;
 	class ResourceImporter;
 	class PipelineBuilder;
