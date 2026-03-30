@@ -18,6 +18,8 @@
 
 #include "Renderer/Renderer.hpp"
 
+#include "RenderingApi/Core/PipelineLayout.hpp"
+
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
 #include <Data/Graphics/CameraData.hpp>
@@ -53,6 +55,13 @@ namespace BetterThanNothing
 		CreateGlobalUniformDescriptorSets();
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
+
+		auto forwardPipelineLayout = RenderingApi::PipelineLayout::Builder(renderingDevice)
+			.AddDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms)
+			.AddDescriptorSetLayout(DescriptorSetLayoutType::Textures)
+			.AddDescriptorSetLayout(DescriptorSetLayoutType::PointLights)
+			.AddPushConstantLayout<DynamicUniformData>(EShaderType::Vertex)
+			.Build();
 
 		resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		resourceManager->LoadShader("../../../Shaders/main/main.frag");

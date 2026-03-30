@@ -265,7 +265,7 @@ namespace BetterThanNothing
 		return m_self->swapChain->GetAspectRatio();
 	}
 
-	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
+	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const DescriptorSetLayoutType key) const
 	{
 		if (!m_self->descriptorLayouts.contains(key))
 			throw std::runtime_error("Cannot find descriptorSetLayout");
