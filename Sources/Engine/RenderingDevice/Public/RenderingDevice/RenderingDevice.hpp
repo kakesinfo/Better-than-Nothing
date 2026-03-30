@@ -78,6 +78,9 @@ namespace BetterThanNothing
 		void Internal_RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	public:
+		void CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& name);
+
 		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc);
 		void				   DestroyTextureSampler(const Handle& handle);
 		RenderingApi::Sampler* GetSampler(const Handle& handle);
@@ -146,8 +149,6 @@ namespace BetterThanNothing
 		[[nodiscard]] auto GetMaxFramesInFlight() const -> uint32_t;
 		[[nodiscard]] auto GetAspectRatio() const -> float;
 
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::DescriptorPool*		 GetDescriptorPool() const;
 		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetLayoutType key) const;
 
 	private:

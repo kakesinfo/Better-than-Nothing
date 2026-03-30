@@ -148,6 +148,22 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
 	}
 
+	void RenderingDevice::CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	{
+		if (m_self->descriptorLayouts.contains(name))
+			throw std::runtime_error("Descriptor layout already exists");
+
+		m_self->descriptorLayouts[name] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
+	}
+
+	[[nodiscard]] RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& name)
+	{
+		if (!m_self->descriptorLayouts.contains(name))
+			throw std::runtime_error("Descriptor layout does not exist");
+
+		return m_self->descriptorLayouts[name].get();
+	}
+
 	std::optional<uint32_t> RenderingDevice::BeginFrame()
 	{
 		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();
