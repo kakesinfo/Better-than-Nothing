@@ -57,11 +57,11 @@ namespace BetterThanNothing
 		CreatePointLightDescriptorSets();
 
 		auto forwardPipelineLayout = RenderingApi::PipelineLayout::Builder(renderingDevice)
-			.AddDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms)
-			.AddDescriptorSetLayout(DescriptorSetLayoutType::Textures)
-			.AddDescriptorSetLayout(DescriptorSetLayoutType::PointLights)
+			.AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms))
+			.AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::Textures))
+			.AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights))
 			.AddPushConstantLayout<DynamicUniformData>(EShaderType::Vertex)
-			.Build();
+			.Build(m_renderingDevice->GetDevice());
 
 		resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		resourceManager->LoadShader("../../../Shaders/main/main.frag");

@@ -26,12 +26,6 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-namespace BetterThanNothing
-{
-	class RenderingDevice;
-	enum class DescriptorSetLayoutType;
-}
-
 namespace BetterThanNothing::RenderingApi
 {
 	class DescriptorSetLayout;
@@ -52,7 +46,7 @@ namespace BetterThanNothing::RenderingApi
 		explicit PipelineLayout(const PipelineLayoutCreateInfo& createInfo);
 		~PipelineLayout();
 
-		static PipelineLayoutBuilder Builder(RenderingDevice* renderingDevice);
+		static PipelineLayoutBuilder Builder();
 
 		[[nodiscard]] VkPipelineLayout Handle() const;
 
@@ -65,10 +59,10 @@ namespace BetterThanNothing::RenderingApi
 	class PipelineLayoutBuilder
 	{
 	public:
-		explicit PipelineLayoutBuilder(RenderingDevice* renderingDevice);
+		explicit PipelineLayoutBuilder() = default;
 		~PipelineLayoutBuilder() = default;
 
-		PipelineLayoutBuilder& AddDescriptorSetLayout(DescriptorSetLayoutType layoutType);
+		PipelineLayoutBuilder& AddDescriptorSetLayout(const DescriptorSetLayout* layout);
 
 		template <typename T>
 		PipelineLayoutBuilder& AddPushConstantLayout(const EShaderType shaderType)
@@ -82,10 +76,9 @@ namespace BetterThanNothing::RenderingApi
 			return *this;
 		}
 
-		std::unique_ptr<PipelineLayout> Build() const;
+		std::unique_ptr<PipelineLayout> Build(Device* device) const;
 
 	private:
-		RenderingDevice* m_renderingDevice;
 		std::vector<VkDescriptorSetLayout> m_descriptorLayouts;
 		std::vector<VkPushConstantRange>   m_pushConstants;
 	};

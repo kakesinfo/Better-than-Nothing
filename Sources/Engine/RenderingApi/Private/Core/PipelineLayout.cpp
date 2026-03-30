@@ -18,7 +18,6 @@
 
 #include "RenderingApi/Core/PipelineLayout.hpp"
 
-#include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingApi/Core/DescriptorSetLayout.hpp"
 #include "RenderingApi/Core/Device.hpp"
 
@@ -43,9 +42,9 @@ namespace BetterThanNothing::RenderingApi
 			vkDestroyPipelineLayout(m_device->Handle(), m_pipelineLayout, nullptr);
 	}
 
-	PipelineLayoutBuilder PipelineLayout::Builder(RenderingDevice* renderingDevice)
+	PipelineLayoutBuilder PipelineLayout::Builder()
 	{
-		return PipelineLayoutBuilder(renderingDevice);
+		return PipelineLayoutBuilder();
 	}
 
 	VkPipelineLayout PipelineLayout::Handle() const
@@ -53,16 +52,14 @@ namespace BetterThanNothing::RenderingApi
 		return m_pipelineLayout;
 	}
 
-	PipelineLayoutBuilder::PipelineLayoutBuilder(RenderingDevice* renderingDevice) : m_renderingDevice(renderingDevice) {}
-
-	PipelineLayoutBuilder& PipelineLayoutBuilder::AddDescriptorSetLayout(const DescriptorSetLayoutType layoutType)
+	PipelineLayoutBuilder& PipelineLayoutBuilder::AddDescriptorSetLayout(const DescriptorSetLayout* layout)
 	{
-		m_descriptorLayouts.push_back(m_renderingDevice->GetDescriptorSetLayout(layoutType)->Handle());
+		m_descriptorLayouts.push_back(layout->Handle());
 		return *this;
 	}
 
-	std::unique_ptr<PipelineLayout> PipelineLayoutBuilder::Build() const
+	std::unique_ptr<PipelineLayout> PipelineLayoutBuilder::Build(Device* device) const
 	{
-		return std::make_unique<PipelineLayout>(PipelineLayoutCreateInfo{m_descriptorLayouts, m_pushConstants, m_renderingDevice->GetDevice()});
+		return std::make_unique<PipelineLayout>(PipelineLayoutCreateInfo {m_descriptorLayouts, m_pushConstants, device});
 	}
 }
