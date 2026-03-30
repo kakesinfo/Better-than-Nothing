@@ -25,6 +25,7 @@
 #include <RenderingApi/Core/Device.hpp>
 #include <RenderingApi/Core/Fence.hpp>
 #include <RenderingApi/Core/Instance.hpp>
+#include <RenderingApi/Core/PipelineLayout.hpp>
 #include <RenderingApi/Core/Queue.hpp>
 #include <RenderingApi/Core/Semaphore.hpp>
 #include <RenderingApi/Core/Surface.hpp>
@@ -53,7 +54,10 @@ namespace BetterThanNothing
 		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  imageAvailableSemaphores;
 		std::vector<std::unique_ptr<RenderingApi::Fence>>		  inFlightFences;
 
-		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts;
+		std::unordered_map<DescriptorSetLayoutType, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts_legacy;
+
+		std::unordered_map<std::string, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts;
+		std::unordered_map<std::string, std::unique_ptr<RenderingApi::PipelineLayout>>		pipelineLayouts;
 
 		std::unique_ptr<StagingBuffer> stagingBuffer;
 
