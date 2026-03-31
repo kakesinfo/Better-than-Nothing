@@ -18,6 +18,8 @@
 
 #include "Renderer/Renderer.hpp"
 
+#include "RenderingApi/Core/PipelineLayout.hpp"
+
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
 #include <Data/Graphics/CameraData.hpp>
@@ -49,22 +51,33 @@ namespace BetterThanNothing
 	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
 		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager), m_editor(editor)
 	{
+		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+		m_renderingDevice->CreateDescriptorSetLayout("Textures", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		m_renderingDevice->CreateDescriptorSetLayout("PointLights", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+
 		CreateGlobalUniformBuffers();
 		CreateGlobalUniformDescriptorSets();
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
 
-		resourceManager->LoadShader("../../../Shaders/main/main.vert");
-		resourceManager->LoadShader("../../../Shaders/main/main.frag");
+		// auto forwardPipelineLayout = RenderingApi::PipelineLayout::Builder()
+		// 								 .AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms))
+		// 								 .AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::Textures))
+		// 								 .AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights))
+		// 								 .AddPushConstantLayout<DynamicUniformData>(EShaderType::Vertex)
+		// 								 .Build(m_renderingDevice->GetDevice());
+
+		m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
+		m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
 
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Shaders/");
 			builder->SetName("main");
 			builder->AddVertexShader("main/main.vert");
 			builder->AddFragmentShader("main/main.frag");
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms)->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::Textures)->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights)->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("GlobalUniforms")->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("Textures")->Handle());
+			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("PointLights")->Handle());
 		});
 
 		m_drawStream = std::make_unique<DrawStream>();
@@ -220,9 +233,8 @@ namespace BetterThanNothing
 		{
 			const auto	   handle = m_globalUniformBuffer.at(i);
 			constexpr auto size = sizeof(GlobalUniformData);
-			constexpr auto layout = DescriptorSetLayoutType::GlobalUniforms;
 
-			m_globalDescriptorSets[i] = m_renderingDevice->CreateUniformBufferDescriptorSet(handle, size, layout);
+			m_globalDescriptorSets[i] = m_renderingDevice->CreateUniformBufferDescriptorSet(handle, size, "GlobalUniforms");
 		}
 
 		Logger::Log<SUCCESS>("Vulkan global descriptor sets: ok (count: {})", m_globalDescriptorSets.size());
@@ -256,9 +268,8 @@ namespace BetterThanNothing
 		{
 			const auto	   handle = m_pointLightBuffer.at(i);
 			constexpr auto size = MAX_LIGHT_COUNT * sizeof(PointLightData);
-			constexpr auto layout = DescriptorSetLayoutType::PointLights;
 
-			m_pointLightDescriptorSets[i] = m_renderingDevice->CreateStorageBufferDescriptorSet(handle, size, layout);
+			m_pointLightDescriptorSets[i] = m_renderingDevice->CreateStorageBufferDescriptorSet(handle, size, "PointLights");
 		}
 
 		Logger::Log<SUCCESS>("Point light descriptor sets: ok (count: {})", m_pointLightDescriptorSets.size());
@@ -493,7 +504,7 @@ namespace BetterThanNothing
 		params.device = m_renderingDevice->GetDevice();
 		params.swapChain = m_renderingDevice->GetSwapChain();
 
-		m_defaultPipeline = std::make_unique<RenderingApi::Pipeline>(params, shaderModules);
+		m_defaultPipeline = std::make_unique<RenderingApi::Pipeline_Legacy>(params, shaderModules);
 	}
 
 	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()

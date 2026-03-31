@@ -24,7 +24,7 @@ namespace BetterThanNothing
 
 	struct ShaderGpuData_Legacy;
 	class ShaderModule;
-	enum class EShaderType;
+	enum class EShaderType : uint32_t;
 
 	struct ShaderData
 	{
