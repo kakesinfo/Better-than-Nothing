@@ -85,7 +85,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, std::string_view layoutType)
+	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const std::string_view layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
 

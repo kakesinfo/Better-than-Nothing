@@ -74,10 +74,6 @@ namespace BetterThanNothing
 
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
-	private:
-		void Internal_RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
-
-	public:
 		void CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, VkShaderStageFlags stageFlags);
 		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& name);
 
