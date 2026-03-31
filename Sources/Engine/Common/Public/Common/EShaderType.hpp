@@ -18,11 +18,15 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace BetterThanNothing
 {
-	enum class EShaderType
+	enum class EShaderType : uint32_t
 	{
-		Vertex,
-		Fragment
+		Vertex = 0x00000001,
+		Geometry = 0x00000008,
+		Fragment = 0x00000010,
+		Compute = 0x00000020
 	};
 }

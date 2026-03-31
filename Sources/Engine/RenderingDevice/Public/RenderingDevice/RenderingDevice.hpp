@@ -46,7 +46,7 @@ namespace BetterThanNothing
 		class Allocator;
 		class SwapChain;
 		class CommandPool;
-		class Pipeline;
+		class Pipeline_Legacy;
 		class CommandBuffer;
 		class DescriptorPool;
 		class DescriptorSetLayout;
@@ -74,10 +74,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
-	private:
-		void Internal_RegisterDescriptorLayout(DescriptorSetLayoutType key, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		void CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& name);
 
-	public:
 		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc);
 		void				   DestroyTextureSampler(const Handle& handle);
 		RenderingApi::Sampler* GetSampler(const Handle& handle);
@@ -105,13 +104,13 @@ namespace BetterThanNothing
 		RenderingApi::Texture* GetTexture(const Handle& handle);
 
 	private:
-		bool Internal_CreateDescriptorSet(const DescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const;
+		bool Internal_CreateDescriptorSet(std::string_view layoutType, RenderingApi::DescriptorSet* newDescriptorSet) const;
 
 	public:
-		[[nodiscard]] Handle CreateDescriptorSet(DescriptorSetLayoutType type);
-		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, DescriptorSetLayoutType layoutType);
-		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, DescriptorSetLayoutType layoutType);
-		[[nodiscard]] Handle		 CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle);
+		[[nodiscard]] Handle CreateDescriptorSet(std::string_view layoutType);
+		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, std::string_view layoutType);
+		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, std::string_view layoutType);
+		[[nodiscard]] Handle CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, std::string_view layoutType);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void						 FlushDescriptorSetUpdateRequests();
 		void						 DestroyDescriptorSet(const Handle& handle);
@@ -146,9 +145,7 @@ namespace BetterThanNothing
 		[[nodiscard]] auto GetMaxFramesInFlight() const -> uint32_t;
 		[[nodiscard]] auto GetAspectRatio() const -> float;
 
-		/// @deprecated Will be removed in the future.
-		[[nodiscard]] RenderingApi::DescriptorPool*		 GetDescriptorPool() const;
-		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetLayoutType key) const;
+		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& layoutType) const;
 
 	private:
 		RenderingDeviceCreateInfo				  m_createInfo;

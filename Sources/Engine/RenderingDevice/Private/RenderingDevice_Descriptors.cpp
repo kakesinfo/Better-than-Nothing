@@ -30,9 +30,9 @@
 
 namespace BetterThanNothing
 {
-	bool RenderingDevice::Internal_CreateDescriptorSet(const DescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const
+	bool RenderingDevice::Internal_CreateDescriptorSet(const std::string_view layoutType, RenderingApi::DescriptorSet* newDescriptorSet) const
 	{
-		const auto layout = GetDescriptorSetLayout(type)->Handle();
+		const auto layout = GetDescriptorSetLayout(std::string(layoutType))->Handle();
 
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -43,7 +43,7 @@ namespace BetterThanNothing
 		return vkAllocateDescriptorSets(m_self->device->Handle(), &allocInfo, &newDescriptorSet->value) == VK_SUCCESS;
 	}
 
-	Handle RenderingDevice::CreateDescriptorSet(DescriptorSetLayoutType layoutType)
+	Handle RenderingDevice::CreateDescriptorSet(const std::string_view layoutType)
 	{
 		const Handle handle = m_self->descriptors.Allocate();
 
@@ -56,9 +56,9 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle RenderingDevice::CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle)
+	Handle RenderingDevice::CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, const std::string_view layoutType)
 	{
-		const Handle handle = CreateDescriptorSet(DescriptorSetLayoutType::Textures);
+		const Handle handle = CreateDescriptorSet(layoutType);
 
 		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
 		const RenderingApi::Texture*	   texture = GetTexture(textureHandle);
@@ -85,7 +85,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const DescriptorSetLayoutType layoutType)
+	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const std::string_view layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
 
@@ -113,7 +113,7 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle RenderingDevice::CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const DescriptorSetLayoutType layoutType)
+	Handle RenderingDevice::CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const std::string_view layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
 

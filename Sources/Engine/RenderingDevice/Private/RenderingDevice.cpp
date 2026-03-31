@@ -72,10 +72,6 @@ namespace BetterThanNothing
 									 .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
 									 .Build();
 
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::GlobalUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::Textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-		Internal_RegisterDescriptorLayout(DescriptorSetLayoutType::PointLights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
-
 		m_self->stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
 
 		Internal_CreateCommandBuffers();
@@ -115,11 +111,6 @@ namespace BetterThanNothing
 		}
 	};
 
-	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
-	{
-		m_self->descriptorLayouts[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
-	}
-
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
 	{
 		return std::make_unique<RenderingDevice>(createInfo);
@@ -146,6 +137,22 @@ namespace BetterThanNothing
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
+	}
+
+	void RenderingDevice::CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	{
+		if (m_self->descriptorLayouts.contains(name))
+			throw std::runtime_error("Descriptor layout already exists");
+
+		m_self->descriptorLayouts[name] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
+	}
+
+	[[nodiscard]] RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& name)
+	{
+		if (!m_self->descriptorLayouts.contains(name))
+			throw std::runtime_error("Descriptor layout does not exist");
+
+		return m_self->descriptorLayouts[name].get();
 	}
 
 	std::optional<uint32_t> RenderingDevice::BeginFrame()
@@ -265,10 +272,10 @@ namespace BetterThanNothing
 		return m_self->swapChain->GetAspectRatio();
 	}
 
-	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(DescriptorSetLayoutType key) const
+	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& layoutType) const
 	{
-		if (!m_self->descriptorLayouts.contains(key))
+		if (!m_self->descriptorLayouts.contains(layoutType))
 			throw std::runtime_error("Cannot find descriptorSetLayout");
-		return m_self->descriptorLayouts.at(key).get();
+		return m_self->descriptorLayouts.at(layoutType).get();
 	}
 }
