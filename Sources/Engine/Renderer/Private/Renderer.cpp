@@ -20,7 +20,6 @@
 
 #include "RenderingApi/Core/PipelineLayout.hpp"
 #include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
-
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
 #include <Data/Graphics/CameraData.hpp>

@@ -41,7 +41,6 @@ namespace BetterThanNothing::RenderingApi
 	public:
 		explicit PipelineLayout(const PipelineLayoutCreateInfo& createInfo);
 		~PipelineLayout();
-
 		[[nodiscard]] VkPipelineLayout Handle() const;
 
 	private:
