@@ -17,6 +17,7 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
 #include "Platform/Platform.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
@@ -153,6 +154,14 @@ namespace BetterThanNothing
 			throw std::runtime_error("Descriptor layout does not exist");
 
 		return m_self->descriptorLayouts[name].get();
+	}
+
+	void RenderingDevice::CreatePipelineLayout(const std::string& name, const std::function<void(PipelineLayoutBlueprint*)>& callback)
+	{
+		PipelineLayoutBlueprint blueprint(this);
+		callback(&blueprint);
+
+		m_self->pipelineLayouts[name] = blueprint.Build();
 	}
 
 	std::optional<uint32_t> RenderingDevice::BeginFrame()

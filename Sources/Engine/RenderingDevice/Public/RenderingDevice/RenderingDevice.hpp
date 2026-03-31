@@ -26,6 +26,7 @@
 #include "Types.hpp"
 
 #include <Common/EBufferingMode.hpp>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -59,6 +60,7 @@ namespace BetterThanNothing
 	class StagingBuffer;
 	struct BufferDescription;
 	struct TextureFromDataDescription;
+	class PipelineLayoutBlueprint;
 
 	struct RenderingDeviceCreateInfo
 	{
@@ -76,6 +78,8 @@ namespace BetterThanNothing
 
 		void CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, VkShaderStageFlags stageFlags);
 		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& name);
+
+		void CreatePipelineLayout(const std::string& name, const std::function<void(PipelineLayoutBlueprint*)>& callback);
 
 		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc);
 		void				   DestroyTextureSampler(const Handle& handle);
