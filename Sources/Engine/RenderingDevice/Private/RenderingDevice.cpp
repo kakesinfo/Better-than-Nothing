@@ -115,11 +115,6 @@ namespace BetterThanNothing
 		}
 	};
 
-	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
-	{
-		m_self->descriptorLayouts_legacy[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
-	}
-
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
 	{
 		return std::make_unique<RenderingDevice>(createInfo);
@@ -146,6 +141,11 @@ namespace BetterThanNothing
 		}
 
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
+	}
+
+	void RenderingDevice::Internal_RegisterDescriptorLayout(const DescriptorSetLayoutType key, const VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	{
+		m_self->descriptorLayouts_legacy[key] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
 	}
 
 	void RenderingDevice::CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, const VkShaderStageFlags stageFlags)
@@ -281,10 +281,10 @@ namespace BetterThanNothing
 		return m_self->swapChain->GetAspectRatio();
 	}
 
-	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const DescriptorSetLayoutType key) const
+	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& layoutType) const
 	{
-		if (!m_self->descriptorLayouts_legacy.contains(key))
+		if (!m_self->descriptorLayouts.contains(layoutType))
 			throw std::runtime_error("Cannot find descriptorSetLayout");
-		return m_self->descriptorLayouts_legacy.at(key).get();
+		return m_self->descriptorLayouts.at(layoutType).get();
 	}
 }

@@ -140,7 +140,7 @@ namespace BetterThanNothing
 
 		gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
 		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{}); // Default sampler description
-		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle);
+		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle, "Textures");
 
 		const auto textureId = GenerateUniqueResourceId();
 		m_textures[textureId] = std::move(gpuData);

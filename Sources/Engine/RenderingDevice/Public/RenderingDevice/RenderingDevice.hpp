@@ -108,13 +108,13 @@ namespace BetterThanNothing
 		RenderingApi::Texture* GetTexture(const Handle& handle);
 
 	private:
-		bool Internal_CreateDescriptorSet(const DescriptorSetLayoutType& type, RenderingApi::DescriptorSet* newDescriptorSet) const;
+		bool Internal_CreateDescriptorSet(std::string_view layoutType, RenderingApi::DescriptorSet* newDescriptorSet) const;
 
 	public:
-		[[nodiscard]] Handle CreateDescriptorSet(DescriptorSetLayoutType type);
-		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, DescriptorSetLayoutType layoutType);
-		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, DescriptorSetLayoutType layoutType);
-		[[nodiscard]] Handle		 CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle);
+		[[nodiscard]] Handle CreateDescriptorSet(std::string_view layoutType);
+		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, std::string_view layoutType);
+		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, std::string_view layoutType);
+		[[nodiscard]] Handle CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, std::string_view layoutType);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void						 FlushDescriptorSetUpdateRequests();
 		void						 DestroyDescriptorSet(const Handle& handle);
@@ -149,7 +149,7 @@ namespace BetterThanNothing
 		[[nodiscard]] auto GetMaxFramesInFlight() const -> uint32_t;
 		[[nodiscard]] auto GetAspectRatio() const -> float;
 
-		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetLayoutType key) const;
+		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& layoutType) const;
 
 	private:
 		RenderingDeviceCreateInfo				  m_createInfo;
