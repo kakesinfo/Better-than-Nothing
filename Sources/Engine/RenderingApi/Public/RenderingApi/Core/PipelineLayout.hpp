@@ -19,10 +19,6 @@
 #pragma once
 
 #include "RenderingApi/Data/VertexInputDescription.hpp"
-
-#include <Common/EShaderType.hpp>
-#include <memory>
-#include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -45,41 +41,11 @@ namespace BetterThanNothing::RenderingApi
 	public:
 		explicit PipelineLayout(const PipelineLayoutCreateInfo& createInfo);
 		~PipelineLayout();
-
-		static PipelineLayoutBuilder Builder();
-
 		[[nodiscard]] VkPipelineLayout Handle() const;
 
 	private:
 		PipelineLayoutCreateInfo m_createInfo;
 		Device*					 m_device;
 		VkPipelineLayout		 m_pipelineLayout = VK_NULL_HANDLE;
-	};
-
-	class PipelineLayoutBuilder
-	{
-	public:
-		explicit PipelineLayoutBuilder() = default;
-		~PipelineLayoutBuilder() = default;
-
-		PipelineLayoutBuilder& AddDescriptorSetLayout(const DescriptorSetLayout* layout);
-
-		template <typename T>
-		PipelineLayoutBuilder& AddPushConstantLayout(const EShaderType shaderType)
-		{
-			VkPushConstantRange pushConstant{};
-			pushConstant.stageFlags = std::to_underlying(shaderType);
-			pushConstant.size = sizeof(T);
-
-			m_pushConstants.push_back(pushConstant);
-
-			return *this;
-		}
-
-		std::unique_ptr<PipelineLayout> Build(Device* device) const;
-
-	private:
-		std::vector<VkDescriptorSetLayout> m_descriptorLayouts;
-		std::vector<VkPushConstantRange>   m_pushConstants;
 	};
 }; // BetterThanNothing
