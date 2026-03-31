@@ -19,6 +19,7 @@
 #include "Renderer/Renderer.hpp"
 
 #include "RenderingApi/Core/PipelineLayout.hpp"
+#include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
@@ -55,17 +56,17 @@ namespace BetterThanNothing
 		m_renderingDevice->CreateDescriptorSetLayout("Textures", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		m_renderingDevice->CreateDescriptorSetLayout("PointLights", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
+		m_renderingDevice->CreatePipelineLayout("Forward", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("Textures");
+			blueprint->AddDescriptorSetLayout("PointLights");
+			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
+		});
+
 		CreateGlobalUniformBuffers();
 		CreateGlobalUniformDescriptorSets();
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
-
-		// auto forwardPipelineLayout = RenderingApi::PipelineLayout::Builder()
-		// 								 .AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::GlobalUniforms))
-		// 								 .AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::Textures))
-		// 								 .AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout(DescriptorSetLayoutType::PointLights))
-		// 								 .AddPushConstantLayout<DynamicUniformData>(EShaderType::Vertex)
-		// 								 .Build(m_renderingDevice->GetDevice());
 
 		m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		m_resourceManager->LoadShader("../../../Shaders/main/main.frag");

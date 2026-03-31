@@ -42,24 +42,8 @@ namespace BetterThanNothing::RenderingApi
 			vkDestroyPipelineLayout(m_device->Handle(), m_pipelineLayout, nullptr);
 	}
 
-	PipelineLayoutBuilder PipelineLayout::Builder()
-	{
-		return PipelineLayoutBuilder();
-	}
-
 	VkPipelineLayout PipelineLayout::Handle() const
 	{
 		return m_pipelineLayout;
-	}
-
-	PipelineLayoutBuilder& PipelineLayoutBuilder::AddDescriptorSetLayout(const DescriptorSetLayout* layout)
-	{
-		m_descriptorLayouts.push_back(layout->Handle());
-		return *this;
-	}
-
-	std::unique_ptr<PipelineLayout> PipelineLayoutBuilder::Build(Device* device) const
-	{
-		return std::make_unique<PipelineLayout>(PipelineLayoutCreateInfo {m_descriptorLayouts, m_pushConstants, device});
 	}
 }
