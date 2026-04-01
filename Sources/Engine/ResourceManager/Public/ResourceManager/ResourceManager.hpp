@@ -49,7 +49,7 @@ namespace BetterThanNothing
 	enum class EShaderType : uint32_t;
 	class RenderingDevice;
 	class ResourceImporter;
-	class PipelineBuilder;
+	class PipelineBlueprint;
 
 	class ResourceManager
 	{
@@ -66,7 +66,7 @@ namespace BetterThanNothing
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
 		ResourceId LoadTexture(const std::string& path);
 		ResourceId LoadShader(const std::string& path);
-		ResourceId CreatePipeline(const std::function<void(PipelineBuilder*)>& callback);
+		ResourceId CreatePipeline(const std::function<void(PipelineBlueprint*)>& callback);
 
 		MeshResourceCache*	  GetMeshData(ResourceId id);
 		TextureResourceCache* GetTextureData(ResourceId id);

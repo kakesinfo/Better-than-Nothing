@@ -20,6 +20,8 @@
 
 #include "RenderingApi/Core/PipelineLayout.hpp"
 #include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
+#include "ResourceManager/PipelineBlueprint.hpp"
+
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
 #include <Data/Graphics/CameraData.hpp>
@@ -67,8 +69,14 @@ namespace BetterThanNothing
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
 
-		m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
-		m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
+		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
+		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
+
+		m_resourceManager->CreatePipeline([&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(vertShader);
+			blueprint->AddShader(fragShader);
+			blueprint->SetPipelineLayout("Forward");
+		});
 
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
 			builder->SetPath("../../../Shaders/");

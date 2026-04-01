@@ -18,7 +18,9 @@
 
 #include "ResourceManager/ResourceManager.hpp"
 
+#include "RenderingDevice/PipelineDescription.hpp"
 #include "RenderingDevice/ShaderDescription.hpp"
+#include "ResourceManager/PipelineBlueprint.hpp"
 
 #include <Common/Logger.hpp>
 #include <Data/Graphics/MeshData.hpp>
@@ -159,6 +161,7 @@ namespace BetterThanNothing
 		ImportedShader importedShader = m_importer->ImportShader(path);
 
 		auto gpuData = std::make_unique<ShaderResourceCache>();
+		gpuData->name = std::filesystem::path(path).filename().string();
 		gpuData->type = importedShader.type;
 		gpuData->module = m_renderingDevice->CreateShader({importedShader.type, importedShader.data.data()});
 
@@ -184,6 +187,25 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("ShaderGpuData created and cached for Shader: {}", path);
 
 		return shaderId;
+	}
+
+	ResourceId ResourceManager::CreatePipeline(const std::function<void(PipelineBlueprint*)>& callback)
+	{
+		PipelineBlueprint blueprint;
+		callback(&blueprint);
+
+		PipelineDescription desc;
+		desc.layout = blueprint.GetPipelineLayout();
+		desc.shaders.reserve(blueprint.GetShaders().size());
+		for (auto& shaderId : blueprint.GetShaders())
+			desc.shaders.push_back(GetShader(shaderId)->module);
+
+		const auto pipelineId = GenerateUniqueResourceId();
+		const auto pipelineHandle = m_renderingDevice->CreatePipeline(desc);
+
+		// TODO: call renderingDevice and cache result
+
+		return pipelineId;
 	}
 
 	MeshResourceCache* ResourceManager::GetMeshData(ResourceId id)

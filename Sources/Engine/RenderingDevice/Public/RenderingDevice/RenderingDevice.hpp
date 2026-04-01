@@ -60,6 +60,7 @@ namespace BetterThanNothing
 	class StagingBuffer;
 	struct BufferDescription;
 	struct TextureFromDataDescription;
+	struct PipelineDescription;
 	class PipelineLayoutBlueprint;
 
 	struct RenderingDeviceCreateInfo
@@ -122,6 +123,8 @@ namespace BetterThanNothing
 
 		[[nodiscard]] Handle CreateShader(const ShaderDescription& desc);
 		void				 DestroyShader(const Handle& handle);
+
+		[[nodiscard]] Handle CreatePipeline(const PipelineDescription& desc);
 
 	private:
 		void Internal_CreateCommandBuffers();
