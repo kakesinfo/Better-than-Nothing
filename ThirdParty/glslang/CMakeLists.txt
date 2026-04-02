@@ -106,7 +106,7 @@ cmake_dependent_option(ENABLE_EMSCRIPTEN_ENVIRONMENT_NODE
     OFF "ENABLE_GLSLANG_JS AND EMSCRIPTEN"
     OFF)
 
-option(ENABLE_HLSL "Enables HLSL input support" ON)
+option(ENABLE_HLSL "Enables HLSL input support" OFF)
 option(ENABLE_RTTI "Enables RTTI")
 option(ENABLE_EXCEPTIONS "Enables Exceptions")
 cmake_dependent_option(ENABLE_OPT "Enables spirv-opt capability if present" ON "ENABLE_SPIRV" OFF)
