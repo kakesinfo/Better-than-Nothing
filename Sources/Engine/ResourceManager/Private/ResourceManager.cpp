@@ -163,7 +163,7 @@ namespace BetterThanNothing
 		auto gpuData = std::make_unique<ShaderResourceCache>();
 		gpuData->name = std::filesystem::path(path).filename().string();
 		gpuData->type = importedShader.type;
-		gpuData->module = m_renderingDevice->CreateShader({importedShader.type, importedShader.data.data()});
+		gpuData->module = m_renderingDevice->CreateShader({gpuData->name, importedShader.type, importedShader.data.data()});
 
 		const auto shaderId = GenerateUniqueResourceId();
 		m_shaders[shaderId] = std::move(gpuData);
@@ -197,10 +197,11 @@ namespace BetterThanNothing
 		PipelineBlueprint blueprint;
 		callback(&blueprint);
 
-		PipelineDescription desc;
+		PipelineDescription desc {};
+		desc.vertexLayout = blueprint.GetVertexLayout();
 		desc.layoutName = blueprint.GetPipelineLayout();
 		desc.shaders.reserve(blueprint.GetShaders().size());
-		for (auto& shaderId : blueprint.GetShaders())
+		for (const auto& shaderId : blueprint.GetShaders())
 			desc.shaders.push_back(GetShader(shaderId)->module);
 
 		// TODO: add more stuff to description using blueprint

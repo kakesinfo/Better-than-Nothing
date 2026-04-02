@@ -17,6 +17,7 @@
  */
 
 #pragma once
+#include "VertexLayout.hpp"
 
 namespace BetterThanNothing
 {
@@ -25,6 +26,7 @@ namespace BetterThanNothing
 	struct PipelineDescription
 	{
 		std::vector<Handle> shaders;
-		std::string layoutName;
+		std::string			layoutName;
+		VertexLayout		vertexLayout;
 	};
 }

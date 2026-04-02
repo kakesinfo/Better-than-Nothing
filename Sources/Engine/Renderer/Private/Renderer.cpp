@@ -20,6 +20,7 @@
 
 #include "RenderingApi/Core/PipelineLayout.hpp"
 #include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
+#include "RenderingDevice/VertexLayout.hpp"
 #include "ResourceManager/PipelineBlueprint.hpp"
 
 #include <Common/Logger.hpp>
@@ -69,13 +70,16 @@ namespace BetterThanNothing
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
 
+		const VertexLayout vertexLayout = { VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3 };
+
 		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
 
-		m_resourceManager->CreatePipeline("Opaque", [&](PipelineBlueprint* blueprint) {
+		m_resourceManager->CreatePipeline("Forward::Opaque", [&](PipelineBlueprint* blueprint) {
 			blueprint->AddShader(vertShader);
 			blueprint->AddShader(fragShader);
 			blueprint->SetPipelineLayout("Forward");
+			blueprint->SetVertexLayout(vertexLayout);
 		});
 
 		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {

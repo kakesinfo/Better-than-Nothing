@@ -92,6 +92,7 @@ namespace BetterThanNothing
 			throw std::runtime_error("failed to create shader module!");
 
 		dstShader->type = desc.type;
+		dstShader->name = desc.name;
 
 		glslang_program_delete(shaderProgram);
 
@@ -112,7 +113,7 @@ namespace BetterThanNothing
 	void RenderingDevice::DestroyShader(const Handle& handle)
 	{
 		if (!m_self->shaders.Has(handle))
-			throw std::runtime_error("Invalid buffer handle!");
+			throw std::runtime_error("Invalid shader handle!");
 
 		const RenderingApi::Shader* shader = m_self->shaders.Get(handle);
 		m_self->device->DestroyShaderModule(shader->module);

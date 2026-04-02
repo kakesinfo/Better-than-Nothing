@@ -32,6 +32,12 @@ namespace BetterThanNothing
 		return this;
 	}
 
+	PipelineBlueprint* PipelineBlueprint::SetVertexLayout(const VertexLayout& layout)
+	{
+		m_vertexLayout = layout;
+		return this;
+	}
+
 	std::vector<ResourceId> PipelineBlueprint::GetShaders() const
 	{
 		return m_shaders;
@@ -40,5 +46,10 @@ namespace BetterThanNothing
 	std::string PipelineBlueprint::GetPipelineLayout() const
 	{
 		return m_pipelineLayout;
+	}
+
+	VertexLayout PipelineBlueprint::GetVertexLayout() const
+	{
+		return m_vertexLayout;
 	}
 }

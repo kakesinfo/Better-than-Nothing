@@ -125,6 +125,8 @@ namespace BetterThanNothing
 		void				 DestroyShader(const Handle& handle);
 
 		[[nodiscard]] Handle CreatePipeline(const PipelineDescription& desc);
+		void				 DestroyPipeline(const Handle& handle);
+
 
 	private:
 		void Internal_CreateCommandBuffers();

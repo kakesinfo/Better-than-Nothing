@@ -19,6 +19,7 @@
 #pragma once
 
 #include <Common/ResourceId.hpp>
+#include <RenderingDevice/VertexLayout.hpp>
 #include <string>
 #include <vector>
 
@@ -32,12 +33,15 @@ namespace BetterThanNothing
 
 		PipelineBlueprint* AddShader(ResourceId id);
 		PipelineBlueprint* SetPipelineLayout(const std::string& name);
+		PipelineBlueprint* SetVertexLayout(const VertexLayout& layout);
 
 		[[nodiscard]] std::vector<ResourceId> GetShaders() const;
 		[[nodiscard]] std::string			  GetPipelineLayout() const;
+		[[nodiscard]] VertexLayout			  GetVertexLayout() const;
 
 	private:
 		std::vector<ResourceId> m_shaders;
 		std::string				m_pipelineLayout;
+		VertexLayout			m_vertexLayout = {};
 	};
 }
