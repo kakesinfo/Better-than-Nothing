@@ -22,27 +22,18 @@
 
 namespace BetterThanNothing
 {
-	struct GlobalUniformData;
-	class LegacyWindow;
-
 	namespace RenderingApi
 	{
-		class Pipeline_Legacy;
-		class PipelineBuilder;
 		class Semaphore;
 	}
 
-	class RenderCache;
-	class Camera;
-	struct CameraData;
-	class DrawStream;
-	struct DirectionalLightData;
-	class ImGuiPass;
-	struct DrawStreamView;
 	class ResourceManager;
 	class RenderingDevice;
 	class Scene;
 	class Editor;
+	class DrawStream;
+	struct DrawStreamView;
+	struct GlobalUniformData;
 
 	class Renderer final
 	{

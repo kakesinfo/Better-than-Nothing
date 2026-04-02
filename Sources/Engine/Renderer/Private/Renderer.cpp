@@ -18,12 +18,6 @@
 
 #include "Renderer/Renderer.hpp"
 
-#include "RenderingApi/Core/PipelineLayout.hpp"
-#include "RenderingApi/Resources/Pipeline.hpp"
-#include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
-#include "RenderingDevice/VertexLayout.hpp"
-#include "ResourceManager/PipelineBlueprint.hpp"
-
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
 #include <Data/Graphics/CameraData.hpp>
@@ -33,11 +27,15 @@
 #include <Data/Graphics/VertexData.hpp>
 #include <Editor/Editor.hpp>
 #include <RenderingApi.hpp>
-#include <RenderingApi/Data/VertexInputDescription.hpp>
+#include <RenderingApi/Core/PipelineLayout.hpp>
 #include <RenderingApi/Resources/Buffer.hpp>
 #include <RenderingApi/Resources/DescriptorSet.hpp>
+#include <RenderingApi/Resources/Pipeline.hpp>
+#include <RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp>
 #include <RenderingDevice/DrawStream.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
+#include <RenderingDevice/VertexLayout.hpp>
+#include <ResourceManager/PipelineBlueprint.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/ResourceManager_Types.hpp>
 #include <Scene/Camera.hpp>
@@ -45,8 +43,6 @@
 #include <Scene/SceneObject.hpp>
 #include <Scene/SceneObject_Components.hpp>
 #include <optional>
-
-#include <iostream>
 
 namespace BetterThanNothing
 {
@@ -66,7 +62,7 @@ namespace BetterThanNothing
 			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
 		});
 
-		const VertexLayout vertexLayout = { VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3 };
+		const VertexLayout vertexLayout = {VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3};
 
 		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
