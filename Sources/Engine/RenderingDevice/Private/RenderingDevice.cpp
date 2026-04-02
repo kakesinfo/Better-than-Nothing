@@ -30,6 +30,9 @@
 #include <RenderingApi.hpp>
 #include <cmath>
 
+
+#include <glslang/Include/glslang_c_interface.h>
+
 namespace BetterThanNothing
 {
 	RenderingDevice::RenderingDevice(const RenderingDeviceCreateInfo& createInfo) : m_createInfo(createInfo)
@@ -77,11 +80,15 @@ namespace BetterThanNothing
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();
+
+		glslang_initialize_process();
 	}
 
 	RenderingDevice::~RenderingDevice()
 	{
 		m_self->device->WaitIdle();
+
+		glslang_finalize_process();
 
 		for (uint32_t i = 0; i < m_self->pipelines.Size(); i++)
 		{

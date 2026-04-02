@@ -117,6 +117,6 @@ namespace BetterThanNothing
 
 		const RenderingApi::Shader* shader = m_self->shaders.Get(handle);
 		m_self->device->DestroyShaderModule(shader->module);
-		m_self->buffers.Destroy(handle);
+		m_self->shaders.Destroy(handle);
 	}
 }

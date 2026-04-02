@@ -155,6 +155,19 @@ namespace BetterThanNothing
 
 		ImportedShader importedShader = m_importer->ImportShader(path);
 
+		// Ensure shader data is valid and null-terminated for glslang
+		// glslang expects a null-terminated C-style string for shader code.
+		if (importedShader.data.empty())
+		{
+			throw std::runtime_error("Shader file '" + path + "' imported with empty content. Cannot create shader module.");
+		}
+
+		// Add null terminator if not already present
+		if (importedShader.data.back() != '\0')
+		{
+			importedShader.data.push_back('\0');
+		}
+
 		auto gpuData = std::make_unique<ShaderResourceCache>();
 		gpuData->name = std::filesystem::path(path).filename().string();
 		gpuData->type = importedShader.type;
