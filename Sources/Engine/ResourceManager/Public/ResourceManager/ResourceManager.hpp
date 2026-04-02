@@ -75,26 +75,17 @@ namespace BetterThanNothing
 		ShaderResourceCache*  GetShaderData(ResourceId id);
 		PipelineResourceCache* GetPipelineData(const std::string& name);
 
-
-		/// @deprecated
-		ResourceId LoadShader_Legacy(const std::string& path, EShaderType type);
-		/// @deprecated
-		ShaderGpuData_Legacy* GetShader_Legacy(ResourceId id);
-
 	private:
 		RenderingDevice*													   m_renderingDevice;
-		std::unique_ptr<ShaderLoader>										   m_shaderLoader;
 		std::unique_ptr<ResourceImporter>									   m_importer;
 		std::unordered_map<ResourceId, std::unique_ptr<MeshResourceCache>>	   m_meshes;
 		std::unordered_map<ResourceId, std::unique_ptr<TextureResourceCache>>  m_textures;
 		std::unordered_map<ResourceId, std::unique_ptr<ShaderResourceCache>>   m_shaders;
-		std::unordered_map<ResourceId, std::unique_ptr<ShaderGpuData_Legacy>>  m_shadersLegacy;
 		std::unordered_map<ResourceId, std::unique_ptr<PipelineResourceCache>> m_pipelines;
 		std::unordered_map<ResourceId, ModelResource>						   m_models;
 		std::unordered_map<std::string, ResourceId>							   m_texturesLUT;
 		std::unordered_map<std::string, ResourceId>							   m_modelsLUT;
 		std::unordered_map<std::string, ResourceId>							   m_shadersLUT;
-		std::unordered_map<std::string, ResourceId>							   m_shadersLegacyLUT;
 		std::unordered_map<std::string, ResourceId>							   m_pipelinesLUT;
 		std::vector<ResourceId>												   m_freeIds;
 	};

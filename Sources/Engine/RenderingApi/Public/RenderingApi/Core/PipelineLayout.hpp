@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "RenderingApi/Data/VertexInputDescription.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 

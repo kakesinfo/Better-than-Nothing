@@ -23,15 +23,11 @@
 #include "ResourceManager/PipelineBlueprint.hpp"
 
 #include <Common/Logger.hpp>
-#include <Data/Graphics/MeshData.hpp>
 #include <Data/Graphics/VertexData.hpp>
-#include <RenderingApi/Core/ShaderModule.hpp>
-#include <RenderingApi/Data/ShaderGpuData_Legacy.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <RenderingDevice/SamplerDescription.hpp>
 #include <RenderingDevice/TextureDescription.hpp>
 #include <ResourceImporter/ResourceImporter.hpp>
-#include <ResourceManager/Loader/ShaderLoader.hpp>
 #include <ResourceManager/ResourceManager_Types.hpp>
 #include <filesystem>
 
@@ -39,7 +35,6 @@ namespace BetterThanNothing
 {
 	ResourceManager::ResourceManager(RenderingDevice* renderingDevice) : m_renderingDevice(renderingDevice)
 	{
-		m_shaderLoader = std::make_unique<ShaderLoader>(m_renderingDevice);
 		m_importer = std::make_unique<ResourceImporter>();
 	}
 
@@ -174,21 +169,6 @@ namespace BetterThanNothing
 		return shaderId;
 	}
 
-	ResourceId ResourceManager::LoadShader_Legacy(const std::string& path, EShaderType type)
-	{
-		if (const auto it = m_shadersLegacyLUT.find(path); it != m_shadersLegacyLUT.end())
-			return it->second;
-
-		const auto shaderId = GenerateUniqueResourceId();
-
-		m_shadersLegacy[shaderId] = m_shaderLoader->Load({type, path});
-		m_shadersLegacyLUT[path] = shaderId;
-
-		Logger::Log<INFO>("ShaderGpuData created and cached for Shader: {}", path);
-
-		return shaderId;
-	}
-
 	ResourceId ResourceManager::CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback)
 	{
 		if (const auto it = m_pipelinesLUT.find(name); it != m_pipelinesLUT.end())
@@ -254,13 +234,5 @@ namespace BetterThanNothing
 		if (!m_pipelinesLUT.contains(name))
 			throw std::runtime_error("No PipelineResourceCache for ResourceId: " + name);
 		return m_pipelines[m_pipelinesLUT[name]].get();
-	}
-
-	ShaderGpuData_Legacy* ResourceManager::GetShader_Legacy(const ResourceId id)
-	{
-		if (!m_shadersLegacy.contains(id))
-			return nullptr;
-
-		return m_shadersLegacy[id].get();
 	}
 }
