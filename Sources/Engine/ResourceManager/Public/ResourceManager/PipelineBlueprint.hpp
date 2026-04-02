@@ -18,28 +18,30 @@
 
 #pragma once
 
+#include <Common/ResourceId.hpp>
+#include <RenderingDevice/VertexLayout.hpp>
+#include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {
-	struct VertexInputDescription
+	class PipelineBlueprint
 	{
-		std::vector<VkVertexInputBindingDescription>   bindings;
-		std::vector<VkVertexInputAttributeDescription> attributes;
+	public:
+		explicit PipelineBlueprint() = default;
+		~PipelineBlueprint() = default;
 
-		[[nodiscard]] VkPipelineVertexInputStateCreateInfo GetCreateInfo() const
-		{
-			VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		PipelineBlueprint* AddShader(ResourceId id);
+		PipelineBlueprint* SetPipelineLayout(const std::string& name);
+		PipelineBlueprint* SetVertexLayout(const VertexLayout& layout);
 
-			vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
-			vertexInputInfo.pVertexBindingDescriptions = bindings.data();
+		[[nodiscard]] std::vector<ResourceId> GetShaders() const;
+		[[nodiscard]] std::string			  GetPipelineLayout() const;
+		[[nodiscard]] VertexLayout			  GetVertexLayout() const;
 
-			vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
-			vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
-
-			return vertexInputInfo;
-		}
+	private:
+		std::vector<ResourceId> m_shaders;
+		std::string				m_pipelineLayout;
+		VertexLayout			m_vertexLayout = {};
 	};
 }

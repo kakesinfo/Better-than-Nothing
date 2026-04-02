@@ -44,7 +44,15 @@ namespace BetterThanNothing
 
 	struct ShaderResourceCache
 	{
+		std::string name;
 		EShaderType type;
 		Handle		module;
+	};
+
+	struct PipelineResourceCache
+	{
+		std::string name;
+		std::string layoutName;
+		Handle		pipeline;
 	};
 }

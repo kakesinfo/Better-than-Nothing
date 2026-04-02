@@ -16,47 +16,102 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RenderingApi.hpp"
-#include <Data/Graphics/DynamicUniformData.hpp>
-#include <iostream>
+#include "RenderingDevice/Handle.hpp"
+#include "RenderingDevice/PipelineDescription.hpp"
+#include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_Internals.hpp"
 
-#include <Common/Logger.hpp>
+#include <glslang/Include/glslang_c_shader_types.h>
+#include <spirv_cross/spirv_cross.hpp>
 
-namespace BetterThanNothing::RenderingApi
+namespace BetterThanNothing
 {
-	Pipeline_Legacy::Pipeline_Legacy(const PipelineCreateInfo& params, const std::vector<const ShaderGpuData_Legacy*>& shaders): m_params(params)
+	static VkShaderStageFlagBits Internal_GetShaderStage(const EShaderType type)
 	{
-		VkPushConstantRange dynamicPushConstant{};
-		dynamicPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		dynamicPushConstant.offset = 0;
-		dynamicPushConstant.size = sizeof(DynamicUniformData);
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(params.descriptorLayouts.size());
-		pipelineLayoutInfo.pSetLayouts = params.descriptorLayouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pPushConstantRanges = &dynamicPushConstant;
-
-		if (vkCreatePipelineLayout(m_params.device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
-			throw std::runtime_error("Failed to create pipeline layout");
-
-		Logger::Log<SUCCESS>("Vulkan pipeline layout: ok");
-
-		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		for (const ShaderGpuData_Legacy* shaderGpuData : shaders)
+		switch (type)
 		{
-			VkShaderStageFlagBits shaderStageType = GetShaderStageTypeByShaderType(shaderGpuData->type);
+			case EShaderType::Vertex:
+				return VK_SHADER_STAGE_VERTEX_BIT;
+			case EShaderType::Fragment:
+				return VK_SHADER_STAGE_FRAGMENT_BIT;
+			default:
+				throw std::runtime_error("Invalid shader type");
+		}
+	}
+
+	static VkFormat Internal_GetVulkanFormat(const VertexType& type)
+	{
+		switch (type)
+		{
+			case VertexType::Float:
+				return VK_FORMAT_R32_SFLOAT;
+			case VertexType::Float2:
+				return VK_FORMAT_R32G32_SFLOAT;
+			case VertexType::Float3:
+				return VK_FORMAT_R32G32B32_SFLOAT;
+			case VertexType::Float4:
+				return VK_FORMAT_R32G32B32A32_SFLOAT;
+			default:
+				throw std::runtime_error("Invalid vertex type");
+		}
+	}
+
+	static std::vector<VkVertexInputBindingDescription> Internal_GetVertexBindingDescription(const VertexLayout& layout)
+	{
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = layout.GetStride();
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return { bindingDescription };
+	}
+
+	static std::vector<VkVertexInputAttributeDescription> Internal_GetVertexAttributeDescriptions(const VertexLayout& layout)
+	{
+		const auto attributes = layout.GetAttributes();
+
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+		attributeDescriptions.reserve(attributes.size());
+
+		for (const auto& attribute : attributes)
+		{
+			VkVertexInputAttributeDescription vertexAttribute{};
+			vertexAttribute.binding = 0;
+			vertexAttribute.location = attribute.location;
+			vertexAttribute.offset = attribute.offset;
+			vertexAttribute.format = Internal_GetVulkanFormat(attribute.type);
+
+			attributeDescriptions.push_back(vertexAttribute);
+		}
+
+		return attributeDescriptions;
+	}
+
+	static bool Internal_CreatePipeline(RenderingApi::Pipeline* dstPipeline, const PipelineDescription& desc,  RenderingDeviceInternals* self)
+	{
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+		for (const auto shaderHandle : desc.shaders)
+		{
+			const auto shader = self->shaders.Get(shaderHandle);
 
 			VkPipelineShaderStageCreateInfo shaderStageInfo{};
 			shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStageInfo.stage = shaderStageType;
-			shaderStageInfo.module = shaderGpuData->shaderModule->Handle();
-			shaderStageInfo.pName = params.name;
+			shaderStageInfo.stage = Internal_GetShaderStage(shader->type);
+			shaderStageInfo.module = shader->module;
+			shaderStageInfo.pName = "main";
 			shaderStages.push_back(shaderStageInfo);
 		}
 
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo = params.vertexInputDescription.GetCreateInfo();
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+		const auto vertexBindings = Internal_GetVertexBindingDescription(desc.vertexLayout);
+		vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertexBindings.size());
+		vertexInputInfo.pVertexBindingDescriptions = vertexBindings.data();
+
+		const auto vertexAttributes = Internal_GetVertexAttributeDescriptions(desc.vertexLayout);
+		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributes.size());
+		vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes.data();
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -92,25 +147,26 @@ namespace BetterThanNothing::RenderingApi
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.rasterizationSamples = m_params.device->GetMaxMsaaSamples();
+		multisampling.rasterizationSamples = self->device->GetMaxMsaaSamples();
 		multisampling.sampleShadingEnable = VK_TRUE;
 		multisampling.alphaToCoverageEnable = VK_TRUE;
 		multisampling.minSampleShading = 1.0f; // closer to one is better quality (SSAA), closer to zero is MSAA
 
 		// Fallback: If no color attachment format is defined, we take the one from the Swapchain
-		if (m_params.colorAttachmentFormats.empty())
-			m_params.colorAttachmentFormats.push_back(m_params.swapChain->GetImageFormat());
+		// if (m_params.colorAttachmentFormats.empty())
+		const std::vector colorAttachmentFormats = {self->swapChain->GetImageFormat()};
 
 		// Fallback: If no depth attachment format is defined, we take the one from the Swapchain
-		if (m_params.depthAttachmentFormat == VK_FORMAT_UNDEFINED)
-			m_params.depthAttachmentFormat = m_params.swapChain->GetDepthFormat();
+		// if (m_params.depthAttachmentFormat == VK_FORMAT_UNDEFINED)
+		const VkFormat depthAttachmentFormat = self->swapChain->GetDepthFormat();
+		const VkFormat stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
 		pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-		pipelineRenderingInfo.colorAttachmentCount = static_cast<uint32_t>(m_params.colorAttachmentFormats.size());
-		pipelineRenderingInfo.pColorAttachmentFormats = m_params.colorAttachmentFormats.data();
-		pipelineRenderingInfo.depthAttachmentFormat = m_params.depthAttachmentFormat;
-		pipelineRenderingInfo.stencilAttachmentFormat = m_params.stencilAttachmentFormat;
+		pipelineRenderingInfo.colorAttachmentCount = static_cast<uint32_t>(colorAttachmentFormats.size());
+		pipelineRenderingInfo.pColorAttachmentFormats = colorAttachmentFormats.data();
+		pipelineRenderingInfo.depthAttachmentFormat = depthAttachmentFormat;
+		pipelineRenderingInfo.stencilAttachmentFormat = stencilAttachmentFormat;
 
 		VkPipelineColorBlendAttachmentState colorBlendState{};
 		colorBlendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -123,7 +179,7 @@ namespace BetterThanNothing::RenderingApi
 		colorBlendState.alphaBlendOp = VK_BLEND_OP_ADD;
 
 		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
-		blendAttachments.resize(m_params.colorAttachmentFormats.size(), colorBlendState);
+		blendAttachments.resize(colorAttachmentFormats.size(), colorBlendState);
 
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -144,6 +200,9 @@ namespace BetterThanNothing::RenderingApi
 		depthStencil.front = {}; // Optional
 		depthStencil.back = {};	 // Optional
 
+		if (!self->pipelineLayouts.contains(desc.layoutName))
+			return false;
+
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
@@ -156,120 +215,42 @@ namespace BetterThanNothing::RenderingApi
 		pipelineInfo.pDepthStencilState = &depthStencil;
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
-		pipelineInfo.layout = m_pipelineLayout;
+		pipelineInfo.layout = self->pipelineLayouts.at(desc.layoutName)->Handle();
 		pipelineInfo.pNext = &pipelineRenderingInfo;
 		pipelineInfo.renderPass = VK_NULL_HANDLE; // m_context->vkRenderPass->Handle();
 		pipelineInfo.subpass = 0;
 
-		if (vkCreateGraphicsPipelines(m_params.device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS)
-			throw std::runtime_error("Failed to create graphics pipeline");
+		if (vkCreateGraphicsPipelines(self->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &dstPipeline->pipeline) != VK_SUCCESS)
+			return false;
 
-		Logger::Log<SUCCESS>("Vulkan graphics pipeline: ok");
+		return true;
 	}
 
-	Pipeline_Legacy::~Pipeline_Legacy()
+	Handle RenderingDevice::CreatePipeline(const PipelineDescription& desc)
 	{
-		if (m_pipelineLayout != VK_NULL_HANDLE)
-			vkDestroyPipelineLayout(m_params.device->Handle(), m_pipelineLayout, nullptr);
+		const auto handle = m_self->pipelines.Allocate();
 
-		if (m_pipeline != VK_NULL_HANDLE)
-			vkDestroyPipeline(m_params.device->Handle(), m_pipeline, nullptr);
+		if (!Internal_CreatePipeline(m_self->pipelines.Get(handle), desc, m_self.get()))
+			throw std::runtime_error("Failed to create pipeline");
+
+		return handle;
 	}
 
-	VkPipeline Pipeline_Legacy::Handle() const
+	RenderingApi::Pipeline* RenderingDevice::GetPipeline(const Handle& handle)
 	{
-		return m_pipeline;
+		if (!m_self->pipelines.Has(handle))
+			throw std::runtime_error("Invalid pipeline handle!");
+
+		return m_self->pipelines.Get(handle);
 	}
 
-	VkPipelineLayout Pipeline_Legacy::GetLayout() const
+	void RenderingDevice::DestroyPipeline(const Handle& handle)
 	{
-		return m_pipelineLayout;
+		if (!m_self->pipelines.Has(handle))
+			throw std::runtime_error("Invalid pipeline handle!");
+
+		const RenderingApi::Pipeline* pipeline = m_self->pipelines.Get(handle);
+		vkDestroyPipeline(m_self->device->Handle(), pipeline->pipeline, nullptr);
+		m_self->pipelines.Destroy(handle);
 	}
-
-	VkShaderStageFlagBits Pipeline_Legacy::GetShaderStageTypeByShaderType(const EShaderType type)
-	{
-		switch (type)
-		{
-			case EShaderType::Vertex:
-				return VK_SHADER_STAGE_VERTEX_BIT;
-			case EShaderType::Fragment:
-				return VK_SHADER_STAGE_FRAGMENT_BIT;
-			default:
-				throw std::runtime_error("Invalid shader type");
-		}
-	}
-
-	PipelineBuilder& PipelineBuilder::SetPath(const char* path)
-	{
-		m_params.path = path;
-		return *this;
-	}
-
-	PipelineBuilder& PipelineBuilder::SetName(const char* name)
-	{
-		m_params.name = name;
-		return *this;
-	}
-
-	PipelineBuilder& PipelineBuilder::AddShader(const std::string& shaderPath, const EShaderType shaderType)
-	{
-		PipelineShaderInfo shaderInfo;
-		shaderInfo.shaderPath = shaderPath;
-		shaderInfo.shaderType = shaderType;
-
-		m_params.shadersInfos.push_back(shaderInfo);
-
-		if (shaderType == EShaderType::Vertex)
-			m_hasVertexShader = true;
-
-		if (shaderType == EShaderType::Fragment)
-			m_hasFragmentShader = true;
-
-		return *this;
-	}
-
-	PipelineBuilder& PipelineBuilder::AddVertexShader(const std::string& shaderPath)
-	{
-		return AddShader(shaderPath, EShaderType::Vertex);
-	}
-
-	PipelineBuilder& PipelineBuilder::AddFragmentShader(const std::string& shaderPath)
-	{
-		return AddShader(shaderPath, EShaderType::Fragment);
-	}
-
-	PipelineBuilder& PipelineBuilder::AddColorAttachment(VkFormat format)
-	{
-		m_params.colorAttachmentFormats.push_back(format);
-		return *this;
-	}
-
-	PipelineBuilder& PipelineBuilder::SetDepthAttachment(VkFormat format)
-	{
-		m_params.depthAttachmentFormat = format;
-		return *this;
-	}
-
-	PipelineBuilder& PipelineBuilder::SetStencilAttachment(VkFormat format)
-	{
-		m_params.stencilAttachmentFormat = format;
-		return *this;
-	}
-
-	PipelineBuilder& PipelineBuilder::AddDescriptorSetLayout(const VkDescriptorSetLayout& layout)
-	{
-		m_params.descriptorLayouts.push_back(layout);
-		return *this;
-	}
-
-	PipelineCreateInfo& PipelineBuilder::GetBuildParams()
-	{
-		if (!m_hasVertexShader)
-			throw std::runtime_error("Missing vertex shader");
-
-		if (!m_hasFragmentShader)
-			throw std::runtime_error("Missing fragment shader");
-
-		return m_params;
-	}
-};
+}

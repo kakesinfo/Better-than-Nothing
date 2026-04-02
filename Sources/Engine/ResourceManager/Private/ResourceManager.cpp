@@ -18,18 +18,16 @@
 
 #include "ResourceManager/ResourceManager.hpp"
 
+#include "RenderingDevice/PipelineDescription.hpp"
 #include "RenderingDevice/ShaderDescription.hpp"
+#include "ResourceManager/PipelineBlueprint.hpp"
 
 #include <Common/Logger.hpp>
-#include <Data/Graphics/MeshData.hpp>
 #include <Data/Graphics/VertexData.hpp>
-#include <RenderingApi/Core/ShaderModule.hpp>
-#include <RenderingApi/Data/ShaderGpuData_Legacy.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <RenderingDevice/SamplerDescription.hpp>
 #include <RenderingDevice/TextureDescription.hpp>
 #include <ResourceImporter/ResourceImporter.hpp>
-#include <ResourceManager/Loader/ShaderLoader.hpp>
 #include <ResourceManager/ResourceManager_Types.hpp>
 #include <filesystem>
 
@@ -37,7 +35,6 @@ namespace BetterThanNothing
 {
 	ResourceManager::ResourceManager(RenderingDevice* renderingDevice) : m_renderingDevice(renderingDevice)
 	{
-		m_shaderLoader = std::make_unique<ShaderLoader>(m_renderingDevice);
 		m_importer = std::make_unique<ResourceImporter>();
 	}
 
@@ -159,8 +156,9 @@ namespace BetterThanNothing
 		ImportedShader importedShader = m_importer->ImportShader(path);
 
 		auto gpuData = std::make_unique<ShaderResourceCache>();
+		gpuData->name = std::filesystem::path(path).filename().string();
 		gpuData->type = importedShader.type;
-		gpuData->module = m_renderingDevice->CreateShader({importedShader.type, importedShader.data.data()});
+		gpuData->module = m_renderingDevice->CreateShader({gpuData->name, importedShader.type, importedShader.data.data()});
 
 		const auto shaderId = GenerateUniqueResourceId();
 		m_shaders[shaderId] = std::move(gpuData);
@@ -171,19 +169,36 @@ namespace BetterThanNothing
 		return shaderId;
 	}
 
-	ResourceId ResourceManager::LoadShader_Legacy(const std::string& path, EShaderType type)
+	ResourceId ResourceManager::CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback)
 	{
-		if (const auto it = m_shadersLegacyLUT.find(path); it != m_shadersLegacyLUT.end())
+		if (const auto it = m_pipelinesLUT.find(name); it != m_pipelinesLUT.end())
 			return it->second;
 
-		const auto shaderId = GenerateUniqueResourceId();
+		PipelineBlueprint blueprint;
+		callback(&blueprint);
 
-		m_shadersLegacy[shaderId] = m_shaderLoader->Load({type, path});
-		m_shadersLegacyLUT[path] = shaderId;
+		PipelineDescription desc {};
+		desc.vertexLayout = blueprint.GetVertexLayout();
+		desc.layoutName = blueprint.GetPipelineLayout();
+		desc.shaders.reserve(blueprint.GetShaders().size());
+		for (const auto& shaderId : blueprint.GetShaders())
+			desc.shaders.push_back(GetShaderData(shaderId)->module);
 
-		Logger::Log<INFO>("ShaderGpuData created and cached for Shader: {}", path);
+		// TODO: add more stuff to description using blueprint
 
-		return shaderId;
+		auto cache = std::make_unique<PipelineResourceCache>();
+		cache->name = name;
+		cache->layoutName = desc.layoutName;
+		cache->pipeline = m_renderingDevice->CreatePipeline(desc);
+
+		const auto pipelineId = GenerateUniqueResourceId();
+
+		m_pipelines[pipelineId] = std::move(cache);
+		m_pipelinesLUT[name] = pipelineId;
+
+		Logger::Log<INFO>("PipelineResourceCache created and cached for Pipeline: {}", name);
+
+		return pipelineId;
 	}
 
 	MeshResourceCache* ResourceManager::GetMeshData(ResourceId id)
@@ -200,25 +215,24 @@ namespace BetterThanNothing
 		return m_textures[id].get();
 	}
 
-	ModelResource* ResourceManager::GetModel(const ResourceId id)
+	ModelResource* ResourceManager::GetModelData(const ResourceId id)
 	{
 		if (!m_models.contains(id))
 			throw std::runtime_error("No ModelResource for ResourceId: " + std::to_string(id));
 		return &m_models[id];
 	}
 
-	ShaderResourceCache* ResourceManager::GetShader(ResourceId id)
+	ShaderResourceCache* ResourceManager::GetShaderData(ResourceId id)
 	{
 		if (!m_shaders.contains(id))
 			throw std::runtime_error("No ShaderResourceCache for ResourceId: " + std::to_string(id));
 		return m_shaders[id].get();
 	}
 
-	ShaderGpuData_Legacy* ResourceManager::GetShader_Legacy(const ResourceId id)
+	PipelineResourceCache* ResourceManager::GetPipelineData(const std::string& name)
 	{
-		if (!m_shadersLegacy.contains(id))
-			return nullptr;
-
-		return m_shadersLegacy[id].get();
+		if (!m_pipelinesLUT.contains(name))
+			throw std::runtime_error("No PipelineResourceCache for ResourceId: " + name);
+		return m_pipelines[m_pipelinesLUT[name]].get();
 	}
 }
