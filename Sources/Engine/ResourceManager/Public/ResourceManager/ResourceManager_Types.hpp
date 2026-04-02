@@ -51,6 +51,8 @@ namespace BetterThanNothing
 
 	struct PipelineResourceCache
 	{
-		st
+		std::string name;
+		std::string layoutName;
+		Handle		pipeline;
 	};
 }

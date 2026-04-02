@@ -25,6 +25,6 @@ namespace BetterThanNothing
 	struct PipelineDescription
 	{
 		std::vector<Handle> shaders;
-		std::string layout;
+		std::string layoutName;
 	};
 }

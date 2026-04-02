@@ -72,7 +72,7 @@ namespace BetterThanNothing
 		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
 
-		m_resourceManager->CreatePipeline([&](PipelineBlueprint* blueprint) {
+		m_resourceManager->CreatePipeline("Opaque", [&](PipelineBlueprint* blueprint) {
 			blueprint->AddShader(vertShader);
 			blueprint->AddShader(fragShader);
 			blueprint->SetPipelineLayout("Forward");

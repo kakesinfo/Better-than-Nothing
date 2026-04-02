@@ -189,21 +189,33 @@ namespace BetterThanNothing
 		return shaderId;
 	}
 
-	ResourceId ResourceManager::CreatePipeline(const std::function<void(PipelineBlueprint*)>& callback)
+	ResourceId ResourceManager::CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback)
 	{
+		if (const auto it = m_pipelinesLUT.find(name); it != m_pipelinesLUT.end())
+			return it->second;
+
 		PipelineBlueprint blueprint;
 		callback(&blueprint);
 
 		PipelineDescription desc;
-		desc.layout = blueprint.GetPipelineLayout();
+		desc.layoutName = blueprint.GetPipelineLayout();
 		desc.shaders.reserve(blueprint.GetShaders().size());
 		for (auto& shaderId : blueprint.GetShaders())
 			desc.shaders.push_back(GetShader(shaderId)->module);
 
-		const auto pipelineId = GenerateUniqueResourceId();
-		const auto pipelineHandle = m_renderingDevice->CreatePipeline(desc);
+		// TODO: add more stuff to description using blueprint
 
-		// TODO: call renderingDevice and cache result
+		auto cache = std::make_unique<PipelineResourceCache>();
+		cache->name = name;
+		cache->layoutName = desc.layoutName;
+		cache->pipeline = m_renderingDevice->CreatePipeline(desc);
+
+		const auto pipelineId = GenerateUniqueResourceId();
+
+		m_pipelines[pipelineId] = std::move(cache);
+		m_pipelinesLUT[name] = pipelineId;
+
+		Logger::Log<INFO>("PipelineResourceCache created and cached for Pipeline: {}", name);
 
 		return pipelineId;
 	}
