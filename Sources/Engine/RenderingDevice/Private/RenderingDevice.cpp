@@ -83,11 +83,19 @@ namespace BetterThanNothing
 	{
 		m_self->device->WaitIdle();
 
+		for (uint32_t i = 0; i < m_self->pipelines.Size(); i++)
+		{
+			vkDestroyPipeline(m_self->device->Handle(), m_self->pipelines.Get(i)->pipeline, nullptr);
+			m_self->pipelines.Destroy(i);
+		}
+
 		for (uint32_t i = 0; i < m_self->shaders.Size(); i++)
 		{
 			m_self->device->DestroyShaderModule(m_self->shaders.Get(i)->module);
 			m_self->shaders.Destroy(i);
 		}
+
+		m_self->pipelineLayouts.clear();
 
 		m_self->samplersLUT.clear();
 		for (uint32_t i = 0; i < m_self->samplers.Size(); i++)

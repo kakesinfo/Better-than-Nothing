@@ -66,11 +66,6 @@ namespace BetterThanNothing
 			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
 		});
 
-		CreateGlobalUniformBuffers();
-		CreateGlobalUniformDescriptorSets();
-		CreatePointLightBuffers();
-		CreatePointLightDescriptorSets();
-
 		const VertexLayout vertexLayout = { VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3 };
 
 		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
@@ -84,6 +79,11 @@ namespace BetterThanNothing
 		});
 
 		m_drawStream = std::make_unique<DrawStream>();
+
+		CreateGlobalUniformBuffers();
+		CreateGlobalUniformDescriptorSets();
+		CreatePointLightBuffers();
+		CreatePointLightDescriptorSets();
 
 		Logger::Log<SUCCESS>("Renderer: initialized successfully");
 	}
