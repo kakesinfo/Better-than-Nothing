@@ -189,14 +189,17 @@ namespace BetterThanNothing
 
 	std::optional<uint32_t> RenderingDevice::BeginFrame()
 	{
+		const auto [windowWidth, windowHeight] = m_createInfo.platform->GetWindowSize();
+
+		if (windowWidth == 0 || windowHeight == 0)
+			return std::nullopt;
+
 		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();
 		FlushDescriptorSetUpdateRequests();
 
 		const auto acquireResult = m_self->swapChain->AcquireNextImage(m_self->imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
-
 		if (!acquireResult.has_value())
 		{
-			const auto [windowWidth, windowHeight] = m_createInfo.platform->GetWindowSize();
 			m_self->device->WaitIdle();
 			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
 			return std::nullopt;
