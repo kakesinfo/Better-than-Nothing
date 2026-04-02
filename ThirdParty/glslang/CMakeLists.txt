@@ -291,7 +291,7 @@ if(BUILD_EXTERNAL AND IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/External)
     add_subdirectory(External)
 endif()
 
-option(ALLOW_EXTERNAL_SPIRV_TOOLS "Allows to build against installed SPIRV-Tools-opt. This is unsupported if the commit isn't the one in known_good.json")
+option(ALLOW_EXTERNAL_SPIRV_TOOLS "Allows to build against installed SPIRV-Tools-opt. This is unsupported if the commit isn't the one in known_good.json" ON)
 if(NOT TARGET SPIRV-Tools-opt)
     if(ALLOW_EXTERNAL_SPIRV_TOOLS)
         # Look for external SPIR-V Tools build, if not building in-tree
