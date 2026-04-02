@@ -164,6 +164,14 @@ namespace BetterThanNothing
 		m_self->pipelineLayouts[name] = blueprint.Build();
 	}
 
+	RenderingApi::PipelineLayout* RenderingDevice::GetPipelineLayout(const std::string& name)
+	{
+		if (!m_self->pipelineLayouts.contains(name))
+			throw std::runtime_error("Pipeline layout does not exist");
+
+		return m_self->pipelineLayouts[name].get();
+	}
+
 	std::optional<uint32_t> RenderingDevice::BeginFrame()
 	{
 		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();

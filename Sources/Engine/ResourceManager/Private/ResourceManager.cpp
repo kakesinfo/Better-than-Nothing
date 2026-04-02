@@ -202,7 +202,7 @@ namespace BetterThanNothing
 		desc.layoutName = blueprint.GetPipelineLayout();
 		desc.shaders.reserve(blueprint.GetShaders().size());
 		for (const auto& shaderId : blueprint.GetShaders())
-			desc.shaders.push_back(GetShader(shaderId)->module);
+			desc.shaders.push_back(GetShaderData(shaderId)->module);
 
 		// TODO: add more stuff to description using blueprint
 
@@ -235,18 +235,25 @@ namespace BetterThanNothing
 		return m_textures[id].get();
 	}
 
-	ModelResource* ResourceManager::GetModel(const ResourceId id)
+	ModelResource* ResourceManager::GetModelData(const ResourceId id)
 	{
 		if (!m_models.contains(id))
 			throw std::runtime_error("No ModelResource for ResourceId: " + std::to_string(id));
 		return &m_models[id];
 	}
 
-	ShaderResourceCache* ResourceManager::GetShader(ResourceId id)
+	ShaderResourceCache* ResourceManager::GetShaderData(ResourceId id)
 	{
 		if (!m_shaders.contains(id))
 			throw std::runtime_error("No ShaderResourceCache for ResourceId: " + std::to_string(id));
 		return m_shaders[id].get();
+	}
+
+	PipelineResourceCache* ResourceManager::GetPipelineData(const std::string& name)
+	{
+		if (!m_pipelinesLUT.contains(name))
+			throw std::runtime_error("No PipelineResourceCache for ResourceId: " + name);
+		return m_pipelines[m_pipelinesLUT[name]].get();
 	}
 
 	ShaderGpuData_Legacy* ResourceManager::GetShader_Legacy(const ResourceId id)

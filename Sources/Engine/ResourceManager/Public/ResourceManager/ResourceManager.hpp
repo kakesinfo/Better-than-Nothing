@@ -71,8 +71,10 @@ namespace BetterThanNothing
 
 		MeshResourceCache*	  GetMeshData(ResourceId id);
 		TextureResourceCache* GetTextureData(ResourceId id);
-		ModelResource*		  GetModel(ResourceId id);
-		ShaderResourceCache*  GetShader(ResourceId id);
+		ModelResource*		  GetModelData(ResourceId id);
+		ShaderResourceCache*  GetShaderData(ResourceId id);
+		PipelineResourceCache* GetPipelineData(const std::string& name);
+
 
 		/// @deprecated
 		ResourceId LoadShader_Legacy(const std::string& path, EShaderType type);

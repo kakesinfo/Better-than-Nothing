@@ -98,7 +98,7 @@ namespace BetterThanNothing
 			shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shaderStageInfo.stage = Internal_GetShaderStage(shader->type);
 			shaderStageInfo.module = shader->module;
-			shaderStageInfo.pName = shader->name.c_str();
+			shaderStageInfo.pName = "main";
 			shaderStages.push_back(shaderStageInfo);
 		}
 
@@ -201,7 +201,7 @@ namespace BetterThanNothing
 		depthStencil.back = {};	 // Optional
 
 		if (!self->pipelineLayouts.contains(desc.layoutName))
-			throw std::runtime_error("");
+			return false;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -221,7 +221,7 @@ namespace BetterThanNothing
 		pipelineInfo.subpass = 0;
 
 		if (vkCreateGraphicsPipelines(self->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &dstPipeline->pipeline) != VK_SUCCESS)
-			throw std::runtime_error("Failed to create graphics pipeline");
+			return false;
 
 		return true;
 	}
@@ -234,6 +234,14 @@ namespace BetterThanNothing
 			throw std::runtime_error("Failed to create pipeline");
 
 		return handle;
+	}
+
+	RenderingApi::Pipeline* RenderingDevice::GetPipeline(const Handle& handle)
+	{
+		if (!m_self->pipelines.Has(handle))
+			throw std::runtime_error("Invalid pipeline handle!");
+
+		return m_self->pipelines.Get(handle);
 	}
 
 	void RenderingDevice::DestroyPipeline(const Handle& handle)

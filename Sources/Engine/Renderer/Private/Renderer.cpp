@@ -19,6 +19,7 @@
 #include "Renderer/Renderer.hpp"
 
 #include "RenderingApi/Core/PipelineLayout.hpp"
+#include "RenderingApi/Resources/Pipeline.hpp"
 #include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
 #include "RenderingDevice/VertexLayout.hpp"
 #include "ResourceManager/PipelineBlueprint.hpp"
@@ -76,20 +77,10 @@ namespace BetterThanNothing
 		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
 
 		m_resourceManager->CreatePipeline("Forward::Opaque", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout);
 			blueprint->AddShader(vertShader);
 			blueprint->AddShader(fragShader);
 			blueprint->SetPipelineLayout("Forward");
-			blueprint->SetVertexLayout(vertexLayout);
-		});
-
-		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
-			builder->SetPath("../../../Shaders/");
-			builder->SetName("main");
-			builder->AddVertexShader("main/main.vert");
-			builder->AddFragmentShader("main/main.frag");
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("GlobalUniforms")->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("Textures")->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("PointLights")->Handle());
 		});
 
 		m_drawStream = std::make_unique<DrawStream>();
@@ -110,9 +101,6 @@ namespace BetterThanNothing
 
 	void Renderer::RenderFrame(Scene* scene) const
 	{
-		if (!m_defaultPipeline)
-			throw std::runtime_error("No pipeline set for rendering!");
-
 		const auto imageIndexOpt = m_renderingDevice->BeginFrame();
 		if (!imageIndexOpt)
 			return;
@@ -178,6 +166,8 @@ namespace BetterThanNothing
 
 		m_drawStream->Reset(flattenedScene.size());
 
+		const auto defaultPipeline = m_resourceManager->GetPipelineData("Forward::Opaque");
+
 		for (const auto& [meshId, textureId, localMatrix] : flattenedScene)
 		{
 			if (!meshId || !textureId)
@@ -194,8 +184,8 @@ namespace BetterThanNothing
 
 			// clang-format off
 			m_drawStream->Draw({
-				.pipeline = m_defaultPipeline->Handle(),
-				.pipelineLayout = m_defaultPipeline->GetLayout(),
+				.pipeline = m_renderingDevice->GetPipeline(defaultPipeline->pipeline)->pipeline,
+				.pipelineLayout = m_renderingDevice->GetPipelineLayout("Forward")->Handle(),
 				.vertexBuffer = meshData->vertexBuffer,
 				.indexBuffer = meshData->indexBuffer,
 				.indexCount = meshData->indexCount,
