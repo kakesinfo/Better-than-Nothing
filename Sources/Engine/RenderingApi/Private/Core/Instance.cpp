@@ -31,12 +31,12 @@ namespace BetterThanNothing::RenderingApi
 
 #ifndef NDEBUG
 		const bool validationLayersEnabled = m_createInfo.enableValidation;
-#else
-		constexpr bool validationLayersEnabled = false;
-#endif
 
 		if (validationLayersEnabled && !validationLayersAvailable)
 			Logger::Log<WARNING>("Validation layers are enabled but not available on this system");
+#else
+		constexpr bool validationLayersEnabled = false;
+#endif
 
 		m_enableValidationLayers = validationLayersEnabled & validationLayersAvailable;
 

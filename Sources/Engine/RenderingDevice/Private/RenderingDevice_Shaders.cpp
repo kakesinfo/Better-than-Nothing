@@ -50,7 +50,7 @@ namespace BetterThanNothing
 		{.language = GLSLANG_SOURCE_GLSL,
 		 .stage = Internal_GetShaderStage(desc.type),
 		 .client = GLSLANG_CLIENT_VULKAN,
-		 .client_version = GLSLANG_TARGET_VULKAN_1_3,
+		 .client_version = GLSLANG_TARGET_VULKAN_1_4,
 		 .target_language = GLSLANG_TARGET_SPV,
 		 .target_language_version = GLSLANG_TARGET_SPV_1_0,
 		 .code = desc.data,
