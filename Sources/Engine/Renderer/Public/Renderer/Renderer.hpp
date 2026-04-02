@@ -22,27 +22,18 @@
 
 namespace BetterThanNothing
 {
-	struct GlobalUniformData;
-	class LegacyWindow;
-
 	namespace RenderingApi
 	{
-		class Pipeline_Legacy;
-		class PipelineBuilder;
 		class Semaphore;
 	}
 
-	class RenderCache;
-	class Camera;
-	struct CameraData;
-	class DrawStream;
-	struct DirectionalLightData;
-	class ImGuiPass;
-	struct DrawStreamView;
 	class ResourceManager;
 	class RenderingDevice;
 	class Scene;
 	class Editor;
+	class DrawStream;
+	struct DrawStreamView;
+	struct GlobalUniformData;
 
 	class Renderer final
 	{
@@ -51,8 +42,6 @@ namespace BetterThanNothing
 		~Renderer();
 
 		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI);
-
-		void RenderFrame(Scene* scene) const;
 
 	private:
 		auto CreateGlobalUniformBuffers() -> void;
@@ -68,11 +57,8 @@ namespace BetterThanNothing
 		void ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const;
 		void ExecuteEditorPass(Scene* scene, uint32_t imageIndex) const;
 
-		static VkVertexInputBindingDescription				  GetVertexBindingDescription();
-		static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions();
-
 	public:
-		void AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback);
+		void RenderFrame(Scene* scene) const;
 
 	private:
 		RenderingDevice*			m_renderingDevice = nullptr;
@@ -80,7 +66,6 @@ namespace BetterThanNothing
 		Editor*						m_editor = nullptr;
 		std::unique_ptr<DrawStream> m_drawStream;
 
-		std::unique_ptr<RenderingApi::Pipeline_Legacy> m_defaultPipeline;
 		std::vector<Handle>						m_globalUniformBuffer;
 		std::vector<Handle>						m_globalDescriptorSets;
 		std::vector<Handle>						m_pointLightBuffer;

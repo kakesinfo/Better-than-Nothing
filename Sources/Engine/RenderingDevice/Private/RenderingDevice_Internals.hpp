@@ -32,6 +32,7 @@
 #include <RenderingApi/Core/SwapChain.hpp>
 #include <RenderingApi/Resources/Buffer.hpp>
 #include <RenderingApi/Resources/DescriptorSet.hpp>
+#include <RenderingApi/Resources/Pipeline.hpp>
 #include <RenderingApi/Resources/Sampler.hpp>
 #include <RenderingApi/Resources/Shader.hpp>
 #include <RenderingApi/Resources/Texture.hpp>
@@ -64,6 +65,7 @@ namespace BetterThanNothing
 		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   samplers;
 		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> descriptors;
 		HandleRegistry<RenderingApi::Shader, HandleType::Shader>			   shaders;
+		HandleRegistry<RenderingApi::Pipeline, HandleType::Pipeline>		   pipelines;
 
 		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> samplersLUT;
 		std::vector<DescriptorSetUpdateRequest>															descriptorsUpdateRequests;

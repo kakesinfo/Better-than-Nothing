@@ -18,8 +18,6 @@
 
 #include "Renderer/Renderer.hpp"
 
-#include "RenderingApi/Core/PipelineLayout.hpp"
-#include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
 #include <Data/Graphics/CameraData.hpp>
@@ -29,11 +27,15 @@
 #include <Data/Graphics/VertexData.hpp>
 #include <Editor/Editor.hpp>
 #include <RenderingApi.hpp>
-#include <RenderingApi/Data/VertexInputDescription.hpp>
+#include <RenderingApi/Core/PipelineLayout.hpp>
 #include <RenderingApi/Resources/Buffer.hpp>
 #include <RenderingApi/Resources/DescriptorSet.hpp>
+#include <RenderingApi/Resources/Pipeline.hpp>
+#include <RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp>
 #include <RenderingDevice/DrawStream.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
+#include <RenderingDevice/VertexLayout.hpp>
+#include <ResourceManager/PipelineBlueprint.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/ResourceManager_Types.hpp>
 #include <Scene/Camera.hpp>
@@ -41,8 +43,6 @@
 #include <Scene/SceneObject.hpp>
 #include <Scene/SceneObject_Components.hpp>
 #include <optional>
-
-#include <iostream>
 
 namespace BetterThanNothing
 {
@@ -62,25 +62,24 @@ namespace BetterThanNothing
 			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
 		});
 
+		const VertexLayout vertexLayout = {VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3};
+
+		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
+		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
+
+		m_resourceManager->CreatePipeline("Forward::Opaque", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout);
+			blueprint->AddShader(vertShader);
+			blueprint->AddShader(fragShader);
+			blueprint->SetPipelineLayout("Forward");
+		});
+
+		m_drawStream = std::make_unique<DrawStream>();
+
 		CreateGlobalUniformBuffers();
 		CreateGlobalUniformDescriptorSets();
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
-
-		m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
-		m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
-
-		AddPipeline([&](RenderingApi::PipelineBuilder* builder) {
-			builder->SetPath("../../../Shaders/");
-			builder->SetName("main");
-			builder->AddVertexShader("main/main.vert");
-			builder->AddFragmentShader("main/main.frag");
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("GlobalUniforms")->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("Textures")->Handle());
-			builder->AddDescriptorSetLayout(m_renderingDevice->GetDescriptorSetLayout("PointLights")->Handle());
-		});
-
-		m_drawStream = std::make_unique<DrawStream>();
 
 		Logger::Log<SUCCESS>("Renderer: initialized successfully");
 	}
@@ -98,9 +97,6 @@ namespace BetterThanNothing
 
 	void Renderer::RenderFrame(Scene* scene) const
 	{
-		if (!m_defaultPipeline)
-			throw std::runtime_error("No pipeline set for rendering!");
-
 		const auto imageIndexOpt = m_renderingDevice->BeginFrame();
 		if (!imageIndexOpt)
 			return;
@@ -166,6 +162,8 @@ namespace BetterThanNothing
 
 		m_drawStream->Reset(flattenedScene.size());
 
+		const auto defaultPipeline = m_resourceManager->GetPipelineData("Forward::Opaque");
+
 		for (const auto& [meshId, textureId, localMatrix] : flattenedScene)
 		{
 			if (!meshId || !textureId)
@@ -182,8 +180,8 @@ namespace BetterThanNothing
 
 			// clang-format off
 			m_drawStream->Draw({
-				.pipeline = m_defaultPipeline->Handle(),
-				.pipelineLayout = m_defaultPipeline->GetLayout(),
+				.pipeline = m_renderingDevice->GetPipeline(defaultPipeline->pipeline)->pipeline,
+				.pipelineLayout = m_renderingDevice->GetPipelineLayout("Forward")->Handle(),
 				.vertexBuffer = meshData->vertexBuffer,
 				.indexBuffer = meshData->indexBuffer,
 				.indexCount = meshData->indexCount,
@@ -478,68 +476,5 @@ namespace BetterThanNothing
 
 			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
 		}
-	}
-
-	void Renderer::AddPipeline(const std::function<void(RenderingApi::PipelineBuilder*)>& callback)
-	{
-		RenderingApi::PipelineBuilder builder;
-		callback(&builder);
-
-		RenderingApi::PipelineCreateInfo params = builder.GetBuildParams();
-
-		std::vector<const ShaderGpuData_Legacy*> shaderModules;
-		shaderModules.reserve(params.shadersInfos.size());
-
-		for (auto& [shaderPath, shaderType] : params.shadersInfos)
-		{
-			const auto legacyShaderId = m_resourceManager->LoadShader_Legacy(params.path + shaderPath, shaderType);
-			const auto shaderGpuData = m_resourceManager->GetShader_Legacy(legacyShaderId);
-			shaderModules.push_back(shaderGpuData);
-		}
-
-		params.vertexInputDescription = {};
-		params.vertexInputDescription.bindings = {GetVertexBindingDescription()};
-		params.vertexInputDescription.attributes = GetVertexAttributeDescriptions();
-
-		params.device = m_renderingDevice->GetDevice();
-		params.swapChain = m_renderingDevice->GetSwapChain();
-
-		m_defaultPipeline = std::make_unique<RenderingApi::Pipeline_Legacy>(params, shaderModules);
-	}
-
-	VkVertexInputBindingDescription Renderer::GetVertexBindingDescription()
-	{
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(VertexData);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		return bindingDescription;
-	}
-
-	std::vector<VkVertexInputAttributeDescription> Renderer::GetVertexAttributeDescriptions()
-	{
-		std::vector<VkVertexInputAttributeDescription> attributeDescriptions(4);
-
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(VertexData, position);
-
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(VertexData, color);
-
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(VertexData, uv);
-
-		attributeDescriptions[3].binding = 0;
-		attributeDescriptions[3].location = 3;
-		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[3].offset = offsetof(VertexData, normal);
-
-		return attributeDescriptions;
 	}
 }

@@ -24,6 +24,7 @@ namespace BetterThanNothing
 {
 	struct ShaderDescription
 	{
+		std::string name;
 		EShaderType type;
 		char* data;
 	};

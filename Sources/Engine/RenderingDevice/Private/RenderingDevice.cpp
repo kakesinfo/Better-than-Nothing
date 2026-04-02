@@ -30,6 +30,9 @@
 #include <RenderingApi.hpp>
 #include <cmath>
 
+
+#include <glslang/Include/glslang_c_interface.h>
+
 namespace BetterThanNothing
 {
 	RenderingDevice::RenderingDevice(const RenderingDeviceCreateInfo& createInfo) : m_createInfo(createInfo)
@@ -77,17 +80,29 @@ namespace BetterThanNothing
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();
+
+		glslang_initialize_process();
 	}
 
 	RenderingDevice::~RenderingDevice()
 	{
 		m_self->device->WaitIdle();
 
+		glslang_finalize_process();
+
+		for (uint32_t i = 0; i < m_self->pipelines.Size(); i++)
+		{
+			vkDestroyPipeline(m_self->device->Handle(), m_self->pipelines.Get(i)->pipeline, nullptr);
+			m_self->pipelines.Destroy(i);
+		}
+
 		for (uint32_t i = 0; i < m_self->shaders.Size(); i++)
 		{
 			m_self->device->DestroyShaderModule(m_self->shaders.Get(i)->module);
 			m_self->shaders.Destroy(i);
 		}
+
+		m_self->pipelineLayouts.clear();
 
 		m_self->samplersLUT.clear();
 		for (uint32_t i = 0; i < m_self->samplers.Size(); i++)
@@ -162,6 +177,14 @@ namespace BetterThanNothing
 		callback(&blueprint);
 
 		m_self->pipelineLayouts[name] = blueprint.Build();
+	}
+
+	RenderingApi::PipelineLayout* RenderingDevice::GetPipelineLayout(const std::string& name)
+	{
+		if (!m_self->pipelineLayouts.contains(name))
+			throw std::runtime_error("Pipeline layout does not exist");
+
+		return m_self->pipelineLayouts[name].get();
 	}
 
 	std::optional<uint32_t> RenderingDevice::BeginFrame()

@@ -25,6 +25,7 @@ namespace BetterThanNothing::RenderingApi
 {
 	struct Shader
 	{
+		std::string name;
 		EShaderType type;
 		VkShaderModule module = VK_NULL_HANDLE;
 	};

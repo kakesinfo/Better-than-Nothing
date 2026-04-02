@@ -17,22 +17,16 @@
  */
 
 #pragma once
-
-#include <Common/EShaderType.hpp>
-#include <memory>
+#include "VertexLayout.hpp"
 
 namespace BetterThanNothing
 {
-	class ShaderModule;
+	class Handle;
 
-	namespace RenderingApi
+	struct PipelineDescription
 	{
-		class ShaderModule;
-	}
-
-	struct ShaderGpuData_Legacy
-	{
-		EShaderType									type{};
-		std::unique_ptr<RenderingApi::ShaderModule> shaderModule = VK_NULL_HANDLE;
+		std::vector<Handle> shaders;
+		std::string			layoutName;
+		VertexLayout		vertexLayout;
 	};
-};
+}

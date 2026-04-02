@@ -29,7 +29,8 @@ namespace BetterThanNothing
 		Buffer,
 		Texture,
 		Sampler,
-		Shader
+		Shader,
+		Pipeline
 	};
 
 	class Handle

@@ -65,7 +65,7 @@ namespace BetterThanNothing
 		root.AddComponent<TransformComponent>();
 
 		const ResourceId modelId = m_resourceManager->LoadModel(path, preTransform);
-		const ModelResource* model = m_resourceManager->GetModel(modelId);
+		const ModelResource* model = m_resourceManager->GetModelData(modelId);
 
 		auto& modelComp = root.AddComponent<ModelComponent>();
 		modelComp.children.reserve(model->meshes.size());

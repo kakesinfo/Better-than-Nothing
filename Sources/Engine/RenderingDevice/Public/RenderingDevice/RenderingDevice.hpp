@@ -47,7 +47,6 @@ namespace BetterThanNothing
 		class Allocator;
 		class SwapChain;
 		class CommandPool;
-		class Pipeline_Legacy;
 		class CommandBuffer;
 		class DescriptorPool;
 		class DescriptorSetLayout;
@@ -55,11 +54,14 @@ namespace BetterThanNothing
 		struct Sampler;
 		struct Texture;
 		struct DescriptorSet;
+		struct Pipeline;
+		class PipelineLayout;
 	}
 
 	class StagingBuffer;
 	struct BufferDescription;
 	struct TextureFromDataDescription;
+	struct PipelineDescription;
 	class PipelineLayoutBlueprint;
 
 	struct RenderingDeviceCreateInfo
@@ -80,6 +82,7 @@ namespace BetterThanNothing
 		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& name);
 
 		void CreatePipelineLayout(const std::string& name, const std::function<void(PipelineLayoutBlueprint*)>& callback);
+		[[nodiscard]] RenderingApi::PipelineLayout* GetPipelineLayout(const std::string& name);
 
 		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc);
 		void				   DestroyTextureSampler(const Handle& handle);
@@ -122,6 +125,10 @@ namespace BetterThanNothing
 
 		[[nodiscard]] Handle CreateShader(const ShaderDescription& desc);
 		void				 DestroyShader(const Handle& handle);
+
+		[[nodiscard]] Handle				  CreatePipeline(const PipelineDescription& desc);
+		[[nodiscard]] RenderingApi::Pipeline* GetPipeline(const Handle& handle);
+		void								  DestroyPipeline(const Handle& handle);
 
 	private:
 		void Internal_CreateCommandBuffers();
