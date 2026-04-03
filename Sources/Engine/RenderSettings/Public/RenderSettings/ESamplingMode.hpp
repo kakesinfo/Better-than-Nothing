@@ -18,16 +18,16 @@
 
 #pragma once
 
-#include "Math/Matrix4.hpp"
-#include "Math/Vector3.hpp"
+#include <cstdint>
 
 namespace BetterThanNothing
 {
-	struct CameraData
+	enum class ESamplingMode : uint8_t
 	{
-		Matrix4 view;
-		Matrix4 projection;
-		Vector3 position;
-		float	exposure;
+		/**
+		 *
+		 */
+		MSAA = 0,
+		SSAA = 1
 	};
 }

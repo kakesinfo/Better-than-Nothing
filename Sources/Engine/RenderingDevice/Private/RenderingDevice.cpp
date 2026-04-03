@@ -67,8 +67,8 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Buffering mode: {}", static_cast<uint8_t>(createInfo.bufferingMode));
 		Logger::Log<INFO>("Max frame in-flight: {}", m_maxFramesInFlight);
 		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode != EBufferingMode::Immediate ? "enabled" : "disabled");
-		Logger::Log<INFO>("Anisotropy: {}x", m_self->device->GetMaxAnisotropy());
-		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples()));
+		Logger::Log<INFO>("Max Anisotropy: {}x", m_self->device->GetMaxAnisotropy());
+		Logger::Log<INFO>("Max MSAA samplers: {}x", static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples()));
 
 		m_self->descriptorPool = RenderingApi::DescriptorPool::Builder(m_self->device.get())
 									 .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)

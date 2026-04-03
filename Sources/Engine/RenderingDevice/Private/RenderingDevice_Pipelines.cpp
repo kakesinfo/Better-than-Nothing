@@ -145,6 +145,10 @@ namespace BetterThanNothing
 		rasterizer.depthBiasClamp = 0.0f;		   // Optional
 		rasterizer.depthBiasSlopeFactor = 0.0f;	   // Optional
 
+		// MSAA: sampleShadingEnable FALSE, minSampleShading 0.0f
+		// SSAA: sampleShadingEnable TRUE, minSampleShading 1.0f
+		// FSR : sampleShadingEnable FALSE, rasterizationSamples VK_SAMPLE_COUNT_1_BIT, minSampleShading 0.0f, alphaToCoverageEnable FALSE
+
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampling.rasterizationSamples = self->device->GetMaxMsaaSamples();
