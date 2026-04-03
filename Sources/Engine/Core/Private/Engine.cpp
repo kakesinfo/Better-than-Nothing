@@ -21,6 +21,8 @@
 #include <Core/Engine.hpp>
 
 #include "Platform/Platform.hpp"
+#include "RenderSettings/ESamplingMode.hpp"
+#include "RenderSettings/RenderSettings.hpp"
 
 #include <Core/IEngineApplication.hpp>
 #include <Editor/DebugPanel.hpp>
@@ -44,6 +46,10 @@ namespace BetterThanNothing
 	{
 		m_platform = Platform::Create("Better Than Nothing", 1280, 720);
 		LegacyInputManager::Initialize();
+
+		RenderSettings renderSettings {};
+		renderSettings.bufferingMode = EBufferingMode::Double;
+		renderSettings.samplingMode = ESamplingMode::SSAA;
 
 		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
