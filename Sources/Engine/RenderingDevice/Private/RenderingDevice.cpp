@@ -17,10 +17,8 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
-#include "../../RenderSettings/Public/RenderSettings/RenderSettings.hpp"
 #include "Platform/Platform.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
-#include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
@@ -223,7 +221,7 @@ namespace BetterThanNothing
 		const auto					   commandBuffer = m_self->commandBuffers.at(m_currentFrameIndex)->Handle();
 		const VkSemaphore			   waitSemaphores[] = {m_self->imageAvailableSemaphores.at(m_currentFrameIndex)->Handle()};
 		constexpr VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-		const VkSemaphore			   signalSemaphores[] = {m_self->swapChain->GetImageFinishedSemaphore(m_currentFrameIndex)};
+		const VkSemaphore			   signalSemaphores[] = {m_self->swapChain->GetImageFinishedSemaphore(imageIndex)};
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

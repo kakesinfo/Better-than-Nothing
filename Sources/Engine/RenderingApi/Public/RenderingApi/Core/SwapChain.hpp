@@ -18,11 +18,11 @@
 
 #pragma once
 
-#include <Common/EBufferingMode.hpp>
+#include <RenderSettings/RenderSettings.hpp>
 #include <optional>
 #include <vector>
-#include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing::RenderingApi
 {
@@ -38,7 +38,7 @@ namespace BetterThanNothing::RenderingApi
 		Allocator*	   allocator;
 		uint32_t	   width;
 		uint32_t	   height;
-		EBufferingMode bufferingMode = EBufferingMode::Double;
+		EBufferingMode bufferingMode;
 	};
 
 	class SwapChain

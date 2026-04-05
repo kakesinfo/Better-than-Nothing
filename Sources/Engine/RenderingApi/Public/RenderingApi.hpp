@@ -31,4 +31,4 @@
 #include "RenderingApi/Core/ShaderModule.hpp"
 #include "RenderingApi/Core/Surface.hpp"
 #include "RenderingApi/Core/SwapChain.hpp"
-#include <Common/EBufferingMode.hpp>
+#include <../../RenderSettings/Public/RenderSettings/EBufferingMode.hpp>

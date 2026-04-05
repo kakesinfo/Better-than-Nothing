@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Common/EBufferingMode.hpp"
+#include "EBufferingMode.hpp"
 #include "ESamplingMode.hpp"
 
 namespace BetterThanNothing
