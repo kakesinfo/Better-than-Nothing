@@ -87,7 +87,21 @@ namespace BetterThanNothing
 		return attributeDescriptions;
 	}
 
-	static bool Internal_CreatePipeline(RenderingApi::Pipeline* dstPipeline, const PipelineDescription& desc,  RenderingDeviceInternals* self)
+	static VkSampleCountFlagBits Internal_GetSampleCountFlagBits(const uint32_t sampleCount)
+	{
+		switch (sampleCount)
+		{
+			case 64: return VK_SAMPLE_COUNT_64_BIT;
+			case 32: return VK_SAMPLE_COUNT_32_BIT;
+			case 16: return VK_SAMPLE_COUNT_16_BIT;
+			case 8:  return VK_SAMPLE_COUNT_8_BIT;
+			case 4:  return VK_SAMPLE_COUNT_4_BIT;
+			case 2:  return VK_SAMPLE_COUNT_2_BIT;
+			default: return VK_SAMPLE_COUNT_1_BIT;
+		}
+	}
+
+	static bool Internal_CreatePipeline(RenderingApi::Pipeline* dstPipeline, const PipelineDescription& desc,  RenderingDeviceInternals* self, const RenderSettings* renderSettings)
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		for (const auto shaderHandle : desc.shaders)
@@ -149,12 +163,29 @@ namespace BetterThanNothing
 		// SSAA: sampleShadingEnable TRUE, minSampleShading 1.0f
 		// FSR : sampleShadingEnable FALSE, rasterizationSamples VK_SAMPLE_COUNT_1_BIT, minSampleShading 0.0f, alphaToCoverageEnable FALSE
 
+		const auto maxSampleLevel = static_cast<uint32_t>(self->device->GetMaxMsaaSamples());
+		const auto samplingLevel = std::min(renderSettings->samplingLevel, maxSampleLevel);
+
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.rasterizationSamples = self->device->GetMaxMsaaSamples();
-		multisampling.sampleShadingEnable = VK_TRUE;
+		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampling.sampleShadingEnable = VK_FALSE;
 		multisampling.alphaToCoverageEnable = VK_TRUE;
-		multisampling.minSampleShading = 1.0f; // closer to one is better quality (SSAA), closer to zero is MSAA
+
+		if (renderSettings->samplingMode == ESamplingMode::Msaa)
+		{
+			multisampling.rasterizationSamples = Internal_GetSampleCountFlagBits(maxSampleLevel);
+			multisampling.sampleShadingEnable = VK_FALSE;
+			multisampling.minSampleShading = 0.0f;
+		}
+
+		if (renderSettings->samplingMode == ESamplingMode::Ssaa)
+		{
+			multisampling.rasterizationSamples = Internal_GetSampleCountFlagBits(maxSampleLevel);
+			multisampling.sampleShadingEnable = VK_TRUE;
+			multisampling.minSampleShading = 1.0f;
+		}
+
 
 		// Fallback: If no color attachment format is defined, we take the one from the Swapchain
 		// if (m_params.colorAttachmentFormats.empty())
@@ -234,7 +265,7 @@ namespace BetterThanNothing
 	{
 		const auto handle = m_self->pipelines.Allocate();
 
-		if (!Internal_CreatePipeline(m_self->pipelines.Get(handle), desc, m_self.get()))
+		if (!Internal_CreatePipeline(m_self->pipelines.Get(handle), desc, m_self.get(), m_createInfo.renderSettings))
 			throw std::runtime_error("Failed to create pipeline");
 
 		return handle;

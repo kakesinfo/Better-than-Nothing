@@ -28,7 +28,7 @@ namespace BetterThanNothing
 		EBufferingMode bufferingMode;
 		bool		   enableVSync;
 		ESamplingMode  samplingMode;
-		uint16_t	   samplingLevel;
+		uint32_t	   samplingLevel;
 		float		   anisotropyLevel;
 		float		   gammaCorrection;
 	};

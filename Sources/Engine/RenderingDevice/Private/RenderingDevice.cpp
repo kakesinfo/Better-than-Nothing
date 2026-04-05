@@ -67,7 +67,7 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Max frame in-flight: {}", m_maxFramesInFlight);
 		Logger::Log<INFO>("VSync: {}", createInfo.renderSettings->bufferingMode != EBufferingMode::Immediate ? "enabled" : "disabled");
 		Logger::Log<INFO>("Multi-Sampling method: {}", createInfo.renderSettings->samplingMode == ESamplingMode::Msaa ? "MSAA" : "SSAA");
-		Logger::Log<INFO>("Multiampling level: {}x", std::min(createInfo.renderSettings->samplingLevel, static_cast<uint16_t>(m_self->device->GetMaxMsaaSamples())));
+		Logger::Log<INFO>("Multiampling level: {}x", std::min(createInfo.renderSettings->samplingLevel, static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples())));
 		Logger::Log<INFO>("Anisotropy level: {}x", std::min(m_createInfo.renderSettings->anisotropyLevel, m_self->device->GetMaxAnisotropy()));
 
 		m_self->descriptorPool = RenderingApi::DescriptorPool::Builder(m_self->device.get())
