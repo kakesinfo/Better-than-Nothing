@@ -33,6 +33,7 @@
 
 namespace BetterThanNothing
 {
+	struct RenderSettings;
 	struct ShaderDescription;
 	struct RenderingDeviceInternals;
 
@@ -67,7 +68,7 @@ namespace BetterThanNothing
 	struct RenderingDeviceCreateInfo
 	{
 		Platform*	   platform;
-		EBufferingMode bufferingMode = EBufferingMode::Double;
+		const RenderSettings* renderSettings;
 	};
 
 	class RenderingDevice

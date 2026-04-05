@@ -204,7 +204,7 @@ namespace BetterThanNothing::RenderingApi
 
 	void SwapChain::CreateSyncObjects()
 	{
-		const uint32_t imageCount = m_images.size();
+		const auto imageCount = static_cast<uint32_t>(m_createInfo.bufferingMode);
 
 		m_imageFinishedSemaphores.resize(imageCount);
 		for (uint32_t i = 0; i < imageCount; i++)

@@ -19,12 +19,17 @@
 #pragma once
 
 #include "Common/EBufferingMode.hpp"
+#include "ESamplingMode.hpp"
 
 namespace BetterThanNothing
 {
 	struct RenderSettings
 	{
-		EBufferingMode bufferingMode = EBufferingMode::Double;
-		ESamplingMode samplingMode = ESamplingMode::MSAA;
+		EBufferingMode bufferingMode;
+		bool		   enableVSync;
+		ESamplingMode  samplingMode;
+		uint16_t	   samplingLevel;
+		float		   anisotropyLevel;
+		float		   gammaCorrection;
 	};
 }

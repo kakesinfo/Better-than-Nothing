@@ -47,11 +47,19 @@ namespace BetterThanNothing
 		m_platform = Platform::Create("Better Than Nothing", 1280, 720);
 		LegacyInputManager::Initialize();
 
-		RenderSettings renderSettings {};
-		renderSettings.bufferingMode = EBufferingMode::Double;
-		renderSettings.samplingMode = ESamplingMode::SSAA;
+		const RenderSettings renderSettings = {
+			// --- Synchronisation ---
+			.bufferingMode = EBufferingMode::Triple,
+			.enableVSync = true,
+			// --- Anti-Aliasing (Image quality) ---
+			.samplingMode = ESamplingMode::Msaa,
+			.samplingLevel = 4,
+			.anisotropyLevel = 16,
+			// --- Post-Processing ---
+			.gammaCorrection = 2.0f,
+		};
 
-		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Double});
+		m_renderingDevice = RenderingDevice::Create({m_platform.get(), &renderSettings});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 #ifndef NDEBUG

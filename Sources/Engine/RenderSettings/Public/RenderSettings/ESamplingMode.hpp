@@ -25,9 +25,15 @@ namespace BetterThanNothing
 	enum class ESamplingMode : uint8_t
 	{
 		/**
-		 *
+		 * Super Sampling Anti-Aliasing
 		 */
-		MSAA = 0,
-		SSAA = 1
+		Ssaa = 0,
+
+		/**
+		 * Multi-Sample Anti-Aliasing
+		 */
+		Msaa = 1,
+
+		// TODO: Add FXAA, TAA, FSR
 	};
 }
