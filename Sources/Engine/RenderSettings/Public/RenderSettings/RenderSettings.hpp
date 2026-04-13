@@ -18,16 +18,18 @@
 
 #pragma once
 
-#include "Math/Matrix4.hpp"
-#include "Math/Vector3.hpp"
+#include "EBufferingMode.hpp"
+#include "ESamplingMode.hpp"
 
 namespace BetterThanNothing
 {
-	struct CameraData
+	struct RenderSettings
 	{
-		Matrix4 view;
-		Matrix4 projection;
-		Vector3 position;
-		float	exposure;
+		EBufferingMode bufferingMode;
+		bool		   enableVSync;
+		ESamplingMode  samplingMode;
+		uint32_t	   samplingLevel;
+		float		   anisotropyLevel;
+		float		   gammaCorrection;
 	};
 }

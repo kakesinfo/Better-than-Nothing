@@ -18,6 +18,7 @@
 
 #include "RenderingApi.hpp"
 #include <Common/Logger.hpp>
+#include <RenderSettings/EBufferingMode.hpp>
 
 namespace BetterThanNothing::RenderingApi
 {
@@ -204,7 +205,7 @@ namespace BetterThanNothing::RenderingApi
 
 	void SwapChain::CreateSyncObjects()
 	{
-		const uint32_t imageCount = m_images.size();
+		const auto imageCount = m_images.size();
 
 		m_imageFinishedSemaphores.resize(imageCount);
 		for (uint32_t i = 0; i < imageCount; i++)

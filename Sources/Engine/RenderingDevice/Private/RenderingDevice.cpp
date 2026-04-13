@@ -17,19 +17,17 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
-#include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
 #include "Platform/Platform.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
-#include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
+#include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
 #include "RenderingDevice_Internals.hpp"
 #include "StagingBuffer.hpp"
 
 #include <Common/Logger.hpp>
 #include <RenderingApi.hpp>
 #include <cmath>
-
 
 #include <glslang/Include/glslang_c_interface.h>
 
@@ -56,19 +54,21 @@ namespace BetterThanNothing
 			m_self->allocator.get(),
 			static_cast<uint32_t>(windowWidth),
 			static_cast<uint32_t>(windowHeight),
-			createInfo.bufferingMode,
+			createInfo.renderSettings->bufferingMode,
 		});
 
-		m_maxFramesInFlight = m_self->swapChain->GetImageCount();
+		const auto requestedFrames = static_cast<uint32_t>(m_createInfo.renderSettings->bufferingMode);
+		m_maxFramesInFlight = std::min(requestedFrames, m_self->swapChain->GetImageCount());
 
 		Logger::Log<INFO>("Vendor: {}", m_self->device->GetVendorName());
 		Logger::Log<INFO>("Device: {}", m_self->device->GetDeviceName());
 		Logger::Log<INFO>("API Version: {}", m_self->device->GetApiVersion());
-		Logger::Log<INFO>("Buffering mode: {}", static_cast<uint8_t>(createInfo.bufferingMode));
+		Logger::Log<INFO>("Buffering mode: {}", static_cast<uint8_t>(createInfo.renderSettings->bufferingMode));
 		Logger::Log<INFO>("Max frame in-flight: {}", m_maxFramesInFlight);
-		Logger::Log<INFO>("VSync: {}", createInfo.bufferingMode != EBufferingMode::Immediate ? "enabled" : "disabled");
-		Logger::Log<INFO>("Anisotropy: {}x", m_self->device->GetMaxAnisotropy());
-		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples()));
+		Logger::Log<INFO>("VSync: {}", createInfo.renderSettings->bufferingMode != EBufferingMode::Immediate ? "enabled" : "disabled");
+		Logger::Log<INFO>("Multi-Sampling method: {}", createInfo.renderSettings->samplingMode == ESamplingMode::Msaa ? "MSAA" : "SSAA");
+		Logger::Log<INFO>("Multiampling level: {}x", std::min(createInfo.renderSettings->samplingLevel, static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples())));
+		Logger::Log<INFO>("Anisotropy level: {}x", std::min(m_createInfo.renderSettings->anisotropyLevel, m_self->device->GetMaxAnisotropy()));
 
 		m_self->descriptorPool = RenderingApi::DescriptorPool::Builder(m_self->device.get())
 									 .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)

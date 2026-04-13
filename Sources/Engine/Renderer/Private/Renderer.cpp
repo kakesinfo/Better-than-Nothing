@@ -20,11 +20,9 @@
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
-#include <Data/Graphics/CameraData.hpp>
 #include <Data/Graphics/DirectionalLightData.hpp>
 #include <Data/Graphics/DynamicUniformData.hpp>
 #include <Data/Graphics/GlobalUniformData.hpp>
-#include <Data/Graphics/VertexData.hpp>
 #include <Editor/Editor.hpp>
 #include <RenderingApi.hpp>
 #include <RenderingApi/Core/PipelineLayout.hpp>

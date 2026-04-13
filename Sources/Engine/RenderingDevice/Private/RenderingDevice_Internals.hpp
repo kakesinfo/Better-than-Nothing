@@ -36,6 +36,7 @@
 #include <RenderingApi/Resources/Sampler.hpp>
 #include <RenderingApi/Resources/Shader.hpp>
 #include <RenderingApi/Resources/Texture.hpp>
+#include <RenderingDevice/HandleRegistry.hpp>
 
 namespace BetterThanNothing
 {

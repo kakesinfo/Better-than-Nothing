@@ -35,6 +35,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Common
         Engine::Data
         Engine::Math
+        Engine::RenderSettings
         Engine::Platform
         Engine::Scene
         Engine::ResourceManager

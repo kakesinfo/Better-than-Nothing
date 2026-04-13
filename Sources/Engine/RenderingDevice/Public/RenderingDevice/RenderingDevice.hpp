@@ -20,19 +20,16 @@
 
 #include "DescriptorSetUpdateRequest.hpp"
 #include "Handle.hpp"
-#include "HandleRegistry.hpp"
 #include "SamplerDescription.hpp"
 #include "TextureDescription.hpp"
-#include "Types.hpp"
 
-#include <Common/EBufferingMode.hpp>
 #include <functional>
 #include <memory>
 #include <optional>
-#include <unordered_map>
 
 namespace BetterThanNothing
 {
+	struct RenderSettings;
 	struct ShaderDescription;
 	struct RenderingDeviceInternals;
 
@@ -67,7 +64,7 @@ namespace BetterThanNothing
 	struct RenderingDeviceCreateInfo
 	{
 		Platform*	   platform;
-		EBufferingMode bufferingMode = EBufferingMode::Double;
+		const RenderSettings* renderSettings;
 	};
 
 	class RenderingDevice
