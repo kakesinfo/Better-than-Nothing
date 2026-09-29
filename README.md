@@ -1,3 +1,6 @@
+> [!WARNING]
+> This project is **currently on hold** as I am working on a game-oriented standard library. As a result, this project is expected to undergo a massive refactor in the future to transition to a bindless architecture. Bugs may be present and the API is subject to change without notice.
+
 # Better than Nothing
 Everything is in the title, it is a better-than-nothing Game Engine.
 
