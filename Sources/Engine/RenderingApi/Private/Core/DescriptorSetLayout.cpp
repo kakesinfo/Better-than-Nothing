@@ -20,7 +20,7 @@
 
 namespace BetterThanNothing::RenderingApi
 {
-	DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetLayoutCreateInfo& createInfo): m_createInfo(createInfo)
+	DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetLayoutCreateInfo& createInfo): m_device(createInfo.device)
 	{
 		VkDescriptorSetLayoutBinding defaultBinding{};
 		defaultBinding.descriptorType = createInfo.descriptorType;
@@ -34,19 +34,35 @@ namespace BetterThanNothing::RenderingApi
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 
-		if (vkCreateDescriptorSetLayout(createInfo.device->Handle(), &layoutInfo, nullptr, &m_layout) != VK_SUCCESS)
+		if (vkCreateDescriptorSetLayout(m_device->Handle(), &layoutInfo, nullptr, &m_layout) != VK_SUCCESS)
+			throw std::runtime_error("Failed to create descriptor set layout!");
+	}
+
+	DescriptorSetLayout::DescriptorSetLayout(Device* device, const std::vector<VkDescriptorSetLayoutBinding>& bindings): m_device(device)
+	{
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		layoutInfo.pBindings = bindings.data();
+
+		if (vkCreateDescriptorSetLayout(m_device->Handle(), &layoutInfo, nullptr, &m_layout) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create descriptor set layout!");
 	}
 
 	DescriptorSetLayout::~DescriptorSetLayout()
 	{
-		if (m_layout != VK_NULL_HANDLE)
-			vkDestroyDescriptorSetLayout(m_createInfo.device->Handle(), m_layout, nullptr);
+		if (m_layout != VK_NULL_HANDLE && m_device != nullptr)
+			vkDestroyDescriptorSetLayout(m_device->Handle(), m_layout, nullptr);
 	}
 
 	std::unique_ptr<DescriptorSetLayout> DescriptorSetLayout::Create(const DescriptorSetLayoutCreateInfo& createInfo)
 	{
 		return std::make_unique<DescriptorSetLayout>(createInfo);
+	}
+
+	std::unique_ptr<DescriptorSetLayout> DescriptorSetLayout::Create(Device* device, const std::vector<VkDescriptorSetLayoutBinding>& bindings)
+	{
+		return std::make_unique<DescriptorSetLayout>(device, bindings);
 	}
 
 	VkDescriptorSetLayout DescriptorSetLayout::Handle() const

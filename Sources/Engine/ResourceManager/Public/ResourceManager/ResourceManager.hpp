@@ -19,6 +19,7 @@
 #pragma once
 
 #include <Common/ResourceId.hpp>
+#include <Math/Matrix4.hpp>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -27,18 +28,32 @@ namespace BetterThanNothing
 {
 	struct PipelineResourceCache;
 	struct ShaderResourceCache;
+	struct MaterialResourceCache;
+	struct MaterialResource;
 	struct MeshData;
 
 	struct MeshResource
 	{
-		ResourceId id;
-		ResourceId textureId;
+		ResourceId id{0};
+		ResourceId materialId{0};
+		ResourceId textureId{0};
+	};
+
+	struct ModelNodeResource
+	{
+		std::string name;
+		Matrix4 transform{Matrix4::Identity};
+		std::vector<uint32_t> meshIndices;
+		std::vector<uint32_t> children;
 	};
 
 	struct ModelResource
 	{
-		ResourceId				  id;
-		std::vector<MeshResource> meshes;
+		ResourceId				       id{0};
+		std::vector<MeshResource>      meshes;
+		std::vector<ResourceId>        materials;
+		std::vector<ModelNodeResource> nodes;
+		std::vector<uint32_t>          rootNodes;
 	};
 
 	struct MeshResourceCache;
@@ -66,20 +81,32 @@ namespace BetterThanNothing
 	public:
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
 		ResourceId LoadTexture(const std::string& path);
+		ResourceId LoadTextureFromMemory(const std::string& name, const uint8_t* data, uint32_t width, uint32_t height, uint32_t channels);
+		ResourceId CreateMaterial(const MaterialResource& material);
+		ResourceId GetOrCreateDefaultMaterial();
 		ResourceId LoadShader(const std::string& path);
 		ResourceId CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback);
 
-		MeshResourceCache*	  GetMeshData(ResourceId id);
-		TextureResourceCache* GetTextureData(ResourceId id);
-		ModelResource*		  GetModelData(ResourceId id);
-		ShaderResourceCache*  GetShaderData(ResourceId id);
+		MeshResourceCache*	   GetMeshData(ResourceId id);
+		TextureResourceCache*  GetTextureData(ResourceId id);
+		ModelResource*		   GetModelData(ResourceId id);
+		MaterialResourceCache* GetMaterialData(ResourceId id);
+		ShaderResourceCache*   GetShaderData(ResourceId id);
 		PipelineResourceCache* GetPipelineData(const std::string& name);
 
+		ResourceId GetDefaultWhiteTexture();
+		ResourceId GetDefaultNormalTexture();
+		ResourceId GetDefaultMetallicRoughnessTexture();
+		ResourceId GetDefaultBlackTexture();
+
 	private:
+		void EnsureDefaultTextures();
+
 		RenderingDevice*													   m_renderingDevice;
 		std::unique_ptr<ResourceImporter>									   m_importer;
 		std::unordered_map<ResourceId, std::unique_ptr<MeshResourceCache>>	   m_meshes;
 		std::unordered_map<ResourceId, std::unique_ptr<TextureResourceCache>>  m_textures;
+		std::unordered_map<ResourceId, std::unique_ptr<MaterialResourceCache>> m_materials;
 		std::unordered_map<ResourceId, std::unique_ptr<ShaderResourceCache>>   m_shaders;
 		std::unordered_map<ResourceId, std::unique_ptr<PipelineResourceCache>> m_pipelines;
 		std::unordered_map<ResourceId, ModelResource>						   m_models;
@@ -88,5 +115,11 @@ namespace BetterThanNothing
 		std::unordered_map<std::string, ResourceId>							   m_shadersLUT;
 		std::unordered_map<std::string, ResourceId>							   m_pipelinesLUT;
 		std::vector<ResourceId>												   m_freeIds;
+
+		ResourceId m_defaultWhiteTexture{0};
+		ResourceId m_defaultNormalTexture{0};
+		ResourceId m_defaultMetallicRoughnessTexture{0};
+		ResourceId m_defaultBlackTexture{0};
+		ResourceId m_defaultMaterial{0};
 	};
 }

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace BetterThanNothing::RenderingApi
@@ -37,13 +38,15 @@ namespace BetterThanNothing::RenderingApi
 	{
 	public:
 		DescriptorSetLayout(const DescriptorSetLayoutCreateInfo& createInfo);
+		DescriptorSetLayout(Device* device, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 		~DescriptorSetLayout();
 
 		[[nodiscard]] static std::unique_ptr<DescriptorSetLayout> Create(const DescriptorSetLayoutCreateInfo& createInfo);
+		[[nodiscard]] static std::unique_ptr<DescriptorSetLayout> Create(Device* device, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 		[[nodiscard]] VkDescriptorSetLayout						  Handle() const;
 
 	private:
-		DescriptorSetLayoutCreateInfo m_createInfo;
+		Device*						  m_device = nullptr;
 		VkDescriptorSetLayout		  m_layout = VK_NULL_HANDLE;
 	};
 }

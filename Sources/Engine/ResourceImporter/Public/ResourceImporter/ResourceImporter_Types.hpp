@@ -22,6 +22,7 @@
 
 #include <Data/Graphics/VertexData.hpp>
 #include <Math/Matrix4.hpp>
+#include <Math/Vector4.hpp>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -59,16 +60,27 @@ namespace BetterThanNothing
 
 	struct ImportedMaterial
 	{
-		uint32_t				   id;
-		EImportedAlphaMode		   alphaMode;
-		float					   alphaCutoff;
+		uint32_t				   id{0};
+		std::string				   name;
+		EImportedAlphaMode		   alphaMode{EImportedAlphaMode::Opaque};
+		float					   alphaCutoff{0.5f};
+
+		Vector4					   baseColorFactor{1.0f, 1.0f, 1.0f, 1.0f};
+		float					   metallicFactor{1.0f};
+		float					   roughnessFactor{1.0f};
+		Vector3					   emissiveFactor{0.0f, 0.0f, 0.0f};
+
 		std::optional<std::string> diffuseTexturePath;
 		std::optional<std::string> normalTexturePath;
+		std::optional<std::string> metallicRoughnessTexturePath;
+		std::optional<std::string> occlusionTexturePath;
+		std::optional<std::string> emissiveTexturePath;
 	};
 
 	struct ImportedMesh
 	{
-		uint32_t id;
+		uint32_t id{0};
+		std::string name;
 
 		std::vector<VertexData> vertices;
 		std::vector<uint32_t>	indices;
@@ -81,8 +93,10 @@ namespace BetterThanNothing
 
 	struct ImportedNode
 	{
-		Matrix4					  transform;
-		std::optional<ImportedId> mesh;
+		std::string				  name;
+		Matrix4					  transform{Matrix4::Identity};
+		std::vector<ImportedId>   meshes;
+		std::vector<uint32_t>	  children;
 	};
 
 	struct ImportedModel
@@ -93,5 +107,6 @@ namespace BetterThanNothing
 		std::vector<ImportedMaterial> materials;
 
 		std::vector<ImportedNode> children;
+		std::vector<uint32_t>	  rootNodes;
 	};
 }

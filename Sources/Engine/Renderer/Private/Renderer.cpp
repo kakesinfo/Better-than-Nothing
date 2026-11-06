@@ -55,14 +55,39 @@ namespace BetterThanNothing
 		m_renderingDevice->CreateDescriptorSetLayout("Textures", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		m_renderingDevice->CreateDescriptorSetLayout("PointLights", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
+		std::vector<VkDescriptorSetLayoutBinding> materialBindings;
+		for (uint32_t i = 0; i < 5; ++i)
+		{
+			VkDescriptorSetLayoutBinding binding{};
+			binding.binding = i;
+			binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			binding.descriptorCount = 1;
+			binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			materialBindings.push_back(binding);
+		}
+		VkDescriptorSetLayoutBinding uboBinding{};
+		uboBinding.binding = 5;
+		uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboBinding.descriptorCount = 1;
+		uboBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		materialBindings.push_back(uboBinding);
+
+		m_renderingDevice->CreateDescriptorSetLayout("Material", materialBindings);
+
 		m_renderingDevice->CreatePipelineLayout("Forward", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
-			blueprint->AddDescriptorSetLayout("Textures");
+			blueprint->AddDescriptorSetLayout("Material");
 			blueprint->AddDescriptorSetLayout("PointLights");
 			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
 		});
 
-		const VertexLayout vertexLayout = {VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3};
+		const VertexLayout vertexLayout = {
+			VertexType::Float3,
+			VertexType::Float3,
+			VertexType::Float2,
+			VertexType::Float3,
+			VertexType::Float4
+		};
 
 		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
@@ -111,26 +136,33 @@ namespace BetterThanNothing
 	struct RenderObject
 	{
 		ResourceId meshId;
-		ResourceId textureId;
-		Matrix4	   localMatrix;
+		ResourceId materialId;
+		Matrix4	   worldMatrix;
 	};
 
-	static std::vector<RenderObject> FlattenScene(const Scene* scene)
+	static std::vector<RenderObject> FlattenScene(Scene* scene, ResourceManager* resourceManager)
 	{
-		const auto modelView = scene->GetView<TransformComponent, ModelComponent>();
-
 		std::vector<RenderObject> objects;
-		for (auto [entity, transform, model] : modelView.each())
+		for (auto [entity, transform, meshComp] : scene->GetView<TransformComponent, MeshComponent>().each())
 		{
-			for (const auto& sceneObj : model.children)
+			if (meshComp.meshId == 0)
+				continue;
+
+			ResourceId matId = meshComp.materialId;
+			if (matId == 0)
 			{
-				if (!sceneObj.HasComponent<MeshComponent>())
-					continue;
-
-				const auto& meshComp = sceneObj.GetComponent<MeshComponent>();
-
-				objects.emplace_back(RenderObject{.meshId = meshComp.meshId, .textureId = meshComp.textureId, .localMatrix = transform.localTransform});
+				auto obj = scene->GetObject(entity);
+				if (obj.HasComponent<MaterialComponent>())
+					matId = obj.GetComponent<MaterialComponent>().materialId;
 			}
+			if (matId == 0)
+				matId = resourceManager->GetOrCreateDefaultMaterial();
+
+			objects.emplace_back(RenderObject{
+				.meshId = meshComp.meshId,
+				.materialId = matId,
+				.worldMatrix = transform.worldTransform
+			});
 		}
 
 		return objects;
@@ -158,25 +190,25 @@ namespace BetterThanNothing
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
-		const auto flattenedScene = FlattenScene(scene);
+		const auto flattenedScene = FlattenScene(scene, m_resourceManager);
 
 		m_drawStream->Reset(flattenedScene.size());
 
 		const auto defaultPipeline = m_resourceManager->GetPipelineData("Forward::Opaque");
 
-		for (const auto& [meshId, textureId, localMatrix] : flattenedScene)
+		for (const auto& [meshId, materialId, worldMatrix] : flattenedScene)
 		{
-			if (!meshId || !textureId)
+			if (!meshId)
 				continue;
 
 			const auto meshData = m_resourceManager->GetMeshData(meshId);
-			const auto textureData = m_resourceManager->GetTextureData(textureId);
+			const auto materialData = m_resourceManager->GetMaterialData(materialId);
 
-			if (!meshData || !textureData)
+			if (!meshData || !materialData)
 				continue;
 
 			const float distance =
-				Vector3::Distance2(camera->GetPosition(), Vector3(localMatrix.Value()[3][0], localMatrix.Value()[3][1], localMatrix.Value()[3][2]));
+				Vector3::Distance2(camera->GetPosition(), Vector3(worldMatrix.Value()[3][0], worldMatrix.Value()[3][1], worldMatrix.Value()[3][2]));
 
 			// clang-format off
 			m_drawStream->Draw({
@@ -186,9 +218,9 @@ namespace BetterThanNothing
 				.indexBuffer = meshData->indexBuffer,
 				.indexCount = meshData->indexCount,
 				.globalDescriptorSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value,
-				.samplerDescriptorSet = textureData->descriptorSetHandle,
+				.samplerDescriptorSet = materialData->descriptorSetHandle,
 				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
-				.transform = localMatrix,
+				.transform = worldMatrix,
 				.distanceToCamera = distance
 			});
 			// clang-format on

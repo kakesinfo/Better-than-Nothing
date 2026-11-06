@@ -59,9 +59,165 @@ namespace BetterThanNothing
 		return ++lastResourceId;
 	}
 
+	void ResourceManager::EnsureDefaultTextures()
+	{
+		if (m_defaultWhiteTexture != 0)
+			return;
+
+		const uint8_t whitePixel[4] = {255, 255, 255, 255};
+		m_defaultWhiteTexture = LoadTextureFromMemory("__default_white__", whitePixel, 1, 1, 4);
+
+		const uint8_t normalPixel[4] = {128, 128, 255, 255};
+		m_defaultNormalTexture = LoadTextureFromMemory("__default_normal__", normalPixel, 1, 1, 4);
+
+		const uint8_t metalRoughPixel[4] = {0, 255, 0, 255}; // Roughness = 1.0 (green), Metallic = 0.0 (blue)
+		m_defaultMetallicRoughnessTexture = LoadTextureFromMemory("__default_metal_rough__", metalRoughPixel, 1, 1, 4);
+
+		const uint8_t blackPixel[4] = {0, 0, 0, 255};
+		m_defaultBlackTexture = LoadTextureFromMemory("__default_black__", blackPixel, 1, 1, 4);
+	}
+
+	ResourceId ResourceManager::GetDefaultWhiteTexture()
+	{
+		EnsureDefaultTextures();
+		return m_defaultWhiteTexture;
+	}
+
+	ResourceId ResourceManager::GetDefaultNormalTexture()
+	{
+		EnsureDefaultTextures();
+		return m_defaultNormalTexture;
+	}
+
+	ResourceId ResourceManager::GetDefaultMetallicRoughnessTexture()
+	{
+		EnsureDefaultTextures();
+		return m_defaultMetallicRoughnessTexture;
+	}
+
+	ResourceId ResourceManager::GetDefaultBlackTexture()
+	{
+		EnsureDefaultTextures();
+		return m_defaultBlackTexture;
+	}
+
+	ResourceId ResourceManager::LoadTextureFromMemory(const std::string& name, const uint8_t* data, uint32_t width, uint32_t height, uint32_t channels)
+	{
+		if (const auto it = m_texturesLUT.find(name); it != m_texturesLUT.end())
+			return it->second;
+
+		auto gpuData = std::make_unique<TextureResourceCache>();
+		gpuData->channels = channels;
+		gpuData->width = width;
+		gpuData->height = height;
+		gpuData->size = width * height * channels;
+
+		TextureFromDataDescription desc{};
+		desc.data = const_cast<uint8_t*>(data);
+		desc.dataSize = gpuData->size;
+		desc.width = width;
+		desc.height = height;
+		desc.channels = channels;
+
+		gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
+		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{});
+		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle, "Textures");
+
+		const auto textureId = GenerateUniqueResourceId();
+		m_textures[textureId] = std::move(gpuData);
+		m_texturesLUT[name] = textureId;
+
+		return textureId;
+	}
+
+	ResourceId ResourceManager::CreateMaterial(const MaterialResource& material)
+	{
+		EnsureDefaultTextures();
+
+		auto materialCache = std::make_unique<MaterialResourceCache>();
+		materialCache->id = material.id != 0 ? material.id : GenerateUniqueResourceId();
+		materialCache->material = material;
+		materialCache->material.id = materialCache->id;
+
+		ResourceId albedoId = material.albedoTextureId != 0 ? material.albedoTextureId : m_defaultWhiteTexture;
+		ResourceId normalId = material.normalTextureId != 0 ? material.normalTextureId : m_defaultNormalTexture;
+		ResourceId metalRoughId = material.metallicRoughnessTextureId != 0 ? material.metallicRoughnessTextureId : m_defaultMetallicRoughnessTexture;
+		ResourceId occlusionId = material.occlusionTextureId != 0 ? material.occlusionTextureId : m_defaultWhiteTexture;
+		ResourceId emissiveId = material.emissiveTextureId != 0 ? material.emissiveTextureId : m_defaultBlackTexture;
+
+		materialCache->material.albedoTextureId = albedoId;
+		materialCache->material.normalTextureId = normalId;
+		materialCache->material.metallicRoughnessTextureId = metalRoughId;
+		materialCache->material.occlusionTextureId = occlusionId;
+		materialCache->material.emissiveTextureId = emissiveId;
+
+		const auto albedoCache = GetTextureData(albedoId);
+		const auto normalCache = GetTextureData(normalId);
+		const auto metalRoughCache = GetTextureData(metalRoughId);
+		const auto occlusionCache = GetTextureData(occlusionId);
+		const auto emissiveCache = GetTextureData(emissiveId);
+
+		std::array<Handle, 5> textures = {
+			albedoCache->textureHandle,
+			normalCache->textureHandle,
+			metalRoughCache->textureHandle,
+			occlusionCache->textureHandle,
+			emissiveCache->textureHandle
+		};
+
+		// Create UBO for material factors
+		materialCache->uniformBufferHandle = m_renderingDevice->CreateUniformBuffer(sizeof(MaterialUniformData));
+		m_renderingDevice->CopyDataToBuffer(materialCache->uniformBufferHandle, &material.parameters, sizeof(MaterialUniformData));
+
+		materialCache->descriptorSetHandle = m_renderingDevice->CreateMaterialDescriptorSet(
+			textures,
+			albedoCache->samplerHandle,
+			materialCache->uniformBufferHandle,
+			sizeof(MaterialUniformData),
+			"Material"
+		);
+
+		const auto matId = materialCache->id;
+		m_materials[matId] = std::move(materialCache);
+		return matId;
+	}
+
+	ResourceId ResourceManager::GetOrCreateDefaultMaterial()
+	{
+		EnsureDefaultTextures();
+
+		if (m_defaultMaterial != 0)
+			return m_defaultMaterial;
+
+		MaterialResource defaultMat{};
+		defaultMat.name = "DefaultMaterial";
+		defaultMat.albedoTextureId = m_defaultWhiteTexture;
+		defaultMat.normalTextureId = m_defaultNormalTexture;
+		defaultMat.metallicRoughnessTextureId = m_defaultMetallicRoughnessTexture;
+		defaultMat.occlusionTextureId = m_defaultWhiteTexture;
+		defaultMat.emissiveTextureId = m_defaultBlackTexture;
+		defaultMat.parameters.baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		defaultMat.parameters.roughnessFactor = 1.0f;
+		defaultMat.parameters.metallicFactor = 0.0f;
+		defaultMat.parameters.emissiveFactor = Vector3(0.0f, 0.0f, 0.0f);
+
+		m_defaultMaterial = CreateMaterial(defaultMat);
+		return m_defaultMaterial;
+	}
+
+	MaterialResourceCache* ResourceManager::GetMaterialData(ResourceId id)
+	{
+		if (!m_materials.contains(id))
+			return GetMaterialData(GetOrCreateDefaultMaterial());
+		return m_materials[id].get();
+	}
+
 	ResourceId ResourceManager::LoadModel(const std::string& path, bool preTransform)
 	{
-		if (const auto it = m_modelsLUT.find(path); it != m_modelsLUT.end())
+		EnsureDefaultTextures();
+
+		const std::string cacheKey = path + (preTransform ? "_pre" : "_raw");
+		if (const auto it = m_modelsLUT.find(cacheKey); it != m_modelsLUT.end())
 			return it->second;
 
 		const ImportedModel importedModel = m_importer->ImportModel(path, preTransform);
@@ -69,6 +225,36 @@ namespace BetterThanNothing
 		ModelResource model;
 		model.id = GenerateUniqueResourceId();
 
+		// 1. Process and load materials
+		std::vector<ResourceId> loadedMaterials;
+		loadedMaterials.reserve(importedModel.materials.size());
+
+		for (const auto& importedMat : importedModel.materials)
+		{
+			MaterialResource mat{};
+			mat.name = importedMat.name;
+			if (importedMat.diffuseTexturePath.has_value())
+				mat.albedoTextureId = LoadTexture(importedMat.diffuseTexturePath.value());
+			if (importedMat.normalTexturePath.has_value())
+				mat.normalTextureId = LoadTexture(importedMat.normalTexturePath.value());
+			if (importedMat.metallicRoughnessTexturePath.has_value())
+				mat.metallicRoughnessTextureId = LoadTexture(importedMat.metallicRoughnessTexturePath.value());
+			if (importedMat.occlusionTexturePath.has_value())
+				mat.occlusionTextureId = LoadTexture(importedMat.occlusionTexturePath.value());
+			if (importedMat.emissiveTexturePath.has_value())
+				mat.emissiveTextureId = LoadTexture(importedMat.emissiveTexturePath.value());
+
+			mat.parameters.baseColorFactor = importedMat.baseColorFactor;
+			mat.parameters.metallicFactor = importedMat.metallicFactor;
+			mat.parameters.roughnessFactor = importedMat.roughnessFactor;
+			mat.parameters.emissiveFactor = importedMat.emissiveFactor;
+			mat.parameters.alphaCutoff = importedMat.alphaCutoff;
+
+			loadedMaterials.push_back(CreateMaterial(mat));
+		}
+		model.materials = loadedMaterials;
+
+		// 2. Process meshes
 		for (auto& mesh : importedModel.meshes)
 		{
 			MeshResource meshResource{};
@@ -92,21 +278,37 @@ namespace BetterThanNothing
 				meshResource.id = meshId;
 			}
 
-			if (mesh.materialId.has_value())
+			if (mesh.materialId.has_value() && mesh.materialId.value() < loadedMaterials.size())
 			{
-				const ImportedMaterial material = importedModel.materials.at(mesh.materialId.value());
-
-				if (material.diffuseTexturePath.has_value())
-					meshResource.textureId = LoadTexture(material.diffuseTexturePath.value());
+				meshResource.materialId = loadedMaterials[mesh.materialId.value()];
+				const auto matCache = GetMaterialData(meshResource.materialId);
+				meshResource.textureId = matCache->material.albedoTextureId;
+			}
+			else
+			{
+				meshResource.materialId = GetOrCreateDefaultMaterial();
+				meshResource.textureId = m_defaultWhiteTexture;
 			}
 
 			model.meshes.push_back(meshResource);
 		}
 
-		m_modelsLUT[path] = model.id;
+		// 3. Process nodes and hierarchy
+		for (const auto& importedNode : importedModel.children)
+		{
+			ModelNodeResource nodeResource{};
+			nodeResource.name = importedNode.name;
+			nodeResource.transform = importedNode.transform;
+			nodeResource.meshIndices = importedNode.meshes;
+			nodeResource.children = importedNode.children;
+			model.nodes.push_back(nodeResource);
+		}
+		model.rootNodes = importedModel.rootNodes;
+
+		m_modelsLUT[cacheKey] = model.id;
 		m_models[model.id] = model;
 
-		Logger::Log<INFO>("MeshResourceCache created and cached for {} submeshes", model.meshes.size());
+		Logger::Log<INFO>("MeshResourceCache created and cached for {} submeshes, {} materials", model.meshes.size(), model.materials.size());
 
 		return model.id;
 	}

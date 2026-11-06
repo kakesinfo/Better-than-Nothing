@@ -26,6 +26,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 #include "Quaternion.hpp"
@@ -89,7 +90,7 @@ namespace BetterThanNothing
 
 		[[nodiscard]] Matrix4 Rotate(const Quaternion& quat) const
 		{
-			return Matrix4(glm::mat4_cast(quat.Value()) * m_data);
+			return Matrix4(m_data * glm::mat4_cast(quat.Value()));
 		}
 
 		[[nodiscard]] Matrix4	Translate(float x, float y, float z) const { return Matrix4(glm::translate(m_data, glm::vec3(x, y, z))); }
@@ -101,6 +102,11 @@ namespace BetterThanNothing
 		[[nodiscard]] Matrix4	Inverted() const { return Matrix4(glm::inverse(m_data)); }
 		[[nodiscard]] bool		Equals(const Matrix4& other) const { return m_data == other.m_data; }
 		[[nodiscard]] glm::mat4 Value() const { return m_data; }
+
+		static Matrix4 FromColumnMajor(const float elements[16])
+		{
+			return Matrix4(glm::make_mat4(elements));
+		}
 
 		static Matrix4 Perspective(float fovY, float aspect, float nearPlane, float farPlane)
 		{

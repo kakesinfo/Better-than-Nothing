@@ -56,6 +56,51 @@ namespace BetterThanNothing
 		return SceneObject(&m_registry, entity);
 	}
 
+	void Scene::DestroyObject(SceneObject& object)
+	{
+		object.Destroy();
+	}
+
+	void Scene::UpdateTransforms()
+	{
+		std::function<void(entt::entity, const Matrix4&)> updateEntityHierarchy;
+		updateEntityHierarchy = [&](entt::entity entity, const Matrix4& parentWorld) {
+			Matrix4 currentWorld = parentWorld;
+			if (m_registry.all_of<TransformComponent>(entity))
+			{
+				auto& transform = m_registry.get<TransformComponent>(entity);
+				currentWorld = parentWorld * transform.localTransform;
+				transform.worldTransform = currentWorld;
+				transform.isDirty = false;
+			}
+
+			if (m_registry.all_of<HierarchyComponent>(entity))
+			{
+				const auto& children = m_registry.get<HierarchyComponent>(entity).children;
+				for (auto child : children)
+				{
+					if (m_registry.valid(child))
+						updateEntityHierarchy(child, currentWorld);
+				}
+			}
+		};
+
+		// Traverse all root entities (no parent)
+		for (auto entity : m_registry.view<TransformComponent>())
+		{
+			bool isRoot = true;
+			if (m_registry.all_of<HierarchyComponent>(entity))
+			{
+				auto parent = m_registry.get<HierarchyComponent>(entity).parent;
+				if (parent != entt::null && m_registry.valid(parent))
+					isRoot = false;
+			}
+
+			if (isRoot)
+				updateEntityHierarchy(entity, Matrix4::Identity);
+		}
+	}
+
 	SceneObject Scene::LoadModel(const std::string& path, const bool preTransform)
 	{
 		const std::string filename = std::filesystem::path(path).filename().string();
@@ -68,20 +113,92 @@ namespace BetterThanNothing
 		const ModelResource* model = m_resourceManager->GetModelData(modelId);
 
 		auto& modelComp = root.AddComponent<ModelComponent>();
-		modelComp.children.reserve(model->meshes.size());
+		modelComp.path = path;
+		modelComp.preTransform = preTransform;
 
-		for (const auto& [meshId, textureId] : model->meshes)
+		if (!preTransform && !model->nodes.empty())
 		{
-			SceneObject child = CreateObject();
-			child.AddComponent<NameComponent>().name = filename + "_child_" + std::to_string(meshId);
+			// Map node index to SceneObject
+			std::vector<SceneObject> nodeObjects;
+			nodeObjects.reserve(model->nodes.size());
 
-			auto& meshComp = child.AddComponent<MeshComponent>();
-			meshComp.meshId = meshId;
-			meshComp.textureId = textureId;
+			for (size_t i = 0; i < model->nodes.size(); ++i)
+			{
+				const auto& nodeRes = model->nodes[i];
+				SceneObject nodeObj = CreateObject();
+				nodeObj.AddComponent<NameComponent>().name = filename + "_" + nodeRes.name;
 
-			modelComp.children.push_back(child);
+				auto& trans = nodeObj.AddComponent<TransformComponent>();
+				trans.localTransform = nodeRes.transform;
+
+				// For each mesh primitive in this node
+				for (uint32_t meshIdx : nodeRes.meshIndices)
+				{
+					if (meshIdx < model->meshes.size())
+					{
+						const auto& meshRes = model->meshes[meshIdx];
+						SceneObject meshObj = CreateObject();
+						meshObj.AddComponent<NameComponent>().name = filename + "_mesh_" + std::to_string(meshIdx);
+						meshObj.AddComponent<TransformComponent>(); // Identity local transform
+
+						auto& meshComp = meshObj.AddComponent<MeshComponent>();
+						meshComp.meshId = meshRes.id;
+						meshComp.materialId = meshRes.materialId;
+						meshComp.textureId = meshRes.textureId;
+
+						meshObj.AddComponent<MaterialComponent>().materialId = meshRes.materialId;
+
+						meshObj.SetParent(nodeObj);
+						modelComp.children.push_back(meshObj);
+					}
+				}
+
+				nodeObjects.push_back(nodeObj);
+				modelComp.children.push_back(nodeObj);
+			}
+
+			// Wire up node hierarchy
+			for (size_t i = 0; i < model->nodes.size(); ++i)
+			{
+				const auto& nodeRes = model->nodes[i];
+				for (uint32_t childNodeIdx : nodeRes.children)
+				{
+					if (childNodeIdx < nodeObjects.size())
+						nodeObjects[childNodeIdx].SetParent(nodeObjects[i]);
+				}
+			}
+
+			// Attach root nodes to the model root
+			for (uint32_t rootNodeIdx : model->rootNodes)
+			{
+				if (rootNodeIdx < nodeObjects.size())
+					nodeObjects[rootNodeIdx].SetParent(root);
+			}
+		}
+		else
+		{
+			modelComp.children.reserve(model->meshes.size());
+
+			for (size_t i = 0; i < model->meshes.size(); ++i)
+			{
+				const auto& meshRes = model->meshes[i];
+				SceneObject child = CreateObject();
+				child.AddComponent<NameComponent>().name = filename + "_child_" + std::to_string(meshRes.id);
+				child.AddComponent<TransformComponent>();
+
+				auto& meshComp = child.AddComponent<MeshComponent>();
+				meshComp.meshId = meshRes.id;
+				meshComp.materialId = meshRes.materialId;
+				meshComp.textureId = meshRes.textureId;
+
+				child.AddComponent<MaterialComponent>().materialId = meshRes.materialId;
+				child.SetParent(root);
+
+				modelComp.children.push_back(child);
+			}
 		}
 
+		UpdateTransforms();
 		return root;
 	}
 
@@ -114,7 +231,7 @@ namespace BetterThanNothing
 
 	const PointLightData& Scene::GetPointLight(const uint32_t index) const
 	{
-		if (index > m_pointLights.size())
+		if (index >= m_pointLights.size())
 			throw std::out_of_range("No point light with that index");
 		return m_pointLights.at(index);
 	}

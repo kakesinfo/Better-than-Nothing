@@ -27,6 +27,7 @@
 #include "RenderingDevice_Internals.hpp"
 #include <Common/Logger.hpp>
 #include <RenderingApi.hpp>
+#include <array>
 
 namespace BetterThanNothing
 {
@@ -81,6 +82,57 @@ namespace BetterThanNothing
 		request.write.pImageInfo = &request.imageInfo;
 
 		RequestDescriptorSetUpdate(request);
+
+		return handle;
+	}
+
+	Handle RenderingDevice::CreateMaterialDescriptorSet(const std::array<Handle, 5>& textures, const Handle& samplerHandle, const Handle& uniformBufferHandle, size_t uboSize, std::string_view layoutType)
+	{
+		const Handle handle = CreateDescriptorSet(layoutType);
+		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
+		const RenderingApi::Sampler* sampler = GetSampler(samplerHandle);
+
+		for (uint32_t i = 0; i < 5; ++i)
+		{
+			const RenderingApi::Texture* texture = GetTexture(textures[i]);
+			DescriptorSetUpdateRequest request{};
+			request.imageInfo = {};
+			request.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			request.imageInfo.imageView = texture->defaultView;
+			request.imageInfo.sampler = sampler->value;
+
+			request.write = {};
+			request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			request.write.dstSet = descriptor->value;
+			request.write.dstBinding = i;
+			request.write.dstArrayElement = 0;
+			request.write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			request.write.descriptorCount = 1;
+			request.write.pImageInfo = &request.imageInfo;
+
+			RequestDescriptorSetUpdate(request);
+		}
+
+		if (uniformBufferHandle.IsValid() && uboSize > 0)
+		{
+			const RenderingApi::Buffer* buffer = GetBuffer(uniformBufferHandle);
+			DescriptorSetUpdateRequest request{};
+			request.bufferInfo = {};
+			request.bufferInfo.buffer = buffer->value;
+			request.bufferInfo.offset = 0;
+			request.bufferInfo.range = uboSize;
+
+			request.write = {};
+			request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			request.write.dstSet = descriptor->value;
+			request.write.dstBinding = 5;
+			request.write.dstArrayElement = 0;
+			request.write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			request.write.descriptorCount = 1;
+			request.write.pBufferInfo = &request.bufferInfo;
+
+			RequestDescriptorSetUpdate(request);
+		}
 
 		return handle;
 	}

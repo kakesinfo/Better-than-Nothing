@@ -98,7 +98,7 @@ namespace BetterThanNothing
 
 		[[nodiscard]] Vector4 Normalized() const { return Vector4(glm::normalize(m_data)); }
 
-		[[nodiscard]] glm::vec3 Value() const { return m_data; }
+		[[nodiscard]] glm::vec4 Value() const { return m_data; }
 
 		static float   Dot(const Vector4& a, const Vector4& b) { return glm::dot(a.m_data, b.m_data); }
 		static float   Distance(const Vector4& a, const Vector4& b) { return glm::distance(a.m_data, b.m_data); }

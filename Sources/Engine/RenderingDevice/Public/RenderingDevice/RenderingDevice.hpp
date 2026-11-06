@@ -79,6 +79,7 @@ namespace BetterThanNothing
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
 		void CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		void CreateDescriptorSetLayout(const std::string& name, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& name);
 
 		void CreatePipelineLayout(const std::string& name, const std::function<void(PipelineLayoutBlueprint*)>& callback);
@@ -118,6 +119,7 @@ namespace BetterThanNothing
 		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, std::string_view layoutType);
 		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, std::string_view layoutType);
 		[[nodiscard]] Handle CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, std::string_view layoutType);
+		[[nodiscard]] Handle CreateMaterialDescriptorSet(const std::array<Handle, 5>& textures, const Handle& samplerHandle, const Handle& uniformBufferHandle, size_t uboSize, std::string_view layoutType = "Material");
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void						 FlushDescriptorSetUpdateRequests();
 		void						 DestroyDescriptorSet(const Handle& handle);
