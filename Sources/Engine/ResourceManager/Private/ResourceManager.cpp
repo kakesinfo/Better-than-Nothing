@@ -207,9 +207,10 @@ namespace BetterThanNothing
 
 	MaterialResourceCache* ResourceManager::GetMaterialData(ResourceId id)
 	{
-		if (!m_materials.contains(id))
-			return GetMaterialData(GetOrCreateDefaultMaterial());
-		return m_materials[id].get();
+		const auto it = m_materials.find(id);
+		if (it != m_materials.end())
+			return it->second.get();
+		return GetMaterialData(GetOrCreateDefaultMaterial());
 	}
 
 	ResourceId ResourceManager::LoadModel(const std::string& path, bool preTransform)
@@ -405,36 +406,41 @@ namespace BetterThanNothing
 
 	MeshResourceCache* ResourceManager::GetMeshData(ResourceId id)
 	{
-		if (!m_meshes.contains(id))
+		const auto it = m_meshes.find(id);
+		if (it == m_meshes.end())
 			throw std::runtime_error("No MeshResourceCache for ResourceId: " + std::to_string(id));
-		return m_meshes[id].get();
+		return it->second.get();
 	}
 
 	TextureResourceCache* ResourceManager::GetTextureData(const ResourceId id)
 	{
-		if (!m_textures.contains(id))
+		const auto it = m_textures.find(id);
+		if (it == m_textures.end())
 			throw std::runtime_error("No TextureResourceCache for ResourceId: " + std::to_string(id));
-		return m_textures[id].get();
+		return it->second.get();
 	}
 
 	ModelResource* ResourceManager::GetModelData(const ResourceId id)
 	{
-		if (!m_models.contains(id))
+		const auto it = m_models.find(id);
+		if (it == m_models.end())
 			throw std::runtime_error("No ModelResource for ResourceId: " + std::to_string(id));
-		return &m_models[id];
+		return &it->second;
 	}
 
 	ShaderResourceCache* ResourceManager::GetShaderData(ResourceId id)
 	{
-		if (!m_shaders.contains(id))
+		const auto it = m_shaders.find(id);
+		if (it == m_shaders.end())
 			throw std::runtime_error("No ShaderResourceCache for ResourceId: " + std::to_string(id));
-		return m_shaders[id].get();
+		return it->second.get();
 	}
 
 	PipelineResourceCache* ResourceManager::GetPipelineData(const std::string& name)
 	{
-		if (!m_pipelinesLUT.contains(name))
+		const auto it = m_pipelinesLUT.find(name);
+		if (it == m_pipelinesLUT.end())
 			throw std::runtime_error("No PipelineResourceCache for ResourceId: " + name);
-		return m_pipelines[m_pipelinesLUT[name]].get();
+		return m_pipelines.at(it->second).get();
 	}
 }

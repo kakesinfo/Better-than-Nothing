@@ -34,7 +34,7 @@ void main() {
     fragColor = inColor;
     fragTexCoord = inTexCoord;
     
-    mat3 normalMatrix = mat3(transpose(inverse(dynamicUniforms.model)));
-    fragNormal = normalize(normalMatrix * inNormal);
-    fragTangent = vec4(normalize(mat3(dynamicUniforms.model) * inTangent.xyz), inTangent.w);
+    mat3 modelMatrix3 = mat3(dynamicUniforms.model);
+    fragNormal = normalize(modelMatrix3 * inNormal);
+    fragTangent = vec4(normalize(modelMatrix3 * inTangent.xyz), inTangent.w);
 }

@@ -63,8 +63,7 @@ namespace BetterThanNothing
 
 	void Scene::UpdateTransforms()
 	{
-		std::function<void(entt::entity, const Matrix4&)> updateEntityHierarchy;
-		updateEntityHierarchy = [&](entt::entity entity, const Matrix4& parentWorld) {
+		auto updateEntityHierarchy = [&](auto&& self, entt::entity entity, const Matrix4& parentWorld) -> void {
 			Matrix4 currentWorld = parentWorld;
 			if (m_registry.all_of<TransformComponent>(entity))
 			{
@@ -80,7 +79,7 @@ namespace BetterThanNothing
 				for (auto child : children)
 				{
 					if (m_registry.valid(child))
-						updateEntityHierarchy(child, currentWorld);
+						self(self, child, currentWorld);
 				}
 			}
 		};
@@ -97,7 +96,7 @@ namespace BetterThanNothing
 			}
 
 			if (isRoot)
-				updateEntityHierarchy(entity, Matrix4::Identity);
+				updateEntityHierarchy(updateEntityHierarchy, entity, Matrix4::Identity);
 		}
 	}
 
