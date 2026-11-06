@@ -65,27 +65,34 @@ namespace BetterThanNothing
 	{
 #ifdef _WIN32
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-		if (hConsole == INVALID_HANDLE_VALUE)
-			return;
-
-		WORD color = 7;
-		switch (level)
+		if (hConsole != INVALID_HANDLE_VALUE && hConsole != nullptr)
 		{
-			case DEBUG:   color = 8;  break;
-			case INFO:    color = 11; break;
-			case SUCCESS: color = 10; break;
-			case WARNING: color = 14; break;
-			case ERROR:   color = 12; break;
+			WORD color = 7;
+			switch (level)
+			{
+				case DEBUG:   color = 8;  break;
+				case INFO:    color = 11; break;
+				case SUCCESS: color = 10; break;
+				case WARNING: color = 14; break;
+				case ERROR:   color = 12; break;
+			}
+
+			SetConsoleTextAttribute(hConsole, 7);
+			std::cout << std::left << GetTimestamp() << " ";
+			SetConsoleTextAttribute(hConsole, color);
+			std::cout << std::left << std::setw(10) << levelStr;
+
+			SetConsoleTextAttribute(hConsole, 7);
+			std::cout << std::left << std::setw(35) << FormatSourceFile(location);
+			std::cout << std::left << SanitizeMessage(message) << std::endl;
 		}
-
-		SetConsoleTextAttribute(hConsole, 7);
-		std::cout << std::left << GetTimestamp() << " ";
-		SetConsoleTextAttribute(hConsole, color);
-		std::cout << std::left << std::setw(10) << levelStr;
-
-		SetConsoleTextAttribute(hConsole, 7);
-		std::cout << std::left << std::setw(35) << FormatSourceFile(location);
-		std::cout << std::left << SanitizeMessage(message) << std::endl;
+		else
+		{
+			std::cout << std::left << GetTimestamp() << " "
+					  << std::left << std::setw(10) << levelStr
+					  << std::left << std::setw(35) << FormatSourceFile(location)
+					  << std::left << SanitizeMessage(message) << std::endl;
+		}
 #endif
 	}
 

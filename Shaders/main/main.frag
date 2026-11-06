@@ -24,10 +24,23 @@ layout(location = 0) in vec3 fragPosition;
 layout(location = 1) in vec3 fragColor;
 layout(location = 2) in vec2 fragTexCoord;
 layout(location = 3) in vec3 fragNormal;
+layout(location = 4) in vec4 fragTangent;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 1, binding = 0) uniform sampler2D texSampler;
+layout(set = 1, binding = 0) uniform sampler2D albedoMap;
+layout(set = 1, binding = 1) uniform sampler2D normalMap;
+layout(set = 1, binding = 2) uniform sampler2D metallicRoughnessMap;
+layout(set = 1, binding = 3) uniform sampler2D occlusionMap;
+layout(set = 1, binding = 4) uniform sampler2D emissiveMap;
+layout(set = 1, binding = 5) uniform MaterialUniforms {
+    vec4 baseColorFactor;
+    vec3 emissiveFactor;
+    float metallicFactor;
+    float roughnessFactor;
+    float alphaCutoff;
+    uint flags;
+} material;
 
 layout(std430, set = 2, binding = 0) readonly buffer PointLightBuffer {
     PointLightData lights[];
@@ -35,6 +48,18 @@ layout(std430, set = 2, binding = 0) readonly buffer PointLightBuffer {
 
 const float ambientStrength = 0.1;
 const float specularStrength = 0.3;
+
+vec3 CalculateNormal()
+{
+    vec3 normal = normalize(fragNormal);
+    vec3 tangent = normalize(fragTangent.xyz);
+    tangent = normalize(tangent - dot(tangent, normal) * normal);
+    vec3 bitangent = cross(normal, tangent) * fragTangent.w;
+    mat3 TBN = mat3(tangent, bitangent, normal);
+
+    vec3 normalSample = texture(normalMap, fragTexCoord).rgb * 2.0 - 1.0;
+    return normalize(TBN * normalSample);
+}
 
 float CalculateEnergyConservation(vec3 norm, vec3 halfwayDir)
 {
@@ -92,21 +117,30 @@ void main() {
     const float exposure = globalUniforms.cameraExposure;
     const float gammaCorrection = 2.2;
 
-    vec4 textureColor = texture(texSampler, fragTexCoord);
-    textureColor.rgb = pow(textureColor.rgb, vec3(gammaCorrection));
+    vec4 albedoSample = texture(albedoMap, fragTexCoord) * material.baseColorFactor;
+    if (albedoSample.a < material.alphaCutoff)
+        discard;
 
-    const vec3 norm = normalize(fragNormal);
+    albedoSample.rgb = pow(albedoSample.rgb, vec3(gammaCorrection));
+
+    const vec3 norm = CalculateNormal();
     const vec3 viewDir = normalize(globalUniforms.cameraPosition - fragPosition);
 
     vec3 resultColor = CalculateDirectionalLight(norm, viewDir);
     for (int i = 0; i < globalUniforms.pointLightsCount; i++)
         resultColor += CalculatePointLight(pointLights.lights[i], norm, viewDir);
 
-    const vec3 hdrColor = resultColor * textureColor.rgb;
+    float ao = texture(occlusionMap, fragTexCoord).r;
+    resultColor *= ao;
+
+    vec3 emissive = texture(emissiveMap, fragTexCoord).rgb * material.emissiveFactor;
+    emissive = pow(emissive, vec3(gammaCorrection));
+
+    const vec3 hdrColor = (resultColor * albedoSample.rgb) + emissive;
 
     const vec3 exposedColor = hdrColor * exposure;
     const vec3 mappedColor = exposedColor / (exposedColor + vec3(1.0)); // TONE MAPPING (Reinhard)
     const vec3 correctedColor = pow(mappedColor, vec3(1.0 / gammaCorrection)); // GAMMA CORRECTION (power 2.2)
 
-    outColor = vec4(correctedColor, textureColor.a);
+    outColor = vec4(correctedColor, albedoSample.a);
 }

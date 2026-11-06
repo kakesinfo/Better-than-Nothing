@@ -36,6 +36,8 @@
 #include <Scene/SceneObject.hpp>
 #include <Scene/SceneObject_Components.hpp>
 #include <chrono>
+#include <iostream>
+#include <Common/Logger.hpp>
 #include <format>
 
 namespace BetterThanNothing
@@ -94,6 +96,8 @@ namespace BetterThanNothing
 				update.onUpdate(sceneObject, elapsedCount);
 			}
 
+			m_defaultScene->UpdateTransforms();
+
 			m_renderer->RenderFrame(m_defaultScene.get());
 
 			LegacyInputManager::ResetMousePosition();
@@ -106,8 +110,23 @@ namespace BetterThanNothing
 
 	int BootEngine(IEngineApplication* app)
 	{
-		const Engine engine(app);
-		engine.Run();
-		return EXIT_SUCCESS;
+		try
+		{
+			const Engine engine(app);
+			engine.Run();
+			return EXIT_SUCCESS;
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << "CRITICAL ENGINE EXCEPTION: " << e.what() << std::endl;
+			Logger::Log<ERROR>("CRITICAL ENGINE EXCEPTION: {}", e.what());
+			return EXIT_FAILURE;
+		}
+		catch (...)
+		{
+			std::cerr << "CRITICAL UNKNOWN EXCEPTION" << std::endl;
+			Logger::Log<ERROR>("CRITICAL UNKNOWN EXCEPTION");
+			return EXIT_FAILURE;
+		}
 	}
 };

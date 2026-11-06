@@ -20,6 +20,10 @@
 
 #include <Common/ResourceId.hpp>
 #include <Math/Matrix4.hpp>
+#include <entt/entt.hpp>
+#include <functional>
+#include <string>
+#include <vector>
 
 namespace BetterThanNothing
 {
@@ -31,13 +35,34 @@ namespace BetterThanNothing
 	struct NameComponent : Component
 	{
 		std::string name;
+
+		NameComponent() = default;
+		explicit NameComponent(std::string_view n) : name(n) {}
+	};
+
+	struct HierarchyComponent : Component
+	{
+		entt::entity parent{entt::null};
+		std::vector<entt::entity> children;
 	};
 
 	struct TransformComponent : Component
 	{
-		Matrix4 localTransform;
-		// TODO: add global and inverse matrices
-		// TODO: add a dirty flag
+		Matrix4 localTransform{Matrix4::Identity};
+		Matrix4 worldTransform{Matrix4::Identity};
+		bool	isDirty{true};
+	};
+
+	struct MaterialComponent : Component
+	{
+		ResourceId materialId{0};
+	};
+
+	struct MeshComponent : Component
+	{
+		ResourceId meshId{0};
+		ResourceId materialId{0};
+		ResourceId textureId{0}; // Kept for backward compatibility
 	};
 
 	struct ModelComponent : Component
@@ -45,12 +70,6 @@ namespace BetterThanNothing
 		std::string				 path;
 		bool					 preTransform = false;
 		std::vector<SceneObject> children;
-	};
-
-	struct MeshComponent : Component
-	{
-		ResourceId meshId;
-		ResourceId textureId;
 	};
 
 	struct UpdateComponent : Component

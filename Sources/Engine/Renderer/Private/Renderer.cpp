@@ -55,14 +55,39 @@ namespace BetterThanNothing
 		m_renderingDevice->CreateDescriptorSetLayout("Textures", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 		m_renderingDevice->CreateDescriptorSetLayout("PointLights", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
+		std::vector<VkDescriptorSetLayoutBinding> materialBindings;
+		for (uint32_t i = 0; i < 5; ++i)
+		{
+			VkDescriptorSetLayoutBinding binding{};
+			binding.binding = i;
+			binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			binding.descriptorCount = 1;
+			binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			materialBindings.push_back(binding);
+		}
+		VkDescriptorSetLayoutBinding uboBinding{};
+		uboBinding.binding = 5;
+		uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboBinding.descriptorCount = 1;
+		uboBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		materialBindings.push_back(uboBinding);
+
+		m_renderingDevice->CreateDescriptorSetLayout("Material", materialBindings);
+
 		m_renderingDevice->CreatePipelineLayout("Forward", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
-			blueprint->AddDescriptorSetLayout("Textures");
+			blueprint->AddDescriptorSetLayout("Material");
 			blueprint->AddDescriptorSetLayout("PointLights");
 			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
 		});
 
-		const VertexLayout vertexLayout = {VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3};
+		const VertexLayout vertexLayout = {
+			VertexType::Float3,
+			VertexType::Float3,
+			VertexType::Float2,
+			VertexType::Float3,
+			VertexType::Float4
+		};
 
 		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
 		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
@@ -108,34 +133,6 @@ namespace BetterThanNothing
 		m_renderingDevice->EndFrame(imageIndex);
 	}
 
-	struct RenderObject
-	{
-		ResourceId meshId;
-		ResourceId textureId;
-		Matrix4	   localMatrix;
-	};
-
-	static std::vector<RenderObject> FlattenScene(const Scene* scene)
-	{
-		const auto modelView = scene->GetView<TransformComponent, ModelComponent>();
-
-		std::vector<RenderObject> objects;
-		for (auto [entity, transform, model] : modelView.each())
-		{
-			for (const auto& sceneObj : model.children)
-			{
-				if (!sceneObj.HasComponent<MeshComponent>())
-					continue;
-
-				const auto& meshComp = sceneObj.GetComponent<MeshComponent>();
-
-				objects.emplace_back(RenderObject{.meshId = meshComp.meshId, .textureId = meshComp.textureId, .localMatrix = transform.localTransform});
-			}
-		}
-
-		return objects;
-	}
-
 	void Renderer::RecordCommandBuffer(Scene* scene, const uint32_t imageIndex) const
 	{
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
@@ -158,37 +155,48 @@ namespace BetterThanNothing
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
-		const auto flattenedScene = FlattenScene(scene);
-
-		m_drawStream->Reset(flattenedScene.size());
-
 		const auto defaultPipeline = m_resourceManager->GetPipelineData("Forward::Opaque");
+		const VkPipeline pipeline = m_renderingDevice->GetPipeline(defaultPipeline->pipeline)->pipeline;
 
-		for (const auto& [meshId, textureId, localMatrix] : flattenedScene)
+		const auto meshView = scene->GetView<TransformComponent, MeshComponent>();
+		m_drawStream->Reset(static_cast<uint32_t>(meshView.size_hint()));
+
+		const Vector3 cameraPos = camera->GetPosition();
+
+		for (auto [entity, transform, meshComp] : meshView.each())
 		{
-			if (!meshId || !textureId)
+			if (meshComp.meshId == 0)
 				continue;
 
-			const auto meshData = m_resourceManager->GetMeshData(meshId);
-			const auto textureData = m_resourceManager->GetTextureData(textureId);
+			ResourceId matId = meshComp.materialId;
+			if (matId == 0)
+			{
+				auto obj = scene->GetObject(entity);
+				if (obj.HasComponent<MaterialComponent>())
+					matId = obj.GetComponent<MaterialComponent>().materialId;
+			}
+			if (matId == 0)
+				matId = m_resourceManager->GetOrCreateDefaultMaterial();
 
-			if (!meshData || !textureData)
+			const auto meshData = m_resourceManager->GetMeshData(meshComp.meshId);
+			const auto materialData = m_resourceManager->GetMaterialData(matId);
+
+			if (!meshData || !materialData)
 				continue;
 
-			const float distance =
-				Vector3::Distance2(camera->GetPosition(), Vector3(localMatrix.Value()[3][0], localMatrix.Value()[3][1], localMatrix.Value()[3][2]));
+			const float distance = Vector3::Distance2(
+				cameraPos,
+				Vector3(transform.worldTransform.Value()[3][0], transform.worldTransform.Value()[3][1], transform.worldTransform.Value()[3][2])
+			);
 
 			// clang-format off
 			m_drawStream->Draw({
-				.pipeline = m_renderingDevice->GetPipeline(defaultPipeline->pipeline)->pipeline,
-				.pipelineLayout = m_renderingDevice->GetPipelineLayout("Forward")->Handle(),
+				.pipeline = pipeline,
 				.vertexBuffer = meshData->vertexBuffer,
 				.indexBuffer = meshData->indexBuffer,
 				.indexCount = meshData->indexCount,
-				.globalDescriptorSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value,
-				.samplerDescriptorSet = textureData->descriptorSetHandle,
-				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
-				.transform = localMatrix,
+				.samplerDescriptorSet = materialData->descriptorSetHandle,
+				.transform = transform.worldTransform,
 				.distanceToCamera = distance
 			});
 			// clang-format on
@@ -356,56 +364,59 @@ namespace BetterThanNothing
 		renderingInfo.pColorAttachments = &colorAttachment;
 		renderingInfo.pDepthAttachment = &depthAttachment;
 
+		const uint32_t		   frameIndex = m_renderingDevice->GetCurrentFrameIndex();
+		const VkPipelineLayout pipelineLayout = m_renderingDevice->GetPipelineLayout("Forward")->Handle();
+		const auto			   globalDesc = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex]);
+		const auto			   pointLightDesc = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex]);
+
 		commandBuffer->ExecuteRenderPass(
 			[&](RenderingApi::CommandBuffer* cmd) {
 				cmd->SetViewport(0, 0, m_renderingDevice->GetSwapChain()->GetExtent(), 0, 1);
 				cmd->SetScissor(0, 0, m_renderingDevice->GetSwapChain()->GetExtent());
 
+				cmd->BindDescriptorSets(pipelineLayout, 0, 1, &globalDesc->value, 0, nullptr);
+				cmd->BindDescriptorSets(pipelineLayout, 2, 1, &pointLightDesc->value, 0, nullptr);
+
 				VkPipeline lastPipeline = VK_NULL_HANDLE;
 				Handle	   lastSamplerHandle = {};
-
-				bool boundGlobalDescriptor = false;
-				bool boundPointLightDescriptor = false;
+				Handle	   lastVertexBufferHandle = {};
+				Handle	   lastIndexBufferHandle = {};
 
 				for (const DrawPacket& drawPacket : drawStream)
 				{
 					if (lastPipeline != drawPacket.pipeline)
 					{
-						commandBuffer->BindPipeline(drawPacket.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+						cmd->BindPipeline(drawPacket.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
 						lastPipeline = drawPacket.pipeline;
-					}
-
-					if (!boundGlobalDescriptor)
-					{
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 0, 1, &drawPacket.globalDescriptorSet, 0, nullptr);
-						boundGlobalDescriptor = true;
-					}
-
-					if (!boundPointLightDescriptor)
-					{
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 2, 1, &drawPacket.pointLightDescriptorSet, 0, nullptr);
-						boundPointLightDescriptor = true;
 					}
 
 					if (lastSamplerHandle != drawPacket.samplerDescriptorSet)
 					{
 						const auto samplerDescriptorSet = m_renderingDevice->GetDescriptorSet(drawPacket.samplerDescriptorSet);
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &samplerDescriptorSet->value, 0, nullptr);
+						cmd->BindDescriptorSets(pipelineLayout, 1, 1, &samplerDescriptorSet->value, 0, nullptr);
 						lastSamplerHandle = drawPacket.samplerDescriptorSet;
 					}
 
 					const DynamicUniformData dynamicUniforms = {drawPacket.transform};
-					commandBuffer->PushConstants(drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData), &dynamicUniforms);
+					cmd->PushConstants(pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData), &dynamicUniforms);
 
-					const auto vertexBuffer = m_renderingDevice->GetBuffer(drawPacket.vertexBuffer);
-					const auto indexBuffer = m_renderingDevice->GetBuffer(drawPacket.indexBuffer);
+					if (lastVertexBufferHandle != drawPacket.vertexBuffer)
+					{
+						const auto vertexBuffer = m_renderingDevice->GetBuffer(drawPacket.vertexBuffer);
+						const VkBuffer		   vertexBuffers[] = {vertexBuffer->value};
+						constexpr VkDeviceSize offsets[] = {0};
+						cmd->BindVertexBuffers(0, 1, vertexBuffers, offsets);
+						lastVertexBufferHandle = drawPacket.vertexBuffer;
+					}
 
-					const VkBuffer		   vertexBuffers[] = {vertexBuffer->value};
-					constexpr VkDeviceSize offsets[] = {0};
-					commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-					commandBuffer->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
+					if (lastIndexBufferHandle != drawPacket.indexBuffer)
+					{
+						const auto indexBuffer = m_renderingDevice->GetBuffer(drawPacket.indexBuffer);
+						cmd->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
+						lastIndexBufferHandle = drawPacket.indexBuffer;
+					}
 
-					commandBuffer->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
+					cmd->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
 				}
 			},
 			renderingInfo

@@ -163,6 +163,14 @@ namespace BetterThanNothing
 		m_self->descriptorLayouts[name] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
 	}
 
+	void RenderingDevice::CreateDescriptorSetLayout(const std::string& name, const std::vector<VkDescriptorSetLayoutBinding>& bindings)
+	{
+		if (m_self->descriptorLayouts.contains(name))
+			throw std::runtime_error("Descriptor layout already exists");
+
+		m_self->descriptorLayouts[name] = RenderingApi::DescriptorSetLayout::Create(m_self->device.get(), bindings);
+	}
+
 	[[nodiscard]] RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& name)
 	{
 		if (!m_self->descriptorLayouts.contains(name))
@@ -310,7 +318,7 @@ namespace BetterThanNothing
 	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& layoutType) const
 	{
 		if (!m_self->descriptorLayouts.contains(layoutType))
-			throw std::runtime_error("Cannot find descriptorSetLayout");
+			throw std::runtime_error("Cannot find descriptorSetLayout for layoutType: " + layoutType);
 		return m_self->descriptorLayouts.at(layoutType).get();
 	}
 }

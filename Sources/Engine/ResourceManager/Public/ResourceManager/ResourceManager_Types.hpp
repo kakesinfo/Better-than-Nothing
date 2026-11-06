@@ -18,8 +18,12 @@
 
 #pragma once
 
+#include <Math/Matrix4.hpp>
+#include <Math/Vector3.hpp>
+#include <Math/Vector4.hpp>
 #include <RenderingDevice/Handle.hpp>
 #include <memory>
+#include <string>
 
 namespace BetterThanNothing
 {
@@ -40,6 +44,36 @@ namespace BetterThanNothing
 		Handle	textureHandle;
 		Handle	samplerHandle;
 		Handle	descriptorSetHandle;
+	};
+
+	struct MaterialUniformData
+	{
+		alignas(16) Vector4 baseColorFactor{1.0f, 1.0f, 1.0f, 1.0f};
+		alignas(16) Vector3 emissiveFactor{0.0f, 0.0f, 0.0f};
+		float metallicFactor{1.0f};
+		float roughnessFactor{1.0f};
+		float alphaCutoff{0.5f};
+		uint32_t flags{0};
+	};
+
+	struct MaterialResource
+	{
+		ResourceId id{0};
+		std::string name;
+		ResourceId albedoTextureId{0};
+		ResourceId normalTextureId{0};
+		ResourceId metallicRoughnessTextureId{0};
+		ResourceId occlusionTextureId{0};
+		ResourceId emissiveTextureId{0};
+		MaterialUniformData parameters;
+	};
+
+	struct MaterialResourceCache
+	{
+		ResourceId id{0};
+		Handle descriptorSetHandle;
+		Handle uniformBufferHandle;
+		MaterialResource material;
 	};
 
 	struct ShaderResourceCache

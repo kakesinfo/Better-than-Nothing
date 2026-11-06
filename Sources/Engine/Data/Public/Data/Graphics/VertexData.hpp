@@ -20,6 +20,7 @@
 
 #include "Math/Vector2.hpp"
 #include "Math/Vector3.hpp"
+#include "Math/Vector4.hpp"
 
 namespace BetterThanNothing
 {
@@ -29,6 +30,7 @@ namespace BetterThanNothing
 		Vector3 color;
 		Vector2 uv;
 		Vector3 normal;
+		Vector4 tangent{0.0f, 0.0f, 0.0f, 1.0f};
 	};
 
 	struct VertexHash
@@ -46,6 +48,10 @@ namespace BetterThanNothing
 			h = h * 31 + std::hash<float>{}(v.normal.GetX());
 			h = h * 31 + std::hash<float>{}(v.normal.GetY());
 			h = h * 31 + std::hash<float>{}(v.normal.GetZ());
+			h = h * 31 + std::hash<float>{}(v.tangent.GetX());
+			h = h * 31 + std::hash<float>{}(v.tangent.GetY());
+			h = h * 31 + std::hash<float>{}(v.tangent.GetZ());
+			h = h * 31 + std::hash<float>{}(v.tangent.GetW());
 			return h;
 		}
 	};
@@ -55,7 +61,7 @@ namespace BetterThanNothing
 		bool operator()(VertexData const& a, VertexData const& b) const noexcept
 		{
 			return a.position.Equals(b.position) && a.color.Equals(b.color) && a.uv.Equals(b.uv) &&
-				   a.normal.Equals(b.normal);
+				   a.normal.Equals(b.normal) && a.tangent.Equals(b.tangent);
 		}
 	};
 }

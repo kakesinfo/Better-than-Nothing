@@ -30,16 +30,13 @@ namespace BetterThanNothing
 
 	struct DrawPacket
 	{
-		VkPipeline		 pipeline{};
-		VkPipelineLayout pipelineLayout{};
-		Handle			 vertexBuffer{};
-		Handle			 indexBuffer{};
-		uint32_t		 indexCount{};
-		VkDescriptorSet	 globalDescriptorSet{};
-		Handle			 samplerDescriptorSet{};
-		VkDescriptorSet	 pointLightDescriptorSet{};
-		Matrix4			 transform;
-		float			 distanceToCamera{};
+		VkPipeline pipeline{};
+		Handle	   vertexBuffer{};
+		Handle	   indexBuffer{};
+		uint32_t   indexCount{};
+		Handle	   samplerDescriptorSet{};
+		Matrix4	   transform;
+		float	   distanceToCamera{};
 	};
 
 	struct DrawPacketSortKeyData

@@ -39,10 +39,12 @@ namespace BetterThanNothing
 
 		const int materialId = shape.mesh.material_ids.at(0); // We assume that there is only one material
 
-		if (materialId < 0 || materialId >= materials.size())
+		if (materialId < 0 || materialId >= static_cast<int>(materials.size()))
 			return std::nullopt;
 
 		const auto& material = materials[materialId];
+		importedMaterial.name = material.name;
+		importedMaterial.baseColorFactor = Vector4(material.diffuse[0], material.diffuse[1], material.diffuse[2], 1.0f);
 
 		if (!material.diffuse_texname.empty())
 		{
@@ -50,14 +52,23 @@ namespace BetterThanNothing
 			importedMaterial.diffuseTexturePath = texPath.string();
 		}
 
-		if (!material.normal_texname.empty())
-		{
+		std::string normalTex = material.normal_texname;
+		if (normalTex.empty())
+			normalTex = material.bump_texname;
 
-			const std::filesystem::path texPath = parentFolder / material.normal_texname;
+		if (!normalTex.empty())
+		{
+			const std::filesystem::path texPath = parentFolder / normalTex;
 			importedMaterial.normalTexturePath = texPath.string();
 		}
 
-		importedMaterial.id = materialId;
+		if (!material.roughness_texname.empty())
+		{
+			const std::filesystem::path texPath = parentFolder / material.roughness_texname;
+			importedMaterial.metallicRoughnessTexturePath = texPath.string();
+		}
+
+		importedMaterial.id = static_cast<uint32_t>(materialId);
 
 		return importedMaterial;
 	}
@@ -169,20 +180,26 @@ namespace BetterThanNothing
 				if (vertex.position.GetZ() > maxZ)
 					maxZ = vertex.position.GetZ();
 
+				vertex.tangent = {1.0f, 0.0f, 0.0f, 1.0f};
 				currentMesh.vertices.push_back(vertex);
 			}
 
-			currentNode.mesh = currentMeshIndex;
+			currentMesh.name = shape.name;
+			currentNode.name = shape.name;
+			currentNode.meshes.push_back(currentMeshIndex);
 			currentNode.transform = Matrix4::Identity;
 
 			model.meshes.push_back(currentMesh);
 			model.children.push_back(currentNode);
+			model.rootNodes.push_back(currentMeshIndex);
 		}
 
 		const Vector3 center = Vector3(minX + maxX, minY + maxY, minZ + maxZ) / 2.0f;
 		for (auto& mesh : model.meshes)
 		{
 			const size_t vertex_count_in = mesh.vertices.size();
+			if (vertex_count_in == 0)
+				continue;
 
 			std::vector<unsigned int> remap(vertex_count_in);
 			const size_t unique_vertex_count = meshopt_generateVertexRemap(remap.data(), nullptr, vertex_count_in, mesh.vertices.data(), vertex_count_in, sizeof(VertexData));
@@ -200,12 +217,18 @@ namespace BetterThanNothing
 			mesh.vertices = new_vertices;
 			mesh.indices = new_indices;
 
-			for (auto& vert : mesh.vertices)
-				vert.position -= center;
+			if (input.preTransform)
+			{
+				for (auto& vert : mesh.vertices)
+					vert.position -= center;
+			}
 		}
 
-		for (auto& node : model.children)
-			node.transform = node.transform.Translate(center);
+		if (!input.preTransform)
+		{
+			for (auto& node : model.children)
+				node.transform = node.transform.Translate(center);
+		}
 
 		return model;
 	};

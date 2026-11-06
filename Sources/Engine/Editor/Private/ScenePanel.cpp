@@ -39,7 +39,8 @@ namespace BetterThanNothing
 		if (obj.HasComponent<NameComponent>())
 			name = obj.GetComponent<NameComponent>().name;
 
-		const bool hasChildren = obj.HasComponent<ModelComponent>() && !obj.GetComponent<ModelComponent>().children.empty();
+		const auto children = obj.GetChildren();
+		const bool hasChildren = !children.empty();
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
 		if (!hasChildren)
@@ -49,7 +50,7 @@ namespace BetterThanNothing
 		}
 		else if (ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(obj.GetEntity())), flags, "%s", name.c_str()))
 		{
-			for (const auto& child : obj.GetComponent<ModelComponent>().children)
+			for (const auto& child : children)
 				DrawEntityNode(child);
 			ImGui::TreePop();
 		}
@@ -57,17 +58,12 @@ namespace BetterThanNothing
 
 	void ScenePanel::OnRender(Scene* scene)
 	{
-		std::unordered_set<entt::entity> childEntities;
-		for (auto [entity, modelComp] : scene->GetView<ModelComponent>().each())
-			for (const auto& child : modelComp.children)
-				childEntities.insert(child.GetEntity());
-
 		for (auto [entity, nameComp] : scene->GetView<NameComponent>().each())
 		{
-			if (childEntities.contains(entity))
+			SceneObject obj = scene->GetObject(entity);
+			if (obj.GetParent().IsValid())
 				continue;
 
-			SceneObject obj = scene->GetObject(entity);
 			DrawEntityNode(obj);
 		}
 	}
