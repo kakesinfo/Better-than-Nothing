@@ -138,6 +138,7 @@ namespace BetterThanNothing
 
 		m_maxFramesInFlight = m_self->swapChain->GetImageCount();
 		m_self->frameDeletionQueues.resize(m_maxFramesInFlight);
+		m_self->swapChainImageLayouts.assign(m_maxFramesInFlight, VK_IMAGE_LAYOUT_UNDEFINED);
 
 		Logger::Log<INFO>("Vendor: {}", m_self->device->GetVendorName());
 		Logger::Log<INFO>("Device: {}", m_self->device->GetDeviceName());
@@ -359,6 +360,7 @@ namespace BetterThanNothing
 			m_createInfo.platform->SetWindowResized(false);
 			m_self->device->WaitIdle();
 			m_self->swapChain->RecreateSwapChain(static_cast<uint32_t>(windowWidth), static_cast<uint32_t>(windowHeight));
+			m_self->swapChainImageLayouts.assign(m_self->swapChain->GetImageCount(), VK_IMAGE_LAYOUT_UNDEFINED);
 		}
 
 		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();
@@ -371,10 +373,13 @@ namespace BetterThanNothing
 		{
 			m_self->device->WaitIdle();
 			m_self->swapChain->RecreateSwapChain(static_cast<uint32_t>(windowWidth), static_cast<uint32_t>(windowHeight));
+			m_self->swapChainImageLayouts.assign(m_self->swapChain->GetImageCount(), VK_IMAGE_LAYOUT_UNDEFINED);
 			return std::nullopt;
 		}
 
 		const uint32_t imageIndex = acquireResult.value();
+		if (imageIndex < m_self->swapChainImageLayouts.size())
+			m_self->swapChainImageLayouts[imageIndex] = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		m_self->inFlightFences.at(m_currentFrameIndex)->Reset();
 		m_self->commandBuffers.at(m_currentFrameIndex)->Reset();
@@ -385,6 +390,8 @@ namespace BetterThanNothing
 
 	void RenderingDevice::EndFrame(const uint32_t imageIndex)
 	{
+		TransitionSwapChainImage(imageIndex, ImageLayout::Present);
+
 		m_self->commandBuffers.at(m_currentFrameIndex)->EndRecording();
 
 		const auto					   commandBuffer = m_self->commandBuffers.at(m_currentFrameIndex)->Handle();
@@ -426,6 +433,7 @@ namespace BetterThanNothing
 			{
 				m_self->device->WaitIdle();
 				m_self->swapChain->RecreateSwapChain(static_cast<uint32_t>(windowWidth), static_cast<uint32_t>(windowHeight));
+				m_self->swapChainImageLayouts.assign(m_self->swapChain->GetImageCount(), VK_IMAGE_LAYOUT_UNDEFINED);
 			}
 		}
 		else if (presentResult != VK_SUCCESS)
@@ -440,18 +448,31 @@ namespace BetterThanNothing
 		const VkImageLayout	   vkNewLayout = ToVkImageLayout(newLayout);
 		const VkImageLayout	   vkOldLayout = texture->currentLayout;
 
-		if (vkOldLayout == vkNewLayout && vkNewLayout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		const bool isAttachmentSync = (vkNewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
+									   vkNewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		if (vkOldLayout == vkNewLayout && !isAttachmentSync)
 			return;
 
 		m_self->commandBuffers[m_currentFrameIndex]->TransitionImageLayout2(texture->value, texture->aspectMask, texture->mipLevels, vkOldLayout, vkNewLayout);
 		texture->currentLayout = vkNewLayout;
 	}
 
-	void RenderingDevice::TransitionSwapChainImage(const uint32_t imageIndex, const ImageLayout oldLayout, const ImageLayout newLayout)
+	void RenderingDevice::TransitionSwapChainImage(const uint32_t imageIndex, const ImageLayout newLayout)
 	{
+		const VkImageLayout vkNewLayout = ToVkImageLayout(newLayout);
+		const VkImageLayout vkOldLayout = imageIndex < m_self->swapChainImageLayouts.size()
+											  ? m_self->swapChainImageLayouts[imageIndex]
+											  : VK_IMAGE_LAYOUT_UNDEFINED;
+
+		if (vkOldLayout == vkNewLayout && vkNewLayout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			return;
+
 		m_self->commandBuffers[m_currentFrameIndex]->TransitionImageLayout2(
-			m_self->swapChain->GetImage(imageIndex), VK_IMAGE_ASPECT_COLOR_BIT, 1, ToVkImageLayout(oldLayout), ToVkImageLayout(newLayout)
+			m_self->swapChain->GetImage(imageIndex), VK_IMAGE_ASPECT_COLOR_BIT, 1, vkOldLayout, vkNewLayout
 		);
+
+		if (imageIndex < m_self->swapChainImageLayouts.size())
+			m_self->swapChainImageLayouts[imageIndex] = vkNewLayout;
 	}
 
 	void RenderingDevice::BeginRenderPass(const RenderPassDescriptor& desc)
@@ -462,6 +483,23 @@ namespace BetterThanNothing
 			desc.width > 0 ? desc.width : swapExtent.width,
 			desc.height > 0 ? desc.height : swapExtent.height
 		};
+
+		// Automatically transition all attachments into their required layouts before vkCmdBeginRendering
+		for (const auto& colorDesc : desc.colorAttachments)
+		{
+			if (colorDesc.useSwapChainImage)
+				TransitionSwapChainImage(colorDesc.swapChainImageIndex, ImageLayout::ColorAttachment);
+			else if (colorDesc.target.IsValid())
+				TransitionTexture(colorDesc.target, ImageLayout::ColorAttachment);
+
+			if (colorDesc.resolveToSwapChain)
+				TransitionSwapChainImage(colorDesc.swapChainImageIndex, ImageLayout::ColorAttachment);
+			else if (colorDesc.resolveTarget.IsValid())
+				TransitionTexture(colorDesc.resolveTarget, ImageLayout::ColorAttachment);
+		}
+
+		if (desc.depthAttachment.has_value() && desc.depthAttachment->target.IsValid())
+			TransitionTexture(desc.depthAttachment->target, ImageLayout::DepthStencilAttachment);
 
 		std::vector<VkRenderingAttachmentInfo> vkColorAttachments;
 		vkColorAttachments.reserve(desc.colorAttachments.size());

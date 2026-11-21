@@ -158,8 +158,8 @@ namespace BetterThanNothing
 		ImGui::Render();
 	}
 
-	void Editor::RenderDrawData(const RenderingApi::CommandBuffer* commandBuffer) const
+	void Editor::RenderDrawData() const
 	{
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer->Handle());
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_renderingDevice->GetCurrentCommandBuffer()->Handle());
 	}
 }

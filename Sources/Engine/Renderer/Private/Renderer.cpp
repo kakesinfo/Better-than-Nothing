@@ -107,7 +107,10 @@ namespace BetterThanNothing
 
 		AddPass(std::make_unique<ForwardOpaquePass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
-		AddPass(std::make_unique<EditorPass>());
+#ifndef NDEBUG
+		if (m_editor)
+			AddPass(std::make_unique<EditorPass>());
+#endif
 
 		Logger::Log<SUCCESS>("Renderer: initialized successfully ({} passes)", m_passes.size());
 	}

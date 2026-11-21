@@ -26,32 +26,30 @@ namespace BetterThanNothing
 {
 	void EditorPass::Execute(RenderPassContext& ctx)
 	{
-		RenderingDevice* device = ctx.renderingDevice;
-
 #ifndef NDEBUG
-		if (ctx.editor)
-		{
-			ctx.editor->RenderPanels(ctx.scene);
+		if (!ctx.editor)
+			return;
 
-			device->TransitionSwapChainImage(ctx.swapChainImageIndex, ImageLayout::ColorAttachment, ImageLayout::ColorAttachment);
+		RenderingDevice* renderingDevice = ctx.renderingDevice;
 
-			ColorAttachmentDesc colorAttachment{};
-			colorAttachment.useSwapChainImage = true;
-			colorAttachment.swapChainImageIndex = ctx.swapChainImageIndex;
-			colorAttachment.loadOp = LoadOp::Load;
-			colorAttachment.storeOp = StoreOp::Store;
+		ctx.editor->RenderPanels(ctx.scene);
 
-			RenderPassDescriptor passDesc{};
-			passDesc.colorAttachments = {colorAttachment};
-			passDesc.width = ctx.viewportWidth;
-			passDesc.height = ctx.viewportHeight;
+		ColorAttachmentDesc colorAttachment{};
+		colorAttachment.useSwapChainImage = true;
+		colorAttachment.swapChainImageIndex = ctx.swapChainImageIndex;
+		colorAttachment.loadOp = LoadOp::Load;
+		colorAttachment.storeOp = StoreOp::Store;
 
-			device->BeginRenderPass(passDesc);
-			ctx.editor->RenderDrawData(device->GetCurrentCommandBuffer());
-			device->EndRenderPass();
-		}
+		RenderPassDescriptor passDesc{};
+		passDesc.colorAttachments = {colorAttachment};
+		passDesc.width = ctx.viewportWidth;
+		passDesc.height = ctx.viewportHeight;
+
+		renderingDevice->BeginRenderPass(passDesc);
+		ctx.editor->RenderDrawData();
+		renderingDevice->EndRenderPass();
+#else
+		(void)ctx;
 #endif
-
-		device->TransitionSwapChainImage(ctx.swapChainImageIndex, ImageLayout::ColorAttachment, ImageLayout::Present);
 	}
 }

@@ -28,7 +28,7 @@ namespace BetterThanNothing
 		if (!ctx.transparentStream || ctx.transparentStream->Empty())
 			return;
 
-		RenderingDevice* device = ctx.renderingDevice;
+		RenderingDevice* renderingDevice = ctx.renderingDevice;
 
 		ColorAttachmentDesc colorAttachment{};
 		colorAttachment.loadOp = LoadOp::Load;
@@ -59,8 +59,8 @@ namespace BetterThanNothing
 
 		const DrawStreamView drawView = ctx.transparentStream->Build();
 
-		device->BeginRenderPass(passDesc);
-		device->ExecuteDrawStream(drawView);
-		device->EndRenderPass();
+		renderingDevice->BeginRenderPass(passDesc);
+		renderingDevice->ExecuteDrawStream(drawView);
+		renderingDevice->EndRenderPass();
 	}
 }

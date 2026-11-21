@@ -25,14 +25,8 @@ namespace BetterThanNothing
 {
 	void ForwardOpaquePass::Execute(RenderPassContext& ctx)
 	{
-		RenderingDevice* device = ctx.renderingDevice;
+		RenderingDevice* renderingDevice = ctx.renderingDevice;
 		const bool		 hasTransparent = ctx.transparentStream && !ctx.transparentStream->Empty();
-
-		device->TransitionSwapChainImage(ctx.swapChainImageIndex, ImageLayout::Undefined, ImageLayout::ColorAttachment);
-		if (ctx.useMsaa && ctx.colorTarget.IsValid())
-			device->TransitionTexture(ctx.colorTarget, ImageLayout::ColorAttachment);
-		if (ctx.depthTarget.IsValid())
-			device->TransitionTexture(ctx.depthTarget, ImageLayout::DepthStencilAttachment);
 
 		ColorAttachmentDesc colorAttachment{};
 		colorAttachment.loadOp = LoadOp::Clear;
@@ -66,8 +60,8 @@ namespace BetterThanNothing
 
 		const DrawStreamView drawView = ctx.opaqueStream->Build();
 
-		device->BeginRenderPass(passDesc);
-		device->ExecuteDrawStream(drawView);
-		device->EndRenderPass();
+		renderingDevice->BeginRenderPass(passDesc);
+		renderingDevice->ExecuteDrawStream(drawView);
+		renderingDevice->EndRenderPass();
 	}
 }
