@@ -501,8 +501,7 @@ namespace BetterThanNothing
 		if (desc.depthAttachment.has_value() && desc.depthAttachment->target.IsValid())
 			TransitionTexture(desc.depthAttachment->target, ImageLayout::DepthStencilAttachment);
 
-		std::vector<VkRenderingAttachmentInfo> vkColorAttachments;
-		vkColorAttachments.reserve(desc.colorAttachments.size());
+		FixedArray<VkRenderingAttachmentInfo, RenderPassDescriptor::MaxColorAttachments> vkColorAttachments;
 
 		for (const auto& colorDesc : desc.colorAttachments)
 		{
@@ -539,7 +538,7 @@ namespace BetterThanNothing
 				attachment.resolveMode = VK_RESOLVE_MODE_NONE;
 			}
 
-			vkColorAttachments.push_back(attachment);
+			vkColorAttachments.Push(attachment);
 		}
 
 		VkRenderingAttachmentInfo vkDepthAttachment{};

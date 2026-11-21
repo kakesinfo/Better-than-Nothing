@@ -20,10 +20,10 @@
 
 #include "Handle.hpp"
 #include "Types.hpp"
+#include <Common/Containers/FixedArray.hpp>
 #include <array>
 #include <cstdint>
 #include <optional>
-#include <vector>
 
 namespace BetterThanNothing
 {
@@ -52,9 +52,11 @@ namespace BetterThanNothing
 
 	struct RenderPassDescriptor
 	{
-		std::vector<ColorAttachmentDesc>   colorAttachments;
-		std::optional<DepthAttachmentDesc> depthAttachment;
-		uint32_t						   width = 0;
-		uint32_t						   height = 0;
+		static constexpr std::size_t MaxColorAttachments = 8;
+
+		FixedArray<ColorAttachmentDesc, MaxColorAttachments> colorAttachments;
+		std::optional<DepthAttachmentDesc>					 depthAttachment;
+		uint32_t											 width = 0;
+		uint32_t											 height = 0;
 	};
 }

@@ -25,9 +25,9 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
+        Engine::Common
         Vulkan::Headers
     PRIVATE
-        Engine::Common
         Engine::Data
         Engine::Math
         Engine::Platform
