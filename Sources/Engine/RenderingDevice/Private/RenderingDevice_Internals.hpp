@@ -86,5 +86,18 @@ namespace BetterThanNothing
 		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> samplersLUT;
 		std::vector<DescriptorSetUpdateRequest>															descriptorsUpdateRequests;
 		std::vector<VkWriteDescriptorSet>																descriptorsWrites;
+
+		// AMD FidelityFX SDK v2.4.0 state (FSR 4.1.2 Upscaler + Denoiser 1.2.1 configuration)
+		void*					 ffxUpscaleContext = nullptr;
+		uint32_t				 ffxContextMaxRenderWidth = 0;
+		uint32_t				 ffxContextMaxRenderHeight = 0;
+		uint32_t				 ffxContextMaxUpscaleWidth = 0;
+		uint32_t				 ffxContextMaxUpscaleHeight = 0;
+		uint32_t				 ffxContextVersionIndex = 0;
+		bool					 ffxInitialized = false;
+		bool					 ffxUpscalerAvailable = false;
+		std::vector<uint64_t>	 ffxUpscalerVersionIds;
+		std::vector<std::string> ffxUpscalerVersionNames;
+		float					 ffxLastVelocityFactor = -1.0f;
 	};
 }

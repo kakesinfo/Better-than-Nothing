@@ -114,6 +114,8 @@ namespace BetterThanNothing
 
 		// Ambient Occlusion targets
 		Handle m_aoRaw{};
+		Handle m_aoPing{};
+		Handle m_aoPong{};
 		Handle m_aoDenoised{};
 		Handle m_aoHistory{};
 
@@ -134,12 +136,23 @@ namespace BetterThanNothing
 		float	m_lastAtmosphereMultiScatter = -1.0f;
 		Vector3 m_lastSunDirection = Vector3::Zero;
 
-		// HDR, Water snapshots & TAA targets
+		// HDR, Water snapshots & TAA / FSR Upscaled targets
 		Handle				  m_hdrColor{};
 		Handle				  m_waterSceneColorCopy{};
 		Handle				  m_waterDepthCopy{};
 		std::array<Handle, 2> m_taaHistory{};
 		uint64_t			  m_lastSwapChainGeneration = 0;
+		uint32_t			  m_renderWidth = 0;
+		uint32_t			  m_renderHeight = 0;
+		uint32_t			  m_displayWidth = 0;
+		uint32_t			  m_displayHeight = 0;
+		EUpscalerMode		  m_lastUpscalerMode = EUpscalerMode::FSR;
+		EFsrQualityMode		  m_lastFsrQualityMode = EFsrQualityMode::NativeAA;
+		uint32_t			  m_lastFsrVersionIndex = 0;
+		float				  m_currentJitterPixelsX = 0.0f;
+		float				  m_currentJitterPixelsY = 0.0f;
+		float				  m_lastFrameElapsedSeconds = 0.0f;
+		float				  m_currentFrameDeltaMs = 16.67f;
 
 		// Pass descriptor sets
 		std::vector<Handle>	  m_rtShadowDescriptorSets;
@@ -151,6 +164,7 @@ namespace BetterThanNothing
 		Handle				  m_bendSssDescriptorSet{};
 		Handle				  m_gtaoDescriptorSet{};
 		Handle				  m_aoDenoiseDescriptorSet{};
+		std::array<Handle, 3> m_aoFilterDescriptorSets{};
 		Handle				  m_skyTransmittanceDescriptorSet{};
 		Handle				  m_skyMultiScatteringDescriptorSet{};
 		Handle				  m_skyViewDescriptorSet{};

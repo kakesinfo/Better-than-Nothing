@@ -110,7 +110,7 @@ vec3 SampleHistoryCatmullRom(sampler2D tex, vec2 uv, vec2 texSize) {
 
 void main() {
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 size = ivec2(globalUniforms.screenWidth, globalUniforms.screenHeight);
+    ivec2 size = imageSize(outResolvedHdr);
     if (pixel.x >= size.x || pixel.y >= size.y)
         return;
 

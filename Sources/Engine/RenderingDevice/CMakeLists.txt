@@ -27,6 +27,7 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC
         Engine::Common
         Vulkan::Headers
+        FidelityFX::SDK
     PRIVATE
         Engine::Data
         Engine::Math

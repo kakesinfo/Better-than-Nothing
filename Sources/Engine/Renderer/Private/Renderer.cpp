@@ -172,6 +172,8 @@ namespace BetterThanNothing
 		m_bendSssDescriptorSet = m_renderingDevice->CreateDescriptorSet("BendSSS");
 		m_gtaoDescriptorSet = m_renderingDevice->CreateDescriptorSet("GTAO");
 		m_aoDenoiseDescriptorSet = m_renderingDevice->CreateDescriptorSet("AODenoise");
+		for (uint32_t i = 0; i < 3; ++i)
+			m_aoFilterDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("AODenoise");
 
 		m_skyTransmittanceDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyTransmittance");
 		m_skyMultiScatteringDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyMultiScattering");
@@ -281,6 +283,8 @@ namespace BetterThanNothing
 		destroySet(m_bendSssDescriptorSet);
 		destroySet(m_gtaoDescriptorSet);
 		destroySet(m_aoDenoiseDescriptorSet);
+		for (Handle& h : m_aoFilterDescriptorSets)
+			destroySet(h);
 		destroySet(m_skyTransmittanceDescriptorSet);
 		destroySet(m_skyMultiScatteringDescriptorSet);
 		destroySet(m_skyViewDescriptorSet);
@@ -378,11 +382,12 @@ namespace BetterThanNothing
 			}};
 			m_renderingDevice->CreateDescriptorSetLayout("RTShadow", rtShadowBindings);
 
-			const std::array<DescriptorBindingDesc, 4> rtaoBindings = {{
+			const std::array<DescriptorBindingDesc, 5> rtaoBindings = {{
 				{.binding = 0, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
 				{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 				{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 				{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			}};
 			m_renderingDevice->CreateDescriptorSetLayout("RTAO", rtaoBindings);
 
@@ -440,10 +445,11 @@ namespace BetterThanNothing
 		m_renderingDevice->CreateDescriptorSetLayout("BendSSS", bendSssBindings);
 
 		// Ambient Occlusion (GTAO & Denoise)
-		const std::array<DescriptorBindingDesc, 3> gtaoBindings = {{
+		const std::array<DescriptorBindingDesc, 4> gtaoBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 2, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("GTAO", gtaoBindings);
 
@@ -478,11 +484,12 @@ namespace BetterThanNothing
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("SkyView", skyViewBindings);
 
-		const std::array<DescriptorBindingDesc, 4> skyRenderBindings = {{
+		const std::array<DescriptorBindingDesc, 5> skyRenderBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("SkyRender", skyRenderBindings);
 
@@ -567,9 +574,19 @@ namespace BetterThanNothing
 			blueprint->AddPushConstant<VolumetricFogPushConstants>(EShaderType::Compute);
 		});
 
+		// Forward declarations of push constant layouts for pipeline creation
+		struct FfxShadowTileClassPushLayout
+		{
+			float stabilityBias = 0.08f;
+			float radianceClipStdK = 1.5f;
+			float disocclusionThreshold = 0.025f;
+			float _pad = 0.0f;
+		};
+
 		m_renderingDevice->CreatePipelineLayout("FFXShadowTileClass", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("FFXShadowTileClass");
+			blueprint->AddPushConstant<FfxShadowTileClassPushLayout>(EShaderType::Compute);
 		});
 
 		m_renderingDevice->CreatePipelineLayout("FFXShadowFilter", [&](PipelineLayoutBlueprint* blueprint) {
@@ -588,9 +605,22 @@ namespace BetterThanNothing
 			blueprint->AddDescriptorSetLayout("GTAO");
 		});
 
+		struct AoDenoisePushLayout
+		{
+			int32_t stepSize = 0;
+			float	depthSigma = 0.015f;
+			float	normalSigma = 16.0f;
+			float	variancePhi = 4.0f;
+			float	stabilityBias = 0.08f;
+			float	radianceClipStdK = 1.5f;
+			float	disocclusionThreshold = 0.025f;
+			float	_pad = 0.0f;
+		};
+
 		m_renderingDevice->CreatePipelineLayout("AODenoise", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("AODenoise");
+			blueprint->AddPushConstant<AoDenoisePushLayout>(EShaderType::Compute);
 		});
 
 		m_renderingDevice->CreatePipelineLayout("SkyTransmittance", [&](PipelineLayoutBlueprint* blueprint) {
@@ -1026,19 +1056,71 @@ namespace BetterThanNothing
 	void Renderer::EnsureRenderTargets()
 	{
 		const uint64_t currentGen = m_renderingDevice->GetSwapChainGeneration();
-		if (currentGen == m_lastSwapChainGeneration && m_depthTarget.IsValid())
+		const auto [displayWidth, displayHeight] = m_renderingDevice->GetSwapChainExtent();
+		if (displayWidth == 0 || displayHeight == 0)
 			return;
+
+		auto& settings = RenderSettings::Get();
+		const bool fsrSelected = (settings.upscalerMode == EUpscalerMode::FSR && m_renderingDevice->IsFfxUpscalerAvailable());
+
+		uint32_t renderWidth = displayWidth;
+		uint32_t renderHeight = displayHeight;
+		if (fsrSelected)
+		{
+			m_renderingDevice->EnsureFfxUpscalerContext(
+				displayWidth,
+				displayHeight,
+				displayWidth,
+				displayHeight,
+				settings.fsrSelectedVersionIndex
+			);
+			const auto [queriedW, queriedH] = m_renderingDevice->QueryFfxRenderResolution(
+				displayWidth,
+				displayHeight,
+				static_cast<uint32_t>(settings.fsrQualityMode)
+			);
+			if (queriedW > 0 && queriedH > 0)
+			{
+				renderWidth = std::min(queriedW, displayWidth);
+				renderHeight = std::min(queriedH, displayHeight);
+			}
+		}
+
+		settings.fsrDisplayWidth = displayWidth;
+		settings.fsrDisplayHeight = displayHeight;
+		settings.fsrRenderWidth = renderWidth;
+		settings.fsrRenderHeight = renderHeight;
+
+		if (currentGen == m_lastSwapChainGeneration &&
+			m_depthTarget.IsValid() &&
+			m_renderWidth == renderWidth &&
+			m_renderHeight == renderHeight &&
+			m_displayWidth == displayWidth &&
+			m_displayHeight == displayHeight &&
+			m_lastUpscalerMode == settings.upscalerMode &&
+			m_lastFsrQualityMode == settings.fsrQualityMode &&
+			m_lastFsrVersionIndex == settings.fsrSelectedVersionIndex)
+		{
+			return;
+		}
+
+		if (m_depthTarget.IsValid())
+			m_renderingDevice->WaitIdle();
 
 		DestroyRenderTargets();
 
-		const auto [width, height] = m_renderingDevice->GetSwapChainExtent();
-		if (width == 0 || height == 0)
-			return;
+		m_renderWidth = renderWidth;
+		m_renderHeight = renderHeight;
+		m_displayWidth = displayWidth;
+		m_displayHeight = displayHeight;
+		m_lastUpscalerMode = settings.upscalerMode;
+		m_lastFsrQualityMode = settings.fsrQualityMode;
+		m_lastFsrVersionIndex = settings.fsrSelectedVersionIndex;
 
-		auto makeTarget = [&](const TextureFormat fmt, const TextureUsageFlags usage) -> Handle {
+		auto makeTarget = [&](const uint32_t w, const uint32_t h, const TextureFormat fmt, const TextureUsageFlags usage) -> Handle {
 			TextureCreateInfo info{};
-			info.width = width;
-			info.height = height;
+			info.width = w;
+			info.height = h;
 			info.format = fmt;
 			info.usage = usage;
 			info.useMsaa = false;
@@ -1047,26 +1129,26 @@ namespace BetterThanNothing
 			return m_renderingDevice->CreateTexture(info);
 		};
 
-		// G-Buffer targets + previous-frame geometry history
-		m_gbufferAlbedo = makeTarget(TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
-		m_gbufferNormal = makeTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
-		m_gbufferMaterial = makeTarget(TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
-		m_gbufferMotion = makeTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
-		m_depthTarget = m_renderingDevice->CreateDepthAttachment(width, height, false);
-		m_prevDepthTarget = makeTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
-		m_prevNormalTarget = makeTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+		// G-Buffer targets + previous-frame geometry history (at render resolution)
+		m_gbufferAlbedo = makeTarget(renderWidth, renderHeight, TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_gbufferNormal = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_gbufferMaterial = makeTarget(renderWidth, renderHeight, TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_gbufferMotion = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_depthTarget = m_renderingDevice->CreateDepthAttachment(renderWidth, renderHeight, false);
+		m_prevDepthTarget = makeTarget(renderWidth, renderHeight, TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+		m_prevNormalTarget = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 
-		// RT Shadow & AMD FidelityFX Shadow Denoiser targets + 8x4 tile SSBOs
+		// RT Shadow & AMD FidelityFX Shadow Denoiser targets + 8x4 tile SSBOs (at render resolution)
 		const auto storageSampled = TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc | TextureUsageFlags::TransferDst;
-		m_rtShadowRaw = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
-		m_rtShadowPing = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
-		m_rtShadowPong = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
-		m_rtShadowDenoised = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
-		m_rtShadowMoments[0] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, storageSampled);
-		m_rtShadowMoments[1] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, storageSampled);
+		m_rtShadowRaw = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_rtShadowPing = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_rtShadowPong = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_rtShadowDenoised = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_rtShadowMoments[0] = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16B16A16_SFLOAT, storageSampled);
+		m_rtShadowMoments[1] = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16B16A16_SFLOAT, storageSampled);
 
-		const uint32_t tilesX = (width + 7u) / 8u;
-		const uint32_t tilesY = (height + 3u) / 4u;
+		const uint32_t tilesX = (renderWidth + 7u) / 8u;
+		const uint32_t tilesY = (renderHeight + 3u) / 4u;
 		m_rtShadowTileBufferBytes = std::max<size_t>(1, static_cast<size_t>(tilesX) * tilesY) * sizeof(uint32_t);
 		{
 			BufferDescription tileBufDesc{};
@@ -1077,20 +1159,24 @@ namespace BetterThanNothing
 			m_rtShadowTileMetaBuffer = m_renderingDevice->CreateBuffer(tileBufDesc);
 		}
 
-		// Bend Studio Screen Space Shadow target
-		m_screenSpaceShadow = makeTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		// Bend Studio Screen Space Shadow target (at render resolution)
+		m_screenSpaceShadow = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 
-		// Ambient Occlusion targets
-		m_aoRaw = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
-		m_aoDenoised = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
-		m_aoHistory = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
+		// Ambient Occlusion targets (at render resolution)
+		m_aoRaw = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_aoPing = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_aoPong = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_aoDenoised = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_aoHistory = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16_SFLOAT, storageSampled);
 
-		// HDR lighting buffer, Water refraction snapshots & TAA ping-pong history buffers
-		m_hdrColor = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
-		m_waterSceneColorCopy = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
-		m_waterDepthCopy = makeTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
-		m_taaHistory[0] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
-		m_taaHistory[1] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		// HDR lighting buffer & Water refraction snapshots (at render resolution)
+		m_hdrColor = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_waterSceneColorCopy = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+		m_waterDepthCopy = makeTarget(renderWidth, renderHeight, TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+
+		// Resolved / Upscaled HDR output targets (at display resolution)
+		m_taaHistory[0] = makeTarget(displayWidth, displayHeight, TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_taaHistory[1] = makeTarget(displayWidth, displayHeight, TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 
 		m_lastSwapChainGeneration = currentGen;
 		m_historyValid = false;
@@ -1114,6 +1200,7 @@ namespace BetterThanNothing
 				m_renderingDevice->UpdateDescriptorImage(rtaoSet, 1, m_depthTarget, m_nearestClampSampler);
 				m_renderingDevice->UpdateDescriptorImage(rtaoSet, 2, m_gbufferNormal, m_nearestClampSampler);
 				m_renderingDevice->UpdateDescriptorStorageImage(rtaoSet, 3, m_aoRaw);
+				m_renderingDevice->UpdateDescriptorImage(rtaoSet, 4, m_blueNoiseTexture, m_nearestRepeatSampler);
 
 				const Handle fogRtSet = m_volumetricFogRtDescriptorSets[i];
 				m_renderingDevice->UpdateDescriptorImage(fogRtSet, 1, m_depthTarget, m_nearestClampSampler);
@@ -1175,6 +1262,7 @@ namespace BetterThanNothing
 		m_renderingDevice->UpdateDescriptorImage(m_gtaoDescriptorSet, 0, m_depthTarget, m_nearestClampSampler);
 		m_renderingDevice->UpdateDescriptorImage(m_gtaoDescriptorSet, 1, m_gbufferNormal, m_nearestClampSampler);
 		m_renderingDevice->UpdateDescriptorStorageImage(m_gtaoDescriptorSet, 2, m_aoRaw);
+		m_renderingDevice->UpdateDescriptorImage(m_gtaoDescriptorSet, 3, m_blueNoiseTexture, m_nearestRepeatSampler);
 
 		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 0, m_aoRaw, m_nearestClampSampler);
 		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 1, m_aoHistory, m_linearClampSampler);
@@ -1183,13 +1271,30 @@ namespace BetterThanNothing
 		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 4, m_gbufferNormal, m_nearestClampSampler);
 		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 5, m_prevNormalTarget, m_nearestClampSampler);
 		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 6, m_gbufferMotion, m_nearestClampSampler);
-		m_renderingDevice->UpdateDescriptorStorageImage(m_aoDenoiseDescriptorSet, 7, m_aoDenoised);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_aoDenoiseDescriptorSet, 7, m_aoPing);
+
+		// AO Stage 2: 3 A-Trous passes (ping->pong, pong->ping, ping->denoised)
+		const std::array<Handle, 3> aoFilterSrc = {m_aoPing, m_aoPong, m_aoPing};
+		const std::array<Handle, 3> aoFilterDst = {m_aoPong, m_aoPing, m_aoDenoised};
+		for (uint32_t passIdx = 0; passIdx < 3; ++passIdx)
+		{
+			const Handle set = m_aoFilterDescriptorSets[passIdx];
+			m_renderingDevice->UpdateDescriptorImage(set, 0, aoFilterSrc[passIdx], m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 1, m_aoHistory, m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 2, m_depthTarget, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 3, m_prevDepthTarget, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 4, m_gbufferNormal, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 5, m_prevNormalTarget, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 6, m_gbufferMotion, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 7, aoFilterDst[passIdx]);
+		}
 
 		// Sky Render set
 		m_renderingDevice->UpdateDescriptorImage(m_skyRenderDescriptorSet, 0, m_depthTarget, m_nearestClampSampler);
 		m_renderingDevice->UpdateDescriptorImage(m_skyRenderDescriptorSet, 1, m_skyViewLUT, m_skyViewSampler);
 		m_renderingDevice->UpdateDescriptorImage(m_skyRenderDescriptorSet, 2, m_transmittanceLUT, m_linearClampSampler);
 		m_renderingDevice->UpdateDescriptorStorageImage(m_skyRenderDescriptorSet, 3, m_hdrColor);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyRenderDescriptorSet, 4, m_gbufferMotion);
 
 		// Deferred Lighting set (full PBR + Irradiance IBL + AO + FFX Shadows)
 		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 0, m_gbufferAlbedo, m_nearestClampSampler);
@@ -1221,11 +1326,11 @@ namespace BetterThanNothing
 		m_renderingDevice->UpdateDescriptorImage(m_volumetricFogNoRtDescriptorSet, 3, m_irradianceLUT, m_skyViewSampler);
 		m_renderingDevice->UpdateDescriptorStorageImage(m_volumetricFogNoRtDescriptorSet, 4, m_hdrColor);
 
-		// TAA ping-pong & ToneMap sets
+		// TAA ping-pong & ToneMap sets (use linearClampSampler for currentHdrTex so non-FSR fallback can upsample smoothly)
 		for (uint32_t writeIdx = 0; writeIdx < 2; ++writeIdx)
 		{
 			const uint32_t readIdx = 1u - writeIdx;
-			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 0, m_hdrColor, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 0, m_hdrColor, m_linearClampSampler);
 			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 1, m_taaHistory[readIdx], m_linearClampSampler);
 			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 2, m_gbufferMotion, m_nearestClampSampler);
 			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 3, m_depthTarget, m_nearestClampSampler);
@@ -1272,6 +1377,8 @@ namespace BetterThanNothing
 		destroyTex(m_screenSpaceShadow);
 
 		destroyTex(m_aoRaw);
+		destroyTex(m_aoPing);
+		destroyTex(m_aoPong);
 		destroyTex(m_aoDenoised);
 		destroyTex(m_aoHistory);
 
@@ -1295,14 +1402,18 @@ namespace BetterThanNothing
 
 		const uint32_t imageIndex = imageIndexOpt.value();
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
-		const auto [viewportWidth, viewportHeight] = m_renderingDevice->GetSwapChainExtent();
+		const uint32_t renderWidth = m_renderWidth;
+		const uint32_t renderHeight = m_renderHeight;
+		const uint32_t displayWidth = m_displayWidth;
+		const uint32_t displayHeight = m_displayHeight;
 
 		const bool tlasBuilt = BuildAccelerationStructures(scene, frameIndex);
-		BuildDrawStreams(scene, frameIndex, viewportWidth, viewportHeight, tlasBuilt);
+		BuildDrawStreams(scene, frameIndex, renderWidth, renderHeight, tlasBuilt);
 
 		const auto&	   settings = RenderSettings::Get();
 		const uint32_t readIdx = m_temporalReadIndex;
 		const uint32_t writeIdx = 1u - readIdx;
+		const Camera*  camera = scene->GetCamera();
 
 		if (settings.atmosphereDensityScale != m_lastAtmosphereDensityScale)
 		{
@@ -1329,8 +1440,10 @@ namespace BetterThanNothing
 		ctx.scene = scene;
 		ctx.frameIndex = frameIndex;
 		ctx.swapChainImageIndex = imageIndex;
-		ctx.viewportWidth = viewportWidth;
-		ctx.viewportHeight = viewportHeight;
+		ctx.viewportWidth = renderWidth;
+		ctx.viewportHeight = renderHeight;
+		ctx.displayWidth = displayWidth;
+		ctx.displayHeight = displayHeight;
 		ctx.rtSupported = m_rtSupported;
 		ctx.rtShadowsActive = m_rtSupported && settings.enableRTShadows && tlasBuilt;
 		ctx.bendSssActive = settings.enableBendSSS;
@@ -1341,6 +1454,15 @@ namespace BetterThanNothing
 		ctx.brdfLutDirty = m_brdfLutDirty;
 		ctx.temporalReadIndex = readIdx;
 		ctx.temporalWriteIndex = writeIdx;
+		ctx.fsrUpscaleActive = (settings.upscalerMode == EUpscalerMode::FSR && m_renderingDevice->IsFfxUpscalerAvailable());
+		ctx.fsrResetHistory = !m_historyValid;
+		ctx.jitterPixelsX = m_currentJitterPixelsX;
+		ctx.jitterPixelsY = m_currentJitterPixelsY;
+		ctx.frameTimeDeltaMs = m_currentFrameDeltaMs;
+		ctx.cameraNear = camera->GetNearPlane();
+		ctx.cameraFar = camera->GetFarPlane();
+		ctx.cameraFovVerticalRadians = camera->GetFov() * (3.14159265359f / 180.0f);
+		ctx.cameraPreExposure = camera->GetExposure();
 		ctx.unjitteredViewProj = m_prevUnjitteredViewProj;
 		ctx.sunDirection = m_currentSunDirection;
 
@@ -1360,6 +1482,8 @@ namespace BetterThanNothing
 		ctx.screenSpaceShadow = m_screenSpaceShadow;
 
 		ctx.aoRaw = m_aoRaw;
+		ctx.aoPing = m_aoPing;
+		ctx.aoPong = m_aoPong;
 		ctx.aoDenoised = m_aoDenoised;
 		ctx.aoHistory = m_aoHistory;
 
@@ -1384,6 +1508,7 @@ namespace BetterThanNothing
 		ctx.rtaoDescriptorSet = m_rtSupported ? m_rtaoDescriptorSets[frameIndex] : Handle{};
 		ctx.gtaoDescriptorSet = m_gtaoDescriptorSet;
 		ctx.aoDenoiseDescriptorSet = m_aoDenoiseDescriptorSet;
+		ctx.aoFilterDescriptorSets = m_aoFilterDescriptorSets;
 		ctx.skyTransmittanceDescriptorSet = m_skyTransmittanceDescriptorSet;
 		ctx.skyMultiScatteringDescriptorSet = m_skyMultiScatteringDescriptorSet;
 		ctx.skyViewDescriptorSet = m_skyViewDescriptorSet;
@@ -1514,12 +1639,15 @@ namespace BetterThanNothing
 	{
 		const float	  aspectRatio = m_renderingDevice->GetAspectRatio();
 		const Camera* camera = scene->GetCamera();
-		const auto&	  settings = RenderSettings::Get();
+		auto&		  settings = RenderSettings::Get();
 
-		if (settings.enableTAA != m_prevTaaEnabled)
+		const bool taaOrFsrEnabled = (settings.upscalerMode != EUpscalerMode::Off);
+		settings.enableTAA = taaOrFsrEnabled;
+
+		if (taaOrFsrEnabled != m_prevTaaEnabled)
 		{
 			m_historyValid = false;
-			m_prevTaaEnabled = settings.enableTAA;
+			m_prevTaaEnabled = taaOrFsrEnabled;
 		}
 
 		Vector3 dirLightDirection = Vector3(0.0f, -1.0f, 0.0f);
@@ -1539,13 +1667,34 @@ namespace BetterThanNothing
 		const Matrix4  unjitteredProj = camera->GetProjectionMatrix(aspectRatio);
 		const Matrix4  unjitteredViewProj = unjitteredProj * viewMatrix;
 
+		m_currentJitterPixelsX = 0.0f;
+		m_currentJitterPixelsY = 0.0f;
+
 		Matrix4 projMatrix = unjitteredProj;
-		if (settings.enableTAA && settings.debugView == EDebugViewMode::Final && viewportWidth > 0 && viewportHeight > 0)
+		if (taaOrFsrEnabled && settings.debugView == EDebugViewMode::Final && viewportWidth > 0 && viewportHeight > 0)
 		{
-			const uint32_t sampleIdx = static_cast<uint32_t>((m_frameCounter % 16u) + 1u);
-			const float	   jitterX = (Halton(sampleIdx, 2) - 0.5f) * 2.0f / static_cast<float>(viewportWidth);
-			const float	   jitterY = (Halton(sampleIdx, 3) - 0.5f) * 2.0f / static_cast<float>(viewportHeight);
-			projMatrix = Matrix4::Identity.Translate(jitterX, jitterY, 0.0f) * unjitteredProj;
+			const bool useFsrJitter = (settings.upscalerMode == EUpscalerMode::FSR && m_renderingDevice->IsFfxUpscalerAvailable());
+			if (useFsrJitter)
+			{
+				const uint32_t displayW = m_displayWidth > 0 ? m_displayWidth : viewportWidth;
+				const int32_t  phaseCount = m_renderingDevice->QueryFfxJitterPhaseCount(viewportWidth, displayW);
+				const int32_t  jitterIdx = static_cast<int32_t>(m_frameCounter % static_cast<uint64_t>(std::max(phaseCount, 1)));
+				const auto [jx, jy] = m_renderingDevice->QueryFfxJitterOffset(jitterIdx, phaseCount);
+				m_currentJitterPixelsX = jx;
+				m_currentJitterPixelsY = jy;
+			}
+			else
+			{
+				const uint32_t sampleIdx = static_cast<uint32_t>((m_frameCounter % 16u) + 1u);
+				m_currentJitterPixelsX = Halton(sampleIdx, 2) - 0.5f;
+				m_currentJitterPixelsY = Halton(sampleIdx, 3) - 0.5f;
+			}
+
+			// Note: Matrix4::Perspective flips m[1][1] negative for Vulkan Y-down clip space,
+			// so NDC jitter is (+2*jx/w, +2*jy/h)
+			const float ndcJitterX = (2.0f * m_currentJitterPixelsX) / static_cast<float>(viewportWidth);
+			const float ndcJitterY = (2.0f * m_currentJitterPixelsY) / static_cast<float>(viewportHeight);
+			projMatrix = Matrix4::Identity.Translate(ndcJitterX, ndcJitterY, 0.0f) * unjitteredProj;
 		}
 
 		const Matrix4 viewProj = projMatrix * viewMatrix;
@@ -1558,7 +1707,7 @@ namespace BetterThanNothing
 			renderFlags |= GlobalRenderFlags::RTShadowsEnabled;
 		if (settings.enableShadowDenoiser)
 			renderFlags |= GlobalRenderFlags::ShadowDenoiserEnabled;
-		if (settings.enableTAA)
+		if (settings.upscalerMode == EUpscalerMode::TAA)
 			renderFlags |= GlobalRenderFlags::TAAEnabled;
 		if (m_historyValid)
 			renderFlags |= GlobalRenderFlags::HistoryValid;
@@ -1600,6 +1749,11 @@ namespace BetterThanNothing
 		globalUniform->atmosphereMultiScatteringFactor = settings.atmosphereMultiScatteringFactor;
 		globalUniform->atmosphereDensityScale = settings.atmosphereDensityScale;
 		const float elapsedTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - m_startTime).count();
+		if (m_frameCounter > 0 && elapsedTime > m_lastFrameElapsedSeconds)
+			m_currentFrameDeltaMs = std::clamp((elapsedTime - m_lastFrameElapsedSeconds) * 1000.0f, 1.0f, 250.0f);
+		else
+			m_currentFrameDeltaMs = 16.67f;
+		m_lastFrameElapsedSeconds = elapsedTime;
 
 		globalUniform->aoRadius = settings.aoRadius;
 		globalUniform->aoPower = settings.aoPower;

@@ -101,6 +101,7 @@ namespace BetterThanNothing
 		// 5. Render full-resolution skybox + physical limb-darkened solar disk into hdrColor (depth >= 1.0)
 		renderingDevice->TransitionTexture(ctx.depthTarget, ImageLayout::ShaderReadOnly);
 		renderingDevice->TransitionTexture(ctx.hdrColor, ImageLayout::General);
+		renderingDevice->TransitionTexture(ctx.gbufferMotion, ImageLayout::General);
 
 		const PipelineResourceCache* skyRenderPipeline = resourceManager->GetPipelineData("Sky::Render");
 		const std::array<Handle, 2>	 skyRenderSets = {ctx.globalDescriptorSet, ctx.skyRenderDescriptorSet};

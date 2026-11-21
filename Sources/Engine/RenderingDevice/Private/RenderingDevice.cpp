@@ -159,6 +159,7 @@ namespace BetterThanNothing
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();
+		InitializeFidelityFX();
 	}
 
 	RenderingDevice::~RenderingDevice()
@@ -169,6 +170,8 @@ namespace BetterThanNothing
 			Internal_FlushUploadBuffer();
 
 		m_self->device->WaitIdle();
+
+		ShutdownFidelityFX();
 
 		// Drain all deferred frame deletion queues first
 		for (auto& queue : m_self->frameDeletionQueues)
@@ -375,6 +378,9 @@ namespace BetterThanNothing
 			m_self->swapChainImageLayouts.assign(m_self->swapChain->GetImageCount(), VK_IMAGE_LAYOUT_UNDEFINED);
 		}
 
+		// Ensure the previous submitted frame has finished on the GPU before recording onto shared render targets & temporal histories
+		const uint32_t prevFrameIndex = (m_currentFrameIndex + m_maxFramesInFlight - 1u) % m_maxFramesInFlight;
+		m_self->inFlightFences.at(prevFrameIndex)->Wait();
 		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();
 		// Safe point: GPU has finished all work for this frame index; flush deferred deletions
 		m_self->frameDeletionQueues[m_currentFrameIndex].Flush();

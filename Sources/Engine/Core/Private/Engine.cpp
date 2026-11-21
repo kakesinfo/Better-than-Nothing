@@ -114,14 +114,17 @@ namespace BetterThanNothing
 
 			Metrics::EndRecording();
 
-			// Cooperative frame pacing cap (reduces GPU wattage and fan noise on high-refresh monitors)
+			// High-precision cooperative frame pacing cap (sleep coarse remainder, spin-yield final 2 ms to avoid Windows 15.6 ms timer granularity stutter)
 			const uint32_t targetFps = RenderSettings::Get().targetFps;
 			if (targetFps > 0u)
 			{
 				const auto targetDuration = std::chrono::duration<double>(1.0 / static_cast<double>(targetFps));
-				const auto elapsed = std::chrono::steady_clock::now() - frameStart;
-				if (elapsed < targetDuration)
-					std::this_thread::sleep_for(targetDuration - elapsed);
+				constexpr auto spinMargin = std::chrono::duration<double>(0.002);
+				auto elapsed = std::chrono::steady_clock::now() - frameStart;
+				if (elapsed + spinMargin < targetDuration)
+					std::this_thread::sleep_for((targetDuration - elapsed) - spinMargin);
+				while ((std::chrono::steady_clock::now() - frameStart) < targetDuration)
+					std::this_thread::yield();
 			}
 		}
 

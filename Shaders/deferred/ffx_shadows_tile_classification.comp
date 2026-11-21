@@ -60,6 +60,13 @@ layout(set = 1, binding = 8) uniform sampler2D gbufferMotionTex;
 layout(set = 1, binding = 9, rgba16f) uniform writeonly image2D outCurrMoments;
 layout(set = 1, binding = 10, rg16f) uniform writeonly image2D outShadowPing;
 
+layout(push_constant) uniform TileClassPushConstants {
+    float stabilityBias;
+    float radianceClipStdK;
+    float disocclusionThreshold;
+    float _pad;
+} push;
+
 const uint FLAG_SHADOW_DENOISER_ENABLED = 1u << 1;
 const uint FLAG_HISTORY_VALID = 1u << 3;
 
@@ -153,7 +160,8 @@ void main() {
                     vec3 prevNormal = DecodeOctahedral(textureLod(prevNormalTex, prevUV, 0.0).rg);
 
                     // FFX geometric disocclusion check (depth + normal consistency)
-                    float depthDiff = abs(depth - prevDepth) / max(1e-4, depth * 0.025);
+                    float depthThresh = max(push.disocclusionThreshold, 0.001);
+                    float depthDiff = abs(depth - prevDepth) / max(1e-4, depth * depthThresh);
                     float normalDot = dot(currNormal, prevNormal);
                     bool validHistory = (prevDepth < 1.0) && (depthDiff < 1.0) && (normalDot > 0.90);
 
@@ -163,12 +171,14 @@ void main() {
                         float prevVar = prevMoments.g;
                         float prevSamples = prevMoments.b;
 
-                        // FFX neighborhood variance clamping to eliminate moving-object shadow ghosting
-                        float clampRadius = max(spatialStd * 1.5, 0.05);
+                        // FFX neighborhood variance clamping (FFX_API_CONFIGURE_DENOISER_KEY_RADIANCE_CLIP_STD_K)
+                        float clipK = max(push.radianceClipStdK, 0.25);
+                        float clampRadius = max(spatialStd * clipK, 0.05);
                         float clampedPrevMean = clamp(prevMean, spatialMean - clampRadius, spatialMean + clampRadius);
 
                         sampleCount = min(prevSamples + 1.0, 16.0);
-                        float alpha = max(1.0 / sampleCount, 0.08);
+                        float minAlpha = clamp(push.stabilityBias, 0.01, 0.95);
+                        float alpha = max(1.0 / sampleCount, minAlpha);
 
                         mean = mix(clampedPrevMean, rawVis, alpha);
                         float instVar = (rawVis - mean) * (rawVis - mean);

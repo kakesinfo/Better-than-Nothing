@@ -106,9 +106,71 @@ namespace BetterThanNothing
 				if (ImGui::Combo("Tone Map", &toneMapIdx, kToneMapNames, IM_ARRAYSIZE(kToneMapNames)))
 					settings.toneMapMode = static_cast<EToneMapMode>(toneMapIdx);
 
-				ImGui::Checkbox("TAA", &settings.enableTAA);
-				if (settings.enableTAA)
+				ImGui::SeparatorText("AMD FidelityFX Upscaling (SDK 2.4.0)");
+				static constexpr const char* kUpscalerModes[] = {"Off", "Native TAA", "AMD FSR 4.1.2 (FidelityFX SDK)"};
+				int							 upscalerIdx = static_cast<int>(settings.upscalerMode);
+				if (ImGui::Combo("Upscaler", &upscalerIdx, kUpscalerModes, IM_ARRAYSIZE(kUpscalerModes)))
+				{
+					settings.upscalerMode = static_cast<EUpscalerMode>(upscalerIdx);
+					settings.enableTAA = (settings.upscalerMode != EUpscalerMode::Off);
+				}
+
+				if (settings.upscalerMode == EUpscalerMode::FSR)
+				{
+					if (settings.fsrAvailable)
+					{
+						ImGui::TextColored(
+							ImVec4(0.35f, 0.92f, 0.45f, 1.0f),
+							"Active: AMD FSR %s (%.1f MB VRAM)",
+							settings.fsrActiveVersionName.c_str(),
+							settings.fsrGpuMemoryMb
+						);
+						ImGui::TextDisabled(
+							"Render: %ux%u -> Display: %ux%u",
+							settings.fsrRenderWidth,
+							settings.fsrRenderHeight,
+							settings.fsrDisplayWidth,
+							settings.fsrDisplayHeight
+						);
+
+						if (settings.fsrVersionNames.size() > 1)
+						{
+							std::vector<const char*> verPtrs;
+							verPtrs.reserve(settings.fsrVersionNames.size());
+							for (const auto& name : settings.fsrVersionNames)
+								verPtrs.push_back(name.c_str());
+
+							int verIdx = static_cast<int>(settings.fsrSelectedVersionIndex);
+							if (ImGui::Combo("FSR Provider", &verIdx, verPtrs.data(), static_cast<int>(verPtrs.size())))
+								settings.fsrSelectedVersionIndex = static_cast<uint32_t>(std::max(verIdx, 0));
+						}
+
+						static constexpr const char* kFsrQualityNames[] = {
+							"Native AA (1.0x)",
+							"Quality (1.5x)",
+							"Balanced (1.7x)",
+							"Performance (2.0x)",
+							"Ultra Performance (3.0x)",
+						};
+						int qualityIdx = static_cast<int>(settings.fsrQualityMode);
+						if (ImGui::Combo("Quality Mode", &qualityIdx, kFsrQualityNames, IM_ARRAYSIZE(kFsrQualityNames)))
+							settings.fsrQualityMode = static_cast<EFsrQualityMode>(qualityIdx);
+
+						ImGui::Checkbox("RCAS Sharpening", &settings.fsrEnableSharpening);
+						if (settings.fsrEnableSharpening)
+							ImGui::SliderFloat("Sharpness", &settings.fsrSharpness, 0.0f, 1.0f, "%.2f");
+						ImGui::SliderFloat("Velocity Factor", &settings.fsrVelocityFactor, 0.0f, 1.0f, "%.2f");
+						ImGui::Checkbox("FSR Debug Overlay", &settings.fsrDrawDebugView);
+					}
+					else
+					{
+						ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "FidelityFX FSR Vulkan provider unavailable");
+					}
+				}
+				else if (settings.upscalerMode == EUpscalerMode::TAA)
+				{
 					ImGui::SliderFloat("TAA Blend", &settings.taaBlendFactor, 0.02f, 0.5f, "%.2f");
+				}
 
 				ImGui::EndTabItem();
 			}
@@ -208,15 +270,25 @@ namespace BetterThanNothing
 			// --- Tab 4: Shadows & AO ---
 			if (ImGui::BeginTabItem("Shadows"))
 			{
-				ImGui::SeparatorText("RT Shadows (AMD FFX Denoiser)");
+				ImGui::SeparatorText("AMD FidelityFX Unified Denoiser (SDK 2.4.0)");
+				ImGui::TextDisabled("%s", settings.ffxDenoiserSdkVersionName.c_str());
+				ImGui::Checkbox("Enable FFX Denoiser (Shadows + AO)", &settings.enableShadowDenoiser);
+				if (settings.enableShadowDenoiser)
+				{
+					ImGui::SliderFloat("Normal Strength", &settings.denoiserNormalSigma, 1.0f, 64.0f, "%.1f");
+					ImGui::SliderFloat("Depth Sigma", &settings.denoiserDepthSigma, 0.002f, 0.08f, "%.3f");
+					ImGui::SliderFloat("Kernel Relaxation", &settings.denoiserShadowPhi, 0.5f, 12.0f, "%.2f");
+					ImGui::SliderFloat("Stability Bias", &settings.denoiserTemporalStabilityBias, 0.01f, 0.50f, "%.2f");
+					ImGui::SliderFloat("Clip Std-K", &settings.denoiserRadianceClipStdK, 0.5f, 4.0f, "%.2f");
+					ImGui::SliderFloat("Disocclusion Thresh", &settings.denoiserDisocclusionThreshold, 0.005f, 0.10f, "%.3f");
+				}
+
+				ImGui::SeparatorText("Ray-Traced Shadows");
 				if (settings.rtSupported)
 				{
 					ImGui::Checkbox("RT Shadows", &settings.enableRTShadows);
 					if (settings.enableRTShadows)
-					{
-						ImGui::Checkbox("FFX Shadow Denoiser", &settings.enableShadowDenoiser);
 						ImGui::SliderFloat("Sun Radius", &settings.sunAngularRadius, 0.0f, 0.06f, "%.3f");
-					}
 				}
 				else
 				{

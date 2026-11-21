@@ -1,6 +1,8 @@
 #version 450
 
-// Spatio-Temporal Edge-Aware Bilateral Denoiser for RTAO / GTAO
+// AMD FidelityFX-Style Spatio-Temporal Variance-Guided Edge-Aware Denoiser for RTAO / GTAO
+// - Pass 0 (stepSize == 0): 5x5 Cross-Bilateral Spatial Moments + Temporal Reprojection + Variance Estimation
+// - Pass 1..3 (stepSize == 1, 2, 4): 3-pass Variance-Guided A-Trous Wavelet Edge-Stopping Filter
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -42,6 +44,17 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     float irradianceIntensity;
 } globalUniforms;
 
+layout(push_constant) uniform AODenoisePushConstants {
+    int stepSize; // 0 = Temporal Accumulation + Spatial Moments, >0 = A-Trous Wavelet Filter stride (1, 2, 4)
+    float depthSigma;
+    float normalSigma;
+    float variancePhi;
+    float stabilityBias;
+    float radianceClipStdK;
+    float disocclusionThreshold;
+    float _pad;
+} push;
+
 layout(set = 1, binding = 0) uniform sampler2D rawAOTex;
 layout(set = 1, binding = 1) uniform sampler2D historyAOTex;
 layout(set = 1, binding = 2) uniform sampler2D depthTex;
@@ -51,6 +64,7 @@ layout(set = 1, binding = 5) uniform sampler2D prevNormalTex;
 layout(set = 1, binding = 6) uniform sampler2D gbufferMotionTex;
 layout(set = 1, binding = 7, rg16f) uniform writeonly image2D outAODenoised;
 
+const uint FLAG_SHADOW_DENOISER_ENABLED = 1u << 1;
 const uint FLAG_HISTORY_VALID = 1u << 3;
 
 vec3 DecodeOctahedral(vec2 f) {
@@ -71,67 +85,139 @@ void main() {
     vec2 uv = (vec2(pixel) + 0.5) * texelSize;
     float centerDepth = textureLod(depthTex, uv, 0.0).r;
     if (centerDepth >= 1.0) {
-        imageStore(outAODenoised, pixel, vec4(1.0, 1.0, 0.0, 0.0));
+        imageStore(outAODenoised, pixel, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    if ((globalUniforms.flags & FLAG_SHADOW_DENOISER_ENABLED) == 0u) {
+        float rawPassthrough = textureLod(rawAOTex, uv, 0.0).r;
+        imageStore(outAODenoised, pixel, vec4(rawPassthrough, 0.0, 0.0, 0.0));
         return;
     }
 
     vec3 centerNormal = DecodeOctahedral(textureLod(gbufferNormalTex, uv, 0.0).rg);
-    float rawAO = textureLod(rawAOTex, uv, 0.0).r;
 
-    // 5x5 edge-aware bilateral spatial filter
-    float sumAO = 0.0;
-    float sumWeight = 0.0;
-    float minAO = 1.0;
-    float maxAO = 0.0;
-    float depthThresh = max(centerDepth * 0.02, 1e-4);
+    // =========================================================================
+    // STAGE 1 (stepSize == 0): 5x5 Bilateral Spatial Moments + Temporal Filter
+    // =========================================================================
+    if (push.stepSize <= 0) {
+        float rawAO = textureLod(rawAOTex, uv, 0.0).r;
 
-    for (int dy = -2; dy <= 2; ++dy) {
-        for (int dx = -2; dx <= 2; ++dx) {
+        float sumAO = 0.0;
+        float sumAOSq = 0.0;
+        float sumWeight = 0.0;
+        float depthThresh = max(centerDepth * max(push.depthSigma, 0.002), 1e-4);
+
+        for (int dy = -2; dy <= 2; ++dy) {
+            for (int dx = -2; dx <= 2; ++dx) {
+                vec2 sUV = clamp(uv + vec2(dx, dy) * texelSize, vec2(0.0), vec2(1.0));
+                float sDepth = textureLod(depthTex, sUV, 0.0).r;
+                if (sDepth >= 1.0)
+                    continue;
+
+                vec3 sNormal = DecodeOctahedral(textureLod(gbufferNormalTex, sUV, 0.0).rg);
+                float sAO = textureLod(rawAOTex, sUV, 0.0).r;
+
+                float wSpatial = exp(-float(dx * dx + dy * dy) / 4.0);
+                float wDepth = exp(-abs(sDepth - centerDepth) / depthThresh);
+                float wNormal = pow(max(dot(centerNormal, sNormal), 0.0), max(push.normalSigma, 1.0));
+                float w = wSpatial * wDepth * wNormal;
+
+                sumAO += sAO * w;
+                sumAOSq += (sAO * sAO) * w;
+                sumWeight += w;
+            }
+        }
+
+        float spatialMean = (sumWeight > 1e-5) ? (sumAO / sumWeight) : rawAO;
+        float spatialVar = (sumWeight > 1e-5) ? max(sumAOSq / sumWeight - spatialMean * spatialMean, 0.0) : 0.05;
+        float spatialStd = sqrt(spatialVar);
+
+        float meanAO = spatialMean;
+        float varianceAO = spatialVar;
+
+        // Temporal accumulation with FFX depth + normal disocclusion check
+        if ((globalUniforms.flags & FLAG_HISTORY_VALID) != 0u) {
+            vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
+            vec2 prevUV = uv - motion;
+            if (prevUV.x >= 0.0 && prevUV.x <= 1.0 && prevUV.y >= 0.0 && prevUV.y <= 1.0) {
+                float prevDepth = textureLod(prevDepthTex, prevUV, 0.0).r;
+                vec3 prevNormal = DecodeOctahedral(textureLod(prevNormalTex, prevUV, 0.0).rg);
+
+                float disocclThresh = max(push.disocclusionThreshold, 0.001);
+                float depthDiff = abs(centerDepth - prevDepth) / max(1e-4, centerDepth * disocclThresh);
+                if (prevDepth < 1.0 && depthDiff < 1.0 && dot(centerNormal, prevNormal) > 0.88) {
+                    vec2 hist = textureLod(historyAOTex, prevUV, 0.0).rg;
+                    // FFX neighborhood variance clamping (FFX_API_CONFIGURE_DENOISER_KEY_RADIANCE_CLIP_STD_K)
+                    float clipK = max(push.radianceClipStdK, 0.25);
+                    float clampRadius = max(spatialStd * clipK, 0.06);
+                    float clampedHist = clamp(hist.r, spatialMean - clampRadius, spatialMean + clampRadius);
+
+                    // FFX temporal stability bias (FFX_API_CONFIGURE_DENOISER_KEY_STABILITY_BIAS)
+                    float alpha = clamp(push.stabilityBias, 0.01, 0.95);
+                    meanAO = mix(clampedHist, spatialMean, alpha);
+                    float instVar = (rawAO - meanAO) * (rawAO - meanAO);
+                    varianceAO = mix(hist.g, max(instVar, spatialVar * 0.5), alpha);
+                }
+            }
+        }
+
+        imageStore(outAODenoised, pixel, vec4(clamp(meanAO, 0.0, 1.0), max(varianceAO, 0.0), 0.0, 0.0));
+        return;
+    }
+
+    // =========================================================================
+    // STAGE 2 (stepSize == 1, 2, 4): Variance-Guided A-Trous Wavelet Filter
+    // =========================================================================
+    vec2 centerAO = textureLod(rawAOTex, uv, 0.0).rg;
+
+    // 3x3 smoothed local variance estimate
+    float filteredVar = 0.0;
+    const float varKernel[3] = float[3](0.25, 0.5, 0.25);
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
             vec2 sUV = clamp(uv + vec2(dx, dy) * texelSize, vec2(0.0), vec2(1.0));
-            float sDepth = textureLod(depthTex, sUV, 0.0).r;
-            if (sDepth >= 1.0)
+            filteredVar += textureLod(rawAOTex, sUV, 0.0).g * varKernel[dx + 1] * varKernel[dy + 1];
+        }
+    }
+
+    float sigmaAO = max(push.variancePhi * sqrt(max(filteredVar, 0.0)), 0.06);
+    float depthThresh = max(centerDepth * push.depthSigma, 1e-4);
+
+    const float kernel[3] = float[3](0.25, 0.5, 0.25);
+    float sumMean = centerAO.r;
+    float sumVar = centerAO.g;
+    float sumWeight = 1.0;
+
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (dx == 0 && dy == 0)
                 continue;
 
-            vec3 sNormal = DecodeOctahedral(textureLod(gbufferNormalTex, sUV, 0.0).rg);
-            float sAO = textureLod(rawAOTex, sUV, 0.0).r;
+            vec2 sampleUV = uv + vec2(dx * push.stepSize, dy * push.stepSize) * texelSize;
+            if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0)
+                continue;
 
-            if (abs(dx) <= 1 && abs(dy) <= 1) {
-                minAO = min(minAO, sAO);
-                maxAO = max(maxAO, sAO);
-            }
+            float sampleDepth = textureLod(depthTex, sampleUV, 0.0).r;
+            if (sampleDepth >= 1.0)
+                continue;
 
-            float wSpatial = exp(-float(dx * dx + dy * dy) / 4.5);
-            float wDepth = exp(-abs(sDepth - centerDepth) / depthThresh);
-            float wNormal = pow(max(dot(centerNormal, sNormal), 0.0), 16.0);
-            float w = wSpatial * wDepth * wNormal;
+            vec3 sampleNormal = DecodeOctahedral(textureLod(gbufferNormalTex, sampleUV, 0.0).rg);
+            vec2 sampleAO = textureLod(rawAOTex, sampleUV, 0.0).rg;
 
-            sumAO += sAO * w;
+            float wDepth = exp(-abs(sampleDepth - centerDepth) / depthThresh);
+            float wNormal = pow(max(dot(centerNormal, sampleNormal), 0.0), push.normalSigma);
+            float wAO = exp(-abs(sampleAO.r - centerAO.r) / sigmaAO);
+            float wSpatial = kernel[dx + 1] * kernel[dy + 1];
+
+            float w = wSpatial * wDepth * wNormal * wAO;
+            sumMean += sampleAO.r * w;
+            sumVar += sampleAO.g * w * w;
             sumWeight += w;
         }
     }
 
-    float spatialAO = (sumWeight > 1e-5) ? (sumAO / sumWeight) : rawAO;
-    float finalAO = spatialAO;
-    float historyLen = 1.0;
-
-    // Temporal accumulation with depth + normal disocclusion rejection
-    if ((globalUniforms.flags & FLAG_HISTORY_VALID) != 0u) {
-        vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
-        vec2 prevUV = uv - motion;
-        if (prevUV.x >= 0.0 && prevUV.x <= 1.0 && prevUV.y >= 0.0 && prevUV.y <= 1.0) {
-            float prevDepth = textureLod(prevDepthTex, prevUV, 0.0).r;
-            vec3 prevNormal = DecodeOctahedral(textureLod(prevNormalTex, prevUV, 0.0).rg);
-
-            float depthDiff = abs(centerDepth - prevDepth) / max(1e-4, centerDepth * 0.025);
-            if (prevDepth < 1.0 && depthDiff < 1.0 && dot(centerNormal, prevNormal) > 0.90) {
-                vec2 hist = textureLod(historyAOTex, prevUV, 0.0).rg;
-                float clampedHist = clamp(hist.r, minAO, maxAO);
-                historyLen = min(hist.g + 1.0, 12.0);
-                float alpha = max(1.0 / historyLen, 0.12);
-                finalAO = mix(clampedHist, spatialAO, alpha);
-            }
-        }
-    }
-
-    imageStore(outAODenoised, pixel, vec4(clamp(finalAO, 0.0, 1.0), historyLen, 0.0, 0.0));
+    float outMean = sumMean / sumWeight;
+    float outVar = sumVar / (sumWeight * sumWeight);
+    imageStore(outAODenoised, pixel, vec4(clamp(outMean, 0.0, 1.0), max(outVar, 0.0), 0.0, 0.0));
 }

@@ -19,6 +19,8 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 namespace BetterThanNothing
 {
@@ -52,15 +54,38 @@ namespace BetterThanNothing
 		RTAO = 2
 	};
 
+	enum class EUpscalerMode : uint32_t
+	{
+		Off = 0,
+		TAA = 1,
+		FSR = 2 // AMD FidelityFX SDK v2.4.0 Upscaler (FSR 4.1.2 / 3.1.6)
+	};
+
+	enum class EFsrQualityMode : uint32_t
+	{
+		NativeAA = 0,		  // 1.0x (FFX_UPSCALE_QUALITY_MODE_NATIVEAA)
+		Quality = 1,		  // 1.5x (FFX_UPSCALE_QUALITY_MODE_QUALITY)
+		Balanced = 2,		  // 1.7x (FFX_UPSCALE_QUALITY_MODE_BALANCED)
+		Performance = 3,	  // 2.0x (FFX_UPSCALE_QUALITY_MODE_PERFORMANCE)
+		UltraPerformance = 4  // 3.0x (FFX_UPSCALE_QUALITY_MODE_ULTRA_PERFORMANCE)
+	};
+
 	struct RenderSettingsData
 	{
 		EDebugViewMode debugView = EDebugViewMode::Final;
 		EToneMapMode   toneMapMode = EToneMapMode::AgX;
 
-		// RT Shadows + AMD FidelityFX Shadow Denoiser
+		// RT Shadows + AMD FidelityFX Shadow Denoiser (SDK v2.4.0 / FFX_DNSR_Shadows)
 		bool  enableRTShadows = true;
 		bool  enableShadowDenoiser = true;
 		float sunAngularRadius = 0.015f;
+		// FidelityFX Denoiser configurable filter parameters (mapped from FfxApiConfigureDenoiserKey & A-Trous weights)
+		float denoiserDepthSigma = 0.015f;			  // Disocclusion / bilateral depth sigma
+		float denoiserNormalSigma = 16.0f;			  // Cross-bilateral normal strength
+		float denoiserShadowPhi = 4.0f;				  // Variance-guided edge-stopping relaxation
+		float denoiserTemporalStabilityBias = 0.08f;  // Minimum temporal blend alpha (FFX_API_CONFIGURE_DENOISER_KEY_STABILITY_BIAS)
+		float denoiserRadianceClipStdK = 1.5f;		  // Neighborhood std-dev clamping K (FFX_API_CONFIGURE_DENOISER_KEY_RADIANCE_CLIP_STD_K)
+		float denoiserDisocclusionThreshold = 0.025f; // Relative depth disocclusion threshold (FFX_API_CONFIGURE_DENOISER_KEY_DISOCCLUSION_THRESHOLD)
 
 		// Bend Studio Screen Space Shadows
 		bool	 enableBendSSS = true;
@@ -94,12 +119,35 @@ namespace BetterThanNothing
 		float cloudSpeed = 1.0f;
 		float cloudShadowStrength = 0.65f;
 
-		// Temporal Anti-Aliasing
+		// Upscaling & Temporal Anti-Aliasing (AMD FidelityFX FSR 4.1.2 / Native TAA)
+		EUpscalerMode	upscalerMode = EUpscalerMode::FSR;
+		EFsrQualityMode fsrQualityMode = EFsrQualityMode::NativeAA;
+		bool			fsrEnableSharpening = true;
+		float			fsrSharpness = 0.70f;
+		bool			fsrDrawDebugView = false;
+		float			fsrVelocityFactor = 1.0f; // FFX_API_CONFIGURE_UPSCALE_KEY_FVELOCITYFACTOR
+		uint32_t		fsrSelectedVersionIndex = 0;
+
+		// Read-only runtime telemetry populated by FidelityFX SDK v2.4.0
+		bool					 fsrAvailable = false;
+		std::string				 fsrActiveVersionName = "4.1.2";
+		uint64_t				 fsrActiveVersionId = 0;
+		float					 fsrGpuMemoryMb = 0.0f;
+		uint32_t				 fsrRenderWidth = 0;
+		uint32_t				 fsrRenderHeight = 0;
+		uint32_t				 fsrDisplayWidth = 0;
+		uint32_t				 fsrDisplayHeight = 0;
+		std::vector<std::string> fsrVersionNames;
+
+		bool					 ffxDenoiserSdkHeaderPresent = true;
+		std::string				 ffxDenoiserSdkVersionName = "1.2.1 (FFX_DNSR_Shadows Vulkan + Ray Regeneration 1.2.1 SDK)";
+
+		// Legacy TAA controls (kept synchronized with upscalerMode)
 		bool  enableTAA = true;
 		float taaBlendFactor = 0.1f;
 
 		// Performance & Frame Pacing
-		uint32_t targetFps = 60; // 0 = VSync refresh rate only
+		uint32_t targetFps = 0; // 0 = VSync refresh rate only (avoids CPU sleep vs VBlank phase oscillation)
 
 		// Water rendering
 		float waterLevel = -1.6f;

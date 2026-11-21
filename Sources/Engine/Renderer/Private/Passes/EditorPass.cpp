@@ -40,10 +40,13 @@ namespace BetterThanNothing
 		colorAttachment.loadOp = LoadOp::Load;
 		colorAttachment.storeOp = StoreOp::Store;
 
+		const uint32_t displayW = ctx.displayWidth > 0 ? ctx.displayWidth : ctx.viewportWidth;
+		const uint32_t displayH = ctx.displayHeight > 0 ? ctx.displayHeight : ctx.viewportHeight;
+
 		RenderPassDescriptor passDesc{};
 		passDesc.colorAttachments = {colorAttachment};
-		passDesc.width = ctx.viewportWidth;
-		passDesc.height = ctx.viewportHeight;
+		passDesc.width = displayW;
+		passDesc.height = displayH;
 
 		renderingDevice->BeginRenderPass(passDesc);
 		ctx.editor->RenderDrawData();

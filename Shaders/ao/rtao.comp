@@ -2,6 +2,8 @@
 #extension GL_EXT_ray_query : require
 
 // Hardware Ray-Traced Ambient Occlusion (RTAO) via VK_KHR_ray_query
+// - Spatially decorrelated Blue Noise + Golden Ratio / R2 quasi-Monte Carlo hemisphere sampling
+// - 2 stratified cosine-weighted rays per pixel + smooth distance falloff for noise-free contact crevices
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -47,8 +49,10 @@ layout(set = 1, binding = 0) uniform accelerationStructureEXT topLevelAS;
 layout(set = 1, binding = 1) uniform sampler2D depthTex;
 layout(set = 1, binding = 2) uniform sampler2D gbufferNormalTex;
 layout(set = 1, binding = 3, rg16f) uniform writeonly image2D outAORaw;
+layout(set = 1, binding = 4) uniform sampler2D blueNoiseTex;
 
 const float PI = 3.14159265359;
+const float GOLDEN_RATIO = 1.61803398875;
 
 vec3 DecodeOctahedral(vec2 f) {
     vec3 n = vec3(f.x, f.y, 1.0 - abs(f.x) - abs(f.y));
@@ -64,15 +68,18 @@ vec3 ReconstructWorldPos(vec2 uv, float depth) {
     return worldPos.xyz / worldPos.w;
 }
 
-uint PcgHash(uint v) {
-    uint state = v * 747796405u + 2891336453u;
-    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-    return (word >> 22u) ^ word;
-}
+// High-frequency spatial blue-noise + R2 low-discrepancy temporal sequence
+vec2 SampleBlueNoise2D(ivec2 pixel, uint sampleIndex) {
+    ivec2 noiseCoord1 = (pixel + ivec2(int(sampleIndex) * 17, int(sampleIndex) * 29)) & 63;
+    ivec2 noiseCoord2 = (pixel + ivec2(int(sampleIndex) * 37 + 23, int(sampleIndex) * 41 + 11)) & 63;
+    float b1 = texelFetch(blueNoiseTex, noiseCoord1, 0).r;
+    float b2 = texelFetch(blueNoiseTex, noiseCoord2, 0).r;
 
-float Rand01(inout uint seed) {
-    seed = PcgHash(seed);
-    return float(seed) * (1.0 / 4294967296.0);
+    // R2 quasi-random temporal offset (Roberts 2018)
+    float t = float((globalUniforms.frameIndex & 63u) * 2u + sampleIndex);
+    float u1 = fract(b1 + t * 0.7548776662466927);
+    float u2 = fract(b2 + t * 0.5698402909980532);
+    return vec2(u1, u2);
 }
 
 void BuildOrthonormalBasis(vec3 n, out vec3 tangent, out vec3 bitangent) {
@@ -100,7 +107,7 @@ void main() {
     vec2 uv = (vec2(pixel) + 0.5) / vec2(globalUniforms.screenWidth, globalUniforms.screenHeight);
     float depth = textureLod(depthTex, uv, 0.0).r;
     if (depth >= 1.0) {
-        imageStore(outAORaw, pixel, vec4(1.0, 1.0, 0.0, 0.0));
+        imageStore(outAORaw, pixel, vec4(1.0, 0.0, 0.0, 0.0));
         return;
     }
 
@@ -108,24 +115,25 @@ void main() {
     vec3 N = DecodeOctahedral(textureLod(gbufferNormalTex, uv, 0.0).rg);
 
     float distToCam = length(globalUniforms.cameraPosition - worldPos);
-    if (distToCam > 85.0) {
-        imageStore(outAORaw, pixel, vec4(1.0, 1.0, 0.0, 0.0));
+    if (distToCam > 95.0) {
+        imageStore(outAORaw, pixel, vec4(1.0, 0.0, 0.0, 0.0));
         return;
     }
 
-    float bias = 0.005 + 0.0012 * distToCam;
+    float bias = 0.004 + 0.0012 * distToCam;
     vec3 origin = worldPos + N * bias;
 
     float radius = max(globalUniforms.aoRadius, 0.05);
-    uint seed = uint(pixel.x) * 1973u + uint(pixel.y) * 9277u + (globalUniforms.frameIndex & 255u) * 26699u;
 
-    // 1 ray per pixel + spatio-temporal bilateral denoiser (cuts RT load by 50%)
-    const int RAY_COUNT = 1;
+    // 2 stratified blue-noise rays per pixel (eliminates 1-spp binary salt-and-pepper grain)
+    const int RAY_COUNT = 2;
     float visibilitySum = 0.0;
 
     for (int i = 0; i < RAY_COUNT; ++i) {
-        float u1 = (float(i) + Rand01(seed)) / float(RAY_COUNT);
-        float u2 = Rand01(seed);
+        vec2 xi = SampleBlueNoise2D(pixel, uint(i));
+        // Stratify radial component across the 2 rays so one samples inner hemisphere and one outer
+        float u1 = (float(i) + xi.x) / float(RAY_COUNT);
+        float u2 = xi.y;
         vec3 rayDir = SampleCosineHemisphere(u1, u2, N);
 
         rayQueryEXT rq;
@@ -144,14 +152,14 @@ void main() {
         if (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT) {
             visibilitySum += 1.0;
         } else {
-            // Smooth distance falloff so distant hits contribute less occlusion
+            // Smooth cubic Hermite distance falloff so distant hits contribute soft ambient shading
             float tHit = rayQueryGetIntersectionTEXT(rq, true);
             float normDist = clamp(tHit / radius, 0.0, 1.0);
-            visibilitySum += normDist * normDist;
+            visibilitySum += smoothstep(0.0, 1.0, normDist);
         }
     }
 
     float ao = clamp(visibilitySum / float(RAY_COUNT), 0.0, 1.0);
     ao = pow(ao, max(globalUniforms.aoPower, 0.1));
-    imageStore(outAORaw, pixel, vec4(ao, 1.0, 0.0, 0.0));
+    imageStore(outAORaw, pixel, vec4(ao, 0.0, 0.0, 0.0));
 }

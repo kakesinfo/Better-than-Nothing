@@ -45,6 +45,8 @@ namespace BetterThanNothing
 		uint32_t swapChainImageIndex = 0;
 		uint32_t viewportWidth = 0;
 		uint32_t viewportHeight = 0;
+		uint32_t displayWidth = 0;
+		uint32_t displayHeight = 0;
 
 		bool	 rtSupported = false;
 		bool	 rtShadowsActive = false;
@@ -56,6 +58,16 @@ namespace BetterThanNothing
 		bool	 brdfLutDirty = true;
 		uint32_t temporalReadIndex = 0;
 		uint32_t temporalWriteIndex = 1;
+
+		bool  fsrUpscaleActive = false;
+		bool  fsrResetHistory = false;
+		float jitterPixelsX = 0.0f;
+		float jitterPixelsY = 0.0f;
+		float frameTimeDeltaMs = 16.67f;
+		float cameraNear = 0.1f;
+		float cameraFar = 1000.0f;
+		float cameraFovVerticalRadians = 1.04719755f;
+		float cameraPreExposure = 1.0f;
 
 		Matrix4 unjitteredViewProj = Matrix4::Identity;
 		Vector3 sunDirection = Vector3(0.0f, 1.0f, 0.0f);
@@ -81,6 +93,8 @@ namespace BetterThanNothing
 
 		// Ambient Occlusion targets
 		Handle aoRaw{};
+		Handle aoPing{};
+		Handle aoPong{};
 		Handle aoDenoised{};
 		Handle aoHistory{};
 
@@ -108,6 +122,7 @@ namespace BetterThanNothing
 		Handle				  rtaoDescriptorSet{};
 		Handle				  gtaoDescriptorSet{};
 		Handle				  aoDenoiseDescriptorSet{};
+		std::array<Handle, 3> aoFilterDescriptorSets{}; // pass 0: ping->pong, pass 1: pong->ping, pass 2: ping->denoised
 		Handle				  skyTransmittanceDescriptorSet{};
 		Handle				  skyMultiScatteringDescriptorSet{};
 		Handle				  skyViewDescriptorSet{};

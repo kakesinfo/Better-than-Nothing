@@ -18,6 +18,7 @@
 
 #include "RTShadowPass.hpp"
 
+#include <Common/RenderSettings.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <ResourceManager/ResourceManager.hpp>
 #include <ResourceManager/ResourceManager_Types.hpp>
@@ -25,6 +26,14 @@
 
 namespace BetterThanNothing
 {
+	struct FfxShadowTileClassPushConstants
+	{
+		float stabilityBias = 0.08f;
+		float radianceClipStdK = 1.5f;
+		float disocclusionThreshold = 0.025f;
+		float _pad = 0.0f;
+	};
+
 	struct FfxShadowFilterPushConstants
 	{
 		int32_t stepSize = 1;
@@ -38,8 +47,19 @@ namespace BetterThanNothing
 		if (!ctx.rtSupported || !ctx.rtShadowsActive || !ctx.rtShadowDescriptorSet.IsValid())
 			return;
 
-		RenderingDevice* renderingDevice = ctx.renderingDevice;
-		ResourceManager* resourceManager = ctx.resourceManager;
+		RenderingDevice*  renderingDevice = ctx.renderingDevice;
+		ResourceManager*  resourceManager = ctx.resourceManager;
+		const auto&		  settings = RenderSettings::Get();
+
+		FfxDenoiserSetupParams denoiserParams{};
+		denoiserParams.maxRenderWidth = ctx.viewportWidth;
+		denoiserParams.maxRenderHeight = ctx.viewportHeight;
+		denoiserParams.crossBilateralNormalStrength = settings.denoiserNormalSigma;
+		denoiserParams.stabilityBias = settings.denoiserTemporalStabilityBias;
+		denoiserParams.radianceClipStdK = settings.denoiserRadianceClipStdK;
+		denoiserParams.gaussianKernelRelaxation = settings.denoiserShadowPhi;
+		denoiserParams.disocclusionThreshold = settings.denoiserDisocclusionThreshold;
+		renderingDevice->ConfigureFfxDenoiser(denoiserParams);
 
 		const uint32_t groupsX = (ctx.viewportWidth + 7u) / 8u;
 		const uint32_t groupsY = (ctx.viewportHeight + 7u) / 8u;
@@ -73,6 +93,12 @@ namespace BetterThanNothing
 		const std::array<Handle, 2>	 tileClassSets = {ctx.globalDescriptorSet, ctx.ffxTileClassDescriptorSets[writeIdx]};
 		renderingDevice->BindComputePipeline(tileClassPipeline->pipeline);
 		renderingDevice->BindComputeDescriptorSets(tileClassPipeline->layoutName, 0, tileClassSets);
+
+		FfxShadowTileClassPushConstants tilePush{};
+		tilePush.stabilityBias = settings.denoiserTemporalStabilityBias;
+		tilePush.radianceClipStdK = settings.denoiserRadianceClipStdK;
+		tilePush.disocclusionThreshold = settings.denoiserDisocclusionThreshold;
+		renderingDevice->PushComputeConstants(tileClassPipeline->layoutName, &tilePush, sizeof(tilePush));
 		renderingDevice->Dispatch(groupsX, groupsY, 1);
 
 		// Ensure tile classification metadata SSBO is visible to A-Trous filter passes
@@ -96,9 +122,9 @@ namespace BetterThanNothing
 
 			FfxShadowFilterPushConstants push{};
 			push.stepSize = kStepSizes[passIdx];
-			push.depthSigma = 0.015f;
-			push.normalSigma = 16.0f;
-			push.shadowPhi = 4.0f;
+			push.depthSigma = settings.denoiserDepthSigma;
+			push.normalSigma = settings.denoiserNormalSigma;
+			push.shadowPhi = settings.denoiserShadowPhi;
 			renderingDevice->PushComputeConstants(filterPipeline->layoutName, &push, sizeof(push));
 
 			renderingDevice->Dispatch(groupsX, groupsY, 1);

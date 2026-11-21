@@ -92,6 +92,43 @@ namespace BetterThanNothing
 		uint32_t mask = 0xFF;
 	};
 
+	struct FfxUpscaleDispatchParams
+	{
+		Handle	 color{};
+		Handle	 depth{};
+		Handle	 motionVectors{};
+		Handle	 output{};
+		uint32_t renderWidth = 0;
+		uint32_t renderHeight = 0;
+		uint32_t upscaleWidth = 0;
+		uint32_t upscaleHeight = 0;
+		float	 jitterOffsetX = 0.0f;
+		float	 jitterOffsetY = 0.0f;
+		float	 motionVectorScaleX = 1.0f;
+		float	 motionVectorScaleY = 1.0f;
+		bool	 enableSharpening = true;
+		float	 sharpness = 0.7f;
+		float	 frameTimeDeltaMs = 16.67f;
+		float	 preExposure = 1.0f;
+		bool	 reset = false;
+		float	 cameraNear = 0.1f;
+		float	 cameraFar = 1000.0f;
+		float	 cameraFovAngleVerticalRadians = 1.04719755f;
+		float	 viewSpaceToMetersFactor = 1.0f;
+		bool	 drawDebugView = false;
+	};
+
+	struct FfxDenoiserSetupParams
+	{
+		uint32_t maxRenderWidth = 0;
+		uint32_t maxRenderHeight = 0;
+		float	 crossBilateralNormalStrength = 16.0f;
+		float	 stabilityBias = 0.08f;
+		float	 radianceClipStdK = 1.5f;
+		float	 gaussianKernelRelaxation = 4.0f;
+		float	 disocclusionThreshold = 0.025f;
+	};
+
 	class RenderingDevice
 	{
 	public:
@@ -228,6 +265,18 @@ namespace BetterThanNothing
 		void ComputeBarrier();
 
 		void WaitIdle() const;
+
+		// AMD FidelityFX SDK v2.4.0 (FSR 4.1.2 Upscaler & Denoiser 1.2.1 integration)
+		bool							  InitializeFidelityFX();
+		void							  ShutdownFidelityFX();
+		[[nodiscard]] bool				  IsFfxUpscalerAvailable() const;
+		bool							  EnsureFfxUpscalerContext(uint32_t maxRenderWidth, uint32_t maxRenderHeight, uint32_t maxUpscaleWidth, uint32_t maxUpscaleHeight, uint32_t versionIndex = 0);
+		[[nodiscard]] std::pair<uint32_t, uint32_t> QueryFfxRenderResolution(uint32_t displayWidth, uint32_t displayHeight, uint32_t qualityMode) const;
+		[[nodiscard]] int32_t			  QueryFfxJitterPhaseCount(uint32_t renderWidth, uint32_t displayWidth) const;
+		[[nodiscard]] std::pair<float, float> QueryFfxJitterOffset(int32_t index, int32_t phaseCount) const;
+		bool							  ConfigureFfxUpscaler(float velocityFactor);
+		bool							  DispatchFfxUpscale(const FfxUpscaleDispatchParams& params);
+		void							  ConfigureFfxDenoiser(const FfxDenoiserSetupParams& params);
 
 		// Swapchain & device queries (engine-agnostic)
 		[[nodiscard]] uint32_t					  GetCurrentFrameIndex() const;
