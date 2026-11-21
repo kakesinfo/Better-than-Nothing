@@ -32,6 +32,7 @@
 
 #include "Quaternion.hpp"
 #include "Vector3.hpp"
+#include "Vector4.hpp"
 
 #include <ostream>
 
@@ -106,6 +107,7 @@ namespace BetterThanNothing
 
 		[[nodiscard]] Matrix4 operator*(float value) const { return Matrix4(m_data * value); }
 		[[nodiscard]] Matrix4 operator*(const Matrix4& other) const { return Matrix4(m_data * other.m_data); }
+		[[nodiscard]] Vector4 operator*(const Vector4& vec) const { return Vector4(m_data * vec.Value()); }
 		[[nodiscard]] Matrix4 operator+(const Matrix4& other) const { return Matrix4(m_data + other.m_data); }
 		[[nodiscard]] Matrix4 operator-(const Matrix4& other) const { return Matrix4(m_data - other.m_data); }
 		[[nodiscard]] bool	  operator==(const Matrix4& other) const { return m_data == other.m_data; }
@@ -133,7 +135,14 @@ namespace BetterThanNothing
 		[[nodiscard]] Matrix4		   Scale(const Vector3& vec) const { return Scale(vec.GetX(), vec.GetY(), vec.GetZ()); }
 		[[nodiscard]] Matrix4		   Transposed() const { return Matrix4(glm::transpose(m_data)); }
 		[[nodiscard]] Matrix4		   Inverted() const { return Matrix4(glm::inverse(m_data)); }
-		[[nodiscard]] Vector3		   GetTranslation() const { return Vector3(m_data[3][0], m_data[3][1], m_data[3][2]); }
+		[[nodiscard]] Vector3 GetTranslation() const { return Vector3(m_data[3][0], m_data[3][1], m_data[3][2]); }
+		[[nodiscard]] Vector4 GetRow(const int row) const { return Vector4(m_data[0][row], m_data[1][row], m_data[2][row], m_data[3][row]); }
+		[[nodiscard]] Vector4 GetColumn(const int col) const { return Vector4(m_data[col]); }
+		[[nodiscard]] Vector3 TransformPoint(const Vector3& point) const
+		{
+			const glm::vec4 res = m_data * glm::vec4(point.Value(), 1.0f);
+			return Vector3(res.x, res.y, res.z);
+		}
 		[[nodiscard]] bool			   Equals(const Matrix4& other) const { return m_data == other.m_data; }
 		[[nodiscard]] const glm::mat4& Value() const { return m_data; }
 

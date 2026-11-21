@@ -43,17 +43,17 @@ namespace BetterThanNothing
 		// Extracts 6 normalized frustum planes from a Vulkan clip-space (z in [0, 1]) ViewProjection matrix.
 		[[nodiscard]] static Frustum FromViewProjection(const Matrix4& viewProjection)
 		{
-			const glm::mat4& m = viewProjection.Value();
-			const glm::vec4	 row0(m[0][0], m[1][0], m[2][0], m[3][0]);
-			const glm::vec4	 row1(m[0][1], m[1][1], m[2][1], m[3][1]);
-			const glm::vec4	 row2(m[0][2], m[1][2], m[2][2], m[3][2]);
-			const glm::vec4	 row3(m[0][3], m[1][3], m[2][3], m[3][3]);
+			const Vector4 row0 = viewProjection.GetRow(0);
+			const Vector4 row1 = viewProjection.GetRow(1);
+			const Vector4 row2 = viewProjection.GetRow(2);
+			const Vector4 row3 = viewProjection.GetRow(3);
 
-			auto makePlane = [](const glm::vec4& eq) -> Plane {
-				const float len = glm::length(glm::vec3(eq));
+			auto makePlane = [](const Vector4& eq) -> Plane {
+				const Vector3 n(eq.GetX(), eq.GetY(), eq.GetZ());
+				const float	  len = n.Magnitude();
 				if (len <= 0.0f)
 					return {};
-				return {Vector3(eq.x / len, eq.y / len, eq.z / len), eq.w / len};
+				return {n / len, eq.GetW() / len};
 			};
 
 			Frustum f;
@@ -85,18 +85,22 @@ namespace BetterThanNothing
 
 		[[nodiscard]] bool IntersectsLocalAABB(const Vector3& localMin, const Vector3& localMax, const Matrix4& worldMatrix) const
 		{
-			const glm::mat4& m = worldMatrix.Value();
-			const glm::vec3	 localCenter = (localMin.Value() + localMax.Value()) * 0.5f;
-			const glm::vec3	 localExtents = (localMax.Value() - localMin.Value()) * 0.5f;
+			const Vector3 localCenter = (localMin + localMax) * 0.5f;
+			const Vector3 localExtents = (localMax - localMin) * 0.5f;
 
-			const glm::vec3 worldCenter = glm::vec3(m * glm::vec4(localCenter, 1.0f));
-			const glm::vec3 right(std::fabs(m[0][0]), std::fabs(m[0][1]), std::fabs(m[0][2]));
-			const glm::vec3 up(std::fabs(m[1][0]), std::fabs(m[1][1]), std::fabs(m[1][2]));
-			const glm::vec3 forward(std::fabs(m[2][0]), std::fabs(m[2][1]), std::fabs(m[2][2]));
+			const Vector3 worldCenter = worldMatrix.TransformPoint(localCenter);
 
-			const glm::vec3 worldExtents = right * localExtents.x + up * localExtents.y + forward * localExtents.z;
+			const Vector4 col0 = worldMatrix.GetColumn(0);
+			const Vector4 col1 = worldMatrix.GetColumn(1);
+			const Vector4 col2 = worldMatrix.GetColumn(2);
 
-			return IntersectsAABB(Vector3(worldCenter - worldExtents), Vector3(worldCenter + worldExtents));
+			const Vector3 right(std::fabs(col0.GetX()), std::fabs(col0.GetY()), std::fabs(col0.GetZ()));
+			const Vector3 up(std::fabs(col1.GetX()), std::fabs(col1.GetY()), std::fabs(col1.GetZ()));
+			const Vector3 forward(std::fabs(col2.GetX()), std::fabs(col2.GetY()), std::fabs(col2.GetZ()));
+
+			const Vector3 worldExtents = right * localExtents.GetX() + up * localExtents.GetY() + forward * localExtents.GetZ();
+
+			return IntersectsAABB(worldCenter - worldExtents, worldCenter + worldExtents);
 		}
 
 	private:
