@@ -22,6 +22,7 @@
 #include <Common/EMouseButton.hpp>
 #include <functional>
 #include <memory>
+#include <string>
 
 struct SDL_Window;
 union SDL_Event;
