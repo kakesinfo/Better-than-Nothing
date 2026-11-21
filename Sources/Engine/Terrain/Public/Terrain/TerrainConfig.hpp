@@ -80,13 +80,13 @@ namespace BetterThanNothing
 			cfg.chunksX = 8;
 			cfg.chunksZ = 8;
 			cfg.chunkSize = 32.0f;
-			cfg.chunkResolution = 64;
-			cfg.waterResolution = 32;
+			cfg.chunkResolution = 32; // 1.0m vertex spacing (4x lighter BVH & G-Buffer)
+			cfg.waterResolution = 24;
 			cfg.hillAmplitude = 9.5f;
 			cfg.mountainAmplitude = 22.0f;
 			cfg.baseFrequency = 0.015f;
 			cfg.waterLevel = -1.6f;
-			cfg.uvScale = 0.22f;
+			cfg.uvScale = 0.65f;
 			cfg.textureMaxDimension = 1024;
 
 			// Flat courtyard plateau underneath Sponza (Sponza bounds: X[-19.2, 18.0], Z[-11.8, 11.1], floor Y=0.0)
@@ -105,16 +105,16 @@ namespace BetterThanNothing
 			cfg.waterBasins.push_back({.centerX = -10.0f, .centerZ = -42.0f, .radiusX = 26.0f, .radiusZ = 16.0f, .depth = 4.0f});
 			cfg.waterBasins.push_back({.centerX = 36.0f, .centerZ = 38.0f, .radiusX = 22.0f, .radiusZ = 19.0f, .depth = 3.9f});
 
-			// User's 5 Ground PBR texture packs from .assets/
+			// 5 PBR texture packs from .assets/ (with Grass002 for lush green meadows)
 			cfg.layerTextures[0] = {
 				".assets/Ground049A_8K-JPG/Ground049A_8K-JPG_Color.jpg",
 				".assets/Ground049A_8K-JPG/Ground049A_8K-JPG_NormalGL.jpg",
 				".assets/Ground049A_8K-JPG/Ground049A_8K-JPG_Roughness.jpg",
 			};
 			cfg.layerTextures[1] = {
-				".assets/Ground068_8K-JPG/Ground068_8K-JPG_Color.jpg",
-				".assets/Ground068_8K-JPG/Ground068_8K-JPG_NormalGL.jpg",
-				".assets/Ground068_8K-JPG/Ground068_8K-JPG_Roughness.jpg",
+				".assets/Grass002_8K-JPG/Grass002_8K-JPG_Color.jpg",
+				".assets/Grass002_8K-JPG/Grass002_8K-JPG_NormalGL.jpg",
+				".assets/Grass002_8K-JPG/Grass002_8K-JPG_Roughness.jpg",
 			};
 			cfg.layerTextures[2] = {
 				".assets/Ground071_8K-JPG/Ground071_8K-JPG_Color.jpg",
@@ -139,8 +139,8 @@ namespace BetterThanNothing
 	struct TreeScatterConfig
 	{
 		std::string modelPath = ".assets/tree_elm/scene.gltf";
-		uint32_t	targetCount = 60;
-		float		minSpacing = 11.5f;
+		uint32_t	targetCount = 36;
+		float		minSpacing = 14.0f;
 		float		minScale = 0.48f;
 		float		maxScale = 0.85f;
 		float		maxSlope = 0.28f;

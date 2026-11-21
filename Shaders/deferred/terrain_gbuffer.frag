@@ -1,9 +1,9 @@
 #version 450
 
 // Multi-Layer Terrain PBR G-Buffer Fragment Shader
-// Blends 5 Ground PBR texture packs (Color + NormalGL + Roughness):
-//   Layer 0: Ground049A (Sand / Riverbed / Shore)
-//   Layer 1: Ground068  (Mossy Forest Grass)
+// Blends 5 PBR texture packs (Color + NormalGL + Roughness):
+//   Layer 0: Ground049A (Dry Sand / Riverbed / Shore)
+//   Layer 1: Grass002   (Lush Meadow Grass)
 //   Layer 2: Ground071  (Forest Dirt / Twigs)
 //   Layer 3: Ground086  (Mossy Rock / Hillsides)
 //   Layer 4: Ground108  (Rocky Gravel / Steep Cliffs)
@@ -114,26 +114,27 @@ float ValueNoise(vec2 p) {
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
-// Dual-scale anti-tiling sample: blends near detail UV with rotated macro UV
-vec3 SampleAntiTileAlbedo(sampler2D tex, vec2 uv, vec2 macroUV, float macroBlend) {
-    vec3 c0 = pow(texture(tex, uv).rgb, vec3(2.2));
-    vec3 c1 = pow(texture(tex, macroUV).rgb, vec3(2.2));
-    return mix(c0, c1, macroBlend);
+// Sharp near detail; only blends rotated far UV at distance to eliminate tiling without blurring grass blades
+vec3 SampleTerrainAlbedo(sampler2D tex, vec2 uv, vec2 farUV, float farBlend) {
+    vec3 cNear = pow(texture(tex, uv).rgb, vec3(2.2));
+    if (farBlend <= 0.005)
+        return cNear;
+    vec3 cFar = pow(texture(tex, farUV).rgb, vec3(2.2));
+    return mix(cNear, cFar, farBlend);
 }
 
-vec3 SampleAntiTileNormalTS(sampler2D tex, vec2 uv, vec2 macroUV, float macroBlend) {
-    vec3 n0 = texture(tex, uv).xyz * 2.0 - 1.0;
-    vec3 n1 = texture(tex, macroUV).xyz * 2.0 - 1.0;
-    return normalize(mix(n0, n1, macroBlend * 0.65));
+vec3 SampleTerrainNormalTS(sampler2D tex, vec2 uv, float strength) {
+    vec3 n = texture(tex, uv).xyz * 2.0 - 1.0;
+    n.xy *= strength;
+    n.z = max(n.z, 0.1);
+    return normalize(n);
 }
 
-float SampleAntiTileRough(sampler2D tex, vec2 uv, vec2 macroUV, float macroBlend) {
-    float r0 = texture(tex, uv).r;
-    float r1 = texture(tex, macroUV).r;
-    return mix(r0, r1, macroBlend);
+float SampleTerrainRoughness(sampler2D tex, vec2 uv, float minR, float maxR) {
+    float r = texture(tex, uv).r;
+    return mix(minR, maxR, r);
 }
 
-// Vulkan Jacobian TBN perturbation using blended tangent-space normal
 vec3 ApplyTangentNormal(vec3 N, vec3 pos, vec2 uv, vec3 mapN) {
     vec3 dp1 = dFdx(pos);
     vec3 dp2 = dFdy(pos);
@@ -163,14 +164,15 @@ vec3 ApplyTangentNormal(vec3 N, vec3 pos, vec2 uv, vec3 mapN) {
 void main() {
     vec3 geomN = normalize(inWorldNormal);
     float slope = clamp(1.0 - geomN.y, 0.0, 1.0);
+    float distToCam = length(globalUniforms.cameraPosition - inWorldPos);
 
-    // Rotated macro UV breaks up visible repetition across large terrain chunks
+    // Keep grass blades & sand grains 100% crisp up close; only blend rotated far UV beyond 28m
     const mat2 rot = mat2(0.80, -0.60, 0.60, 0.80);
     vec2 uv = inTexCoord;
-    vec2 macroUV = (rot * inTexCoord) * 0.27 + vec2(3.17, 1.91);
-    float macroBlend = 0.32 + 0.16 * ValueNoise(inWorldPos.xz * 0.045);
+    vec2 farUV = (rot * inTexCoord) * 0.35 + vec2(3.17, 1.91);
+    float farBlend = smoothstep(26.0, 85.0, distToCam) * 0.55;
+    float normalDistFade = 1.0 - smoothstep(35.0, 110.0, distToCam) * 0.65;
 
-    // Splat weights from vertex color + split rock weight between mossy rock (Ground086) and gravel scree (Ground108)
     float wSand = clamp(inColor.r, 0.0, 1.0);
     float wGrass = clamp(inColor.g, 0.0, 1.0);
     float wDirt = clamp(inColor.b, 0.0, 1.0);
@@ -181,7 +183,6 @@ void main() {
     float wMossyRock = wRockTotal * (1.0 - gravelRatio);
     float wGravel = wRockTotal * gravelRatio;
 
-    // Subtle height/noise modulation to sharpen natural biome transitions
     float microBreakup = (ValueNoise(inWorldPos.xz * 0.35) - 0.5) * 0.14;
     wSand = max(wSand + microBreakup * wSand, 0.0);
     wGrass = max(wGrass - microBreakup * wGrass, 0.0);
@@ -199,39 +200,40 @@ void main() {
     float roughness = 0.0;
 
     if (wSand > 0.005) {
-        albedo += wSand * SampleAntiTileAlbedo(sandAlbedo, uv, macroUV, macroBlend);
-        normalTS += wSand * SampleAntiTileNormalTS(sandNormal, uv, macroUV, macroBlend);
-        roughness += wSand * SampleAntiTileRough(sandRoughness, uv, macroUV, macroBlend);
+        albedo += wSand * SampleTerrainAlbedo(sandAlbedo, uv * 0.75, farUV * 0.75, farBlend);
+        normalTS += wSand * SampleTerrainNormalTS(sandNormal, uv * 0.75, 0.45 * normalDistFade);
+        roughness += wSand * SampleTerrainRoughness(sandRoughness, uv * 0.75, 0.85, 0.96);
     }
     if (wGrass > 0.005) {
-        albedo += wGrass * SampleAntiTileAlbedo(grassAlbedo, uv, macroUV, macroBlend);
-        normalTS += wGrass * SampleAntiTileNormalTS(grassNormal, uv, macroUV, macroBlend);
-        roughness += wGrass * SampleAntiTileRough(grassRoughness, uv, macroUV, macroBlend);
+        vec3 grassCol = SampleTerrainAlbedo(grassAlbedo, uv, farUV, farBlend);
+        albedo += wGrass * grassCol;
+        normalTS += wGrass * SampleTerrainNormalTS(grassNormal, uv, 0.50 * normalDistFade);
+        roughness += wGrass * SampleTerrainRoughness(grassRoughness, uv, 0.88, 0.98);
     }
     if (wDirt > 0.005) {
-        albedo += wDirt * SampleAntiTileAlbedo(dirtAlbedo, uv, macroUV, macroBlend);
-        normalTS += wDirt * SampleAntiTileNormalTS(dirtNormal, uv, macroUV, macroBlend);
-        roughness += wDirt * SampleAntiTileRough(dirtRoughness, uv, macroUV, macroBlend);
+        albedo += wDirt * SampleTerrainAlbedo(dirtAlbedo, uv * 0.85, farUV * 0.85, farBlend);
+        normalTS += wDirt * SampleTerrainNormalTS(dirtNormal, uv * 0.85, 0.50 * normalDistFade);
+        roughness += wDirt * SampleTerrainRoughness(dirtRoughness, uv * 0.85, 0.88, 0.98);
     }
     if (wMossyRock > 0.005) {
-        albedo += wMossyRock * SampleAntiTileAlbedo(mossyRockAlbedo, uv * 0.75, macroUV * 0.85, macroBlend);
-        normalTS += wMossyRock * SampleAntiTileNormalTS(mossyRockNormal, uv * 0.75, macroUV * 0.85, macroBlend);
-        roughness += wMossyRock * SampleAntiTileRough(mossyRockRoughness, uv * 0.75, macroUV * 0.85, macroBlend);
+        albedo += wMossyRock * SampleTerrainAlbedo(mossyRockAlbedo, uv * 0.55, farUV * 0.65, farBlend);
+        normalTS += wMossyRock * SampleTerrainNormalTS(mossyRockNormal, uv * 0.55, 0.70 * normalDistFade);
+        roughness += wMossyRock * SampleTerrainRoughness(mossyRockRoughness, uv * 0.55, 0.78, 0.94);
     }
     if (wGravel > 0.005) {
-        albedo += wGravel * SampleAntiTileAlbedo(gravelAlbedo, uv * 0.9, macroUV, macroBlend);
-        normalTS += wGravel * SampleAntiTileNormalTS(gravelNormal, uv * 0.9, macroUV, macroBlend);
-        roughness += wGravel * SampleAntiTileRough(gravelRoughness, uv * 0.9, macroUV, macroBlend);
+        albedo += wGravel * SampleTerrainAlbedo(gravelAlbedo, uv * 0.70, farUV * 0.70, farBlend);
+        normalTS += wGravel * SampleTerrainNormalTS(gravelNormal, uv * 0.70, 0.65 * normalDistFade);
+        roughness += wGravel * SampleTerrainRoughness(gravelRoughness, uv * 0.70, 0.82, 0.96);
     }
 
-    // Subtle macro world-space color variation so distant hillsides look organic
-    float macroVar = ValueNoise(inWorldPos.xz * 0.025);
-    albedo *= mix(0.88, 1.12, macroVar);
+    // Gentle large-scale meadow/soil color variation so open plains feel natural
+    float macroVar = ValueNoise(inWorldPos.xz * 0.03);
+    albedo *= mix(0.90, 1.12, macroVar);
 
-    // Wet darkening near/under water line
-    float wetness = 1.0 - smoothstep(-0.2, 0.55, inWorldPos.y - globalUniforms.waterLevel);
-    albedo *= mix(1.0, 0.58, wetness);
-    roughness = mix(clamp(roughness, 0.25, 0.98), 0.18, wetness * 0.75);
+    // Subtle damp darkening ONLY right at the water edge (keeps sand matte, never glossy plastic)
+    float dampEdge = 1.0 - smoothstep(-0.15, 0.18, inWorldPos.y - globalUniforms.waterLevel);
+    albedo *= mix(1.0, 0.74, dampEdge);
+    roughness = mix(clamp(roughness, 0.78, 0.99), 0.68, dampEdge * 0.5);
 
     vec3 N = ApplyTangentNormal(geomN, inWorldPos, uv, normalize(normalTS));
 

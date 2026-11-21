@@ -2,9 +2,9 @@
 #extension GL_EXT_ray_query : require
 
 // Volumetric Raymarched Fog with Blue Noise (inspired by Demofox's Shadertoy WsfBDf)
+// - Restricted to Sponza's world-space AABB (instant early-out outside Sponza for massive GPU savings)
 // - Blue Noise dithering animated per-frame with the Golden Ratio (converges smoothly with TAA)
-// - Exponential height fog + animated 3D FBM wispy mist density
-// - Per-step HW Ray Query (VK_KHR_ray_query) shadow test for true 3D Volumetric God Rays
+// - Per-step HW Ray Query (VK_KHR_ray_query) shadow test for real 3D Volumetric God Rays
 // - Henyey-Greenstein phase function + Hillaire Transmittance & Sky Irradiance + Beer-Lambert extinction
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -68,7 +68,10 @@ layout(push_constant) uniform VolumetricFogPushConstants {
     float anisotropy;
     float noiseStrength;
     uint  stepCount;
-    uint  flags; // bit 0: useBlueNoise, bit 1: useRTShadows
+    uint  flags; // bit 0: BlueNoise, bit 1: RTShadows, bit 2: RestrictToBox
+
+    vec4  boxMin; // xyz = min, w = soft edge fade meters
+    vec4  boxMax; // xyz = max
 } fogParams;
 
 const float PI = 3.14159265359;
@@ -78,6 +81,7 @@ const float ATMOSPHERE_RADIUS_KM = 6460.0;
 
 const uint FOG_FLAG_BLUE_NOISE = 1u << 0;
 const uint FOG_FLAG_RT_SHADOWS = 1u << 1;
+const uint FOG_FLAG_RESTRICT_BOX = 1u << 2;
 
 float SafeSqrt(float x) {
     return sqrt(max(x, 0.0));
@@ -105,14 +109,24 @@ vec2 DirectionToEquirectUV(vec3 dir) {
     return vec2(u, clamp(v, 0.015, 0.985));
 }
 
-// Henyey-Greenstein scattering phase function
+vec2 IntersectAABB(vec3 ro, vec3 rd, vec3 bMin, vec3 bMax) {
+    vec3 safeRd = mix(rd, vec3(1e-6), lessThan(abs(rd), vec3(1e-6)));
+    vec3 invDir = 1.0 / safeRd;
+    vec3 t0 = (bMin - ro) * invDir;
+    vec3 t1 = (bMax - ro) * invDir;
+    vec3 tMin = min(t0, t1);
+    vec3 tMax = max(t0, t1);
+    float tEnter = max(max(tMin.x, tMin.y), tMin.z);
+    float tExit = min(min(tMax.x, tMax.y), tMax.z);
+    return vec2(tEnter, tExit);
+}
+
 float HenyeyGreenstein(float cosTheta, float g) {
     float g2 = g * g;
     float denom = max(1.0 + g2 - 2.0 * g * cosTheta, 1e-4);
     return (1.0 - g2) / (4.0 * PI * denom * sqrt(denom));
 }
 
-// Fast 3D hash value noise for organic drifting mist
 float Hash31(vec3 p) {
     p = fract(p * 0.1031);
     p += dot(p, p.yzx + 33.33);
@@ -133,31 +147,37 @@ float ValueNoise3D(vec3 p) {
     float n011 = Hash31(i + vec3(0, 1, 1));
     float n111 = Hash31(i + vec3(1, 1, 1));
 
-    float nx00 = mix(n000, n100, f.x);
-    float nx10 = mix(n010, n110, f.x);
-    float nx01 = mix(n001, n101, f.x);
-    float nx11 = mix(n011, n111, f.x);
-
-    float nxy0 = mix(nx00, nx10, f.y);
-    float nxy1 = mix(nx01, nx11, f.y);
-    return mix(nxy0, nxy1, f.z);
+    return mix(
+        mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+        mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
+        f.z
+    );
 }
 
-float SampleFogDensity(vec3 pos, float t) {
+float SampleFogDensity(vec3 pos, float t, bool restrictBox) {
+    float boxFade = 1.0;
+    if (restrictBox) {
+        vec3 distFromEdge = min(pos - fogParams.boxMin.xyz, fogParams.boxMax.xyz - pos);
+        float minEdge = min(min(distFromEdge.x, distFromEdge.z), distFromEdge.y);
+        if (minEdge <= 0.0)
+            return 0.0;
+        boxFade = smoothstep(0.0, max(fogParams.boxMin.w, 0.1), minEdge);
+    }
+
     float heightAboveBase = max(pos.y - fogParams.baseHeight, 0.0);
     float heightDensity = exp(-heightAboveBase * fogParams.heightFalloff);
-    if (heightDensity < 0.002)
+    if (heightDensity * boxFade < 0.002)
         return 0.0;
 
     float noiseMod = 1.0;
     if (fogParams.noiseStrength > 0.001) {
-        vec3 wind = vec3(t * 0.35, t * 0.04, t * 0.22);
-        vec3 p = pos * 0.055 + wind;
-        float n = ValueNoise3D(p) * 0.65 + ValueNoise3D(p * 2.15 - wind * 0.5) * 0.35;
+        vec3 wind = vec3(t * 0.25, t * 0.03, t * 0.15);
+        vec3 p = pos * 0.12 + wind;
+        float n = ValueNoise3D(p) * 0.65 + ValueNoise3D(p * 2.1 - wind * 0.4) * 0.35;
         noiseMod = mix(1.0, smoothstep(0.18, 0.88, n) * 1.45, fogParams.noiseStrength);
     }
 
-    return fogParams.density * heightDensity * noiseMod;
+    return fogParams.density * heightDensity * boxFade * noiseMod;
 }
 
 float TraceSunVisibility(vec3 origin, vec3 sunDir) {
@@ -170,7 +190,7 @@ float TraceSunVisibility(vec3 origin, vec3 sunDir) {
         origin,
         0.05,
         sunDir,
-        300.0
+        120.0
     );
     while (rayQueryProceedEXT(rq)) {}
     return (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT) ? 1.0 : 0.0;
@@ -181,34 +201,48 @@ void main() {
     if (pixel.x >= int(globalUniforms.screenWidth) || pixel.y >= int(globalUniforms.screenHeight))
         return;
 
-    // Only apply on Final view (0) or VolumetricFog debug view (11)
     if (globalUniforms.debugView != 0u && globalUniforms.debugView != 11u)
         return;
 
     vec2 uv = (vec2(pixel) + 0.5) / vec2(globalUniforms.screenWidth, globalUniforms.screenHeight);
-    float depth = textureLod(depthTex, uv, 0.0).r;
-
-    // Reconstruct world-space ray from camera through pixel
     vec4 farClip = vec4(uv * 2.0 - 1.0, 0.9999, 1.0);
     vec4 farWorld = globalUniforms.invViewProj * farClip;
     vec3 rayDir = normalize(farWorld.xyz / farWorld.w - globalUniforms.cameraPosition);
 
-    float sceneDist = fogParams.maxDistance;
+    bool restrictBox = (fogParams.flags & FOG_FLAG_RESTRICT_BOX) != 0u;
+    float tStart = 0.0;
+    float tEnd = fogParams.maxDistance;
+
+    // Early-out immediately for all pixels whose ray never intersects Sponza's volume
+    if (restrictBox) {
+        vec2 boxHit = IntersectAABB(globalUniforms.cameraPosition, rayDir, fogParams.boxMin.xyz, fogParams.boxMax.xyz);
+        tStart = max(boxHit.x, 0.0);
+        tEnd = min(boxHit.y, tStart + fogParams.maxDistance);
+        if (tEnd <= tStart + 0.02) {
+            if (globalUniforms.debugView == 11u)
+                imageStore(hdrColorImg, pixel, vec4(0.0, 0.0, 0.0, 1.0));
+            return;
+        }
+    }
+
+    float depth = textureLod(depthTex, uv, 0.0).r;
+    float sceneDist = 1e6;
     if (depth < 0.99999) {
         vec4 hitClip = vec4(uv * 2.0 - 1.0, depth, 1.0);
         vec4 hitWorld = globalUniforms.invViewProj * hitClip;
         sceneDist = length(hitWorld.xyz / hitWorld.w - globalUniforms.cameraPosition);
     }
 
-    float marchDist = min(sceneDist, fogParams.maxDistance);
-    if (marchDist <= 0.05) {
+    tEnd = min(tEnd, sceneDist);
+    float marchLen = tEnd - tStart;
+    if (marchLen <= 0.05) {
         if (globalUniforms.debugView == 11u)
             imageStore(hdrColorImg, pixel, vec4(0.0, 0.0, 0.0, 1.0));
         return;
     }
 
-    uint steps = clamp(fogParams.stepCount, 8u, 64u);
-    float stepSize = marchDist / float(steps);
+    uint steps = clamp(fogParams.stepCount, 8u, 48u);
+    float stepSize = marchLen / float(steps);
 
     // Demofox WsfBDf: Blue Noise texture offset + Golden Ratio temporal animation
     float jitter = 0.5;
@@ -221,10 +255,7 @@ void main() {
 
     vec3 sunDir = normalize(-globalUniforms.lightDirection);
     float cosTheta = dot(rayDir, sunDir);
-    // Dual-lobe HG phase: sharp forward sun glow + gentle isotropic fill
-    float phaseForward = HenyeyGreenstein(cosTheta, clamp(fogParams.anisotropy, 0.0, 0.92));
-    float phaseBack = HenyeyGreenstein(cosTheta, -0.2);
-    float phase = mix(phaseBack, phaseForward, 0.78);
+    float phase = mix(HenyeyGreenstein(cosTheta, -0.2), HenyeyGreenstein(cosTheta, clamp(fogParams.anisotropy, 0.0, 0.92)), 0.78);
 
     float camAltKm = max(globalUniforms.atmosphereAltitudeKm + max(globalUniforms.cameraPosition.y * 0.001, 0.0), 0.005);
     float camR = min(GROUND_RADIUS_KM + camAltKm, ATMOSPHERE_RADIUS_KM - 0.05);
@@ -232,28 +263,25 @@ void main() {
     vec3 sunTrans = textureLod(transmittanceLUT, TransmittanceUV(camR, sunDir.y), 0.0).rgb * sunHorizonFade;
     vec3 sunIlluminanceLux = globalUniforms.lightColor * globalUniforms.sunIlluminanceLux * sunTrans;
 
-    // Ambient sky in-scattering inside shadowed fog
     vec3 ambientSkyLux = textureLod(irradianceLUT, DirectionToEquirectUV(vec3(0.0, 1.0, 0.0)), 0.0).rgb * globalUniforms.irradianceIntensity;
-    vec3 ambientScatterBase = (ambientSkyLux / (4.0 * PI)) * 0.55;
-    vec3 fogAlbedo = vec3(0.86, 0.90, 0.96);
+    vec3 ambientScatterBase = (ambientSkyLux / (4.0 * PI)) * 0.45;
+    vec3 fogAlbedo = vec3(0.88, 0.91, 0.96);
 
     vec3 inScatterNits = vec3(0.0);
     float transmittance = 1.0;
 
-    float t = jitter * stepSize;
+    float t = tStart + jitter * stepSize;
     for (uint i = 0u; i < steps; ++i) {
         vec3 samplePos = globalUniforms.cameraPosition + rayDir * t;
-        float sigmaT = SampleFogDensity(samplePos, globalUniforms.time);
+        float sigmaT = SampleFogDensity(samplePos, globalUniforms.time, restrictBox);
 
         if (sigmaT > 1e-5) {
             float sunVis = useRT ? TraceSunVisibility(samplePos, sunDir) : 1.0;
             vec3 directScatter = sunIlluminanceLux * phase * sunVis;
             vec3 S = fogAlbedo * (directScatter + ambientScatterBase) * sigmaT;
 
-            // Energy-conserving analytical step integration (Hillaire Frostbite 2015)
             float stepTrans = exp(-sigmaT * stepSize);
-            vec3 stepScatter = (S - S * stepTrans) / max(sigmaT, 1e-5);
-            inScatterNits += transmittance * stepScatter;
+            inScatterNits += transmittance * (S - S * stepTrans) / max(sigmaT, 1e-5);
             transmittance *= stepTrans;
 
             if (transmittance < 0.01)
@@ -266,7 +294,6 @@ void main() {
     vec3 inScatterPreExposed = clamp(inScatterNits * globalUniforms.cameraExposure, vec3(0.0), vec3(65000.0));
 
     if (globalUniforms.debugView == 11u) {
-        // Show isolated volumetric in-scattering (tone-compressed for clear inspection)
         vec3 dbg = inScatterPreExposed / (inScatterPreExposed + vec3(1.0));
         imageStore(hdrColorImg, pixel, vec4(dbg, 1.0));
         return;

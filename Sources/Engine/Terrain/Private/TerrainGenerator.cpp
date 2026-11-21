@@ -143,10 +143,10 @@ namespace BetterThanNothing
 			const float d = std::sqrt(ex * ex + ez * ez);
 			courtyardDirt = std::max(courtyardDirt, (1.0f - TerrainNoise::Smoothstep(0.0f, 14.0f, d)) * 0.85f);
 		}
-		const float soilPatch = TerrainNoise::Smoothstep(0.42f, 0.72f, n2) * 0.65f;
-		float		wDirt = std::clamp(std::max(courtyardDirt, soilPatch), 0.0f, 1.0f);
+		const float soilPatch = TerrainNoise::Smoothstep(0.54f, 0.82f, n2) * 0.45f;
+		float		wDirt = std::clamp(std::max(courtyardDirt * 0.65f, soilPatch), 0.0f, 1.0f);
 
-		// Layer 1 (G): Lush Mossy Grass fills remaining flat/gentle lowlands
+		// Layer 1 (G): Lush Grass002 fills remaining flat/gentle lowlands & meadows
 		float wGrass = std::max(0.0f, 1.0f - wDirt);
 
 		// Priority: rock dominates steep slopes, sand dominates shorelines/underwater

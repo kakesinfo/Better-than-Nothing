@@ -247,7 +247,8 @@ void main() {
     vec3 irradianceLux = textureLod(irradianceLUT, DirectionToEquirectUV(N), 0.0).rgb * globalUniforms.irradianceIntensity;
     vec3 diffuseIndirect = kD_ibl * (albedo / PI) * irradianceLux;
     vec3 prefilteredNits = SamplePrefilteredEnv(reflect(-V, N), roughness) * globalUniforms.irradianceIntensity;
-    vec3 specularIndirect = prefilteredNits * (F0 * envBRDF.x + envBRDF.y) * energyCompensation;
+    float roughGrazingAtten = mix(1.0 - roughness * roughness, 1.0, metallic);
+    vec3 specularIndirect = prefilteredNits * (F0 * envBRDF.x + envBRDF.y * roughGrazingAtten) * energyCompensation;
 
     vec3 preExposedHdr = clamp((diffuseIndirect + specularIndirect + LoNits) * globalUniforms.cameraExposure, vec3(0.0), vec3(65000.0));
     outColor = vec4(preExposedHdr, alpha);

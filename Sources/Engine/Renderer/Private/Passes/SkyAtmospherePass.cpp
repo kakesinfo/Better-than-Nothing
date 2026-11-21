@@ -63,33 +63,40 @@ namespace BetterThanNothing
 			renderingDevice->TransitionTexture(ctx.multiScatteringLUT, ImageLayout::ShaderReadOnly);
 		}
 
-		// 3. Recompute Sky-View LUT (192x108) dynamically every frame for current sun direction & camera altitude
-		renderingDevice->TransitionTexture(ctx.transmittanceLUT, ImageLayout::ShaderReadOnly);
-		renderingDevice->TransitionTexture(ctx.multiScatteringLUT, ImageLayout::ShaderReadOnly);
-		renderingDevice->TransitionTexture(ctx.skyViewLUT, ImageLayout::General);
+		// 3 & 4. Recompute Sky-View LUT, Diffuse Irradiance LUT & GGX Prefiltered Specular Atlas only when sun/atmosphere changed
+		if (ctx.skyIblLutsDirty || ctx.atmosphereStaticLutsDirty)
+		{
+			renderingDevice->TransitionTexture(ctx.transmittanceLUT, ImageLayout::ShaderReadOnly);
+			renderingDevice->TransitionTexture(ctx.multiScatteringLUT, ImageLayout::ShaderReadOnly);
+			renderingDevice->TransitionTexture(ctx.skyViewLUT, ImageLayout::General);
 
-		const PipelineResourceCache* skyViewPipeline = resourceManager->GetPipelineData("Sky::SkyViewLUT");
-		const std::array<Handle, 2>	 skyViewSets = {ctx.globalDescriptorSet, ctx.skyViewDescriptorSet};
-		renderingDevice->BindComputePipeline(skyViewPipeline->pipeline);
-		renderingDevice->BindComputeDescriptorSets(skyViewPipeline->layoutName, 0, skyViewSets);
-		renderingDevice->Dispatch((kSkyViewWidth + 7u) / 8u, (kSkyViewHeight + 7u) / 8u, 1);
+			const PipelineResourceCache* skyViewPipeline = resourceManager->GetPipelineData("Sky::SkyViewLUT");
+			const std::array<Handle, 2>	 skyViewSets = {ctx.globalDescriptorSet, ctx.skyViewDescriptorSet};
+			renderingDevice->BindComputePipeline(skyViewPipeline->pipeline);
+			renderingDevice->BindComputeDescriptorSets(skyViewPipeline->layoutName, 0, skyViewSets);
+			renderingDevice->Dispatch((kSkyViewWidth + 7u) / 8u, (kSkyViewHeight + 7u) / 8u, 1);
 
-		// 4. Convolve live Sky-View LUT into Diffuse Irradiance LUT (64x32) & GGX Prefiltered Specular Atlas (128x320)
-		renderingDevice->TransitionTexture(ctx.skyViewLUT, ImageLayout::ShaderReadOnly);
-		renderingDevice->TransitionTexture(ctx.irradianceLUT, ImageLayout::General);
-		renderingDevice->TransitionTexture(ctx.prefilteredEnvLUT, ImageLayout::General);
+			renderingDevice->TransitionTexture(ctx.skyViewLUT, ImageLayout::ShaderReadOnly);
+			renderingDevice->TransitionTexture(ctx.irradianceLUT, ImageLayout::General);
+			renderingDevice->TransitionTexture(ctx.prefilteredEnvLUT, ImageLayout::General);
 
-		const PipelineResourceCache* irrPipeline = resourceManager->GetPipelineData("Sky::IrradianceConvolve");
-		const std::array<Handle, 2>	 irrSets = {ctx.globalDescriptorSet, ctx.skyIrradianceDescriptorSet};
-		renderingDevice->BindComputePipeline(irrPipeline->pipeline);
-		renderingDevice->BindComputeDescriptorSets(irrPipeline->layoutName, 0, irrSets);
-		renderingDevice->Dispatch((kIrradianceWidth + 7u) / 8u, (kIrradianceHeight + 7u) / 8u, 1);
+			const PipelineResourceCache* irrPipeline = resourceManager->GetPipelineData("Sky::IrradianceConvolve");
+			const std::array<Handle, 2>	 irrSets = {ctx.globalDescriptorSet, ctx.skyIrradianceDescriptorSet};
+			renderingDevice->BindComputePipeline(irrPipeline->pipeline);
+			renderingDevice->BindComputeDescriptorSets(irrPipeline->layoutName, 0, irrSets);
+			renderingDevice->Dispatch((kIrradianceWidth + 7u) / 8u, (kIrradianceHeight + 7u) / 8u, 1);
 
-		const PipelineResourceCache* prefPipeline = resourceManager->GetPipelineData("Sky::PrefilterEnv");
-		const std::array<Handle, 2>	 prefSets = {ctx.globalDescriptorSet, ctx.skyPrefilterDescriptorSet};
-		renderingDevice->BindComputePipeline(prefPipeline->pipeline);
-		renderingDevice->BindComputeDescriptorSets(prefPipeline->layoutName, 0, prefSets);
-		renderingDevice->Dispatch((kPrefilterWidth + 7u) / 8u, (kPrefilterHeight + 7u) / 8u, 1);
+			const PipelineResourceCache* prefPipeline = resourceManager->GetPipelineData("Sky::PrefilterEnv");
+			const std::array<Handle, 2>	 prefSets = {ctx.globalDescriptorSet, ctx.skyPrefilterDescriptorSet};
+			renderingDevice->BindComputePipeline(prefPipeline->pipeline);
+			renderingDevice->BindComputeDescriptorSets(prefPipeline->layoutName, 0, prefSets);
+			renderingDevice->Dispatch((kPrefilterWidth + 7u) / 8u, (kPrefilterHeight + 7u) / 8u, 1);
+		}
+		else
+		{
+			renderingDevice->TransitionTexture(ctx.skyViewLUT, ImageLayout::ShaderReadOnly);
+			renderingDevice->TransitionTexture(ctx.transmittanceLUT, ImageLayout::ShaderReadOnly);
+		}
 
 		// 5. Render full-resolution skybox + physical limb-darkened solar disk into hdrColor (depth >= 1.0)
 		renderingDevice->TransitionTexture(ctx.depthTarget, ImageLayout::ShaderReadOnly);

@@ -18,6 +18,7 @@
 
 #include <Common/EKey.hpp>
 #include <Common/Metrics.hpp>
+#include <Common/RenderSettings.hpp>
 #include <Core/Engine.hpp>
 
 #include "Platform/Platform.hpp"
@@ -38,6 +39,7 @@
 #include <algorithm>
 #include <chrono>
 #include <format>
+#include <thread>
 
 namespace BetterThanNothing
 {
@@ -46,7 +48,8 @@ namespace BetterThanNothing
 		m_platform = Platform::Create("Better Than Nothing", 1280, 720);
 		LegacyInputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Immediate});
+		// Use VSync (Double/FIFO) by default instead of uncapped Immediate mode to keep GPU temps & fans low
+		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 #ifndef NDEBUG
@@ -88,9 +91,9 @@ namespace BetterThanNothing
 		{
 			Metrics::BeginRecording();
 
-			const auto	currentTime = std::chrono::steady_clock::now();
-			const float rawDeltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
-			lastTime = currentTime;
+			const auto	frameStart = std::chrono::steady_clock::now();
+			const float rawDeltaTime = std::chrono::duration<float>(frameStart - lastTime).count();
+			lastTime = frameStart;
 
 			const float deltaTime = std::clamp(rawDeltaTime, 0.0f, 0.1f);
 
@@ -110,6 +113,16 @@ namespace BetterThanNothing
 			LegacyInputManager::EndFrame();
 
 			Metrics::EndRecording();
+
+			// Cooperative frame pacing cap (reduces GPU wattage and fan noise on high-refresh monitors)
+			const uint32_t targetFps = RenderSettings::Get().targetFps;
+			if (targetFps > 0u)
+			{
+				const auto targetDuration = std::chrono::duration<double>(1.0 / static_cast<double>(targetFps));
+				const auto elapsed = std::chrono::steady_clock::now() - frameStart;
+				if (elapsed < targetDuration)
+					std::this_thread::sleep_for(targetDuration - elapsed);
+			}
 		}
 
 		m_application->OnDisable();

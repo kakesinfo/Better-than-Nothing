@@ -25,18 +25,21 @@ namespace BetterThanNothing
 {
 	struct VolumetricFogPushConstants
 	{
-		float	 density = 0.011f;
-		float	 heightFalloff = 0.12f;
-		float	 baseHeight = -1.5f;
-		float	 maxDistance = 160.0f;
+		float	 density = 0.022f;
+		float	 heightFalloff = 0.14f;
+		float	 baseHeight = 0.0f;
+		float	 maxDistance = 80.0f;
 
-		float	 anisotropy = 0.65f;
+		float	 anisotropy = 0.68f;
 		float	 noiseStrength = 0.55f;
-		uint32_t stepCount = 32;
+		uint32_t stepCount = 16;
 		uint32_t flags = 0;
+
+		float	 boxMin[4]{-19.2f, -0.5f, -11.8f, 2.2f}; // xyz = Sponza volume min, w = soft edge fade meters
+		float	 boxMax[4]{ 18.0f, 14.3f,  11.1f, 0.0f}; // xyz = Sponza volume max
 	};
 
-	static_assert(sizeof(VolumetricFogPushConstants) == 32);
+	static_assert(sizeof(VolumetricFogPushConstants) == 64);
 
 	class VolumetricFogPass final : public IRenderPass
 	{

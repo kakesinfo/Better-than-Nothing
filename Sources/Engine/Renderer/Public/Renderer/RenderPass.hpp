@@ -52,6 +52,7 @@ namespace BetterThanNothing
 		bool	 tlasValid = false;
 		EAOMode	 activeAoMode = EAOMode::GTAO;
 		bool	 atmosphereStaticLutsDirty = true;
+		bool	 skyIblLutsDirty = true;
 		bool	 brdfLutDirty = true;
 		uint32_t temporalReadIndex = 0;
 		uint32_t temporalWriteIndex = 1;

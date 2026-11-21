@@ -124,10 +124,15 @@ namespace BetterThanNothing
 		Handle m_irradianceLUT{};
 		Handle m_prefilteredEnvLUT{};
 		Handle m_brdfLUT{};
-		Handle m_blueNoiseTexture{};
-		bool   m_atmosphereStaticLutsDirty = true;
-		bool   m_brdfLutDirty = true;
-		float  m_lastAtmosphereDensityScale = 1.0f;
+		Handle	m_blueNoiseTexture{};
+		bool	m_atmosphereStaticLutsDirty = true;
+		bool	m_skyIblLutsDirty = true;
+		bool	m_brdfLutDirty = true;
+		float	m_lastAtmosphereDensityScale = 1.0f;
+		float	m_lastAtmosphereAltitudeKm = -1.0f;
+		float	m_lastAtmosphereMieAnisotropy = -1.0f;
+		float	m_lastAtmosphereMultiScatter = -1.0f;
+		Vector3 m_lastSunDirection = Vector3::Zero;
 
 		// HDR, Water snapshots & TAA targets
 		Handle				  m_hdrColor{};

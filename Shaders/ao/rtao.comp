@@ -108,13 +108,19 @@ void main() {
     vec3 N = DecodeOctahedral(textureLod(gbufferNormalTex, uv, 0.0).rg);
 
     float distToCam = length(globalUniforms.cameraPosition - worldPos);
+    if (distToCam > 85.0) {
+        imageStore(outAORaw, pixel, vec4(1.0, 1.0, 0.0, 0.0));
+        return;
+    }
+
     float bias = 0.005 + 0.0012 * distToCam;
     vec3 origin = worldPos + N * bias;
 
     float radius = max(globalUniforms.aoRadius, 0.05);
     uint seed = uint(pixel.x) * 1973u + uint(pixel.y) * 9277u + (globalUniforms.frameIndex & 255u) * 26699u;
 
-    const int RAY_COUNT = 2;
+    // 1 ray per pixel + spatio-temporal bilateral denoiser (cuts RT load by 50%)
+    const int RAY_COUNT = 1;
     float visibilitySum = 0.0;
 
     for (int i = 0; i < RAY_COUNT; ++i) {

@@ -91,6 +91,9 @@ namespace BetterThanNothing
 		bool  enableTAA = true;
 		float taaBlendFactor = 0.1f;
 
+		// Performance & Frame Pacing
+		uint32_t targetFps = 60; // 0 = VSync refresh rate only
+
 		// Water rendering
 		float waterLevel = -1.6f;
 		float waterWaveScale = 1.0f;
@@ -98,15 +101,16 @@ namespace BetterThanNothing
 
 		// Volumetric Raymarched Fog with Blue Noise (Shadertoy WsfBDf / Demofox)
 		bool	 enableVolumetricFog = true;
+		bool	 fogRestrictToSponza = true;
 		bool	 fogUseBlueNoise = true;
 		bool	 fogUseRTShadows = true;
-		float	 fogDensity = 0.011f;
-		float	 fogHeightFalloff = 0.12f;
-		float	 fogBaseHeight = -1.5f;
-		float	 fogMaxDistance = 160.0f;
-		float	 fogAnisotropy = 0.65f;
+		float	 fogDensity = 0.022f;
+		float	 fogHeightFalloff = 0.14f;
+		float	 fogBaseHeight = 0.0f;
+		float	 fogMaxDistance = 80.0f;
+		float	 fogAnisotropy = 0.68f;
 		float	 fogNoiseStrength = 0.55f;
-		uint32_t fogStepCount = 32;
+		uint32_t fogStepCount = 16;
 
 		bool rtSupported = false;
 	};

@@ -1284,7 +1284,19 @@ namespace BetterThanNothing
 		if (settings.atmosphereDensityScale != m_lastAtmosphereDensityScale)
 		{
 			m_atmosphereStaticLutsDirty = true;
+			m_skyIblLutsDirty = true;
 			m_lastAtmosphereDensityScale = settings.atmosphereDensityScale;
+		}
+		if (settings.atmosphereAltitudeKm != m_lastAtmosphereAltitudeKm ||
+			settings.atmosphereMieAnisotropy != m_lastAtmosphereMieAnisotropy ||
+			settings.atmosphereMultiScatteringFactor != m_lastAtmosphereMultiScatter ||
+			Vector3::Distance2(m_currentSunDirection, m_lastSunDirection) > 1e-6f)
+		{
+			m_skyIblLutsDirty = true;
+			m_lastAtmosphereAltitudeKm = settings.atmosphereAltitudeKm;
+			m_lastAtmosphereMieAnisotropy = settings.atmosphereMieAnisotropy;
+			m_lastAtmosphereMultiScatter = settings.atmosphereMultiScatteringFactor;
+			m_lastSunDirection = m_currentSunDirection;
 		}
 
 		RenderPassContext ctx{};
@@ -1302,6 +1314,7 @@ namespace BetterThanNothing
 		ctx.tlasValid = tlasBuilt;
 		ctx.activeAoMode = (settings.aoMode == EAOMode::RTAO && !m_rtSupported) ? EAOMode::GTAO : settings.aoMode;
 		ctx.atmosphereStaticLutsDirty = m_atmosphereStaticLutsDirty;
+		ctx.skyIblLutsDirty = m_skyIblLutsDirty;
 		ctx.brdfLutDirty = m_brdfLutDirty;
 		ctx.temporalReadIndex = readIdx;
 		ctx.temporalWriteIndex = writeIdx;
@@ -1376,6 +1389,7 @@ namespace BetterThanNothing
 		m_renderingDevice->EndFrame(imageIndex);
 
 		m_atmosphereStaticLutsDirty = false;
+		m_skyIblLutsDirty = false;
 		m_brdfLutDirty = false;
 		m_temporalReadIndex = writeIdx;
 		m_historyValid = true;

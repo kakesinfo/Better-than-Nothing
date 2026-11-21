@@ -31,6 +31,7 @@ namespace BetterThanNothing
 	{
 		constexpr uint32_t kFogFlagBlueNoise = 1u << 0;
 		constexpr uint32_t kFogFlagRTShadows = 1u << 1;
+		constexpr uint32_t kFogFlagRestrictToBox = 1u << 2;
 	}
 
 	void VolumetricFogPass::Execute(RenderPassContext& ctx)
@@ -64,6 +65,8 @@ namespace BetterThanNothing
 			flags |= kFogFlagBlueNoise;
 		if (useRtPipeline && settings.fogUseRTShadows)
 			flags |= kFogFlagRTShadows;
+		if (settings.fogRestrictToSponza)
+			flags |= kFogFlagRestrictToBox;
 
 		VolumetricFogPushConstants push{};
 		push.density = settings.fogDensity;
@@ -72,8 +75,17 @@ namespace BetterThanNothing
 		push.maxDistance = settings.fogMaxDistance;
 		push.anisotropy = settings.fogAnisotropy;
 		push.noiseStrength = settings.fogNoiseStrength;
-		push.stepCount = std::clamp(settings.fogStepCount, 8u, 64u);
+		push.stepCount = std::clamp(settings.fogStepCount, 8u, 48u);
 		push.flags = flags;
+		// Sponza world-space bounding box (at scale 0.01f: X[-19.2, 18.0], Y[-0.5, 14.3], Z[-11.8, 11.1])
+		push.boxMin[0] = -19.2f;
+		push.boxMin[1] = -0.5f;
+		push.boxMin[2] = -11.8f;
+		push.boxMin[3] = 2.2f;
+		push.boxMax[0] = 18.0f;
+		push.boxMax[1] = 14.3f;
+		push.boxMax[2] = 11.1f;
+		push.boxMax[3] = 0.0f;
 
 		const uint32_t groupsX = (ctx.viewportWidth + 7u) / 8u;
 		const uint32_t groupsY = (ctx.viewportHeight + 7u) / 8u;
