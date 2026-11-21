@@ -19,7 +19,10 @@
 #pragma once
 
 #include <Common/ResourceId.hpp>
+#include <Math/Matrix4.hpp>
+#include <functional>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -27,26 +30,32 @@ namespace BetterThanNothing
 {
 	struct PipelineResourceCache;
 	struct ShaderResourceCache;
+	struct MeshResourceCache;
+	struct TextureResourceCache;
 	struct MeshData;
 
 	struct MeshResource
 	{
-		ResourceId id;
-		ResourceId textureId;
+		ResourceId id = InvalidResourceId;
+		ResourceId textureId = InvalidResourceId;
+	};
+
+	struct ModelNodeResource
+	{
+		std::string			  name;
+		Matrix4				  localTransform = Matrix4::Identity;
+		std::vector<uint32_t> meshIndices;
+		std::vector<uint32_t> children;
 	};
 
 	struct ModelResource
 	{
-		ResourceId				  id;
-		std::vector<MeshResource> meshes;
+		ResourceId					   id = InvalidResourceId;
+		std::vector<MeshResource>	   meshes;
+		std::vector<ModelNodeResource> nodes;
+		std::vector<uint32_t>		   rootNodes;
 	};
 
-	struct MeshResourceCache;
-	struct TextureResourceCache;
-
-	struct ShaderGpuData_Legacy;
-	class TextureLoader;
-	class ShaderLoader;
 	enum class EShaderType : uint32_t;
 	class RenderingDevice;
 	class ResourceImporter;
@@ -58,6 +67,11 @@ namespace BetterThanNothing
 		explicit ResourceManager(RenderingDevice* renderingDevice);
 		~ResourceManager();
 
+		ResourceManager(const ResourceManager&) = delete;
+		ResourceManager& operator=(const ResourceManager&) = delete;
+		ResourceManager(ResourceManager&&) = delete;
+		ResourceManager& operator=(ResourceManager&&) = delete;
+
 		static std::unique_ptr<ResourceManager> Create(RenderingDevice* renderingDevice);
 
 	private:
@@ -67,13 +81,16 @@ namespace BetterThanNothing
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
 		ResourceId LoadTexture(const std::string& path);
 		ResourceId LoadShader(const std::string& path);
+		ResourceId CreateMesh(const MeshData& meshData);
 		ResourceId CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback);
 
-		MeshResourceCache*	  GetMeshData(ResourceId id);
-		TextureResourceCache* GetTextureData(ResourceId id);
-		ModelResource*		  GetModelData(ResourceId id);
-		ShaderResourceCache*  GetShaderData(ResourceId id);
-		PipelineResourceCache* GetPipelineData(const std::string& name);
+		void Clear();
+
+		[[nodiscard]] MeshResourceCache*	 GetMeshData(ResourceId id) const;
+		[[nodiscard]] TextureResourceCache*	 GetTextureData(ResourceId id) const;
+		[[nodiscard]] const ModelResource*	 GetModelData(ResourceId id) const;
+		[[nodiscard]] ShaderResourceCache*	 GetShaderData(ResourceId id) const;
+		[[nodiscard]] PipelineResourceCache* GetPipelineData(const std::string& name) const;
 
 	private:
 		RenderingDevice*													   m_renderingDevice;
@@ -88,5 +105,6 @@ namespace BetterThanNothing
 		std::unordered_map<std::string, ResourceId>							   m_shadersLUT;
 		std::unordered_map<std::string, ResourceId>							   m_pipelinesLUT;
 		std::vector<ResourceId>												   m_freeIds;
+		ResourceId															   m_nextResourceId = 0;
 	};
 }

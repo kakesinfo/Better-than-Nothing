@@ -44,6 +44,12 @@ namespace BetterThanNothing
 		explicit Platform(const PlatformCreateInfo& createInfo);
 		~Platform();
 
+		Platform(const Platform&) = delete;
+		Platform& operator=(const Platform&) = delete;
+		Platform(Platform&&) = delete;
+		Platform& operator=(Platform&&) = delete;
+
+		static std::unique_ptr<Platform> Create(const PlatformCreateInfo& createInfo);
 		static std::unique_ptr<Platform> Create(std::string windowTitle, int32_t windowWidth, int32_t windowHeight);
 
 		void PollEvents();
@@ -56,6 +62,7 @@ namespace BetterThanNothing
 		[[nodiscard]] bool	IsRunning() const;
 
 		void SetEventCallback(const std::function<bool(const SDL_Event&)>& callback);
+		void ClearEventCallback();
 
 	protected:
 		void OnQuitEvent();

@@ -85,12 +85,12 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const std::string_view layoutType)
+	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const std::string_view layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
 
 		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
-		const RenderingApi::Buffer*		   buffer = GetBuffer(storageBufferHandle);
+		const RenderingApi::Buffer*		   buffer = GetBuffer(uniformBufferHandle);
 
 		DescriptorSetUpdateRequest request{};
 
@@ -113,12 +113,12 @@ namespace BetterThanNothing
 		return handle;
 	}
 
-	Handle RenderingDevice::CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const std::string_view layoutType)
+	Handle RenderingDevice::CreateStorageBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const std::string_view layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
 
 		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
-		const RenderingApi::Buffer*		   buffer = GetBuffer(uniformBufferHandle);
+		const RenderingApi::Buffer*		   buffer = GetBuffer(storageBufferHandle);
 
 		DescriptorSetUpdateRequest request{};
 
@@ -199,6 +199,13 @@ namespace BetterThanNothing
 	{
 		if (!m_self->descriptors.Has(handle))
 			throw std::runtime_error("Invalid descriptor set handle!");
+
+		const RenderingApi::DescriptorSet* descriptor = m_self->descriptors.Get(handle);
+		if (descriptor->value != VK_NULL_HANDLE)
+		{
+			std::erase_if(m_self->descriptorsUpdateRequests, [&](const DescriptorSetUpdateRequest& req) { return req.write.dstSet == descriptor->value; });
+			vkFreeDescriptorSets(m_self->device->Handle(), m_self->descriptorPool->Handle(), 1, &descriptor->value);
+		}
 
 		m_self->descriptors.Destroy(handle);
 	}

@@ -136,7 +136,7 @@ namespace BetterThanNothing::RenderingApi
 		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
-	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, const uint32_t bufferSize, const uint64_t offset = 0)
+	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, const uint32_t bufferSize, const uint64_t offset)
 	{
 		VkBufferCopy copyRegion{};
 		copyRegion.size = bufferSize;
@@ -207,7 +207,7 @@ namespace BetterThanNothing::RenderingApi
 		vkCmdPipelineBarrier(m_commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, const uint32_t width, const uint32_t height, const uint32_t offset = 0)
+	void CommandBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, const uint32_t width, const uint32_t height, const uint32_t offset)
 	{
 		VkBufferImageCopy region{};
 		region.bufferOffset = offset;
@@ -259,8 +259,11 @@ namespace BetterThanNothing::RenderingApi
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &vkCommandBuffer;
 
-		vkQueueSubmit(graphicsQueue->Handle(), 1, &submitInfo, VK_NULL_HANDLE);
-		vkQueueWaitIdle(graphicsQueue->Handle());
+		const auto fence = Fence::Create({device, false});
+		if (vkQueueSubmit(graphicsQueue->Handle(), 1, &submitInfo, fence->Handle()) != VK_SUCCESS)
+			throw std::runtime_error("failed to submit single-time command buffer!");
+
+		fence->Wait();
 	}
 
 	VkCommandBuffer CommandBuffer::Handle() const

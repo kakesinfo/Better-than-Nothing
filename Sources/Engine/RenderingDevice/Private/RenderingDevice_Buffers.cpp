@@ -66,6 +66,8 @@ namespace BetterThanNothing
 			allocInfo.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		if (desc.allocationFlags & BufferAllocationFlags::Dedicated)
 			allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+		if (desc.allocationFlags & BufferAllocationFlags::HostAccessSequentialWrite)
+			allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
 		if (allocator->CreateBuffer(&bufferInfo, &allocInfo, &buffer->value, &buffer->allocation, &buffer->allocInfo) != VK_SUCCESS)
 			return false;
@@ -82,7 +84,7 @@ namespace BetterThanNothing
 		if (!Internal_CreateBuffer(desc, m_self->buffers.Get(handle), m_self->allocator.get()))
 		{
 			m_self->buffers.Destroy(handle);
-			throw std::runtime_error("Failed to vulkan create buffer!");
+			throw std::runtime_error("Failed to create Vulkan buffer!");
 		}
 
 		return handle;
@@ -93,8 +95,8 @@ namespace BetterThanNothing
 		BufferDescription desc{};
 		desc.size = size;
 		desc.bufferUsage = BufferUsageFlags::Uniform;
-		desc.memoryUsage = BufferMemoryUsage::CpuToGpu;
-		desc.allocationFlags = BufferAllocationFlags::Mapped;
+		desc.memoryUsage = BufferMemoryUsage::Auto;
+		desc.allocationFlags = BufferAllocationFlags::HostAccessSequentialWrite | BufferAllocationFlags::Mapped;
 
 		return CreateBuffer(desc);
 	}
@@ -104,7 +106,7 @@ namespace BetterThanNothing
 		BufferDescription desc{};
 		desc.size = size;
 		desc.bufferUsage = BufferUsageFlags::Storage;
-		desc.memoryUsage = BufferMemoryUsage::CpuToGpu;
+		desc.memoryUsage = BufferMemoryUsage::Auto;
 		desc.allocationFlags = BufferAllocationFlags::HostAccessSequentialWrite | BufferAllocationFlags::Mapped;
 
 		return CreateBuffer(desc);
@@ -120,7 +122,10 @@ namespace BetterThanNothing
 		const Handle handle = CreateBuffer(desc);
 
 		if (!StageDataToBuffer(handle, data, size))
-			throw std::runtime_error("Failed to copy data to buffer!");
+		{
+			DestroyBuffer(handle);
+			throw std::runtime_error("Failed to copy data to vertex buffer!");
+		}
 
 		return handle;
 	}
@@ -135,7 +140,10 @@ namespace BetterThanNothing
 		const Handle handle = CreateBuffer(desc);
 
 		if (!StageDataToBuffer(handle, data, size))
-			throw std::runtime_error("Failed to copy data to buffer!");
+		{
+			DestroyBuffer(handle);
+			throw std::runtime_error("Failed to copy data to index buffer!");
+		}
 
 		return handle;
 	}
@@ -152,7 +160,7 @@ namespace BetterThanNothing
 			const auto srcBuffer = m_self->stagingBuffer->GetBuffer();
 			const auto dstBuffer = m_self->buffers.Get(dstBufferHandle)->value;
 
-			cmd->CopyBuffer(srcBuffer, dstBuffer, size, offset);
+			cmd->CopyBuffer(srcBuffer, dstBuffer, static_cast<uint32_t>(size), offset);
 		}, m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get());
 		// clang-format on
 
@@ -166,8 +174,11 @@ namespace BetterThanNothing
 		if (data == nullptr || size == 0)
 			return false;
 
-		void* dst = m_self->buffers.Get(dstBufferHandle)->allocInfo.pMappedData;
-		std::memcpy(dst, data, size);
+		const RenderingApi::Buffer* buffer = m_self->buffers.Get(dstBufferHandle);
+		if (buffer->allocInfo.pMappedData == nullptr || size > buffer->size)
+			return false;
+
+		std::memcpy(buffer->allocInfo.pMappedData, data, size);
 
 		return true;
 	}

@@ -19,15 +19,20 @@
 #pragma once
 
 #include "Panel.hpp"
+#include <Common/Metrics.hpp>
 
 namespace BetterThanNothing
 {
-	class DebugPanel final: public Panel
+	class DebugPanel final : public Panel
 	{
 	public:
 		explicit DebugPanel();
 		~DebugPanel() override = default;
 
 		void OnRender(Scene* scene) override;
+
+	private:
+		float			  m_updateTimer = 0.0f;
+		RenderMetricsData m_cachedMetrics{};
 	};
 }

@@ -31,21 +31,29 @@ namespace BetterThanNothing
 		Vector3 normal;
 	};
 
+	static_assert(sizeof(VertexData) == 44, "VertexData must stay tightly packed (11 floats) to match VertexLayout");
+
 	struct VertexHash
 	{
 		size_t operator()(VertexData const& v) const noexcept
 		{
-			auto h = std::hash<float>{}(v.position.GetX());
-			h = h * 31 + std::hash<float>{}(v.position.GetY());
-			h = h * 31 + std::hash<float>{}(v.position.GetZ());
-			h = h * 31 + std::hash<float>{}(v.uv.GetX());
-			h = h * 31 + std::hash<float>{}(v.uv.GetY());
-			h = h * 31 + std::hash<float>{}(v.color.GetX());
-			h = h * 31 + std::hash<float>{}(v.color.GetY());
-			h = h * 31 + std::hash<float>{}(v.color.GetZ());
-			h = h * 31 + std::hash<float>{}(v.normal.GetX());
-			h = h * 31 + std::hash<float>{}(v.normal.GetY());
-			h = h * 31 + std::hash<float>{}(v.normal.GetZ());
+			auto hashFloat = [](const float f) noexcept { return std::hash<float>{}(f == 0.0f ? 0.0f : f); };
+			auto combine = [](size_t& seed, const size_t val) noexcept {
+				seed ^= val + 0x9e3779b9u + (seed << 6) + (seed >> 2);
+			};
+
+			size_t h = 0;
+			combine(h, hashFloat(v.position.GetX()));
+			combine(h, hashFloat(v.position.GetY()));
+			combine(h, hashFloat(v.position.GetZ()));
+			combine(h, hashFloat(v.color.GetX()));
+			combine(h, hashFloat(v.color.GetY()));
+			combine(h, hashFloat(v.color.GetZ()));
+			combine(h, hashFloat(v.uv.GetX()));
+			combine(h, hashFloat(v.uv.GetY()));
+			combine(h, hashFloat(v.normal.GetX()));
+			combine(h, hashFloat(v.normal.GetY()));
+			combine(h, hashFloat(v.normal.GetZ()));
 			return h;
 		}
 	};

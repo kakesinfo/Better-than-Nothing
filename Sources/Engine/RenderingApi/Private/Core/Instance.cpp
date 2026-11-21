@@ -38,7 +38,7 @@ namespace BetterThanNothing::RenderingApi
 		if (validationLayersEnabled && !validationLayersAvailable)
 			Logger::Log<WARNING>("Validation layers are enabled but not available on this system");
 
-		m_enableValidationLayers = validationLayersEnabled & validationLayersAvailable;
+		m_enableValidationLayers = validationLayersEnabled && validationLayersAvailable;
 
 		VkApplicationInfo appInfo{};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -55,7 +55,7 @@ namespace BetterThanNothing::RenderingApi
 
 		// Prepare validation layers
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-		if (validationLayersEnabled)
+		if (m_enableValidationLayers)
 		{
 			PopulateDebugMessengerCreateInfo(&debugCreateInfo);
 
@@ -82,7 +82,8 @@ namespace BetterThanNothing::RenderingApi
 	Instance::~Instance()
 	{
 		DestroyDebugMessenger();
-		vkDestroyInstance(m_instance, nullptr);
+		if (m_instance != VK_NULL_HANDLE)
+			vkDestroyInstance(m_instance, nullptr);
 	}
 
 	std::unique_ptr<Instance> Instance::Create(const InstanceCreateInfo& createInfo)
@@ -112,7 +113,7 @@ namespace BetterThanNothing::RenderingApi
 
 		std::vector extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
 
-		if (m_createInfo.enableValidation)
+		if (m_enableValidationLayers)
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 		return extensions;
@@ -165,18 +166,12 @@ namespace BetterThanNothing::RenderingApi
 		Logger::Log<SUCCESS>("Debug Messenger: ok");
 	}
 
-	void Instance::DestroyDebugMessenger() const
+	void Instance::DestroyDebugMessenger() const noexcept
 	{
-		if (m_instance == VK_NULL_HANDLE)
-			throw std::runtime_error("Vulkan instance is not initialized");
-
-		if (!m_enableValidationLayers)
+		if (m_instance == VK_NULL_HANDLE || !m_enableValidationLayers || m_debugMessenger == VK_NULL_HANDLE)
 			return;
 
-		if (m_debugMessenger != VK_NULL_HANDLE)
-		{
-			DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
-		}
+		DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
 	}
 
 	VkResult Instance::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* debugMessenger) noexcept

@@ -19,17 +19,25 @@
 #pragma once
 
 #include "Panel.hpp"
+#include <entt/entt.hpp>
 
 namespace BetterThanNothing
 {
 	class Scene;
+	class SceneObject;
 
-	class ScenePanel final: public Panel
+	class ScenePanel final : public Panel
 	{
 	public:
 		explicit ScenePanel();
 		~ScenePanel() override = default;
 
 		void OnRender(Scene* scene) override;
+
+	private:
+		void DrawEntityNode(Scene* scene, entt::entity entity);
+		void DrawInspector(Scene* scene);
+
+		entt::entity m_selectedEntity = entt::null;
 	};
 }

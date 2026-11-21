@@ -19,20 +19,18 @@
 #pragma once
 
 #include "RenderingDevice/Handle.hpp"
+#include <Data/Graphics/PointLightData.hpp>
+#include <memory>
+#include <vector>
 
 namespace BetterThanNothing
 {
-	namespace RenderingApi
-	{
-		class Semaphore;
-	}
-
 	class ResourceManager;
 	class RenderingDevice;
 	class Scene;
 	class Editor;
 	class DrawStream;
-	struct DrawStreamView;
+	class DrawStreamView;
 	struct GlobalUniformData;
 
 	class Renderer final
@@ -41,7 +39,12 @@ namespace BetterThanNothing
 		explicit Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor);
 		~Renderer();
 
-		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI);
+		Renderer(const Renderer&) = delete;
+		Renderer& operator=(const Renderer&) = delete;
+		Renderer(Renderer&&) = delete;
+		Renderer& operator=(Renderer&&) = delete;
+
+		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor);
 
 	private:
 		auto CreateGlobalUniformBuffers() -> void;
@@ -51,8 +54,8 @@ namespace BetterThanNothing
 		void CreatePointLightBuffers();
 		void CreatePointLightDescriptorSets();
 
-		void RecordCommandBuffer(Scene* scene, uint32_t imageIndex) const;
-		void DrawPointLights(const Scene* scene, uint32_t frameIndex) const;
+		void	 RecordCommandBuffer(Scene* scene, uint32_t imageIndex) const;
+		uint32_t UploadPointLights(const Scene* scene, uint32_t frameIndex) const;
 
 		void ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const;
 		void ExecuteEditorPass(Scene* scene, uint32_t imageIndex) const;
@@ -66,9 +69,11 @@ namespace BetterThanNothing
 		Editor*						m_editor = nullptr;
 		std::unique_ptr<DrawStream> m_drawStream;
 
-		std::vector<Handle>						m_globalUniformBuffer;
-		std::vector<Handle>						m_globalDescriptorSets;
-		std::vector<Handle>						m_pointLightBuffer;
-		std::vector<Handle>						m_pointLightDescriptorSets;
+		std::vector<Handle>					m_globalUniformBuffer;
+		std::vector<Handle>					m_globalDescriptorSets;
+		std::vector<Handle>					m_pointLightBuffer;
+		std::vector<Handle>					m_pointLightDescriptorSets;
+		mutable std::vector<PointLightData> m_pointLightsScratch;
+		mutable bool						m_warnedLightLimit = false;
 	};
 }

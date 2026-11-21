@@ -48,8 +48,14 @@ namespace BetterThanNothing
 
 	Platform::~Platform()
 	{
-		SDL_DestroyWindow(m_window);
+		if (m_window)
+			SDL_DestroyWindow(m_window);
 		SDL_Quit();
+	}
+
+	std::unique_ptr<Platform> Platform::Create(const PlatformCreateInfo& createInfo)
+	{
+		return std::make_unique<Platform>(createInfo);
 	}
 
 	std::unique_ptr<Platform> Platform::Create(std::string windowTitle, const int32_t windowWidth, const int32_t windowHeight)
@@ -59,9 +65,9 @@ namespace BetterThanNothing
 		createInfo.windowWidth = windowWidth;
 		createInfo.windowHeight = windowHeight;
 		createInfo.windowFullscreen = false;
-		createInfo.windowResizable = false;
+		createInfo.windowResizable = true;
 
-		return std::make_unique<Platform>(createInfo);
+		return Create(createInfo);
 	}
 
 	void Platform::PollEvents()
@@ -142,6 +148,11 @@ namespace BetterThanNothing
 		m_eventCallback = callback;
 	}
 
+	void Platform::ClearEventCallback()
+	{
+		m_eventCallback = nullptr;
+	}
+
 	void Platform::OnQuitEvent()
 	{
 		m_running = false;
@@ -149,6 +160,7 @@ namespace BetterThanNothing
 
 	void Platform::OnWindowResizeEvent()
 	{
+		SDL_GetWindowSizeInPixels(m_window, &m_windowWidth, &m_windowHeight);
 		m_windowResized = true;
 	}
 

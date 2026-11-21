@@ -20,6 +20,7 @@
 
 #include "Types.hpp"
 #include "Handle.hpp"
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {

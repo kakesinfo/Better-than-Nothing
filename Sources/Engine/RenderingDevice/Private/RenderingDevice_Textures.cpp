@@ -92,46 +92,28 @@ namespace BetterThanNothing
 		return true;
 	}
 
-	void RenderingDevice::Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc)
+	void RenderingDevice::Internal_UploadTextureAndGenerateMipmaps(const CopyDataToTextureImageDescription& desc, const bool generateMipmaps)
 	{
 		const RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
-
-		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-		bufferInfo.size = desc.dataSize;
-		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-		const uint64_t offset = m_self->stagingBuffer->Stage(desc.data, desc.dataSize);
+		const uint64_t				 offset = m_self->stagingBuffer->Stage(desc.data, desc.dataSize);
 
 		RenderingApi::CommandBuffer::SingleTimeCommands(
 			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
 				commandBuffer->TransitionImageLayout(texture->value, desc.format, desc.oldLayout, desc.newLayout, texture->mipLevels);
-				commandBuffer->CopyBufferToImage(m_self->stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, offset);
+				commandBuffer->CopyBufferToImage(m_self->stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, static_cast<uint32_t>(offset));
 
-				// Transition to TRANSFER_DST_OPTIMAL is done in mipmap generation _createMipmaps
-				// commandBuffer->TransitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_SRGB,
-				// VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
-			},
-			m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get()
-		);
+				if (!generateMipmaps || texture->mipLevels <= 1)
+				{
+					commandBuffer->TransitionImageLayout(texture->value, desc.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, texture->mipLevels);
+					return;
+				}
 
-		m_self->stagingBuffer->Reset();
-	}
-
-	bool RenderingDevice::Internal_CreateTextureMipmaps(const Handle& destination)
-	{
-		const RenderingApi::Texture* texture = m_self->textures.Get(destination);
-
-		if (!m_self->device->IsSupportedFormatFeature(texture->format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
-			return false;
-
-		RenderingApi::CommandBuffer::SingleTimeCommands(
-			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
 				VkImageMemoryBarrier barrier{};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 				barrier.image = texture->value;
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Must not create mipmaps for depth images
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseArrayLayer = 0;
 				barrier.subresourceRange.layerCount = 1;
 				barrier.subresourceRange.levelCount = 1;
@@ -188,45 +170,56 @@ namespace BetterThanNothing
 			m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get()
 		);
 
-		return true;
+		m_self->stagingBuffer->Reset();
 	}
 
 	Handle RenderingDevice::CreateTextureFromData(const TextureFromDataDescription& desc)
 	{
-		const Handle	   handle = m_self->textures.Allocate();
-		const std::uint8_t mipLevels = Internal_CalculateMipLevels(desc.width, desc.height);
+		if (desc.data == nullptr || desc.dataSize == 0 || desc.width == 0 || desc.height == 0)
+			throw std::runtime_error("Invalid texture data description");
 
-		TextureImageDescription imageDesc{};
-		imageDesc.destination = handle;
-		imageDesc.width = desc.width;
-		imageDesc.height = desc.height;
-		imageDesc.depth = 1;
-		imageDesc.mipLevels = mipLevels;
-		imageDesc.format = VK_FORMAT_R8G8B8A8_UNORM;
-		imageDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageDesc.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		constexpr VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+		const bool		   canGenerateMipmaps = m_self->device->IsSupportedFormatFeature(format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT);
+		const std::uint8_t mipLevels = canGenerateMipmaps ? Internal_CalculateMipLevels(desc.width, desc.height) : 1;
 
-		if (!Internal_CreateTextureImage(imageDesc))
-			throw std::runtime_error("Cannot create texture image from data");
+		const Handle handle = m_self->textures.Allocate();
 
-		CopyDataToTextureImageDescription copyDesc;
-		copyDesc.destination = handle;
-		copyDesc.data = desc.data;
-		copyDesc.dataSize = desc.dataSize;
-		copyDesc.format = imageDesc.format;
-		copyDesc.oldLayout = imageDesc.initialLayout;
+		try
+		{
+			TextureImageDescription imageDesc{};
+			imageDesc.destination = handle;
+			imageDesc.width = desc.width;
+			imageDesc.height = desc.height;
+			imageDesc.depth = 1;
+			imageDesc.mipLevels = mipLevels;
+			imageDesc.format = format;
+			imageDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageDesc.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | (canGenerateMipmaps ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0u);
 
-		Internal_CopyDataToTextureImage(copyDesc);
+			if (!Internal_CreateTextureImage(imageDesc))
+				throw std::runtime_error("Cannot create texture image from data");
 
-		if (!Internal_CreateTextureMipmaps(handle))
-			throw std::runtime_error("Cannot create texture mip maps");
+			CopyDataToTextureImageDescription copyDesc{};
+			copyDesc.destination = handle;
+			copyDesc.data = desc.data;
+			copyDesc.dataSize = static_cast<uint32_t>(desc.dataSize);
+			copyDesc.format = imageDesc.format;
+			copyDesc.oldLayout = imageDesc.initialLayout;
 
-		TextureImageViewDescription viewDesc{};
-		viewDesc.destination = handle;
-		viewDesc.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+			Internal_UploadTextureAndGenerateMipmaps(copyDesc, canGenerateMipmaps);
 
-		if (!Internal_CreateTextureImageView(viewDesc))
-			throw std::runtime_error("Cannot create texture image view");
+			TextureImageViewDescription viewDesc{};
+			viewDesc.destination = handle;
+			viewDesc.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			if (!Internal_CreateTextureImageView(viewDesc))
+				throw std::runtime_error("Cannot create texture image view");
+		}
+		catch (...)
+		{
+			DestroyTexture(handle);
+			throw;
+		}
 
 		return handle;
 	}

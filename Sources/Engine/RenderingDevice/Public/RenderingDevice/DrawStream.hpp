@@ -22,6 +22,7 @@
 
 #include <Math/Matrix4.hpp>
 #include <vector>
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {
@@ -30,6 +31,7 @@ namespace BetterThanNothing
 
 	struct DrawPacket
 	{
+		Handle			 pipelineHandle{};
 		VkPipeline		 pipeline{};
 		VkPipelineLayout pipelineLayout{};
 		Handle			 vertexBuffer{};
@@ -38,22 +40,14 @@ namespace BetterThanNothing
 		VkDescriptorSet	 globalDescriptorSet{};
 		Handle			 samplerDescriptorSet{};
 		VkDescriptorSet	 pointLightDescriptorSet{};
-		Matrix4			 transform;
+		Matrix4			 transform{};
 		float			 distanceToCamera{};
-	};
-
-	struct DrawPacketSortKeyData
-	{
-		uint64_t distance : 16 = 0;
-		uint64_t _padding1 : 16 = 0;
-		uint64_t textureId : 16 = 0;
-		uint64_t _padding2 : 16 = 0; // TODO: change to pipelineId
 	};
 
 	struct DrawPacketSortKey
 	{
 		uint32_t packetId = 0;
-		DrawPacketSortKeyData data;
+		uint64_t key = 0;
 
 		bool operator<(const DrawPacketSortKey& other) const;
 	};

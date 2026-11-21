@@ -227,6 +227,9 @@ namespace BetterThanNothing::RenderingApi
 
 	void SwapChain::RecreateSwapChain(const uint32_t newWidth, const uint32_t newHeight)
 	{
+		if (newWidth == 0 || newHeight == 0)
+			return;
+
 		m_createInfo.device->WaitIdle();
 
 		CleanupSwapChain();
@@ -243,18 +246,28 @@ namespace BetterThanNothing::RenderingApi
 		m_imageFinishedSemaphores.clear();
 
 		m_createInfo.device->DestroyImageView(m_depthImageView);
+		m_depthImageView = VK_NULL_HANDLE;
 		m_createInfo.allocator->DestroyImage(m_depthImage, m_depthAllocation);
+		m_depthImage = VK_NULL_HANDLE;
+		m_depthAllocation = VK_NULL_HANDLE;
 
 		m_createInfo.device->DestroyImageView(m_colorImageView);
+		m_colorImageView = VK_NULL_HANDLE;
 		m_createInfo.allocator->DestroyImage(m_colorImage, m_colorAllocation);
+		m_colorImage = VK_NULL_HANDLE;
+		m_colorAllocation = VK_NULL_HANDLE;
 
-		for (size_t i = 0; i < m_images.size(); i++)
-			m_createInfo.device->DestroyImageView(m_imageViews.at(i));
+		for (const VkImageView view : m_imageViews)
+			m_createInfo.device->DestroyImageView(view);
 
 		m_imageViews.clear();
 		m_images.clear();
 
-		vkDestroySwapchainKHR(m_createInfo.device->Handle(), m_swapChain, nullptr);
+		if (m_swapChain != VK_NULL_HANDLE)
+		{
+			vkDestroySwapchainKHR(m_createInfo.device->Handle(), m_swapChain, nullptr);
+			m_swapChain = VK_NULL_HANDLE;
+		}
 	}
 
 	VkSurfaceFormatKHR SwapChain::ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
@@ -343,6 +356,8 @@ namespace BetterThanNothing::RenderingApi
 
 	float SwapChain::GetAspectRatio() const
 	{
+		if (m_extent.height == 0)
+			return 1.0f;
 		return static_cast<float>(m_extent.width) / static_cast<float>(m_extent.height);
 	}
 

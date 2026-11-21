@@ -24,7 +24,7 @@ namespace BetterThanNothing
 {
 	bool DrawPacketSortKey::operator<(const DrawPacketSortKey& other) const
 	{
-		return std::bit_cast<uint64_t>(data) < std::bit_cast<uint64_t>(other.data);
+		return key < other.key;
 	}
 
 	void DrawStream::Reset(const std::uint32_t newSize)
@@ -40,12 +40,18 @@ namespace BetterThanNothing
 
 	void DrawStream::Draw(const DrawPacket& drawPacket)
 	{
+		const auto packetIndex = static_cast<uint32_t>(m_packets.size());
 		m_packets.push_back(drawPacket);
 
+		const float	   clampedDist = drawPacket.distanceToCamera > 0.0f ? drawPacket.distanceToCamera : 0.0f;
+		const uint64_t quantizedDist = static_cast<uint64_t>(std::bit_cast<uint32_t>(clampedDist) >> 16) & 0xFFFFu;
+		const uint64_t meshId = static_cast<uint64_t>(drawPacket.vertexBuffer.GetId()) & 0xFFFFu;
+		const uint64_t textureId = static_cast<uint64_t>(drawPacket.samplerDescriptorSet.GetId()) & 0xFFFFu;
+		const uint64_t pipelineId = static_cast<uint64_t>(drawPacket.pipelineHandle.GetId()) & 0xFFFFu;
+
 		DrawPacketSortKey sortKey{};
-		sortKey.packetId = m_packets.size() - 1;
-		sortKey.data.distance = std::bit_cast<uint32_t>(drawPacket.distanceToCamera) >> 16;
-		sortKey.data.textureId = drawPacket.samplerDescriptorSet.GetId();
+		sortKey.packetId = packetIndex;
+		sortKey.key = (pipelineId << 48) | (textureId << 32) | (meshId << 16) | quantizedDist;
 
 		m_sortKeys.push_back(sortKey);
 	}

@@ -29,6 +29,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <cmath>
 #include <ostream>
 
 namespace BetterThanNothing
@@ -49,16 +50,21 @@ namespace BetterThanNothing
 		explicit Vector3(const glm::vec3& other) : m_data(other) {}
 		explicit Vector3(float value) : m_data(value) {}
 
-		// TODO: Add copy constructor and copy assignment operator
-		Vector3(const Vector3& other) : m_data(other.m_data) {}
+		Vector3(const Vector3&) = default;
+		Vector3& operator=(const Vector3&) = default;
+		Vector3(Vector3&&) noexcept = default;
+		Vector3& operator=(Vector3&&) noexcept = default;
 
 		[[nodiscard]] float GetX() const { return m_data.x; }
 		[[nodiscard]] float GetY() const { return m_data.y; }
 		[[nodiscard]] float GetZ() const { return m_data.z; }
 
-		[[nodiscard]] float& x() { return m_data.x; }
-		[[nodiscard]] float& y() { return m_data.y; }
-		[[nodiscard]] float& z() { return m_data.z; }
+		[[nodiscard]] float&	   x() { return m_data.x; }
+		[[nodiscard]] float&	   y() { return m_data.y; }
+		[[nodiscard]] float&	   z() { return m_data.z; }
+		[[nodiscard]] const float& x() const { return m_data.x; }
+		[[nodiscard]] const float& y() const { return m_data.y; }
+		[[nodiscard]] const float& z() const { return m_data.z; }
 
 		void SetX(float x) { m_data.x = x; }
 		void SetY(float y) { m_data.y = y; }
@@ -70,45 +76,48 @@ namespace BetterThanNothing
 		[[nodiscard]] Vector3 operator/(float scalar) const { return Vector3(m_data / scalar); }
 		[[nodiscard]] Vector3 operator-() const { return Vector3(-m_data); }
 
-		Vector3 operator+=(const Vector3& other)
+		Vector3& operator+=(const Vector3& other)
 		{
 			m_data += other.m_data;
 			return *this;
 		}
 
-		Vector3 operator-=(const Vector3& other)
+		Vector3& operator-=(const Vector3& other)
 		{
 			m_data -= other.m_data;
 			return *this;
 		}
 
-		Vector3 operator*=(float scalar)
+		Vector3& operator*=(float scalar)
 		{
 			m_data *= scalar;
 			return *this;
 		}
 
-		Vector3 operator/=(float scalar)
+		Vector3& operator/=(float scalar)
 		{
 			m_data /= scalar;
 			return *this;
 		}
 
-		Vector3 operator=(const Vector3& other)
-		{
-			m_data = other.m_data;
-			return *this;
-		}
+		[[nodiscard]] bool operator==(const Vector3& other) const { return m_data == other.m_data; }
+		[[nodiscard]] bool operator!=(const Vector3& other) const { return m_data != other.m_data; }
 
 		[[nodiscard]] bool Equals(const Vector3& other) const { return m_data == other.m_data; }
 
 		[[nodiscard]] float Magnitude() const { return glm::length(m_data); }
+		[[nodiscard]] float SquaredMagnitude() const { return glm::dot(m_data, m_data); }
 
-		[[nodiscard]] Vector3 Normalized() const { return Vector3(glm::normalize(m_data)); }
+		[[nodiscard]] Vector3 Normalized() const
+		{
+			const float lenSq = SquaredMagnitude();
+			return lenSq > 0.0f ? Vector3(m_data / std::sqrt(lenSq)) : Vector3::Zero;
+		}
 
-		[[nodiscard]] glm::vec3 Value() const { return m_data; }
+		[[nodiscard]] const glm::vec3& Value() const { return m_data; }
 
 		static float   Dot(const Vector3& a, const Vector3& b) { return glm::dot(a.m_data, b.m_data); }
+		static Vector3 Cross(const Vector3& a, const Vector3& b) { return Vector3(glm::cross(a.m_data, b.m_data)); }
 		static float   Distance(const Vector3& a, const Vector3& b) { return glm::distance(a.m_data, b.m_data); }
 		static float   Distance2(const Vector3& a, const Vector3& b) { return glm::distance2(a.m_data, b.m_data); }
 		static Vector3 Lerp(const Vector3& a, const Vector3& b, float t) { return Vector3(glm::mix(a.m_data, b.m_data, t)); }
@@ -117,7 +126,7 @@ namespace BetterThanNothing
 
 		friend std::ostream& operator<<(std::ostream& os, const Vector3& vec)
 		{
-			os << "Vector3(" << vec.GetX() << ", " << vec.GetY() << ")";
+			os << "Vector3(" << vec.GetX() << ", " << vec.GetY() << ", " << vec.GetZ() << ")";
 			return os;
 		}
 

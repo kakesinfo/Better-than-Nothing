@@ -39,7 +39,7 @@ namespace BetterThanNothing
 	public:
 		static const Quaternion Identity;
 
-		Quaternion() : m_data(0.0f, 0.0f, 0.0f, 0.0f) {}
+		Quaternion() : m_data(1.0f, 0.0f, 0.0f, 0.0f) {}
 		Quaternion(float w, float x, float y, float z) : m_data(w, x, y, z) {}
 		explicit Quaternion(const glm::quat& quat) : m_data(quat) {}
 
@@ -52,6 +52,8 @@ namespace BetterThanNothing
 		[[nodiscard]] Quaternion operator+(const Quaternion& other) const { return Quaternion(m_data + other.m_data); }
 		[[nodiscard]] Quaternion operator-(const Quaternion& other) const { return Quaternion(m_data - other.m_data); }
 		[[nodiscard]] Vector3	 operator*(const Vector3& other) const { return Vector3(m_data * other.Value()); }
+		[[nodiscard]] bool		 operator==(const Quaternion& other) const { return glm::all(glm::equal(m_data, other.m_data)); }
+		[[nodiscard]] bool		 operator!=(const Quaternion& other) const { return !(*this == other); }
 
 		[[nodiscard]] static Quaternion AngleAxis(float angleInDegrees, float x, float y, float z)
 		{
@@ -63,13 +65,27 @@ namespace BetterThanNothing
 			return AngleAxis(angleInDegrees, axis.GetX(), axis.GetY(), axis.GetZ());
 		}
 
-		[[nodiscard]] Quaternion Normalized() const { return Quaternion(glm::normalize(m_data)); }
+		[[nodiscard]] static Quaternion FromEulerDegrees(const Vector3& eulerDegrees)
+		{
+			return Quaternion(glm::quat(glm::radians(eulerDegrees.Value())));
+		}
+
+		[[nodiscard]] Vector3 ToEulerDegrees() const
+		{
+			return Vector3(glm::degrees(glm::eulerAngles(m_data)));
+		}
+
+		[[nodiscard]] Quaternion Normalized() const
+		{
+			const float len = glm::length(m_data);
+			return len > 0.0f ? Quaternion(m_data / len) : Identity;
+		}
 
 		[[nodiscard]] Quaternion Conjugated() const { return Quaternion(glm::conjugate(m_data)); }
 
-		[[nodiscard]] float		Magnitude() const { return glm::length(m_data); }
-		[[nodiscard]] bool		Equals(const Quaternion& other) const { return glm::all(glm::equal(m_data, other.m_data)); }
-		[[nodiscard]] glm::quat Value() const { return m_data; }
+		[[nodiscard]] float			   Magnitude() const { return glm::length(m_data); }
+		[[nodiscard]] bool			   Equals(const Quaternion& other) const { return glm::all(glm::equal(m_data, other.m_data)); }
+		[[nodiscard]] const glm::quat& Value() const { return m_data; }
 
 		friend std::ostream& operator<<(std::ostream& os, const Quaternion& quat)
 		{

@@ -39,19 +39,25 @@ namespace BetterThanNothing
 		const auto now = std::chrono::system_clock::now();
 		const auto time = std::chrono::system_clock::to_time_t(now);
 
+		std::tm localTm{};
+#ifdef _WIN32
+		localtime_s(&localTm, &time);
+#else
+		localtime_r(&time, &localTm);
+#endif
+
 		std::stringstream ss;
-		ss << std::put_time(std::localtime(&time), "[%Y-%m-%d %X]");
+		ss << std::put_time(&localTm, "[%Y-%m-%d %X]");
 		return ss.str();
 	}
 
 	std::string Logger::FormatSourceFile(const std::source_location& location)
 	{
-		const std::filesystem::path fullPath(location.file_name());
+		std::string_view fileName(location.file_name());
+		if (const size_t pos = fileName.find_last_of("/\\"); pos != std::string_view::npos)
+			fileName.remove_prefix(pos + 1);
 
-		const std::string fileName = fullPath.filename().string();
-		const std::string line = std::to_string(location.line());
-
-		return "[" + fileName + ":" + line + "]";
+		return std::format("[{}:{}]", fileName, location.line());
 	}
 
 	std::string Logger::SanitizeMessage(std::string_view message)

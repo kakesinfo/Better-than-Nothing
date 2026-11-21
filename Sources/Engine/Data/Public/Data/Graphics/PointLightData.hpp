@@ -19,6 +19,7 @@
 #pragma once
 
 #include "Math/Vector3.hpp"
+#include <cstddef>
 
 namespace BetterThanNothing
 {
@@ -32,4 +33,12 @@ namespace BetterThanNothing
 		float quadratic = 0.0f;
 		float intensity = 0.0f;
 	};
+
+	static_assert(offsetof(PointLightData, position) == 0);
+	static_assert(offsetof(PointLightData, color) == 16);
+	static_assert(offsetof(PointLightData, constant) == 28);
+	static_assert(offsetof(PointLightData, linear) == 32);
+	static_assert(offsetof(PointLightData, quadratic) == 36);
+	static_assert(offsetof(PointLightData, intensity) == 40);
+	static_assert(sizeof(PointLightData) == 48);
 }

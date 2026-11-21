@@ -42,12 +42,13 @@ namespace BetterThanNothing
 
 		[[nodiscard]] static std::unique_ptr<StagingBuffer> Create(RenderingApi::Allocator* allocator, uint64_t size);
 
-		uint64_t			   Stage(const void* data, uint64_t dataSize, uint32_t alignment = 4);
+		uint64_t			   Stage(const void* data, uint64_t dataSize, uint64_t alignment = 4);
 		[[nodiscard]] VkBuffer GetBuffer() const;
 		void				   Reset();
 
-
 	private:
+		void AllocateBuffer(uint64_t sizeBytes);
+
 		RenderingApi::Allocator* m_allocator;
 		VkBuffer				 m_buffer = VK_NULL_HANDLE;
 		VmaAllocation			 m_bufferAlloc = VK_NULL_HANDLE;

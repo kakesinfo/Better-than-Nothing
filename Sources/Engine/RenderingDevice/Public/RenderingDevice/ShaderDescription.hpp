@@ -19,13 +19,16 @@
 #pragma once
 
 #include "Common/EShaderType.hpp"
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace BetterThanNothing
 {
 	struct ShaderDescription
 	{
-		std::string name;
-		EShaderType type;
-		char* data;
+		std::string			  name;
+		EShaderType			  type = EShaderType::Vertex;
+		std::vector<uint32_t> spirv;
 	};
 }

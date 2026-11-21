@@ -21,46 +21,76 @@
 #include "Math/Matrix4.hpp"
 #include "Math/Quaternion.hpp"
 #include "Math/Vector3.hpp"
+#include <algorithm>
 
 namespace BetterThanNothing
 {
 	Camera::Camera(const float fov, const float nearPlane, const float farPlane)
-		: m_fov(fov), m_nearPlane(nearPlane), m_farPlane(farPlane)
+		: m_fov(fov), m_nearPlane(nearPlane), m_farPlane(farPlane), m_position(2.0f, 2.0f, 2.0f), m_orientation(Quaternion::Identity)
 	{
-		m_position = Vector3(2.0f, 2.0f, 2.0f);
-		m_orientation = Quaternion(1.0f, 0.0f, 0.0f, 0.0f);
 	}
-
-	Camera::~Camera() {}
 
 	void Camera::SetPosition(const Vector3& position)
 	{
 		m_position = position;
+		m_viewDirty = true;
 	}
 
 	void Camera::SetOrientation(const Quaternion& orientation)
 	{
-		m_orientation = orientation;
+		m_orientation = orientation.Normalized();
+		const Vector3 euler = m_orientation.ToEulerDegrees();
+		m_pitch = std::clamp(euler.GetX(), -89.0f, 89.0f);
+		m_yaw = euler.GetY();
+		m_viewDirty = true;
+	}
+
+	void Camera::SetFov(const float fov)
+	{
+		m_fov = std::clamp(fov, 1.0f, 179.0f);
+	}
+
+	void Camera::SetExposure(const float exposure)
+	{
+		m_exposure = std::max(0.01f, exposure);
 	}
 
 	void Camera::Move(const Vector3& delta)
 	{
+		if (delta == Vector3::Zero)
+			return;
 		m_position += delta;
+		m_viewDirty = true;
 	}
 
 	void Camera::Rotate(const float yaw, const float pitch)
 	{
-		const Quaternion qYaw = Quaternion::AngleAxis(yaw, Vector3::Up);
-		const Quaternion qPitch = Quaternion::AngleAxis(pitch, Vector3::Right);
+		if (yaw == 0.0f && pitch == 0.0f)
+			return;
 
-		m_orientation = (qYaw * m_orientation * qPitch).Normalized();
+		m_yaw += yaw;
+		m_pitch = std::clamp(m_pitch + pitch, -89.0f, 89.0f);
+		UpdateOrientationFromAngles();
 	}
 
-	Matrix4 Camera::GetViewMatrix() const
+	void Camera::UpdateOrientationFromAngles()
 	{
-		const auto	  rotate = Matrix4(m_orientation.Conjugated());
-		const Matrix4 translate = Matrix4::Identity.Translate(-m_position);
-		return (rotate * translate);
+		const Quaternion qYaw = Quaternion::AngleAxis(m_yaw, Vector3::Up);
+		const Quaternion qPitch = Quaternion::AngleAxis(m_pitch, Vector3::Right);
+		m_orientation = (qYaw * qPitch).Normalized();
+		m_viewDirty = true;
+	}
+
+	const Matrix4& Camera::GetViewMatrix() const
+	{
+		if (m_viewDirty)
+		{
+			const Matrix4 rotate(m_orientation.Conjugated());
+			const Matrix4 translate = Matrix4::Identity.Translate(-m_position);
+			m_viewMatrix = rotate * translate;
+			m_viewDirty = false;
+		}
+		return m_viewMatrix;
 	}
 
 	Matrix4 Camera::GetProjectionMatrix(const float aspectRatio) const
@@ -86,5 +116,30 @@ namespace BetterThanNothing
 	Vector3 Camera::GetPosition() const
 	{
 		return m_position;
+	}
+
+	Quaternion Camera::GetOrientation() const
+	{
+		return m_orientation;
+	}
+
+	float Camera::GetFov() const
+	{
+		return m_fov;
+	}
+
+	float Camera::GetNearPlane() const
+	{
+		return m_nearPlane;
+	}
+
+	float Camera::GetFarPlane() const
+	{
+		return m_farPlane;
+	}
+
+	float Camera::GetExposure() const
+	{
+		return m_exposure;
 	}
 }

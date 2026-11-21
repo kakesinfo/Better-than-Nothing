@@ -21,28 +21,31 @@
 
 namespace BetterThanNothing
 {
-	MeshData MeshFactory::CreatePlane(const float size)
+	MeshData MeshFactory::CreatePlane(const float size, const uint32_t subdivisions)
 	{
-		const auto	subdivisions = static_cast<int32_t>(size);
-		const float halfSize = size / 2.0f;
+		const uint32_t quads = subdivisions > 0 ? subdivisions : 1;
+		const uint32_t vertsPerAxis = quads + 1;
+		const float	   halfSize = size * 0.5f;
+		const float	   invQuads = 1.0f / static_cast<float>(quads);
 
 		MeshBuilder builder;
-		for (int32_t x = 0; x < subdivisions; x++)
+		for (uint32_t x = 0; x < vertsPerAxis; ++x)
 		{
-			for (int32_t z = 0; z < subdivisions; z++)
+			for (uint32_t z = 0; z < vertsPerAxis; ++z)
 			{
-				const float posX = (static_cast<float>(x) / size) * size - halfSize;
-				const float posZ = (static_cast<float>(z) / size) * size - halfSize;
+				const float u = static_cast<float>(x) * invQuads;
+				const float v = static_cast<float>(z) * invQuads;
+				const float posX = u * size - halfSize;
+				const float posZ = v * size - halfSize;
 
-				builder.AddVertex({posX, 0.0f, posZ}, {1.0f, 1.0f, 1.0f},
-								  {static_cast<float>(x), static_cast<float>(z)}, {0.0f, 1.0f, 0.0f});
+				builder.AddVertex({posX, 0.0f, posZ}, {1.0f, 1.0f, 1.0f}, {u, v}, {0.0f, 1.0f, 0.0f});
 
-				if (x < subdivisions - 1 && z < subdivisions - 1)
+				if (x < quads && z < quads)
 				{
-					const uint32_t topLeft = x * subdivisions + z;
-					const uint32_t topRight = (x + 1) * subdivisions + z;
-					const uint32_t bottomLeft = x * subdivisions + (z + 1);
-					const uint32_t bottomRight = (x + 1) * subdivisions + (z + 1);
+					const uint32_t topLeft = x * vertsPerAxis + z;
+					const uint32_t topRight = (x + 1) * vertsPerAxis + z;
+					const uint32_t bottomLeft = x * vertsPerAxis + (z + 1);
+					const uint32_t bottomRight = (x + 1) * vertsPerAxis + (z + 1);
 
 					builder.AddIndices({topLeft, bottomLeft, topRight, topRight, bottomLeft, bottomRight});
 				}

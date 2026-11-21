@@ -86,17 +86,43 @@ namespace BetterThanNothing
 
 	Renderer::~Renderer()
 	{
-		if (m_renderingDevice)
-			m_renderingDevice->GetDevice()->WaitIdle();
+		if (!m_renderingDevice)
+			return;
+
+		m_renderingDevice->WaitIdle();
+
+		for (const Handle& handle : m_globalDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (const Handle& handle : m_globalUniformBuffer)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyBuffer(handle);
+		}
+		for (const Handle& handle : m_pointLightDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (const Handle& handle : m_pointLightBuffer)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyBuffer(handle);
+		}
 	}
 
-	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI)
+	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
 	{
-		return std::make_unique<Renderer>(renderingDevice, resourceManager, debugUI);
+		return std::make_unique<Renderer>(renderingDevice, resourceManager, editor);
 	}
 
 	void Renderer::RenderFrame(Scene* scene) const
 	{
+		if (!scene || !scene->HasCamera())
+			return;
+
 		const auto imageIndexOpt = m_renderingDevice->BeginFrame();
 		if (!imageIndexOpt)
 			return;
@@ -108,87 +134,74 @@ namespace BetterThanNothing
 		m_renderingDevice->EndFrame(imageIndex);
 	}
 
-	struct RenderObject
-	{
-		ResourceId meshId;
-		ResourceId textureId;
-		Matrix4	   localMatrix;
-	};
-
-	static std::vector<RenderObject> FlattenScene(const Scene* scene)
-	{
-		const auto modelView = scene->GetView<TransformComponent, ModelComponent>();
-
-		std::vector<RenderObject> objects;
-		for (auto [entity, transform, model] : modelView.each())
-		{
-			for (const auto& sceneObj : model.children)
-			{
-				if (!sceneObj.HasComponent<MeshComponent>())
-					continue;
-
-				const auto& meshComp = sceneObj.GetComponent<MeshComponent>();
-
-				objects.emplace_back(RenderObject{.meshId = meshComp.meshId, .textureId = meshComp.textureId, .localMatrix = transform.localTransform});
-			}
-		}
-
-		return objects;
-	}
-
 	void Renderer::RecordCommandBuffer(Scene* scene, const uint32_t imageIndex) const
 	{
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
 		const float	   aspectRatio = m_renderingDevice->GetAspectRatio();
 
-		const auto& directionalLight = scene->GetDirectionalLight();
-		const auto& camera = scene->GetCamera();
+		const Camera* camera = scene->GetCamera();
+
+		// Fetch first directional light in ECS, or fallback to zero intensity
+		Vector3 dirLightDirection = Vector3(0.0f, -1.0f, 0.0f);
+		Vector3 dirLightColor = Vector3::One;
+		float	dirLightIntensity = 0.0f;
+		if (const auto dirLightView = scene->GetView<DirectionalLightComponent>(); dirLightView.begin() != dirLightView.end())
+		{
+			const auto& dirLight = dirLightView.get<DirectionalLightComponent>(*dirLightView.begin());
+			dirLightDirection = dirLight.direction;
+			dirLightColor = dirLight.color;
+			dirLightIntensity = dirLight.intensity;
+		}
+
+		const uint32_t pointLightCount = UploadPointLights(scene, frameIndex);
 
 		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
 		globalUniform->view = camera->GetViewMatrix();
 		globalUniform->projection = camera->GetProjectionMatrix(aspectRatio);
 		globalUniform->cameraPosition = camera->GetPosition();
-		globalUniform->cameraExposure = 0.5f;
-		globalUniform->lightDirection = directionalLight.revDirection;
-		globalUniform->lightColor = directionalLight.color;
-		globalUniform->lightIntensity = directionalLight.intensity;
-		globalUniform->pointLightCount = scene->GetPointLightCount();
-
-		DrawPointLights(scene, frameIndex);
+		globalUniform->cameraExposure = camera->GetExposure();
+		globalUniform->lightDirection = dirLightDirection;
+		globalUniform->lightColor = dirLightColor;
+		globalUniform->lightIntensity = dirLightIntensity;
+		globalUniform->pointLightCount = pointLightCount;
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
-		const auto flattenedScene = FlattenScene(scene);
+		const auto meshView = scene->GetView<TransformComponent, MeshComponent>();
+		m_drawStream->Reset(static_cast<uint32_t>(meshView.size_hint()));
 
-		m_drawStream->Reset(flattenedScene.size());
+		const auto			   defaultPipeline = m_resourceManager->GetPipelineData("Forward::Opaque");
+		const VkPipeline	   vkPipeline = m_renderingDevice->GetPipeline(defaultPipeline->pipeline)->pipeline;
+		const VkPipelineLayout vkPipelineLayout = m_renderingDevice->GetPipelineLayout(defaultPipeline->layoutName)->Handle();
+		const VkDescriptorSet  globalDescSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value;
+		const VkDescriptorSet  pointLightDescSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value;
+		const Vector3		   cameraPos = camera->GetPosition();
 
-		const auto defaultPipeline = m_resourceManager->GetPipelineData("Forward::Opaque");
-
-		for (const auto& [meshId, textureId, localMatrix] : flattenedScene)
+		for (auto [entity, transform, meshComp] : meshView.each())
 		{
-			if (!meshId || !textureId)
+			if (meshComp.meshId == InvalidResourceId || meshComp.textureId == InvalidResourceId)
 				continue;
 
-			const auto meshData = m_resourceManager->GetMeshData(meshId);
-			const auto textureData = m_resourceManager->GetTextureData(textureId);
+			const auto meshData = m_resourceManager->GetMeshData(meshComp.meshId);
+			const auto textureData = m_resourceManager->GetTextureData(meshComp.textureId);
 
 			if (!meshData || !textureData)
 				continue;
 
-			const float distance =
-				Vector3::Distance2(camera->GetPosition(), Vector3(localMatrix.Value()[3][0], localMatrix.Value()[3][1], localMatrix.Value()[3][2]));
+			const float distance = Vector3::Distance2(cameraPos, transform.GetWorldPosition());
 
 			// clang-format off
 			m_drawStream->Draw({
-				.pipeline = m_renderingDevice->GetPipeline(defaultPipeline->pipeline)->pipeline,
-				.pipelineLayout = m_renderingDevice->GetPipelineLayout("Forward")->Handle(),
+				.pipelineHandle = defaultPipeline->pipeline,
+				.pipeline = vkPipeline,
+				.pipelineLayout = vkPipelineLayout,
 				.vertexBuffer = meshData->vertexBuffer,
 				.indexBuffer = meshData->indexBuffer,
 				.indexCount = meshData->indexCount,
-				.globalDescriptorSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value,
+				.globalDescriptorSet = globalDescSet,
 				.samplerDescriptorSet = textureData->descriptorSetHandle,
-				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
-				.transform = localMatrix,
+				.pointLightDescriptorSet = pointLightDescSet,
+				.transform = transform.worldMatrix,
 				.distanceToCamera = distance
 			});
 			// clang-format on
@@ -202,15 +215,41 @@ namespace BetterThanNothing
 		ExecuteEditorPass(scene, imageIndex);
 	}
 
-	void Renderer::DrawPointLights(const Scene* scene, const uint32_t frameIndex) const
+	uint32_t Renderer::UploadPointLights(const Scene* scene, const uint32_t frameIndex) const
 	{
-		const uint32_t count = scene->GetPointLightCount();
+		m_pointLightsScratch.clear();
 
-		if (count == 0)
-			return;
+		const auto lightView = scene->GetView<TransformComponent, PointLightComponent>();
+		for (auto [entity, transform, light] : lightView.each())
+		{
+			if (m_pointLightsScratch.size() >= MAX_LIGHT_COUNT)
+			{
+				if (!m_warnedLightLimit)
+				{
+					Logger::Log<WARNING>("Point light count exceeds MAX_LIGHT_COUNT ({}); extra lights will be ignored", MAX_LIGHT_COUNT);
+					m_warnedLightLimit = true;
+				}
+				break;
+			}
 
-		const auto handle = m_pointLightBuffer.at(frameIndex);
-		m_renderingDevice->CopyDataToBuffer(handle, scene->GetPointLights().data(), count * sizeof(PointLightData));
+			PointLightData data{};
+			data.position = transform.GetWorldPosition();
+			data.color = light.color;
+			data.constant = light.constant;
+			data.linear = light.linear;
+			data.quadratic = light.quadratic;
+			data.intensity = light.intensity;
+			m_pointLightsScratch.push_back(data);
+		}
+
+		const auto count = static_cast<uint32_t>(m_pointLightsScratch.size());
+		if (count > 0)
+		{
+			const auto handle = m_pointLightBuffer.at(frameIndex);
+			m_renderingDevice->CopyDataToBuffer(handle, m_pointLightsScratch.data(), count * sizeof(PointLightData));
+		}
+
+		return count;
 	}
 
 	auto Renderer::CreateGlobalUniformBuffers() -> void
@@ -276,81 +315,86 @@ namespace BetterThanNothing
 	void Renderer::ExecuteForwardPass(const uint32_t imageIndex, const DrawStreamView& drawStream) const
 	{
 		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
+		const auto swapChain = m_renderingDevice->GetSwapChain();
+		const bool useMsaa = m_renderingDevice->GetDevice()->GetMaxMsaaSamples() > VK_SAMPLE_COUNT_1_BIT;
 
 		{
 			std::array<VkImageMemoryBarrier, 3> barriers{};
+			uint32_t							barrierCount = 0;
 
-			barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barriers[0].srcAccessMask = 0;
-			barriers[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barriers[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barriers[0].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[0].image = m_renderingDevice->GetSwapChain()->GetImage(imageIndex);
-			barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barriers[0].subresourceRange.baseMipLevel = 0;
-			barriers[0].subresourceRange.levelCount = 1;
-			barriers[0].subresourceRange.baseArrayLayer = 0;
-			barriers[0].subresourceRange.layerCount = 1;
+			auto& swapchainBarrier = barriers[barrierCount++];
+			swapchainBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			swapchainBarrier.srcAccessMask = 0;
+			swapchainBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			swapchainBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			swapchainBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			swapchainBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			swapchainBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			swapchainBarrier.image = swapChain->GetImage(imageIndex);
+			swapchainBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-			barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barriers[1].srcAccessMask = 0;
-			barriers[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-			barriers[1].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barriers[1].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[1].image = m_renderingDevice->GetSwapChain()->GetColorImage();
-			barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barriers[1].subresourceRange.baseMipLevel = 0;
-			barriers[1].subresourceRange.levelCount = 1;
-			barriers[1].subresourceRange.baseArrayLayer = 0;
-			barriers[1].subresourceRange.layerCount = 1;
+			if (useMsaa)
+			{
+				auto& msaaBarrier = barriers[barrierCount++];
+				msaaBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				msaaBarrier.srcAccessMask = 0;
+				msaaBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+				msaaBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				msaaBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				msaaBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				msaaBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				msaaBarrier.image = swapChain->GetColorImage();
+				msaaBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+			}
 
-			barriers[2].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barriers[2].srcAccessMask = 0;
-			barriers[2].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			barriers[2].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barriers[2].newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[2].image = m_renderingDevice->GetSwapChain()->GetDepthImage();
-			barriers[2].subresourceRange.aspectMask = m_renderingDevice->GetSwapChain()->GetDepthAspectFlags();
-			barriers[2].subresourceRange.baseMipLevel = 0;
-			barriers[2].subresourceRange.levelCount = 1;
-			barriers[2].subresourceRange.baseArrayLayer = 0;
-			barriers[2].subresourceRange.layerCount = 1;
+			auto& depthBarrier = barriers[barrierCount++];
+			depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			depthBarrier.srcAccessMask = 0;
+			depthBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			depthBarrier.image = swapChain->GetDepthImage();
+			depthBarrier.subresourceRange = {swapChain->GetDepthAspectFlags(), 0, 1, 0, 1};
 
 			commandBuffer->PipelineBarrier(
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr,
-				barriers.size(), barriers.data()
+				barrierCount, barriers.data()
 			);
 		}
 
 		VkRenderingAttachmentInfo colorAttachment{};
 		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = m_renderingDevice->GetSwapChain()->GetColorImageView();
 		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-		colorAttachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorAttachment.resolveImageView = m_renderingDevice->GetSwapChain()->GetImageView(imageIndex);
-		colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		if (useMsaa)
+		{
+			colorAttachment.imageView = swapChain->GetColorImageView();
+			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			colorAttachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+			colorAttachment.resolveImageView = swapChain->GetImageView(imageIndex);
+			colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
+		else
+		{
+			colorAttachment.imageView = swapChain->GetImageView(imageIndex);
+			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			colorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+		}
 
 		VkRenderingAttachmentInfo depthAttachment{};
 		depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		depthAttachment.imageView = m_renderingDevice->GetSwapChain()->GetDepthImageView();
+		depthAttachment.imageView = swapChain->GetDepthImageView();
 		depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 		depthAttachment.clearValue.depthStencil = {1.0f, 0};
 
 		VkRenderingInfo renderingInfo{};
 		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.renderArea = {{0, 0}, m_renderingDevice->GetSwapChain()->GetExtent()};
+		renderingInfo.renderArea = {{0, 0}, swapChain->GetExtent()};
 		renderingInfo.layerCount = 1;
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAttachment;
@@ -358,54 +402,58 @@ namespace BetterThanNothing
 
 		commandBuffer->ExecuteRenderPass(
 			[&](RenderingApi::CommandBuffer* cmd) {
-				cmd->SetViewport(0, 0, m_renderingDevice->GetSwapChain()->GetExtent(), 0, 1);
-				cmd->SetScissor(0, 0, m_renderingDevice->GetSwapChain()->GetExtent());
+				cmd->SetViewport(0, 0, swapChain->GetExtent(), 0, 1);
+				cmd->SetScissor(0, 0, swapChain->GetExtent());
 
-				VkPipeline lastPipeline = VK_NULL_HANDLE;
-				Handle	   lastSamplerHandle = {};
-
-				bool boundGlobalDescriptor = false;
-				bool boundPointLightDescriptor = false;
+				VkPipeline		 lastPipeline = VK_NULL_HANDLE;
+				VkPipelineLayout lastPipelineLayout = VK_NULL_HANDLE;
+				Handle			 lastSamplerHandle{};
+				Handle			 lastVertexBuffer{};
+				Handle			 lastIndexBuffer{};
 
 				for (const DrawPacket& drawPacket : drawStream)
 				{
 					if (lastPipeline != drawPacket.pipeline)
 					{
-						commandBuffer->BindPipeline(drawPacket.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+						cmd->BindPipeline(drawPacket.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
 						lastPipeline = drawPacket.pipeline;
 					}
 
-					if (!boundGlobalDescriptor)
+					if (lastPipelineLayout != drawPacket.pipelineLayout)
 					{
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 0, 1, &drawPacket.globalDescriptorSet, 0, nullptr);
-						boundGlobalDescriptor = true;
-					}
-
-					if (!boundPointLightDescriptor)
-					{
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 2, 1, &drawPacket.pointLightDescriptorSet, 0, nullptr);
-						boundPointLightDescriptor = true;
+						cmd->BindDescriptorSets(drawPacket.pipelineLayout, 0, 1, &drawPacket.globalDescriptorSet, 0, nullptr);
+						cmd->BindDescriptorSets(drawPacket.pipelineLayout, 2, 1, &drawPacket.pointLightDescriptorSet, 0, nullptr);
+						lastPipelineLayout = drawPacket.pipelineLayout;
+						lastSamplerHandle = {};
 					}
 
 					if (lastSamplerHandle != drawPacket.samplerDescriptorSet)
 					{
 						const auto samplerDescriptorSet = m_renderingDevice->GetDescriptorSet(drawPacket.samplerDescriptorSet);
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &samplerDescriptorSet->value, 0, nullptr);
+						cmd->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &samplerDescriptorSet->value, 0, nullptr);
 						lastSamplerHandle = drawPacket.samplerDescriptorSet;
 					}
 
 					const DynamicUniformData dynamicUniforms = {drawPacket.transform};
-					commandBuffer->PushConstants(drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData), &dynamicUniforms);
+					cmd->PushConstants(drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData), &dynamicUniforms);
 
-					const auto vertexBuffer = m_renderingDevice->GetBuffer(drawPacket.vertexBuffer);
-					const auto indexBuffer = m_renderingDevice->GetBuffer(drawPacket.indexBuffer);
+					if (lastVertexBuffer != drawPacket.vertexBuffer)
+					{
+						const auto			   vertexBuffer = m_renderingDevice->GetBuffer(drawPacket.vertexBuffer);
+						const VkBuffer		   vertexBuffers[] = {vertexBuffer->value};
+						constexpr VkDeviceSize offsets[] = {0};
+						cmd->BindVertexBuffers(0, 1, vertexBuffers, offsets);
+						lastVertexBuffer = drawPacket.vertexBuffer;
+					}
 
-					const VkBuffer		   vertexBuffers[] = {vertexBuffer->value};
-					constexpr VkDeviceSize offsets[] = {0};
-					commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-					commandBuffer->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
+					if (lastIndexBuffer != drawPacket.indexBuffer)
+					{
+						const auto indexBuffer = m_renderingDevice->GetBuffer(drawPacket.indexBuffer);
+						cmd->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
+						lastIndexBuffer = drawPacket.indexBuffer;
+					}
 
-					commandBuffer->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
+					cmd->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
 				}
 			},
 			renderingInfo
@@ -418,44 +466,43 @@ namespace BetterThanNothing
 		const auto swapChain = m_renderingDevice->GetSwapChain();
 
 #ifndef NDEBUG
-		m_editor->RenderPanels(scene);
-#endif
-
+		if (m_editor)
 		{
-			VkImageMemoryBarrier barrier{};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.image = swapChain->GetImage(imageIndex);
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = 1;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 1;
+			m_editor->RenderPanels(scene);
 
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+			{
+				VkImageMemoryBarrier barrier{};
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.image = swapChain->GetImage(imageIndex);
+				barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+				commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+			}
+
+			VkRenderingAttachmentInfo colorAttachment = {};
+			colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+			colorAttachment.imageView = swapChain->GetImageView(imageIndex);
+			colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+			VkRenderingInfo renderingInfo = {};
+			renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+			renderingInfo.renderArea = {{0, 0}, swapChain->GetExtent()};
+			renderingInfo.layerCount = 1;
+			renderingInfo.colorAttachmentCount = 1;
+			renderingInfo.pColorAttachments = &colorAttachment;
+
+			commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) { m_editor->RenderDrawData(cmd); }, renderingInfo);
 		}
-
-#ifndef NDEBUG
-		VkRenderingAttachmentInfo colorAttachment = {};
-		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = swapChain->GetImageView(imageIndex);
-		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-		VkRenderingInfo renderingInfo = {};
-		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.renderArea = {{0, 0}, swapChain->GetExtent()};
-		renderingInfo.layerCount = 1;
-		renderingInfo.colorAttachmentCount = 1;
-		renderingInfo.pColorAttachments = &colorAttachment;
-
-		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) { m_editor->RenderDrawData(cmd); }, renderingInfo);
+#else
+		(void) scene;
 #endif
 
 		{
@@ -468,11 +515,7 @@ namespace BetterThanNothing
 			presentationBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			presentationBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			presentationBarrier.image = swapChain->GetImage(imageIndex);
-			presentationBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			presentationBarrier.subresourceRange.baseMipLevel = 0;
-			presentationBarrier.subresourceRange.levelCount = 1;
-			presentationBarrier.subresourceRange.baseArrayLayer = 0;
-			presentationBarrier.subresourceRange.layerCount = 1;
+			presentationBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
 			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
 		}

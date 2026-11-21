@@ -64,7 +64,7 @@ namespace BetterThanNothing::RenderingApi
 
 		m_vendorName = GetVendorById(deviceProperties.vendorID);
 		m_deviceName = deviceProperties.deviceName;
-		m_apiVersion = std::to_string(deviceProperties.apiVersion);
+		m_apiVersion = std::format("{}.{}.{}", VK_API_VERSION_MAJOR(deviceProperties.apiVersion), VK_API_VERSION_MINOR(deviceProperties.apiVersion), VK_API_VERSION_PATCH(deviceProperties.apiVersion));
 		m_minUniformBufferOffsetAlignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
 		m_maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 		m_maxTexture2DSize = deviceProperties.limits.maxImageDimension2D;
@@ -172,12 +172,13 @@ namespace BetterThanNothing::RenderingApi
 		VkFormatProperties props;
 		vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &props);
 
-		return props.optimalTilingFeatures & features;
+		return (props.optimalTilingFeatures & features) == features;
 	}
 
 	void Device::WaitIdle() const
 	{
-		vkDeviceWaitIdle(m_device);
+		if (m_device != VK_NULL_HANDLE)
+			vkDeviceWaitIdle(m_device);
 	}
 
 	VkResult Device::CreateImageView(const VkImageViewCreateInfo& createInfo, VkImageView* imageView) const
@@ -187,7 +188,8 @@ namespace BetterThanNothing::RenderingApi
 
 	void Device::DestroyImageView(VkImageView imageView) const
 	{
-		vkDestroyImageView(m_device, imageView, nullptr);
+		if (imageView != VK_NULL_HANDLE)
+			vkDestroyImageView(m_device, imageView, nullptr);
 	}
 
 	VkResult Device::CreateSampler(const VkSamplerCreateInfo& samplerCreateInfo, VkSampler* sampler) const
@@ -197,7 +199,8 @@ namespace BetterThanNothing::RenderingApi
 
 	void Device::DestroySampler(VkSampler sampler) const
 	{
-		vkDestroySampler(m_device, sampler, nullptr);
+		if (sampler != VK_NULL_HANDLE)
+			vkDestroySampler(m_device, sampler, nullptr);
 	}
 
 	VkResult Device::CreateShaderModule(const VkShaderModuleCreateInfo& createInfo, VkShaderModule* shaderModule) const
@@ -207,7 +210,8 @@ namespace BetterThanNothing::RenderingApi
 
 	void Device::DestroyShaderModule(VkShaderModule shaderModule) const
 	{
-		vkDestroyShaderModule(m_device, shaderModule, nullptr);
+		if (shaderModule != VK_NULL_HANDLE)
+			vkDestroyShaderModule(m_device, shaderModule, nullptr);
 	}
 
 	bool Device::CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept
@@ -304,20 +308,47 @@ namespace BetterThanNothing::RenderingApi
 			swapchainSupported = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 		}
 
-		VkPhysicalDeviceFeatures supportedFeatures;
-		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+		VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures{};
+		dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
 
-		return queueFamiliesSupported && extensionsSupported && swapchainSupported && supportedFeatures.samplerAnisotropy;
+		VkPhysicalDeviceFeatures2 supportedFeatures2{};
+		supportedFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		supportedFeatures2.pNext = &dynamicRenderingFeatures;
+		vkGetPhysicalDeviceFeatures2(device, &supportedFeatures2);
+
+		return queueFamiliesSupported && extensionsSupported && swapchainSupported && supportedFeatures2.features.samplerAnisotropy && supportedFeatures2.features.sampleRateShading && dynamicRenderingFeatures.dynamicRendering;
 	}
 
 	VkPhysicalDevice Device::FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const
 	{
+		VkPhysicalDevice bestDevice = VK_NULL_HANDLE;
+		uint32_t		 bestScore = 0;
+
 		for (const auto& device : devices)
 		{
-			if (IsDeviceSuitable(device))
-				return device;
+			if (!IsDeviceSuitable(device))
+				continue;
+
+			VkPhysicalDeviceProperties props{};
+			vkGetPhysicalDeviceProperties(device, &props);
+
+			uint32_t score = 1;
+			if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+				score += 1000;
+			else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+				score += 100;
+
+			if (score > bestScore)
+			{
+				bestScore = score;
+				bestDevice = device;
+			}
 		}
-		throw std::runtime_error("Failed to find a suitable GPU");
+
+		if (bestDevice == VK_NULL_HANDLE)
+			throw std::runtime_error("Failed to find a suitable GPU");
+
+		return bestDevice;
 	}
 
 	std::string Device::GetVendorById(uint32_t vendorId)

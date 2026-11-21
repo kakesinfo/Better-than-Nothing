@@ -23,6 +23,7 @@
 #include "ResourceManager/PipelineBlueprint.hpp"
 
 #include <Common/Logger.hpp>
+#include <Data/Graphics/MeshData.hpp>
 #include <Data/Graphics/VertexData.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <RenderingDevice/SamplerDescription.hpp>
@@ -38,7 +39,10 @@ namespace BetterThanNothing
 		m_importer = std::make_unique<ResourceImporter>();
 	}
 
-	ResourceManager::~ResourceManager() = default;
+	ResourceManager::~ResourceManager()
+	{
+		Clear();
+	}
 
 	std::unique_ptr<ResourceManager> ResourceManager::Create(RenderingDevice* renderingDevice)
 	{
@@ -47,8 +51,6 @@ namespace BetterThanNothing
 
 	ResourceId ResourceManager::GenerateUniqueResourceId()
 	{
-		static ResourceId lastResourceId = 0;
-
 		if (!m_freeIds.empty())
 		{
 			const auto resourceId = m_freeIds.back();
@@ -56,59 +58,140 @@ namespace BetterThanNothing
 			return resourceId;
 		}
 
-		return ++lastResourceId;
+		return ++m_nextResourceId;
+	}
+
+	void ResourceManager::Clear()
+	{
+		if (!m_renderingDevice)
+			return;
+
+		m_renderingDevice->WaitIdle();
+
+		for (const auto& [id, pipeline] : m_pipelines)
+		{
+			if (pipeline->pipeline.IsValid())
+				m_renderingDevice->DestroyPipeline(pipeline->pipeline);
+		}
+		m_pipelines.clear();
+		m_pipelinesLUT.clear();
+
+		for (const auto& [id, shader] : m_shaders)
+		{
+			if (shader->module.IsValid())
+				m_renderingDevice->DestroyShader(shader->module);
+		}
+		m_shaders.clear();
+		m_shadersLUT.clear();
+
+		for (const auto& [id, mesh] : m_meshes)
+		{
+			if (mesh->vertexBuffer.IsValid())
+				m_renderingDevice->DestroyBuffer(mesh->vertexBuffer);
+			if (mesh->indexBuffer.IsValid())
+				m_renderingDevice->DestroyBuffer(mesh->indexBuffer);
+		}
+		m_meshes.clear();
+
+		for (const auto& [id, texture] : m_textures)
+		{
+			if (texture->descriptorSetHandle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(texture->descriptorSetHandle);
+			if (texture->textureHandle.IsValid())
+				m_renderingDevice->DestroyTexture(texture->textureHandle);
+		}
+		m_textures.clear();
+		m_texturesLUT.clear();
+
+		m_models.clear();
+		m_modelsLUT.clear();
+		m_freeIds.clear();
+	}
+
+	ResourceId ResourceManager::CreateMesh(const MeshData& meshData)
+	{
+		if (meshData.vertices.empty() || meshData.indices.empty())
+			throw std::runtime_error("Cannot create GPU mesh from empty MeshData");
+
+		const ResourceId meshId = GenerateUniqueResourceId();
+		auto			 meshGpuData = std::make_unique<MeshResourceCache>();
+
+		const size_t vertexBufferSize = sizeof(meshData.vertices[0]) * meshData.vertices.size();
+		meshGpuData->vertexBuffer = m_renderingDevice->CreateVertexBuffer(meshData.vertices.data(), vertexBufferSize);
+		meshGpuData->vertexCount = static_cast<uint32_t>(meshData.vertices.size());
+
+		const size_t indexBufferSize = sizeof(meshData.indices[0]) * meshData.indices.size();
+		meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(meshData.indices.data(), indexBufferSize);
+		meshGpuData->indexCount = static_cast<uint32_t>(meshData.indices.size());
+
+		m_meshes[meshId] = std::move(meshGpuData);
+		return meshId;
 	}
 
 	ResourceId ResourceManager::LoadModel(const std::string& path, bool preTransform)
 	{
-		if (const auto it = m_modelsLUT.find(path); it != m_modelsLUT.end())
+		const std::string cacheKey = path + (preTransform ? "|pre" : "|raw");
+		if (const auto it = m_modelsLUT.find(cacheKey); it != m_modelsLUT.end())
 			return it->second;
 
 		const ImportedModel importedModel = m_importer->ImportModel(path, preTransform);
 
 		ModelResource model;
 		model.id = GenerateUniqueResourceId();
+		model.meshes.reserve(importedModel.meshes.size());
 
-		for (auto& mesh : importedModel.meshes)
+		for (const auto& mesh : importedModel.meshes)
 		{
 			MeshResource meshResource{};
 
 			if (!mesh.vertices.empty() && !mesh.indices.empty())
 			{
-				auto meshId = GenerateUniqueResourceId();
-				auto meshGpuData = std::make_unique<MeshResourceCache>();
+				const ResourceId meshId = GenerateUniqueResourceId();
+				auto			 meshGpuData = std::make_unique<MeshResourceCache>();
 
-				const uint32_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
-				const void*	   vertexBufferData = mesh.vertices.data();
-				meshGpuData->vertexBuffer = m_renderingDevice->CreateVertexBuffer(vertexBufferData, vertexBufferSize);
+				const size_t vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
+				meshGpuData->vertexBuffer = m_renderingDevice->CreateVertexBuffer(mesh.vertices.data(), vertexBufferSize);
 				meshGpuData->vertexCount = static_cast<uint32_t>(mesh.vertices.size());
 
-				const uint32_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
-				const void*	   indexBufferData = mesh.indices.data();
-				meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(indexBufferData, indexBufferSize);
+				const size_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
+				meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(mesh.indices.data(), indexBufferSize);
 				meshGpuData->indexCount = static_cast<uint32_t>(mesh.indices.size());
 
 				m_meshes[meshId] = std::move(meshGpuData);
 				meshResource.id = meshId;
 			}
 
-			if (mesh.materialId.has_value())
+			std::string diffusePath;
+			if (mesh.materialId.has_value() && mesh.materialId.value() < importedModel.materials.size())
 			{
-				const ImportedMaterial material = importedModel.materials.at(mesh.materialId.value());
-
+				const ImportedMaterial& material = importedModel.materials[mesh.materialId.value()];
 				if (material.diffuseTexturePath.has_value())
-					meshResource.textureId = LoadTexture(material.diffuseTexturePath.value());
+					diffusePath = material.diffuseTexturePath.value();
 			}
 
+			meshResource.textureId = LoadTexture(diffusePath);
 			model.meshes.push_back(meshResource);
 		}
 
-		m_modelsLUT[path] = model.id;
-		m_models[model.id] = model;
+		model.nodes.reserve(importedModel.nodes.size());
+		for (const auto& importedNode : importedModel.nodes)
+		{
+			ModelNodeResource node{};
+			node.name = importedNode.name;
+			node.localTransform = importedNode.transform;
+			node.meshIndices = importedNode.meshes;
+			node.children = importedNode.children;
+			model.nodes.push_back(std::move(node));
+		}
+		model.rootNodes = importedModel.rootNodes;
 
-		Logger::Log<INFO>("MeshResourceCache created and cached for {} submeshes", model.meshes.size());
+		m_modelsLUT[cacheKey] = model.id;
+		const ResourceId modelId = model.id;
+		m_models[modelId] = std::move(model);
 
-		return model.id;
+		Logger::Log<INFO>("ModelResource cached: {} ({} submeshes, {} nodes)", path, m_models[modelId].meshes.size(), m_models[modelId].nodes.size());
+
+		return modelId;
 	}
 
 	ResourceId ResourceManager::LoadTexture(const std::string& path)
@@ -123,20 +206,20 @@ namespace BetterThanNothing
 		ImportedTexture importedTexture = m_importer->ImportTexture(texturePath);
 
 		auto gpuData = std::make_unique<TextureResourceCache>();
-		gpuData->channels = importedTexture.channels;
-		gpuData->size = importedTexture.size;
-		gpuData->width = importedTexture.width;
-		gpuData->height = importedTexture.height;
+		gpuData->channels = static_cast<int32_t>(importedTexture.channels);
+		gpuData->size = static_cast<int32_t>(importedTexture.size);
+		gpuData->width = static_cast<int32_t>(importedTexture.width);
+		gpuData->height = static_cast<int32_t>(importedTexture.height);
 
 		TextureFromDataDescription desc{};
 		desc.data = importedTexture.data.data();
-		desc.dataSize = gpuData->size;
-		desc.width = gpuData->width;
-		desc.height = gpuData->height;
-		desc.channels = gpuData->channels;
+		desc.dataSize = importedTexture.size;
+		desc.width = importedTexture.width;
+		desc.height = importedTexture.height;
+		desc.channels = importedTexture.channels;
 
 		gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
-		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{}); // Default sampler description
+		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{});
 		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle, "Textures");
 
 		const auto textureId = GenerateUniqueResourceId();
@@ -158,7 +241,7 @@ namespace BetterThanNothing
 		auto gpuData = std::make_unique<ShaderResourceCache>();
 		gpuData->name = std::filesystem::path(path).filename().string();
 		gpuData->type = importedShader.type;
-		gpuData->module = m_renderingDevice->CreateShader({gpuData->name, importedShader.type, importedShader.data.data()});
+		gpuData->module = m_renderingDevice->CreateShader({gpuData->name, importedShader.type, std::move(importedShader.spirv)});
 
 		const auto shaderId = GenerateUniqueResourceId();
 		m_shaders[shaderId] = std::move(gpuData);
@@ -177,14 +260,12 @@ namespace BetterThanNothing
 		PipelineBlueprint blueprint;
 		callback(&blueprint);
 
-		PipelineDescription desc {};
+		PipelineDescription desc{};
 		desc.vertexLayout = blueprint.GetVertexLayout();
 		desc.layoutName = blueprint.GetPipelineLayout();
 		desc.shaders.reserve(blueprint.GetShaders().size());
 		for (const auto& shaderId : blueprint.GetShaders())
 			desc.shaders.push_back(GetShaderData(shaderId)->module);
-
-		// TODO: add more stuff to description using blueprint
 
 		auto cache = std::make_unique<PipelineResourceCache>();
 		cache->name = name;
@@ -201,38 +282,43 @@ namespace BetterThanNothing
 		return pipelineId;
 	}
 
-	MeshResourceCache* ResourceManager::GetMeshData(ResourceId id)
+	MeshResourceCache* ResourceManager::GetMeshData(const ResourceId id) const
 	{
-		if (!m_meshes.contains(id))
+		const auto it = m_meshes.find(id);
+		if (it == m_meshes.end())
 			throw std::runtime_error("No MeshResourceCache for ResourceId: " + std::to_string(id));
-		return m_meshes[id].get();
+		return it->second.get();
 	}
 
-	TextureResourceCache* ResourceManager::GetTextureData(const ResourceId id)
+	TextureResourceCache* ResourceManager::GetTextureData(const ResourceId id) const
 	{
-		if (!m_textures.contains(id))
+		const auto it = m_textures.find(id);
+		if (it == m_textures.end())
 			throw std::runtime_error("No TextureResourceCache for ResourceId: " + std::to_string(id));
-		return m_textures[id].get();
+		return it->second.get();
 	}
 
-	ModelResource* ResourceManager::GetModelData(const ResourceId id)
+	const ModelResource* ResourceManager::GetModelData(const ResourceId id) const
 	{
-		if (!m_models.contains(id))
+		const auto it = m_models.find(id);
+		if (it == m_models.end())
 			throw std::runtime_error("No ModelResource for ResourceId: " + std::to_string(id));
-		return &m_models[id];
+		return &it->second;
 	}
 
-	ShaderResourceCache* ResourceManager::GetShaderData(ResourceId id)
+	ShaderResourceCache* ResourceManager::GetShaderData(const ResourceId id) const
 	{
-		if (!m_shaders.contains(id))
+		const auto it = m_shaders.find(id);
+		if (it == m_shaders.end())
 			throw std::runtime_error("No ShaderResourceCache for ResourceId: " + std::to_string(id));
-		return m_shaders[id].get();
+		return it->second.get();
 	}
 
-	PipelineResourceCache* ResourceManager::GetPipelineData(const std::string& name)
+	PipelineResourceCache* ResourceManager::GetPipelineData(const std::string& name) const
 	{
-		if (!m_pipelinesLUT.contains(name))
-			throw std::runtime_error("No PipelineResourceCache for ResourceId: " + name);
-		return m_pipelines[m_pipelinesLUT[name]].get();
+		const auto lutIt = m_pipelinesLUT.find(name);
+		if (lutIt == m_pipelinesLUT.end())
+			throw std::runtime_error("No PipelineResourceCache for name: " + name);
+		return m_pipelines.at(lutIt->second).get();
 	}
 }

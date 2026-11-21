@@ -28,9 +28,9 @@ namespace BetterThanNothing::RenderingApi
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(createInfo.descriptorLayouts.size());
-		pipelineLayoutInfo.pSetLayouts = createInfo.descriptorLayouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pPushConstantRanges = createInfo.pushConstants.data();
+		pipelineLayoutInfo.pSetLayouts = createInfo.descriptorLayouts.empty() ? nullptr : createInfo.descriptorLayouts.data();
+		pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(createInfo.pushConstants.size());
+		pipelineLayoutInfo.pPushConstantRanges = createInfo.pushConstants.empty() ? nullptr : createInfo.pushConstants.data();
 
 		if (vkCreatePipelineLayout(m_device->Handle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create pipeline layout");

@@ -35,25 +35,22 @@ namespace BetterThanNothing
 	{
 		(void) scene;
 
-		static auto updateTimed = 0.0f;
-		static auto cachedMetrics = Metrics::GetLastFrameMetrics();
-
-		updateTimed += ImGui::GetIO().DeltaTime;
-		if (updateTimed > 0.1f)
+		m_updateTimer += ImGui::GetIO().DeltaTime;
+		if (m_updateTimer > 0.1f)
 		{
-			cachedMetrics = Metrics::GetLastFrameMetrics();
-			updateTimed = 0.0f;
+			m_cachedMetrics = Metrics::GetLastFrameMetrics();
+			m_updateTimer = 0.0f;
 		}
 
 		ImGui::SeparatorText("Rendering");
-		ImGui::Text("Vertices: %d", cachedMetrics.verticesRendered);
-		ImGui::Text("Draw calls: %d", cachedMetrics.drawCalls);
-		ImGui::Text("Total draw calls: %zu", cachedMetrics.totalDrawCalls);
+		ImGui::Text("Vertices: %u", m_cachedMetrics.verticesRendered);
+		ImGui::Text("Draw calls: %u", m_cachedMetrics.drawCalls);
+		ImGui::Text("Total draw calls: %llu", static_cast<unsigned long long>(m_cachedMetrics.totalDrawCalls));
 		ImGui::SeparatorText("Frames");
-		ImGui::Text("Frame count: %d", cachedMetrics.frameCount);
-		ImGui::Text("Frame time: %.2f ms", cachedMetrics.frameTime);
-		ImGui::Text("FPS: %d", cachedMetrics.fps);
+		ImGui::Text("Frame count: %u", m_cachedMetrics.frameCount);
+		ImGui::Text("Frame time: %.2f ms", m_cachedMetrics.frameTime);
+		ImGui::Text("FPS: %d", m_cachedMetrics.fps);
 		ImGui::SeparatorText("Camera");
-		ImGui::Text("Pos: x=%.1f y=%.1f z=%.1f", cachedMetrics.cameraX, cachedMetrics.cameraY, cachedMetrics.cameraZ);
+		ImGui::Text("Pos: x=%.1f y=%.1f z=%.1f", m_cachedMetrics.cameraX, m_cachedMetrics.cameraY, m_cachedMetrics.cameraZ);
 	}
 }

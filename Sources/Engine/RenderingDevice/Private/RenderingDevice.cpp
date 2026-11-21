@@ -30,9 +30,6 @@
 #include <RenderingApi.hpp>
 #include <cmath>
 
-
-#include <glslang/Include/glslang_c_interface.h>
-
 namespace BetterThanNothing
 {
 	RenderingDevice::RenderingDevice(const RenderingDeviceCreateInfo& createInfo) : m_createInfo(createInfo)
@@ -80,52 +77,42 @@ namespace BetterThanNothing
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();
-
-		glslang_initialize_process();
 	}
 
 	RenderingDevice::~RenderingDevice()
 	{
 		m_self->device->WaitIdle();
 
-		glslang_finalize_process();
+		m_self->pipelines.ForEachActive([&](const uint32_t idx, RenderingApi::Pipeline& pipeline) {
+			if (pipeline.pipeline != VK_NULL_HANDLE)
+				vkDestroyPipeline(m_self->device->Handle(), pipeline.pipeline, nullptr);
+			m_self->pipelines.Destroy(idx);
+		});
 
-		for (uint32_t i = 0; i < m_self->pipelines.Size(); i++)
-		{
-			vkDestroyPipeline(m_self->device->Handle(), m_self->pipelines.Get(i)->pipeline, nullptr);
-			m_self->pipelines.Destroy(i);
-		}
-
-		for (uint32_t i = 0; i < m_self->shaders.Size(); i++)
-		{
-			m_self->device->DestroyShaderModule(m_self->shaders.Get(i)->module);
-			m_self->shaders.Destroy(i);
-		}
+		m_self->shaders.ForEachActive([&](const uint32_t idx, RenderingApi::Shader& shader) {
+			m_self->device->DestroyShaderModule(shader.module);
+			m_self->shaders.Destroy(idx);
+		});
 
 		m_self->pipelineLayouts.clear();
 
 		m_self->samplersLUT.clear();
-		for (uint32_t i = 0; i < m_self->samplers.Size(); i++)
-		{
-			m_self->device->DestroySampler(m_self->samplers.Get(i)->value);
-			m_self->samplers.Destroy(i);
-		}
+		m_self->samplers.ForEachActive([&](const uint32_t idx, RenderingApi::Sampler& sampler) {
+			m_self->device->DestroySampler(sampler.value);
+			m_self->samplers.Destroy(idx);
+		});
 
-		for (uint32_t i = 0; i < m_self->buffers.Size(); i++)
-		{
-			const auto buffer = m_self->buffers.Get(i);
-			m_self->allocator->DestroyBuffer(buffer->value, buffer->allocation);
-			m_self->buffers.Destroy(i);
-		}
+		m_self->buffers.ForEachActive([&](const uint32_t idx, RenderingApi::Buffer& buffer) {
+			m_self->allocator->DestroyBuffer(buffer.value, buffer.allocation);
+			m_self->buffers.Destroy(idx);
+		});
 
-		for (uint32_t i = 0; i < m_self->textures.Size(); i++)
-		{
-			const auto texture = m_self->textures.Get(i);
-			m_self->device->DestroyImageView(texture->defaultView);
-			m_self->allocator->DestroyImage(texture->value, texture->allocation);
-			m_self->textures.Destroy(i);
-		}
-	};
+		m_self->textures.ForEachActive([&](const uint32_t idx, RenderingApi::Texture& texture) {
+			m_self->device->DestroyImageView(texture.defaultView);
+			m_self->allocator->DestroyImage(texture.value, texture.allocation);
+			m_self->textures.Destroy(idx);
+		});
+	}
 
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
 	{
@@ -163,12 +150,13 @@ namespace BetterThanNothing
 		m_self->descriptorLayouts[name] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
 	}
 
-	[[nodiscard]] RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& name)
+	[[nodiscard]] RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& name) const
 	{
-		if (!m_self->descriptorLayouts.contains(name))
-			throw std::runtime_error("Descriptor layout does not exist");
+		const auto it = m_self->descriptorLayouts.find(name);
+		if (it == m_self->descriptorLayouts.end())
+			throw std::runtime_error("Descriptor layout does not exist: " + name);
 
-		return m_self->descriptorLayouts[name].get();
+		return it->second.get();
 	}
 
 	void RenderingDevice::CreatePipelineLayout(const std::string& name, const std::function<void(PipelineLayoutBlueprint*)>& callback)
@@ -179,20 +167,28 @@ namespace BetterThanNothing
 		m_self->pipelineLayouts[name] = blueprint.Build();
 	}
 
-	RenderingApi::PipelineLayout* RenderingDevice::GetPipelineLayout(const std::string& name)
+	RenderingApi::PipelineLayout* RenderingDevice::GetPipelineLayout(const std::string& name) const
 	{
-		if (!m_self->pipelineLayouts.contains(name))
-			throw std::runtime_error("Pipeline layout does not exist");
+		const auto it = m_self->pipelineLayouts.find(name);
+		if (it == m_self->pipelineLayouts.end())
+			throw std::runtime_error("Pipeline layout does not exist: " + name);
 
-		return m_self->pipelineLayouts[name].get();
+		return it->second.get();
 	}
 
 	std::optional<uint32_t> RenderingDevice::BeginFrame()
 	{
 		const auto [windowWidth, windowHeight] = m_createInfo.platform->GetWindowSize();
 
-		if (windowWidth == 0 || windowHeight == 0)
+		if (windowWidth <= 0 || windowHeight <= 0)
 			return std::nullopt;
+
+		if (m_createInfo.platform->IsWindowResized())
+		{
+			m_createInfo.platform->SetWindowResized(false);
+			m_self->device->WaitIdle();
+			m_self->swapChain->RecreateSwapChain(static_cast<uint32_t>(windowWidth), static_cast<uint32_t>(windowHeight));
+		}
 
 		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();
 		FlushDescriptorSetUpdateRequests();
@@ -201,7 +197,7 @@ namespace BetterThanNothing
 		if (!acquireResult.has_value())
 		{
 			m_self->device->WaitIdle();
-			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
+			m_self->swapChain->RecreateSwapChain(static_cast<uint32_t>(windowWidth), static_cast<uint32_t>(windowHeight));
 			return std::nullopt;
 		}
 
@@ -253,8 +249,11 @@ namespace BetterThanNothing
 		{
 			const auto [windowWidth, windowHeight] = m_createInfo.platform->GetWindowSize();
 			m_createInfo.platform->SetWindowResized(false);
-			m_self->device->WaitIdle();
-			m_self->swapChain->RecreateSwapChain(windowWidth, windowHeight);
+			if (windowWidth > 0 && windowHeight > 0)
+			{
+				m_self->device->WaitIdle();
+				m_self->swapChain->RecreateSwapChain(static_cast<uint32_t>(windowWidth), static_cast<uint32_t>(windowHeight));
+			}
 		}
 		else if (presentResult != VK_SUCCESS)
 			throw std::runtime_error("failed to present swap chain image!");
@@ -305,12 +304,5 @@ namespace BetterThanNothing
 	auto RenderingDevice::GetAspectRatio() const -> float
 	{
 		return m_self->swapChain->GetAspectRatio();
-	}
-
-	RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& layoutType) const
-	{
-		if (!m_self->descriptorLayouts.contains(layoutType))
-			throw std::runtime_error("Cannot find descriptorSetLayout");
-		return m_self->descriptorLayouts.at(layoutType).get();
 	}
 }

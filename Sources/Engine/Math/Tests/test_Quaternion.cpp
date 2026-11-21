@@ -26,7 +26,7 @@ TEST(Quaternion, Create_Default)
 {
 	const Quaternion quat;
 
-	EXPECT_FLOAT_EQ(quat.GetW(), 0.0f);
+	EXPECT_FLOAT_EQ(quat.GetW(), 1.0f);
 	EXPECT_FLOAT_EQ(quat.GetX(), 0.0f);
 	EXPECT_FLOAT_EQ(quat.GetY(), 0.0f);
 	EXPECT_FLOAT_EQ(quat.GetZ(), 0.0f);

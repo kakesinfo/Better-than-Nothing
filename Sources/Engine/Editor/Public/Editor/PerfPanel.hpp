@@ -19,17 +19,26 @@
 #pragma once
 
 #include "Panel.hpp"
+#include <Common/Metrics.hpp>
+#include <array>
 
 namespace BetterThanNothing
 {
 	class Scene;
 
-	class PerfPanel final: public Panel
+	class PerfPanel final : public Panel
 	{
 	public:
 		explicit PerfPanel();
 		~PerfPanel() override = default;
 
 		void OnRender(Scene* scene) override;
+
+	private:
+		static constexpr int		   kHistorySize = 100;
+		std::array<float, kHistorySize> m_fpsHistory{};
+		int								m_historyOffset = 0;
+		float							m_updateTimer = 0.0f;
+		RenderMetricsData				m_cachedMetrics{};
 	};
 }

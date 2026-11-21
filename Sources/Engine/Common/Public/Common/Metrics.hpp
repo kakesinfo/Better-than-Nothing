@@ -31,12 +31,12 @@ namespace BetterThanNothing
 		uint32_t verticesRendered = 0;
 		uint64_t totalDrawCalls = 0;
 		uint64_t totalVerticesRendered = 0;
-		float	 frameTime = 0;
+		float	 frameTime = 0.0f;
 		int		 fps = 0;
 
-		float cameraX;
-		float cameraY;
-		float cameraZ;
+		float cameraX = 0.0f;
+		float cameraY = 0.0f;
+		float cameraZ = 0.0f;
 	};
 
 	class Metrics
@@ -50,7 +50,10 @@ namespace BetterThanNothing
 
 		static void SetFrameTime(const float frameTime) { s_currentFrameMetrics.frameTime = frameTime; }
 
-		static void SetFps(const float fps) { s_currentFrameMetrics.fps = static_cast<int>(std::round(fps)); }
+		static void SetFps(const float fps)
+		{
+			s_currentFrameMetrics.fps = std::isfinite(fps) ? static_cast<int>(std::round(fps)) : 0;
+		}
 
 		static void SetCameraCoordinates(const float x, const float y, const float z)
 		{
@@ -61,21 +64,18 @@ namespace BetterThanNothing
 
 		static void BeginRecording()
 		{
-			std::lock_guard lock(s_mutex);
-
 			s_currentFrameMetrics.drawCalls = 0;
 			s_currentFrameMetrics.verticesRendered = 0;
-			s_currentFrameMetrics.frameTime = 0;
+			s_currentFrameMetrics.frameTime = 0.0f;
 		}
 
 		static void EndRecording()
 		{
-			std::lock_guard lock(s_mutex);
-
 			s_currentFrameMetrics.frameCount++;
 			s_currentFrameMetrics.totalDrawCalls += s_currentFrameMetrics.drawCalls;
 			s_currentFrameMetrics.totalVerticesRendered += s_currentFrameMetrics.verticesRendered;
 
+			std::lock_guard lock(s_mutex);
 			s_lastFrameMetrics = s_currentFrameMetrics;
 		}
 

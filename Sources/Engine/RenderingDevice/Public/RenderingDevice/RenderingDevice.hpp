@@ -79,10 +79,10 @@ namespace BetterThanNothing
 		[[nodiscard]] static std::unique_ptr<RenderingDevice> Create(const RenderingDeviceCreateInfo& createInfo);
 
 		void CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, VkShaderStageFlags stageFlags);
-		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& name);
+		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& name) const;
 
 		void CreatePipelineLayout(const std::string& name, const std::function<void(PipelineLayoutBlueprint*)>& callback);
-		[[nodiscard]] RenderingApi::PipelineLayout* GetPipelineLayout(const std::string& name);
+		[[nodiscard]] RenderingApi::PipelineLayout* GetPipelineLayout(const std::string& name) const;
 
 		Handle				   GetOrCreateTextureSampler(const SamplerDescription& desc);
 		void				   DestroyTextureSampler(const Handle& handle);
@@ -102,8 +102,7 @@ namespace BetterThanNothing
 	private:
 		bool Internal_CreateTextureImage(const TextureImageDescription& desc);
 		bool Internal_CreateTextureImageView(const TextureImageViewDescription& desc);
-		void Internal_CopyDataToTextureImage(const CopyDataToTextureImageDescription& desc);
-		bool Internal_CreateTextureMipmaps(const Handle& destination);
+		void Internal_UploadTextureAndGenerateMipmaps(const CopyDataToTextureImageDescription& desc, bool generateMipmaps);
 
 	public:
 		Handle				   CreateTextureFromData(const TextureFromDataDescription& desc);
@@ -116,7 +115,7 @@ namespace BetterThanNothing
 	public:
 		[[nodiscard]] Handle CreateDescriptorSet(std::string_view layoutType);
 		[[nodiscard]] Handle CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, std::string_view layoutType);
-		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& uniformBufferHandle, size_t size, std::string_view layoutType);
+		[[nodiscard]] Handle CreateStorageBufferDescriptorSet(const Handle& storageBufferHandle, size_t size, std::string_view layoutType);
 		[[nodiscard]] Handle CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, std::string_view layoutType);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void						 FlushDescriptorSetUpdateRequests();
@@ -155,8 +154,6 @@ namespace BetterThanNothing
 
 		[[nodiscard]] auto GetMaxFramesInFlight() const -> uint32_t;
 		[[nodiscard]] auto GetAspectRatio() const -> float;
-
-		[[nodiscard]] RenderingApi::DescriptorSetLayout* GetDescriptorSetLayout(const std::string& layoutType) const;
 
 	private:
 		RenderingDeviceCreateInfo				  m_createInfo;

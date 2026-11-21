@@ -30,45 +30,129 @@ namespace BetterThanNothing
 	ScenePanel::ScenePanel() : Panel("Scene Panel")
 	{
 		SetPosition(0, 250);
-		SetSize(200, 400);
+		SetSize(280, 450);
 	}
 
-	static void DrawEntityNode(const SceneObject& obj)
+	void ScenePanel::DrawEntityNode(Scene* scene, const entt::entity entity)
 	{
-		std::string name = "SceneObject_" + std::to_string(static_cast<uint32_t>(obj.GetEntity()));
-		if (obj.HasComponent<NameComponent>())
-			name = obj.GetComponent<NameComponent>().name;
+		const SceneObject obj = scene->GetObject(entity);
+		if (!obj.IsValid())
+			return;
 
-		const bool hasChildren = obj.HasComponent<ModelComponent>() && !obj.GetComponent<ModelComponent>().children.empty();
+		std::string name;
+		if (const auto* nameComp = obj.TryGetComponent<NameComponent>(); nameComp && !nameComp->name.empty())
+			name = nameComp->name;
+		else
+			name = "Entity_" + std::to_string(static_cast<uint32_t>(entity));
+
+		const auto* hierarchy = obj.TryGetComponent<HierarchyComponent>();
+		const bool	hasChildren = hierarchy && hierarchy->firstChild != entt::null;
+
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
-
+		if (m_selectedEntity == entity)
+			flags |= ImGuiTreeNodeFlags_Selected;
 		if (!hasChildren)
-		{
 			flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-			ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(obj.GetEntity())), flags, "%s", name.c_str());
-		}
-		else if (ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(obj.GetEntity())), flags, "%s", name.c_str()))
+
+		const bool opened = ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<uintptr_t>(entity)), flags, "%s", name.c_str());
+		if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+			m_selectedEntity = entity;
+
+		if (hasChildren && opened)
 		{
-			for (const auto& child : obj.GetComponent<ModelComponent>().children)
-				DrawEntityNode(child);
+			entt::entity child = hierarchy->firstChild;
+			while (child != entt::null)
+			{
+				entt::entity nextSibling = entt::null;
+				if (const auto* childHierarchy = scene->GetRegistry().try_get<HierarchyComponent>(child))
+					nextSibling = childHierarchy->nextSibling;
+
+				DrawEntityNode(scene, child);
+				child = nextSibling;
+			}
 			ImGui::TreePop();
+		}
+	}
+
+	void ScenePanel::DrawInspector(Scene* scene)
+	{
+		if (m_selectedEntity == entt::null || !scene->GetRegistry().valid(m_selectedEntity))
+		{
+			m_selectedEntity = entt::null;
+			return;
+		}
+
+		const SceneObject obj = scene->GetObject(m_selectedEntity);
+
+		ImGui::SeparatorText("Inspector");
+		if (const auto* nameComp = obj.TryGetComponent<NameComponent>())
+			ImGui::Text("Name: %s", nameComp->name.c_str());
+
+		if (auto* transform = obj.TryGetComponent<TransformComponent>())
+		{
+			float pos[3] = {transform->position.GetX(), transform->position.GetY(), transform->position.GetZ()};
+			if (ImGui::DragFloat3("Position", pos, 0.05f))
+				transform->SetPosition(pos[0], pos[1], pos[2]);
+
+			float scale[3] = {transform->scale.GetX(), transform->scale.GetY(), transform->scale.GetZ()};
+			if (ImGui::DragFloat3("Scale", scale, 0.01f))
+				transform->SetScale(Vector3(scale[0], scale[1], scale[2]));
+		}
+
+		if (auto* dirLight = obj.TryGetComponent<DirectionalLightComponent>())
+		{
+			ImGui::SeparatorText("Directional Light");
+			float dir[3] = {dirLight->direction.GetX(), dirLight->direction.GetY(), dirLight->direction.GetZ()};
+			if (ImGui::DragFloat3("Direction", dir, 0.02f))
+				dirLight->direction = Vector3(dir[0], dir[1], dir[2]).Normalized();
+
+			float color[3] = {dirLight->color.GetX(), dirLight->color.GetY(), dirLight->color.GetZ()};
+			if (ImGui::ColorEdit3("Color", color))
+				dirLight->color = Vector3(color[0], color[1], color[2]);
+
+			ImGui::DragFloat("Intensity", &dirLight->intensity, 0.1f, 0.0f, 100.0f);
+		}
+
+		if (auto* pointLight = obj.TryGetComponent<PointLightComponent>())
+		{
+			ImGui::SeparatorText("Point Light");
+			float color[3] = {pointLight->color.GetX(), pointLight->color.GetY(), pointLight->color.GetZ()};
+			if (ImGui::ColorEdit3("Color", color))
+				pointLight->color = Vector3(color[0], color[1], color[2]);
+
+			ImGui::DragFloat("Intensity", &pointLight->intensity, 0.1f, 0.0f, 100.0f);
+			ImGui::DragFloat("Linear", &pointLight->linear, 0.005f, 0.0f, 2.0f);
+			ImGui::DragFloat("Quadratic", &pointLight->quadratic, 0.002f, 0.0f, 2.0f);
+		}
+
+		if (const auto* meshComp = obj.TryGetComponent<MeshComponent>())
+		{
+			ImGui::SeparatorText("Mesh");
+			ImGui::Text("Mesh ID: %llu", static_cast<unsigned long long>(meshComp->meshId));
+			ImGui::Text("Texture ID: %llu", static_cast<unsigned long long>(meshComp->textureId));
 		}
 	}
 
 	void ScenePanel::OnRender(Scene* scene)
 	{
-		std::unordered_set<entt::entity> childEntities;
-		for (auto [entity, modelComp] : scene->GetView<ModelComponent>().each())
-			for (const auto& child : modelComp.children)
-				childEntities.insert(child.GetEntity());
+		if (!scene)
+			return;
 
-		for (auto [entity, nameComp] : scene->GetView<NameComponent>().each())
+		ImGui::SeparatorText("Hierarchy");
+		const float hierarchyHeight = m_selectedEntity != entt::null ? ImGui::GetContentRegionAvail().y * 0.55f : 0.0f;
+		if (ImGui::BeginChild("SceneHierarchy", ImVec2(0.0f, hierarchyHeight), false))
 		{
-			if (childEntities.contains(entity))
-				continue;
+			for (const entt::entity entity : scene->GetView<NameComponent>())
+			{
+				const auto* hierarchy = scene->GetRegistry().try_get<HierarchyComponent>(entity);
+				if (hierarchy && hierarchy->parent != entt::null)
+					continue;
 
-			SceneObject obj = scene->GetObject(entity);
-			DrawEntityNode(obj);
+				DrawEntityNode(scene, entity);
+			}
 		}
+		ImGui::EndChild();
+
+		DrawInspector(scene);
 	}
 }

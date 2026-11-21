@@ -39,7 +39,10 @@ namespace BetterThanNothing
 		static float m_mouseY;
 		static float m_lastMouseX;
 		static float m_lastMouseY;
+		static float m_mouseDeltaX;
+		static float m_mouseDeltaY;
 		static float m_mouseScroll;
+		static bool	 m_hasMousePosition;
 
 		static EMouseButtonAction m_buttons[MOUSE_BUTTON_COUNT];
 
@@ -48,6 +51,7 @@ namespace BetterThanNothing
 		~LegacyInputManager() = default;
 
 		static void Initialize();
+		static void EndFrame();
 
 		static void UpdateKey(int key, EKeyAction action);
 		static void PressKey(int key);

@@ -21,9 +21,6 @@
 #include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingDevice_Internals.hpp"
 
-#include <glslang/Include/glslang_c_shader_types.h>
-#include <spirv_cross/spirv_cross.hpp>
-
 namespace BetterThanNothing
 {
 	static VkShaderStageFlagBits Internal_GetShaderStage(const EShaderType type)
@@ -136,30 +133,25 @@ namespace BetterThanNothing
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizer.depthClampEnable = VK_FALSE;
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode = VK_POLYGON_MODE_FILL; // use VK_POLYGON_MODE_LINE for wireframe
+		rasterizer.polygonMode = desc.wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizer.cullMode = desc.cullMode;
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
-		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
-		rasterizer.depthBiasClamp = 0.0f;		   // Optional
-		rasterizer.depthBiasSlopeFactor = 0.0f;	   // Optional
+		rasterizer.depthBiasConstantFactor = 0.0f;
+		rasterizer.depthBiasClamp = 0.0f;
+		rasterizer.depthBiasSlopeFactor = 0.0f;
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampling.rasterizationSamples = self->device->GetMaxMsaaSamples();
-		multisampling.sampleShadingEnable = VK_TRUE;
-		multisampling.alphaToCoverageEnable = VK_TRUE;
-		multisampling.minSampleShading = 1.0f; // closer to one is better quality (SSAA), closer to zero is MSAA
+		multisampling.sampleShadingEnable = multisampling.rasterizationSamples > VK_SAMPLE_COUNT_1_BIT ? VK_TRUE : VK_FALSE;
+		multisampling.alphaToCoverageEnable = (desc.alphaToCoverage && multisampling.rasterizationSamples > VK_SAMPLE_COUNT_1_BIT) ? VK_TRUE : VK_FALSE;
+		multisampling.minSampleShading = 1.0f;
 
-		// Fallback: If no color attachment format is defined, we take the one from the Swapchain
-		// if (m_params.colorAttachmentFormats.empty())
 		const std::vector colorAttachmentFormats = {self->swapChain->GetImageFormat()};
-
-		// Fallback: If no depth attachment format is defined, we take the one from the Swapchain
-		// if (m_params.depthAttachmentFormat == VK_FORMAT_UNDEFINED)
-		const VkFormat depthAttachmentFormat = self->swapChain->GetDepthFormat();
-		const VkFormat stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+		const VkFormat	  depthAttachmentFormat = self->swapChain->GetDepthFormat();
+		const VkFormat	  stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
 		pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -170,7 +162,7 @@ namespace BetterThanNothing
 
 		VkPipelineColorBlendAttachmentState colorBlendState{};
 		colorBlendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendState.blendEnable = VK_TRUE;
+		colorBlendState.blendEnable = desc.blendEnable ? VK_TRUE : VK_FALSE;
 		colorBlendState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		colorBlendState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		colorBlendState.colorBlendOp = VK_BLEND_OP_ADD;
@@ -190,15 +182,15 @@ namespace BetterThanNothing
 
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
 		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable = VK_TRUE;
-		depthStencil.depthWriteEnable = VK_TRUE;
+		depthStencil.depthTestEnable = desc.depthTest ? VK_TRUE : VK_FALSE;
+		depthStencil.depthWriteEnable = desc.depthWrite ? VK_TRUE : VK_FALSE;
 		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 		depthStencil.depthBoundsTestEnable = VK_FALSE;
-		depthStencil.minDepthBounds = 0.0f; // Optional
-		depthStencil.maxDepthBounds = 1.0f; // Optional
+		depthStencil.minDepthBounds = 0.0f;
+		depthStencil.maxDepthBounds = 1.0f;
 		depthStencil.stencilTestEnable = VK_FALSE;
-		depthStencil.front = {}; // Optional
-		depthStencil.back = {};	 // Optional
+		depthStencil.front = {};
+		depthStencil.back = {};
 
 		if (!self->pipelineLayouts.contains(desc.layoutName))
 			return false;
@@ -217,7 +209,7 @@ namespace BetterThanNothing
 		pipelineInfo.pDynamicState = &dynamicState;
 		pipelineInfo.layout = self->pipelineLayouts.at(desc.layoutName)->Handle();
 		pipelineInfo.pNext = &pipelineRenderingInfo;
-		pipelineInfo.renderPass = VK_NULL_HANDLE; // m_context->vkRenderPass->Handle();
+		pipelineInfo.renderPass = VK_NULL_HANDLE;
 		pipelineInfo.subpass = 0;
 
 		if (vkCreateGraphicsPipelines(self->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &dstPipeline->pipeline) != VK_SUCCESS)
@@ -231,7 +223,10 @@ namespace BetterThanNothing
 		const auto handle = m_self->pipelines.Allocate();
 
 		if (!Internal_CreatePipeline(m_self->pipelines.Get(handle), desc, m_self.get()))
+		{
+			m_self->pipelines.Destroy(handle);
 			throw std::runtime_error("Failed to create pipeline");
+		}
 
 		return handle;
 	}
