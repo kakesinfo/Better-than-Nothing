@@ -32,6 +32,64 @@ namespace BetterThanNothing
 		return static_cast<std::uint8_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 	}
 
+	static VkFormat Internal_ToVkFormat(const TextureFormat format, const RenderingDeviceInternals* self)
+	{
+		switch (format)
+		{
+			case TextureFormat::R8G8B8A8_UNORM:
+				return VK_FORMAT_R8G8B8A8_UNORM;
+			case TextureFormat::R8G8B8A8_SRGB:
+				return VK_FORMAT_R8G8B8A8_SRGB;
+			case TextureFormat::B8G8R8A8_UNORM:
+				return VK_FORMAT_B8G8R8A8_UNORM;
+			case TextureFormat::R16G16B16A16_SFLOAT:
+				return VK_FORMAT_R16G16B16A16_SFLOAT;
+			case TextureFormat::D32_SFLOAT:
+				return VK_FORMAT_D32_SFLOAT;
+			case TextureFormat::D24_UNORM_S8_UINT:
+				return VK_FORMAT_D24_UNORM_S8_UINT;
+			case TextureFormat::D32_SFLOAT_S8_UINT:
+				return VK_FORMAT_D32_SFLOAT_S8_UINT;
+			case TextureFormat::Undefined:
+			default:
+				return self->swapChain->GetImageFormat();
+		}
+	}
+
+	static VkImageUsageFlags Internal_ToVkTextureUsage(const TextureUsageFlags usage)
+	{
+		VkImageUsageFlags flags = 0;
+		if (usage & TextureUsageFlags::TransferSrc)
+			flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		if (usage & TextureUsageFlags::TransferDst)
+			flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		if (usage & TextureUsageFlags::Sampled)
+			flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+		if (usage & TextureUsageFlags::Storage)
+			flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+		if (usage & TextureUsageFlags::ColorAttachment)
+			flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		if (usage & TextureUsageFlags::DepthStencilAttachment)
+			flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		if (usage & TextureUsageFlags::TransientAttachment)
+			flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+		return flags;
+	}
+
+	static VkImageAspectFlags Internal_AspectFlagsForFormat(const VkFormat format)
+	{
+		switch (format)
+		{
+			case VK_FORMAT_D32_SFLOAT:
+				return VK_IMAGE_ASPECT_DEPTH_BIT;
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+				return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			default:
+				return VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+	}
+
 	bool RenderingDevice::Internal_CreateTextureImage(const TextureImageDescription& desc)
 	{
 		RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
@@ -61,6 +119,9 @@ namespace BetterThanNothing
 		texture->height = desc.height;
 		texture->mipLevels = desc.mipLevels;
 		texture->format = desc.format;
+		texture->samples = desc.samples;
+		texture->aspectMask = Internal_AspectFlagsForFormat(desc.format);
+		texture->currentLayout = desc.initialLayout;
 
 		return true;
 	}
@@ -94,83 +155,163 @@ namespace BetterThanNothing
 
 	void RenderingDevice::Internal_UploadTextureAndGenerateMipmaps(const CopyDataToTextureImageDescription& desc, const bool generateMipmaps)
 	{
-		const RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
-		const uint64_t				 offset = m_self->stagingBuffer->Stage(desc.data, desc.dataSize);
+		RenderingApi::Texture* texture = m_self->textures.Get(desc.destination);
 
-		RenderingApi::CommandBuffer::SingleTimeCommands(
-			[&](const std::unique_ptr<RenderingApi::CommandBuffer>& commandBuffer) {
-				commandBuffer->TransitionImageLayout(texture->value, desc.format, desc.oldLayout, desc.newLayout, texture->mipLevels);
-				commandBuffer->CopyBufferToImage(m_self->stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, static_cast<uint32_t>(offset));
+		Internal_EnsureUploadBuffer(desc.dataSize, 4);
 
-				if (!generateMipmaps || texture->mipLevels <= 1)
-				{
-					commandBuffer->TransitionImageLayout(texture->value, desc.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, texture->mipLevels);
-					return;
-				}
+		const uint64_t				 offset = m_self->stagingBuffer->Stage(desc.data, desc.dataSize, 4);
+		RenderingApi::CommandBuffer* commandBuffer = m_self->uploadCommandBuffer.get();
 
-				VkImageMemoryBarrier barrier{};
-				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-				barrier.image = texture->value;
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				barrier.subresourceRange.baseArrayLayer = 0;
-				barrier.subresourceRange.layerCount = 1;
-				barrier.subresourceRange.levelCount = 1;
+		commandBuffer->TransitionImageLayout2(texture->value, texture->aspectMask, texture->mipLevels, desc.oldLayout, desc.newLayout);
+		commandBuffer->CopyBufferToImage(m_self->stagingBuffer->GetBuffer(), texture->value, texture->width, texture->height, offset);
 
-				auto mipWidth = static_cast<std::int32_t>(texture->width);
-				auto mipHeight = static_cast<std::int32_t>(texture->height);
-				for (std::uint8_t i = 1; i < texture->mipLevels; i++)
-				{
-					barrier.subresourceRange.baseMipLevel = i - 1;
-					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-					barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		if (!generateMipmaps || texture->mipLevels <= 1)
+		{
+			commandBuffer->TransitionImageLayout2(texture->value, texture->aspectMask, texture->mipLevels, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		}
+		else
+		{
+			VkImageMemoryBarrier2 barrier{};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+			barrier.image = texture->value;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-					commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+			VkDependencyInfo depInfo{};
+			depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+			depInfo.imageMemoryBarrierCount = 1;
+			depInfo.pImageMemoryBarriers = &barrier;
 
-					VkImageBlit blit{};
-					blit.srcOffsets[0] = {0, 0, 0};
-					blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
-					blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					blit.srcSubresource.mipLevel = i - 1;
-					blit.srcSubresource.baseArrayLayer = 0;
-					blit.srcSubresource.layerCount = 1;
-					blit.dstOffsets[0] = {0, 0, 0};
-					blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
-					blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					blit.dstSubresource.mipLevel = i;
-					blit.dstSubresource.baseArrayLayer = 0;
-					blit.dstSubresource.layerCount = 1;
-
-					commandBuffer->BlitImage(texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &blit, VK_FILTER_LINEAR);
-
-					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-					barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-					commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-					if (mipWidth > 1)
-						mipWidth /= 2;
-					if (mipHeight > 1)
-						mipHeight /= 2;
-				}
-
-				barrier.subresourceRange.baseMipLevel = texture->mipLevels - 1;
+			auto mipWidth = static_cast<std::int32_t>(texture->width);
+			auto mipHeight = static_cast<std::int32_t>(texture->height);
+			for (std::uint8_t i = 1; i < texture->mipLevels; i++)
+			{
+				barrier.subresourceRange.baseMipLevel = i - 1;
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+				barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+
+				commandBuffer->PipelineBarrier2(depInfo);
+
+				VkImageBlit blit{};
+				blit.srcOffsets[0] = {0, 0, 0};
+				blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+				blit.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, static_cast<uint32_t>(i - 1), 0, 1};
+				blit.dstOffsets[0] = {0, 0, 0};
+				blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
+				blit.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, static_cast<uint32_t>(i), 0, 1};
+
+				commandBuffer->BlitImage(texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &blit, VK_FILTER_LINEAR);
+
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+				barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
 
-				commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-			},
-			m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get()
-		);
+				commandBuffer->PipelineBarrier2(depInfo);
 
-		m_self->stagingBuffer->Reset();
+				if (mipWidth > 1)
+					mipWidth /= 2;
+				if (mipHeight > 1)
+					mipHeight /= 2;
+			}
+
+			barrier.subresourceRange.baseMipLevel = texture->mipLevels - 1;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+			barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+			barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+			barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+
+			commandBuffer->PipelineBarrier2(depInfo);
+		}
+
+		texture->currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		if (m_self->uploadBatchDepth == 0)
+			Internal_FlushUploadBuffer();
+	}
+
+	Handle RenderingDevice::CreateTexture(const TextureCreateInfo& desc)
+	{
+		if (desc.width == 0 || desc.height == 0)
+			throw std::runtime_error("Invalid texture dimensions");
+
+		const VkFormat			   vkFormat = Internal_ToVkFormat(desc.format, m_self.get());
+		const VkSampleCountFlagBits samples = desc.useMsaa ? m_self->device->GetMaxMsaaSamples() : VK_SAMPLE_COUNT_1_BIT;
+		const Handle			   handle = m_self->textures.Allocate();
+
+		try
+		{
+			TextureImageDescription imageDesc{};
+			imageDesc.destination = handle;
+			imageDesc.width = desc.width;
+			imageDesc.height = desc.height;
+			imageDesc.depth = 1;
+			imageDesc.mipLevels = desc.mipLevels > 0 ? desc.mipLevels : 1;
+			imageDesc.format = vkFormat;
+			imageDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageDesc.usage = Internal_ToVkTextureUsage(desc.usage);
+			imageDesc.samples = samples;
+			imageDesc.dedicated = desc.dedicated;
+
+			if (!Internal_CreateTextureImage(imageDesc))
+				throw std::runtime_error("Cannot create texture image");
+
+			TextureImageViewDescription viewDesc{};
+			viewDesc.destination = handle;
+			viewDesc.aspectFlags = Internal_AspectFlagsForFormat(vkFormat);
+
+			if (!Internal_CreateTextureImageView(viewDesc))
+				throw std::runtime_error("Cannot create texture image view");
+		}
+		catch (...)
+		{
+			DestroyTexture(handle);
+			throw;
+		}
+
+		return handle;
+	}
+
+	Handle RenderingDevice::CreateColorAttachment(const uint32_t width, const uint32_t height, const bool useMsaa)
+	{
+		TextureCreateInfo desc{};
+		desc.width = width;
+		desc.height = height;
+		desc.format = TextureFormat::Undefined; // Uses swapchain format
+		desc.usage = TextureUsageFlags::ColorAttachment | (useMsaa ? TextureUsageFlags::TransientAttachment : TextureUsageFlags::Sampled);
+		desc.useMsaa = useMsaa;
+		desc.dedicated = true;
+		desc.mipLevels = 1;
+		return CreateTexture(desc);
+	}
+
+	Handle RenderingDevice::CreateDepthAttachment(const uint32_t width, const uint32_t height, const bool useMsaa)
+	{
+		const VkFormat depthFormat = m_self->device->FindDepthFormat();
+		TextureFormat  engineFormat = TextureFormat::D32_SFLOAT;
+		if (depthFormat == VK_FORMAT_D32_SFLOAT_S8_UINT)
+			engineFormat = TextureFormat::D32_SFLOAT_S8_UINT;
+		else if (depthFormat == VK_FORMAT_D24_UNORM_S8_UINT)
+			engineFormat = TextureFormat::D24_UNORM_S8_UINT;
+
+		TextureCreateInfo desc{};
+		desc.width = width;
+		desc.height = height;
+		desc.format = engineFormat;
+		desc.usage = TextureUsageFlags::DepthStencilAttachment;
+		desc.useMsaa = useMsaa;
+		desc.dedicated = true;
+		desc.mipLevels = 1;
+		return CreateTexture(desc);
 	}
 
 	Handle RenderingDevice::CreateTextureFromData(const TextureFromDataDescription& desc)
@@ -178,8 +319,8 @@ namespace BetterThanNothing
 		if (desc.data == nullptr || desc.dataSize == 0 || desc.width == 0 || desc.height == 0)
 			throw std::runtime_error("Invalid texture data description");
 
-		constexpr VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-		const bool		   canGenerateMipmaps = m_self->device->IsSupportedFormatFeature(format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT);
+		const VkFormat	   format = Internal_ToVkFormat(desc.format, m_self.get());
+		const bool		   canGenerateMipmaps = desc.generateMipmaps && m_self->device->IsSupportedFormatFeature(format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT);
 		const std::uint8_t mipLevels = canGenerateMipmaps ? Internal_CalculateMipLevels(desc.width, desc.height) : 1;
 
 		const Handle handle = m_self->textures.Allocate();
@@ -230,9 +371,17 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid texture handle!");
 
 		const RenderingApi::Texture* texture = m_self->textures.Get(handle);
-		m_self->device->DestroyImageView(texture->defaultView);
-		m_self->allocator->DestroyImage(texture->value, texture->allocation);
+		const VkImageView			 view = texture->defaultView;
+		const VkImage				 image = texture->value;
+		const VmaAllocation			 allocation = texture->allocation;
 		m_self->textures.Destroy(handle);
+
+		RenderingApi::Device*	 device = m_self->device.get();
+		RenderingApi::Allocator* allocator = m_self->allocator.get();
+		Internal_EnqueueDeletion([device, allocator, view, image, allocation]() {
+			device->DestroyImageView(view);
+			allocator->DestroyImage(image, allocation);
+		});
 	}
 
 	RenderingApi::Texture* RenderingDevice::GetTexture(const Handle& handle)

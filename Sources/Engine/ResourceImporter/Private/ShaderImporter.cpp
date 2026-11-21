@@ -16,6 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <Common/AssetPath.hpp>
 #include <Common/Logger.hpp>
 #include <ResourceImporter/Importer.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
@@ -62,10 +63,11 @@ namespace BetterThanNothing
 
 	ImportedShader ShaderImporter::Import(const std::string& input)
 	{
-		std::ifstream file(input, std::ios::ate | std::ios::binary);
+		const std::string resolvedPath = AssetPath::Resolve(input);
+		std::ifstream	  file(resolvedPath, std::ios::ate | std::ios::binary);
 
 		if (!file.is_open())
-			throw std::runtime_error("Failed to open shader file: " + input);
+			throw std::runtime_error("Failed to open shader file: " + resolvedPath);
 
 		const std::streampos endPos = file.tellg();
 		if (endPos < 0)

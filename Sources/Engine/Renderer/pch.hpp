@@ -19,20 +19,6 @@
 #pragma once
 
 #include <cstdint>
-
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
-
-#include <vma/vk_mem_alloc.h>
-#include <vulkan/vulkan.h>
-
-#include <glslang/Include/glslang_c_interface.h>
-#include <glslang/Include/glslang_c_shader_types.h>
-#include <glslang/Public/resource_limits_c.h>
-#include <spirv_cross/spirv_cross.hpp>
-
-#define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_vulkan.h>
+#include <memory>
+#include <string>
+#include <vector>

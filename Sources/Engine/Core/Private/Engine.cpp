@@ -46,7 +46,7 @@ namespace BetterThanNothing
 		m_platform = Platform::Create("Better Than Nothing", 1280, 720);
 		LegacyInputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Double});
+		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Immediate});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 #ifndef NDEBUG

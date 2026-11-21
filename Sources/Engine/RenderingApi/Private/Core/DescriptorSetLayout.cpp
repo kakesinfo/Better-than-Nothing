@@ -20,14 +20,18 @@
 
 namespace BetterThanNothing::RenderingApi
 {
-	DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetLayoutCreateInfo& createInfo): m_createInfo(createInfo)
+	DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetLayoutCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
-		VkDescriptorSetLayoutBinding defaultBinding{};
-		defaultBinding.descriptorType = createInfo.descriptorType;
-		defaultBinding.descriptorCount = createInfo.descriptorCount;
-		defaultBinding.stageFlags = createInfo.stageFlags;
-
-		const std::array bindings = { defaultBinding };
+		std::vector<VkDescriptorSetLayoutBinding> bindings = createInfo.bindings;
+		if (bindings.empty())
+		{
+			VkDescriptorSetLayoutBinding defaultBinding{};
+			defaultBinding.binding = 0;
+			defaultBinding.descriptorType = createInfo.descriptorType;
+			defaultBinding.descriptorCount = createInfo.descriptorCount;
+			defaultBinding.stageFlags = createInfo.stageFlags;
+			bindings.push_back(defaultBinding);
+		}
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

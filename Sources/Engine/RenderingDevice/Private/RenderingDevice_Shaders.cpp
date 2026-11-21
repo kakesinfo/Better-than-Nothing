@@ -64,7 +64,12 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid shader handle!");
 
 		const RenderingApi::Shader* shader = m_self->shaders.Get(handle);
-		m_self->device->DestroyShaderModule(shader->module);
+		const VkShaderModule		vkModule = shader->module;
 		m_self->shaders.Destroy(handle);
+
+		RenderingApi::Device* device = m_self->device.get();
+		Internal_EnqueueDeletion([device, vkModule]() {
+			device->DestroyShaderModule(vkModule);
+		});
 	}
 }

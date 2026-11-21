@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "RenderPass.hpp"
 #include "RenderingDevice/Handle.hpp"
 #include <Data/Graphics/PointLightData.hpp>
 #include <memory>
@@ -30,7 +31,6 @@ namespace BetterThanNothing
 	class Scene;
 	class Editor;
 	class DrawStream;
-	class DrawStreamView;
 	struct GlobalUniformData;
 
 	class Renderer final
@@ -46,28 +46,34 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor);
 
+		void AddPass(std::unique_ptr<IRenderPass> pass);
+		void RenderFrame(Scene* scene);
+
 	private:
-		auto CreateGlobalUniformBuffers() -> void;
-		auto CreateGlobalUniformDescriptorSets() -> void;
+		void CreateGlobalUniformBuffers();
+		void CreateGlobalUniformDescriptorSets();
 		auto GetGlobalUniformBuffer(uint32_t frameIndex) const -> GlobalUniformData*;
 
 		void CreatePointLightBuffers();
 		void CreatePointLightDescriptorSets();
 
-		void	 RecordCommandBuffer(Scene* scene, uint32_t imageIndex) const;
+		void EnsureRenderTargets();
+		void DestroyRenderTargets();
+
+		void	 BuildDrawStreams(Scene* scene, uint32_t frameIndex);
 		uint32_t UploadPointLights(const Scene* scene, uint32_t frameIndex) const;
 
-		void ExecuteForwardPass(uint32_t imageIndex, const DrawStreamView& drawStream) const;
-		void ExecuteEditorPass(Scene* scene, uint32_t imageIndex) const;
-
-	public:
-		void RenderFrame(Scene* scene) const;
-
-	private:
 		RenderingDevice*			m_renderingDevice = nullptr;
 		ResourceManager*			m_resourceManager = nullptr;
 		Editor*						m_editor = nullptr;
-		std::unique_ptr<DrawStream> m_drawStream;
+		std::unique_ptr<DrawStream> m_opaqueDrawStream;
+		std::unique_ptr<DrawStream> m_transparentDrawStream;
+
+		std::vector<std::unique_ptr<IRenderPass>> m_passes;
+
+		Handle	 m_colorTarget{};
+		Handle	 m_depthTarget{};
+		uint64_t m_lastSwapChainGeneration = 0;
 
 		std::vector<Handle>					m_globalUniformBuffer;
 		std::vector<Handle>					m_globalDescriptorSets;

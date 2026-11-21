@@ -45,6 +45,7 @@ namespace BetterThanNothing
 		ImGui::SeparatorText("Rendering");
 		ImGui::Text("Vertices: %u", m_cachedMetrics.verticesRendered);
 		ImGui::Text("Draw calls: %u", m_cachedMetrics.drawCalls);
+		ImGui::Text("Culled: %u", m_cachedMetrics.culledDrawCalls);
 		ImGui::Text("Total draw calls: %llu", static_cast<unsigned long long>(m_cachedMetrics.totalDrawCalls));
 		ImGui::SeparatorText("Frames");
 		ImGui::Text("Frame count: %u", m_cachedMetrics.frameCount);

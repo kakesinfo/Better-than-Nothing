@@ -18,10 +18,15 @@
 
 #pragma once
 
+#include "DeletionQueue.hpp"
+#include "DescriptorAllocator.hpp"
+#include "StagingBuffer.hpp"
+
 #include <RenderingApi/Core/Allocator.hpp>
 #include <RenderingApi/Core/CommandBuffer.hpp>
 #include <RenderingApi/Core/CommandPool.hpp>
 #include <RenderingApi/Core/DescriptorPool.hpp>
+#include <RenderingApi/Core/DescriptorSetLayout.hpp>
 #include <RenderingApi/Core/Device.hpp>
 #include <RenderingApi/Core/Fence.hpp>
 #include <RenderingApi/Core/Instance.hpp>
@@ -36,29 +41,37 @@
 #include <RenderingApi/Resources/Sampler.hpp>
 #include <RenderingApi/Resources/Shader.hpp>
 #include <RenderingApi/Resources/Texture.hpp>
+#include <RenderingDevice/DescriptorSetUpdateRequest.hpp>
+#include <RenderingDevice/HandleRegistry.hpp>
+#include <RenderingDevice/SamplerDescription.hpp>
 
 namespace BetterThanNothing
 {
 	struct RenderingDeviceInternals
 	{
-		std::unique_ptr<RenderingApi::Instance>		  instance;
-		std::unique_ptr<RenderingApi::Surface>		  surface;
-		std::unique_ptr<RenderingApi::Device>		  device;
-		std::unique_ptr<RenderingApi::Queue>		  graphicsQueue;
-		std::unique_ptr<RenderingApi::Queue>		  presentQueue;
-		std::unique_ptr<RenderingApi::Allocator>	  allocator;
-		std::unique_ptr<RenderingApi::CommandPool>	  commandPool;
-		std::unique_ptr<RenderingApi::SwapChain>	  swapChain;
-		std::unique_ptr<RenderingApi::DescriptorPool> descriptorPool;
+		std::unique_ptr<RenderingApi::Instance>		   instance;
+		std::unique_ptr<RenderingApi::Surface>		   surface;
+		std::unique_ptr<RenderingApi::Device>		   device;
+		std::unique_ptr<RenderingApi::Queue>		   graphicsQueue;
+		std::unique_ptr<RenderingApi::Queue>		   presentQueue;
+		std::unique_ptr<RenderingApi::Allocator>	   allocator;
+		std::unique_ptr<RenderingApi::CommandPool>	   commandPool;
+		std::unique_ptr<RenderingApi::SwapChain>	   swapChain;
+		std::unique_ptr<DescriptorAllocator>		   descriptorAllocator;
 
 		std::vector<std::unique_ptr<RenderingApi::CommandBuffer>> commandBuffers;
 		std::vector<std::unique_ptr<RenderingApi::Semaphore>>	  imageAvailableSemaphores;
 		std::vector<std::unique_ptr<RenderingApi::Fence>>		  inFlightFences;
+		std::vector<DeletionQueue>								  frameDeletionQueues;
 
 		std::unordered_map<std::string, std::unique_ptr<RenderingApi::DescriptorSetLayout>> descriptorLayouts;
 		std::unordered_map<std::string, std::unique_ptr<RenderingApi::PipelineLayout>>		pipelineLayouts;
 
-		std::unique_ptr<StagingBuffer> stagingBuffer;
+		std::unique_ptr<StagingBuffer>				 stagingBuffer;
+		std::unique_ptr<RenderingApi::CommandBuffer> uploadCommandBuffer;
+		uint32_t									 uploadBatchDepth = 0;
+		bool										 uploadRecording = false;
+		bool										 shuttingDown = false;
 
 		HandleRegistry<RenderingApi::Buffer, HandleType::Buffer>			   buffers;
 		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   textures;

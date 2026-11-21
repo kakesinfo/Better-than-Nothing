@@ -18,6 +18,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 
+#include <Common/AssetPath.hpp>
 #include <ResourceImporter/Importer.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <cstring>
@@ -28,15 +29,17 @@ namespace BetterThanNothing
 {
 	ImportedTexture TextureImporter::Import(const std::string& input)
 	{
+		const std::string resolvedPath = AssetPath::Resolve(input);
+
 		ImportedTexture texture;
 		int				width, height;
 
-		uint8_t* pixels = stbi_load(input.c_str(), &width, &height, nullptr, STBI_rgb_alpha);
+		uint8_t* pixels = stbi_load(resolvedPath.c_str(), &width, &height, nullptr, STBI_rgb_alpha);
 
 		if (!pixels)
 		{
 			std::stringstream ss;
-			ss << "Failed to load texture image from path: " << input << " - " << stbi_failure_reason() << std::endl;
+			ss << "Failed to load texture image from path: " << resolvedPath << " - " << stbi_failure_reason() << std::endl;
 			throw std::runtime_error(ss.str());
 		}
 

@@ -50,6 +50,8 @@ namespace BetterThanNothing::RenderingApi
 		void BeginRecording(VkCommandBufferUsageFlags flags = 0);
 		void EndRecording();
 
+		void BeginRendering(const VkRenderingInfo& renderingInfo) const;
+		void EndRendering() const;
 		void ExecuteRenderPass(const std::function<void(CommandBuffer*)>& callback, const VkRenderingInfo& renderingInfo);
 
 		void Reset();
@@ -70,10 +72,12 @@ namespace BetterThanNothing::RenderingApi
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
 
-		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t bufferSize, uint64_t offset);
+		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint64_t bufferSize, uint64_t offset);
 		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
-		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t offset);
+		void TransitionImageLayout2(VkImage image, VkImageAspectFlags aspectMask, uint32_t mipLevels, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint64_t offset);
 		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers, uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const;
+		void PipelineBarrier2(const VkDependencyInfo& dependencyInfo) const;
 		void BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter);
 		void PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values);
 

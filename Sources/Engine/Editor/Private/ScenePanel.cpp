@@ -129,6 +129,7 @@ namespace BetterThanNothing
 		{
 			ImGui::SeparatorText("Mesh");
 			ImGui::Text("Mesh ID: %llu", static_cast<unsigned long long>(meshComp->meshId));
+			ImGui::Text("Material ID: %llu", static_cast<unsigned long long>(meshComp->materialId));
 			ImGui::Text("Texture ID: %llu", static_cast<unsigned long long>(meshComp->textureId));
 		}
 	}

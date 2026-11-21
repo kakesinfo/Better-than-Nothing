@@ -152,8 +152,13 @@ namespace BetterThanNothing
 		std::erase_if(m_self->samplersLUT, [&](const auto& pair) { return pair.second == handle; });
 
 		const RenderingApi::Sampler* sampler = m_self->samplers.Get(handle);
-		m_self->device->DestroySampler(sampler->value);
+		const VkSampler				 vkSampler = sampler->value;
 		m_self->samplers.Destroy(handle);
+
+		RenderingApi::Device* device = m_self->device.get();
+		Internal_EnqueueDeletion([device, vkSampler]() {
+			device->DestroySampler(vkSampler);
+		});
 	}
 
 	RenderingApi::Sampler* RenderingDevice::GetSampler(const Handle& handle)

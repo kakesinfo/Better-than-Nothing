@@ -43,6 +43,9 @@ namespace BetterThanNothing
 		[[nodiscard]] static std::unique_ptr<StagingBuffer> Create(RenderingApi::Allocator* allocator, uint64_t size);
 
 		uint64_t			   Stage(const void* data, uint64_t dataSize, uint64_t alignment = 4);
+		[[nodiscard]] bool	   CanFit(uint64_t dataSize, uint64_t alignment = 4) const;
+		[[nodiscard]] uint64_t GetSize() const { return m_size; }
+		[[nodiscard]] uint64_t GetOffset() const { return m_offset; }
 		[[nodiscard]] VkBuffer GetBuffer() const;
 		void				   Reset();
 

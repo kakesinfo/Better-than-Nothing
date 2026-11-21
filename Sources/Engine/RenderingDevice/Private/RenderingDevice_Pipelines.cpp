@@ -84,7 +84,45 @@ namespace BetterThanNothing
 		return attributeDescriptions;
 	}
 
-	static bool Internal_CreatePipeline(RenderingApi::Pipeline* dstPipeline, const PipelineDescription& desc,  RenderingDeviceInternals* self)
+	static VkCullModeFlags Internal_ToVkCullMode(const CullMode mode)
+	{
+		switch (mode)
+		{
+			case CullMode::None:
+				return VK_CULL_MODE_NONE;
+			case CullMode::Front:
+				return VK_CULL_MODE_FRONT_BIT;
+			case CullMode::Back:
+				return VK_CULL_MODE_BACK_BIT;
+		}
+		return VK_CULL_MODE_BACK_BIT;
+	}
+
+	static VkFormat Internal_PipelineFormatToVk(const TextureFormat format, const VkFormat fallback)
+	{
+		switch (format)
+		{
+			case TextureFormat::R8G8B8A8_UNORM:
+				return VK_FORMAT_R8G8B8A8_UNORM;
+			case TextureFormat::R8G8B8A8_SRGB:
+				return VK_FORMAT_R8G8B8A8_SRGB;
+			case TextureFormat::B8G8R8A8_UNORM:
+				return VK_FORMAT_B8G8R8A8_UNORM;
+			case TextureFormat::R16G16B16A16_SFLOAT:
+				return VK_FORMAT_R16G16B16A16_SFLOAT;
+			case TextureFormat::D32_SFLOAT:
+				return VK_FORMAT_D32_SFLOAT;
+			case TextureFormat::D24_UNORM_S8_UINT:
+				return VK_FORMAT_D24_UNORM_S8_UINT;
+			case TextureFormat::D32_SFLOAT_S8_UINT:
+				return VK_FORMAT_D32_SFLOAT_S8_UINT;
+			case TextureFormat::Undefined:
+			default:
+				return fallback;
+		}
+	}
+
+	static bool Internal_CreatePipeline(RenderingApi::Pipeline* dstPipeline, const PipelineDescription& desc, RenderingDeviceInternals* self)
 	{
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		for (const auto shaderHandle : desc.shaders)
@@ -135,7 +173,7 @@ namespace BetterThanNothing
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = desc.wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = desc.cullMode;
+		rasterizer.cullMode = Internal_ToVkCullMode(desc.cullMode);
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
@@ -144,13 +182,13 @@ namespace BetterThanNothing
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.rasterizationSamples = self->device->GetMaxMsaaSamples();
+		multisampling.rasterizationSamples = desc.useMsaa ? self->device->GetMaxMsaaSamples() : VK_SAMPLE_COUNT_1_BIT;
 		multisampling.sampleShadingEnable = multisampling.rasterizationSamples > VK_SAMPLE_COUNT_1_BIT ? VK_TRUE : VK_FALSE;
 		multisampling.alphaToCoverageEnable = (desc.alphaToCoverage && multisampling.rasterizationSamples > VK_SAMPLE_COUNT_1_BIT) ? VK_TRUE : VK_FALSE;
 		multisampling.minSampleShading = 1.0f;
 
-		const std::vector colorAttachmentFormats = {self->swapChain->GetImageFormat()};
-		const VkFormat	  depthAttachmentFormat = self->swapChain->GetDepthFormat();
+		const std::vector colorAttachmentFormats = {Internal_PipelineFormatToVk(desc.colorFormat, self->swapChain->GetImageFormat())};
+		const VkFormat	  depthAttachmentFormat = Internal_PipelineFormatToVk(desc.depthFormat, self->device->FindDepthFormat());
 		const VkFormat	  stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
@@ -245,7 +283,13 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid pipeline handle!");
 
 		const RenderingApi::Pipeline* pipeline = m_self->pipelines.Get(handle);
-		vkDestroyPipeline(m_self->device->Handle(), pipeline->pipeline, nullptr);
+		const VkPipeline			  vkPipeline = pipeline->pipeline;
 		m_self->pipelines.Destroy(handle);
+
+		RenderingApi::Device* device = m_self->device.get();
+		Internal_EnqueueDeletion([device, vkPipeline]() {
+			if (vkPipeline != VK_NULL_HANDLE)
+				vkDestroyPipeline(device->Handle(), vkPipeline, nullptr);
+		});
 	}
 }

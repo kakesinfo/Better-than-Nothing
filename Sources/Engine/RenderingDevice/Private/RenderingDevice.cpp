@@ -17,21 +17,102 @@
  */
 
 #include "RenderingDevice/RenderingDevice.hpp"
-#include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
 #include "Platform/Platform.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
+#include "RenderingApi/Resources/Pipeline.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
 #include "RenderingApi/Resources/Texture.hpp"
+#include "RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp"
+#include "RenderingDevice/DrawStream.hpp"
 #include "RenderingDevice_Internals.hpp"
 #include "StagingBuffer.hpp"
 
 #include <Common/Logger.hpp>
 #include <RenderingApi.hpp>
+#include <array>
 #include <cmath>
 
 namespace BetterThanNothing
 {
+	static VkDescriptorType ToVkDescriptorType(const DescriptorType type)
+	{
+		switch (type)
+		{
+			case DescriptorType::UniformBuffer:
+				return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			case DescriptorType::StorageBuffer:
+				return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			case DescriptorType::CombinedImageSampler:
+				return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			case DescriptorType::StorageImage:
+				return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		}
+		throw std::runtime_error("Unknown DescriptorType");
+	}
+
+	static VkShaderStageFlags ToVkShaderStageFlags(const ShaderStageFlags stages)
+	{
+		VkShaderStageFlags flags = 0;
+		if (stages & ShaderStageFlags::Vertex)
+			flags |= VK_SHADER_STAGE_VERTEX_BIT;
+		if (stages & ShaderStageFlags::Geometry)
+			flags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+		if (stages & ShaderStageFlags::Fragment)
+			flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+		if (stages & ShaderStageFlags::Compute)
+			flags |= VK_SHADER_STAGE_COMPUTE_BIT;
+		return flags;
+	}
+
+	static VkAttachmentLoadOp ToVkLoadOp(const LoadOp op)
+	{
+		switch (op)
+		{
+			case LoadOp::Load:
+				return VK_ATTACHMENT_LOAD_OP_LOAD;
+			case LoadOp::Clear:
+				return VK_ATTACHMENT_LOAD_OP_CLEAR;
+			case LoadOp::DontCare:
+				return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		}
+		return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	}
+
+	static VkAttachmentStoreOp ToVkStoreOp(const StoreOp op)
+	{
+		switch (op)
+		{
+			case StoreOp::Store:
+				return VK_ATTACHMENT_STORE_OP_STORE;
+			case StoreOp::DontCare:
+				return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		}
+		return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	}
+
+	static VkImageLayout ToVkImageLayout(const ImageLayout layout)
+	{
+		switch (layout)
+		{
+			case ImageLayout::Undefined:
+				return VK_IMAGE_LAYOUT_UNDEFINED;
+			case ImageLayout::ColorAttachment:
+				return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			case ImageLayout::DepthStencilAttachment:
+				return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			case ImageLayout::ShaderReadOnly:
+				return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			case ImageLayout::TransferSrc:
+				return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			case ImageLayout::TransferDst:
+				return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			case ImageLayout::Present:
+				return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		}
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+
 	RenderingDevice::RenderingDevice(const RenderingDeviceCreateInfo& createInfo) : m_createInfo(createInfo)
 	{
 		const auto [windowWidth, windowHeight] = m_createInfo.platform->GetWindowSize();
@@ -50,13 +131,13 @@ namespace BetterThanNothing
 		m_self->swapChain = RenderingApi::SwapChain::Create({
 			m_self->surface.get(),
 			m_self->device.get(),
-			m_self->allocator.get(),
 			static_cast<uint32_t>(windowWidth),
 			static_cast<uint32_t>(windowHeight),
 			createInfo.bufferingMode,
 		});
 
 		m_maxFramesInFlight = m_self->swapChain->GetImageCount();
+		m_self->frameDeletionQueues.resize(m_maxFramesInFlight);
 
 		Logger::Log<INFO>("Vendor: {}", m_self->device->GetVendorName());
 		Logger::Log<INFO>("Device: {}", m_self->device->GetDeviceName());
@@ -67,13 +148,9 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("Anisotropy: {}x", m_self->device->GetMaxAnisotropy());
 		Logger::Log<INFO>("Msaa: {}x", static_cast<uint32_t>(m_self->device->GetMaxMsaaSamples()));
 
-		m_self->descriptorPool = RenderingApi::DescriptorPool::Builder(m_self->device.get())
-									 .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_maxFramesInFlight)
-									 .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
-									 .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxFramesInFlight)
-									 .Build();
-
+		m_self->descriptorAllocator = std::make_unique<DescriptorAllocator>(m_self->device.get(), 512);
 		m_self->stagingBuffer = StagingBuffer::Create(m_self->allocator.get(), 128);
+		m_self->uploadCommandBuffer = RenderingApi::CommandBuffer::Create({m_self->device.get(), m_self->commandPool.get()});
 
 		Internal_CreateCommandBuffers();
 		Internal_CreateSyncObjects();
@@ -81,8 +158,18 @@ namespace BetterThanNothing
 
 	RenderingDevice::~RenderingDevice()
 	{
+		m_self->shuttingDown = true;
+
+		if (m_self->uploadRecording)
+			Internal_FlushUploadBuffer();
+
 		m_self->device->WaitIdle();
 
+		// Drain all deferred frame deletion queues first
+		for (auto& queue : m_self->frameDeletionQueues)
+			queue.Flush();
+
+		// Destroy any remaining active resources
 		m_self->pipelines.ForEachActive([&](const uint32_t idx, RenderingApi::Pipeline& pipeline) {
 			if (pipeline.pipeline != VK_NULL_HANDLE)
 				vkDestroyPipeline(m_self->device->Handle(), pipeline.pipeline, nullptr);
@@ -119,6 +206,68 @@ namespace BetterThanNothing
 		return std::make_unique<RenderingDevice>(createInfo);
 	}
 
+	void RenderingDevice::Internal_EnqueueDeletion(std::function<void()>&& deletor)
+	{
+		if (m_self->shuttingDown || m_self->frameDeletionQueues.empty())
+		{
+			deletor();
+			return;
+		}
+
+		m_self->frameDeletionQueues[m_currentFrameIndex].Push(std::move(deletor));
+	}
+
+	void RenderingDevice::BeginUploadBatch()
+	{
+		++m_self->uploadBatchDepth;
+	}
+
+	void RenderingDevice::EndUploadBatch()
+	{
+		if (m_self->uploadBatchDepth == 0)
+			return;
+
+		--m_self->uploadBatchDepth;
+		if (m_self->uploadBatchDepth == 0 && m_self->uploadRecording)
+			Internal_FlushUploadBuffer();
+	}
+
+	void RenderingDevice::Internal_EnsureUploadBuffer(const uint64_t requiredStagingBytes, const uint64_t alignment)
+	{
+		if (m_self->uploadRecording && !m_self->stagingBuffer->CanFit(requiredStagingBytes, alignment))
+			Internal_FlushUploadBuffer();
+
+		if (!m_self->uploadRecording)
+		{
+			m_self->uploadCommandBuffer->Reset();
+			m_self->uploadCommandBuffer->BeginRecording(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+			m_self->uploadRecording = true;
+		}
+	}
+
+	void RenderingDevice::Internal_FlushUploadBuffer()
+	{
+		if (!m_self->uploadRecording)
+			return;
+
+		m_self->uploadCommandBuffer->EndRecording();
+		m_self->uploadRecording = false;
+
+		const VkCommandBuffer vkCmd = m_self->uploadCommandBuffer->Handle();
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &vkCmd;
+
+		const auto fence = RenderingApi::Fence::Create({m_self->device.get(), false});
+		if (vkQueueSubmit(m_self->graphicsQueue->Handle(), 1, &submitInfo, fence->Handle()) != VK_SUCCESS)
+			throw std::runtime_error("Failed to submit batched upload command buffer!");
+
+		fence->Wait();
+		m_self->stagingBuffer->Reset();
+	}
+
 	void RenderingDevice::Internal_CreateCommandBuffers()
 	{
 		m_self->commandBuffers.resize(m_maxFramesInFlight);
@@ -142,12 +291,31 @@ namespace BetterThanNothing
 		Logger::Log<SUCCESS>("Vulkan sync objects: ok");
 	}
 
-	void RenderingDevice::CreateDescriptorSetLayout(const std::string& name, VkDescriptorType type, const VkShaderStageFlags stageFlags)
+	void RenderingDevice::CreateDescriptorSetLayout(const std::string& name, const DescriptorType type, const ShaderStageFlags stageFlags)
+	{
+		const DescriptorBindingDesc binding{.binding = 0, .type = type, .count = 1, .stages = stageFlags};
+		CreateDescriptorSetLayout(name, std::span<const DescriptorBindingDesc>(&binding, 1));
+	}
+
+	void RenderingDevice::CreateDescriptorSetLayout(const std::string& name, const std::span<const DescriptorBindingDesc> bindings)
 	{
 		if (m_self->descriptorLayouts.contains(name))
-			throw std::runtime_error("Descriptor layout already exists");
+			throw std::runtime_error("Descriptor layout already exists: " + name);
 
-		m_self->descriptorLayouts[name] = RenderingApi::DescriptorSetLayout::Create({m_self->device.get(), type, 1, stageFlags});
+		RenderingApi::DescriptorSetLayoutCreateInfo info{};
+		info.device = m_self->device.get();
+		info.bindings.reserve(bindings.size());
+		for (const auto& b : bindings)
+		{
+			VkDescriptorSetLayoutBinding vkBinding{};
+			vkBinding.binding = b.binding;
+			vkBinding.descriptorType = ToVkDescriptorType(b.type);
+			vkBinding.descriptorCount = b.count;
+			vkBinding.stageFlags = ToVkShaderStageFlags(b.stages);
+			info.bindings.push_back(vkBinding);
+		}
+
+		m_self->descriptorLayouts[name] = RenderingApi::DescriptorSetLayout::Create(info);
 	}
 
 	[[nodiscard]] RenderingApi::DescriptorSetLayout* RenderingDevice::GetDescriptorSetLayout(const std::string& name) const
@@ -183,6 +351,9 @@ namespace BetterThanNothing
 		if (windowWidth <= 0 || windowHeight <= 0)
 			return std::nullopt;
 
+		if (m_self->uploadRecording)
+			Internal_FlushUploadBuffer();
+
 		if (m_createInfo.platform->IsWindowResized())
 		{
 			m_createInfo.platform->SetWindowResized(false);
@@ -191,6 +362,8 @@ namespace BetterThanNothing
 		}
 
 		m_self->inFlightFences.at(m_currentFrameIndex)->Wait();
+		// Safe point: GPU has finished all work for this frame index; flush deferred deletions
+		m_self->frameDeletionQueues[m_currentFrameIndex].Flush();
 		FlushDescriptorSetUpdateRequests();
 
 		const auto acquireResult = m_self->swapChain->AcquireNextImage(m_self->imageAvailableSemaphores.at(m_currentFrameIndex)->Handle());
@@ -261,14 +434,203 @@ namespace BetterThanNothing
 		m_currentFrameIndex = (m_currentFrameIndex + 1) % m_maxFramesInFlight;
 	}
 
+	void RenderingDevice::TransitionTexture(const Handle& textureHandle, const ImageLayout newLayout)
+	{
+		RenderingApi::Texture* texture = GetTexture(textureHandle);
+		const VkImageLayout	   vkNewLayout = ToVkImageLayout(newLayout);
+		const VkImageLayout	   vkOldLayout = texture->currentLayout;
+
+		if (vkOldLayout == vkNewLayout && vkNewLayout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			return;
+
+		m_self->commandBuffers[m_currentFrameIndex]->TransitionImageLayout2(texture->value, texture->aspectMask, texture->mipLevels, vkOldLayout, vkNewLayout);
+		texture->currentLayout = vkNewLayout;
+	}
+
+	void RenderingDevice::TransitionSwapChainImage(const uint32_t imageIndex, const ImageLayout oldLayout, const ImageLayout newLayout)
+	{
+		m_self->commandBuffers[m_currentFrameIndex]->TransitionImageLayout2(
+			m_self->swapChain->GetImage(imageIndex), VK_IMAGE_ASPECT_COLOR_BIT, 1, ToVkImageLayout(oldLayout), ToVkImageLayout(newLayout)
+		);
+	}
+
+	void RenderingDevice::BeginRenderPass(const RenderPassDescriptor& desc)
+	{
+		const auto cmd = m_self->commandBuffers[m_currentFrameIndex].get();
+		const auto swapExtent = m_self->swapChain->GetExtent();
+		const VkExtent2D extent = {
+			desc.width > 0 ? desc.width : swapExtent.width,
+			desc.height > 0 ? desc.height : swapExtent.height
+		};
+
+		std::vector<VkRenderingAttachmentInfo> vkColorAttachments;
+		vkColorAttachments.reserve(desc.colorAttachments.size());
+
+		for (const auto& colorDesc : desc.colorAttachments)
+		{
+			VkRenderingAttachmentInfo attachment{};
+			attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+			attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			attachment.loadOp = ToVkLoadOp(colorDesc.loadOp);
+			attachment.storeOp = ToVkStoreOp(colorDesc.storeOp);
+			attachment.clearValue.color = {{colorDesc.clearColor[0], colorDesc.clearColor[1], colorDesc.clearColor[2], colorDesc.clearColor[3]}};
+
+			if (colorDesc.useSwapChainImage)
+			{
+				attachment.imageView = m_self->swapChain->GetImageView(colorDesc.swapChainImageIndex);
+			}
+			else
+			{
+				attachment.imageView = GetTexture(colorDesc.target)->defaultView;
+			}
+
+			if (colorDesc.resolveToSwapChain)
+			{
+				attachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+				attachment.resolveImageView = m_self->swapChain->GetImageView(colorDesc.swapChainImageIndex);
+				attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			}
+			else if (colorDesc.resolveTarget.IsValid())
+			{
+				attachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+				attachment.resolveImageView = GetTexture(colorDesc.resolveTarget)->defaultView;
+				attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			}
+			else
+			{
+				attachment.resolveMode = VK_RESOLVE_MODE_NONE;
+			}
+
+			vkColorAttachments.push_back(attachment);
+		}
+
+		VkRenderingAttachmentInfo vkDepthAttachment{};
+		if (desc.depthAttachment.has_value())
+		{
+			const auto& depthDesc = desc.depthAttachment.value();
+			vkDepthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+			vkDepthAttachment.imageView = GetTexture(depthDesc.target)->defaultView;
+			vkDepthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			vkDepthAttachment.loadOp = ToVkLoadOp(depthDesc.loadOp);
+			vkDepthAttachment.storeOp = ToVkStoreOp(depthDesc.storeOp);
+			vkDepthAttachment.clearValue.depthStencil = {depthDesc.clearDepth, depthDesc.clearStencil};
+		}
+
+		VkRenderingInfo renderingInfo{};
+		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+		renderingInfo.renderArea = {{0, 0}, extent};
+		renderingInfo.layerCount = 1;
+		renderingInfo.colorAttachmentCount = static_cast<uint32_t>(vkColorAttachments.size());
+		renderingInfo.pColorAttachments = vkColorAttachments.empty() ? nullptr : vkColorAttachments.data();
+		renderingInfo.pDepthAttachment = desc.depthAttachment.has_value() ? &vkDepthAttachment : nullptr;
+
+		cmd->BeginRendering(renderingInfo);
+		cmd->SetViewport(0, 0, extent, 0.0f, 1.0f);
+		cmd->SetScissor(0, 0, extent);
+	}
+
+	void RenderingDevice::EndRenderPass()
+	{
+		m_self->commandBuffers[m_currentFrameIndex]->EndRendering();
+	}
+
+	void RenderingDevice::ExecuteDrawStream(const DrawStreamView& drawStream)
+	{
+		const auto cmd = m_self->commandBuffers[m_currentFrameIndex].get();
+
+		Handle												  lastPipeline{};
+		std::string											  lastLayoutName;
+		VkPipelineLayout									  currentVkLayout = VK_NULL_HANDLE;
+		std::array<Handle, DrawPacket::MaxDescriptorSets>	  lastDescriptorSets{};
+		Handle												  lastVertexBuffer{};
+		Handle												  lastIndexBuffer{};
+
+		for (const DrawPacket& packet : drawStream)
+		{
+			if (lastPipeline != packet.pipeline)
+			{
+				const auto* pipeline = GetPipeline(packet.pipeline);
+				cmd->BindPipeline(pipeline->pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+				lastPipeline = packet.pipeline;
+			}
+
+			if (lastLayoutName != packet.pipelineLayoutName)
+			{
+				currentVkLayout = GetPipelineLayout(packet.pipelineLayoutName)->Handle();
+				lastLayoutName = packet.pipelineLayoutName;
+				lastDescriptorSets.fill({});
+			}
+
+			for (uint32_t setIdx = 0; setIdx < packet.descriptorSetCount; ++setIdx)
+			{
+				const Handle setHandle = packet.descriptorSets[setIdx];
+				if (!setHandle.IsValid() || lastDescriptorSets[setIdx] == setHandle)
+					continue;
+
+				const auto* descSet = GetDescriptorSet(setHandle);
+				cmd->BindDescriptorSets(currentVkLayout, setIdx, 1, &descSet->value, 0, nullptr);
+				lastDescriptorSets[setIdx] = setHandle;
+			}
+
+			if (packet.pushConstantSize > 0)
+			{
+				cmd->PushConstants(currentVkLayout, ToVkShaderStageFlags(packet.pushConstantStages), 0, packet.pushConstantSize, packet.pushConstantData.data());
+			}
+
+			if (lastVertexBuffer != packet.vertexBuffer)
+			{
+				const auto*			   vertexBuffer = GetBuffer(packet.vertexBuffer);
+				const VkBuffer		   vertexBuffers[] = {vertexBuffer->value};
+				constexpr VkDeviceSize offsets[] = {0};
+				cmd->BindVertexBuffers(0, 1, vertexBuffers, offsets);
+				lastVertexBuffer = packet.vertexBuffer;
+			}
+
+			if (lastIndexBuffer != packet.indexBuffer)
+			{
+				const auto* indexBuffer = GetBuffer(packet.indexBuffer);
+				cmd->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
+				lastIndexBuffer = packet.indexBuffer;
+			}
+
+			cmd->DrawIndexed(packet.indexCount, packet.instanceCount, 0, 0, 0);
+		}
+	}
+
 	void RenderingDevice::WaitIdle() const
 	{
 		m_self->device->WaitIdle();
 	}
 
-	[[nodiscard]] uint32_t RenderingDevice::GetCurrentFrameIndex() const
+	uint32_t RenderingDevice::GetCurrentFrameIndex() const
 	{
 		return m_currentFrameIndex;
+	}
+
+	uint32_t RenderingDevice::GetMaxFramesInFlight() const
+	{
+		return m_maxFramesInFlight;
+	}
+
+	float RenderingDevice::GetAspectRatio() const
+	{
+		return m_self->swapChain->GetAspectRatio();
+	}
+
+	std::pair<uint32_t, uint32_t> RenderingDevice::GetSwapChainExtent() const
+	{
+		const VkExtent2D ext = m_self->swapChain->GetExtent();
+		return {ext.width, ext.height};
+	}
+
+	uint64_t RenderingDevice::GetSwapChainGeneration() const
+	{
+		return m_self->swapChain->GetGeneration();
+	}
+
+	bool RenderingDevice::IsMsaaEnabled() const
+	{
+		return m_self->device->GetMaxMsaaSamples() > VK_SAMPLE_COUNT_1_BIT;
 	}
 
 	RenderingApi::CommandBuffer* RenderingDevice::GetCurrentCommandBuffer() const
@@ -294,15 +656,5 @@ namespace BetterThanNothing
 	RenderingApi::SwapChain* RenderingDevice::GetSwapChain() const
 	{
 		return m_self->swapChain.get();
-	}
-
-	auto RenderingDevice::GetMaxFramesInFlight() const -> uint32_t
-	{
-		return m_maxFramesInFlight;
-	}
-
-	auto RenderingDevice::GetAspectRatio() const -> float
-	{
-		return m_self->swapChain->GetAspectRatio();
 	}
 }

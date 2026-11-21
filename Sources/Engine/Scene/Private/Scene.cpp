@@ -269,6 +269,7 @@ namespace BetterThanNothing
 					const auto& meshRes = model->meshes[meshIdx];
 					auto&		meshComp = nodeObj.AddComponent<MeshComponent>();
 					meshComp.meshId = meshRes.id;
+					meshComp.materialId = meshRes.materialId;
 					meshComp.textureId = meshRes.textureId;
 				}
 			}
@@ -286,6 +287,7 @@ namespace BetterThanNothing
 
 					auto& meshComp = primObj.AddComponent<MeshComponent>();
 					meshComp.meshId = meshRes.id;
+					meshComp.materialId = meshRes.materialId;
 					meshComp.textureId = meshRes.textureId;
 				}
 			}
@@ -310,6 +312,7 @@ namespace BetterThanNothing
 
 				auto& meshComp = child.AddComponent<MeshComponent>();
 				meshComp.meshId = meshRes.id;
+				meshComp.materialId = meshRes.materialId;
 				meshComp.textureId = meshRes.textureId;
 			}
 		}

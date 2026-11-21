@@ -18,17 +18,30 @@
 
 #pragma once
 
+#include <Common/EShaderType.hpp>
+#include <Common/ResourceId.hpp>
+#include <Math/Vector3.hpp>
 #include <RenderingDevice/Handle.hpp>
-#include <memory>
+#include <cstdint>
+#include <string>
 
 namespace BetterThanNothing
 {
+	enum class EAlphaMode : uint8_t
+	{
+		Opaque = 0,
+		Mask,
+		Blend
+	};
+
 	struct MeshResourceCache
 	{
 		Handle	 vertexBuffer;
 		uint32_t vertexCount = 0;
 		Handle	 indexBuffer;
 		uint32_t indexCount = 0;
+		Vector3	 boundsMin = Vector3(-0.5f);
+		Vector3	 boundsMax = Vector3(0.5f);
 	};
 
 	struct TextureResourceCache
@@ -42,10 +55,21 @@ namespace BetterThanNothing
 		Handle	descriptorSetHandle;
 	};
 
+	struct MaterialResourceCache
+	{
+		std::string name;
+		EAlphaMode	alphaMode = EAlphaMode::Opaque;
+		float		alphaCutoff = 0.5f;
+		ResourceId	diffuseTextureId = InvalidResourceId;
+		ResourceId	normalTextureId = InvalidResourceId;
+		std::string pipelineName = "Forward::Opaque";
+		Handle		descriptorSetHandle;
+	};
+
 	struct ShaderResourceCache
 	{
 		std::string name;
-		EShaderType type;
+		EShaderType type = EShaderType::Vertex;
 		Handle		module;
 	};
 

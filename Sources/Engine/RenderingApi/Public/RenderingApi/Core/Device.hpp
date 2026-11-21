@@ -90,7 +90,8 @@ namespace BetterThanNothing::RenderingApi
 
 
 		[[nodiscard]] VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
-		[[nodiscard]] bool IsSupportedFormatFeature(VkFormat format, VkFormatFeatureFlags features) const;
+		[[nodiscard]] VkFormat FindDepthFormat() const;
+		[[nodiscard]] bool	   IsSupportedFormatFeature(VkFormat format, VkFormatFeatureFlags features) const;
 
 	private:
 		bool								  CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept;

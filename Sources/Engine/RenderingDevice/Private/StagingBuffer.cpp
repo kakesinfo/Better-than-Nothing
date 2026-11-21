@@ -68,6 +68,13 @@ namespace BetterThanNothing
 		return std::make_unique<StagingBuffer>(allocator, size);
 	}
 
+	bool StagingBuffer::CanFit(const uint64_t dataSize, const uint64_t alignment) const
+	{
+		const uint64_t alignMask = alignment > 1 ? (alignment - 1) : 0;
+		const uint64_t alignedOffset = (m_offset + alignMask) & ~alignMask;
+		return (dataSize + alignedOffset) <= m_size;
+	}
+
 	uint64_t StagingBuffer::Stage(const void* data, const uint64_t dataSize, const uint64_t alignment)
 	{
 		const uint64_t alignMask = alignment > 1 ? (alignment - 1) : 0;

@@ -32,15 +32,8 @@ namespace BetterThanNothing
 {
 	bool RenderingDevice::Internal_CreateDescriptorSet(const std::string_view layoutType, RenderingApi::DescriptorSet* newDescriptorSet) const
 	{
-		const auto layout = GetDescriptorSetLayout(std::string(layoutType))->Handle();
-
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = m_self->descriptorPool->Handle();
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &layout;
-
-		return vkAllocateDescriptorSets(m_self->device->Handle(), &allocInfo, &newDescriptorSet->value) == VK_SUCCESS;
+		const VkDescriptorSetLayout layout = GetDescriptorSetLayout(std::string(layoutType))->Handle();
+		return m_self->descriptorAllocator->Allocate(layout, newDescriptorSet->value, newDescriptorSet->ownerPool);
 	}
 
 	Handle RenderingDevice::CreateDescriptorSet(const std::string_view layoutType)
@@ -58,29 +51,35 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, const std::string_view layoutType)
 	{
-		const Handle handle = CreateDescriptorSet(layoutType);
+		const TextureBindingUpdate binding{.binding = 0, .textureHandle = textureHandle, .samplerHandle = samplerHandle};
+		return CreateCombinedImageDescriptorSet(std::span<const TextureBindingUpdate>(&binding, 1), layoutType);
+	}
 
+	Handle RenderingDevice::CreateCombinedImageDescriptorSet(const std::span<const TextureBindingUpdate> bindings, const std::string_view layoutType)
+	{
+		const Handle					   handle = CreateDescriptorSet(layoutType);
 		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
-		const RenderingApi::Texture*	   texture = GetTexture(textureHandle);
-		const RenderingApi::Sampler*	   sampler = GetSampler(samplerHandle);
 
-		DescriptorSetUpdateRequest request{};
+		for (const auto& b : bindings)
+		{
+			const RenderingApi::Texture* texture = GetTexture(b.textureHandle);
+			const RenderingApi::Sampler* sampler = GetSampler(b.samplerHandle);
 
-		request.imageInfo = {};
-		request.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		request.imageInfo.imageView = texture->defaultView;
-		request.imageInfo.sampler = sampler->value;
+			DescriptorSetUpdateRequest request{};
+			request.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			request.imageInfo.imageView = texture->defaultView;
+			request.imageInfo.sampler = sampler->value;
 
-		request.write = {};
-		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		request.write.dstSet = descriptor->value;
-		request.write.dstBinding = 0;
-		request.write.dstArrayElement = 0;
-		request.write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		request.write.descriptorCount = 1;
-		request.write.pImageInfo = &request.imageInfo;
+			request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			request.write.dstSet = descriptor->value;
+			request.write.dstBinding = b.binding;
+			request.write.dstArrayElement = 0;
+			request.write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			request.write.descriptorCount = 1;
+			request.write.pImageInfo = &request.imageInfo;
 
-		RequestDescriptorSetUpdate(request);
+			RequestDescriptorSetUpdate(request);
+		}
 
 		return handle;
 	}
@@ -201,13 +200,19 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid descriptor set handle!");
 
 		const RenderingApi::DescriptorSet* descriptor = m_self->descriptors.Get(handle);
-		if (descriptor->value != VK_NULL_HANDLE)
-		{
-			std::erase_if(m_self->descriptorsUpdateRequests, [&](const DescriptorSetUpdateRequest& req) { return req.write.dstSet == descriptor->value; });
-			vkFreeDescriptorSets(m_self->device->Handle(), m_self->descriptorPool->Handle(), 1, &descriptor->value);
-		}
-
+		const VkDescriptorSet			   vkSet = descriptor->value;
+		const VkDescriptorPool			   ownerPool = descriptor->ownerPool;
 		m_self->descriptors.Destroy(handle);
+
+		if (vkSet != VK_NULL_HANDLE)
+		{
+			std::erase_if(m_self->descriptorsUpdateRequests, [&](const DescriptorSetUpdateRequest& req) { return req.write.dstSet == vkSet; });
+
+			DescriptorAllocator* allocator = m_self->descriptorAllocator.get();
+			Internal_EnqueueDeletion([allocator, ownerPool, vkSet]() {
+				allocator->Free(ownerPool, vkSet);
+			});
+		}
 	}
 
 	RenderingApi::DescriptorSet* RenderingDevice::GetDescriptorSet(const Handle& handle)

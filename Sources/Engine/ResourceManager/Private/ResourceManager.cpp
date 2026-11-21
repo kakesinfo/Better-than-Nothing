@@ -22,6 +22,7 @@
 #include "RenderingDevice/ShaderDescription.hpp"
 #include "ResourceManager/PipelineBlueprint.hpp"
 
+#include <Common/AssetPath.hpp>
 #include <Common/Logger.hpp>
 #include <Data/Graphics/MeshData.hpp>
 #include <Data/Graphics/VertexData.hpp>
@@ -30,10 +31,27 @@
 #include <RenderingDevice/TextureDescription.hpp>
 #include <ResourceImporter/ResourceImporter.hpp>
 #include <ResourceManager/ResourceManager_Types.hpp>
+#include <array>
 #include <filesystem>
+#include <limits>
 
 namespace BetterThanNothing
 {
+	static EAlphaMode ConvertAlphaMode(const EImportedAlphaMode mode)
+	{
+		switch (mode)
+		{
+			case EImportedAlphaMode::Mask:
+				return EAlphaMode::Mask;
+			case EImportedAlphaMode::Blend:
+				return EAlphaMode::Blend;
+			case EImportedAlphaMode::Opaque:
+			case EImportedAlphaMode::NONE:
+			default:
+				return EAlphaMode::Opaque;
+		}
+	}
+
 	ResourceManager::ResourceManager(RenderingDevice* renderingDevice) : m_renderingDevice(renderingDevice)
 	{
 		m_importer = std::make_unique<ResourceImporter>();
@@ -93,6 +111,14 @@ namespace BetterThanNothing
 		}
 		m_meshes.clear();
 
+		for (const auto& [id, material] : m_materials)
+		{
+			if (material->descriptorSetHandle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(material->descriptorSetHandle);
+		}
+		m_materials.clear();
+		m_materialsLUT.clear();
+
 		for (const auto& [id, texture] : m_textures)
 		{
 			if (texture->descriptorSetHandle.IsValid())
@@ -106,6 +132,87 @@ namespace BetterThanNothing
 		m_models.clear();
 		m_modelsLUT.clear();
 		m_freeIds.clear();
+	}
+
+	ResourceId ResourceManager::CreateSolidColorTexture(const std::string& cacheKey, const uint8_t r, const uint8_t g, const uint8_t b, const uint8_t a)
+	{
+		if (const auto it = m_texturesLUT.find(cacheKey); it != m_texturesLUT.end())
+			return it->second;
+
+		const std::array<uint8_t, 4> pixel = {r, g, b, a};
+
+		auto gpuData = std::make_unique<TextureResourceCache>();
+		gpuData->width = 1;
+		gpuData->height = 1;
+		gpuData->channels = 4;
+		gpuData->size = 4;
+
+		TextureFromDataDescription desc{};
+		desc.data = pixel.data();
+		desc.dataSize = pixel.size();
+		desc.width = 1;
+		desc.height = 1;
+		desc.channels = 4;
+		desc.generateMipmaps = false;
+
+		gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
+		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{});
+
+		const ResourceId textureId = GenerateUniqueResourceId();
+		m_textures[textureId] = std::move(gpuData);
+		m_texturesLUT[cacheKey] = textureId;
+		return textureId;
+	}
+
+	ResourceId ResourceManager::GetDefaultTexture()
+	{
+		const std::string resolvedDefault = AssetPath::Resolve(".assets/default_texture.png");
+		std::error_code	  ec;
+		if (std::filesystem::exists(resolvedDefault, ec))
+			return LoadTexture(resolvedDefault);
+
+		return CreateSolidColorTexture("__builtin_white__", 255, 255, 255, 255);
+	}
+
+	ResourceId ResourceManager::GetDefaultNormalTexture()
+	{
+		return CreateSolidColorTexture("__builtin_flat_normal__", 128, 128, 255, 255);
+	}
+
+	ResourceId ResourceManager::CreateMaterial(const MaterialCreateInfo& info)
+	{
+		const ResourceId diffuseId = info.diffuseTextureId != InvalidResourceId ? info.diffuseTextureId : GetDefaultTexture();
+		const ResourceId normalId = info.normalTextureId != InvalidResourceId ? info.normalTextureId : GetDefaultNormalTexture();
+		const std::string pipelineName = !info.pipelineName.empty()
+											 ? info.pipelineName
+											 : (info.alphaMode == EAlphaMode::Blend ? "Forward::Transparent" : "Forward::Opaque");
+
+		const std::string cacheKey = std::to_string(diffuseId) + "|" + std::to_string(normalId) + "|" + std::to_string(static_cast<uint8_t>(info.alphaMode)) + "|" + pipelineName;
+		if (const auto it = m_materialsLUT.find(cacheKey); it != m_materialsLUT.end())
+			return it->second;
+
+		const TextureResourceCache* diffuseTex = GetTextureData(diffuseId);
+		const TextureResourceCache* normalTex = GetTextureData(normalId);
+
+		const std::array<TextureBindingUpdate, 2> bindings = {{
+			{.binding = 0, .textureHandle = diffuseTex->textureHandle, .samplerHandle = diffuseTex->samplerHandle},
+			{.binding = 1, .textureHandle = normalTex->textureHandle, .samplerHandle = normalTex->samplerHandle},
+		}};
+
+		auto material = std::make_unique<MaterialResourceCache>();
+		material->name = info.name.empty() ? ("Material_" + std::to_string(m_materials.size())) : info.name;
+		material->alphaMode = info.alphaMode;
+		material->alphaCutoff = info.alphaCutoff;
+		material->diffuseTextureId = diffuseId;
+		material->normalTextureId = normalId;
+		material->pipelineName = pipelineName;
+		material->descriptorSetHandle = m_renderingDevice->CreateCombinedImageDescriptorSet(bindings, "Material");
+
+		const ResourceId materialId = GenerateUniqueResourceId();
+		m_materials[materialId] = std::move(material);
+		m_materialsLUT[cacheKey] = materialId;
+
+		return materialId;
 	}
 
 	ResourceId ResourceManager::CreateMesh(const MeshData& meshData)
@@ -124,21 +231,38 @@ namespace BetterThanNothing
 		meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(meshData.indices.data(), indexBufferSize);
 		meshGpuData->indexCount = static_cast<uint32_t>(meshData.indices.size());
 
+		Vector3 minBounds(std::numeric_limits<float>::max());
+		Vector3 maxBounds(std::numeric_limits<float>::lowest());
+		for (const auto& v : meshData.vertices)
+		{
+			minBounds = Vector3::Min(minBounds, v.position);
+			maxBounds = Vector3::Max(maxBounds, v.position);
+		}
+		meshGpuData->boundsMin = minBounds;
+		meshGpuData->boundsMax = maxBounds;
+
 		m_meshes[meshId] = std::move(meshGpuData);
 		return meshId;
 	}
 
 	ResourceId ResourceManager::LoadModel(const std::string& path, bool preTransform)
 	{
-		const std::string cacheKey = path + (preTransform ? "|pre" : "|raw");
+		const std::string resolvedPath = AssetPath::Resolve(path);
+		const std::string cacheKey = resolvedPath + (preTransform ? "|pre" : "|raw");
 		if (const auto it = m_modelsLUT.find(cacheKey); it != m_modelsLUT.end())
 			return it->second;
 
-		const ImportedModel importedModel = m_importer->ImportModel(path, preTransform);
+		const ImportedModel importedModel = m_importer->ImportModel(resolvedPath, preTransform);
+
+		// Batch all vertex/index/texture GPU uploads for this model into minimal command buffer submissions
+		RenderingDevice::UploadBatchScope uploadBatch(m_renderingDevice);
 
 		ModelResource model;
 		model.id = GenerateUniqueResourceId();
 		model.meshes.reserve(importedModel.meshes.size());
+
+		const ResourceId defaultTexId = GetDefaultTexture();
+		const ResourceId defaultNormalId = GetDefaultNormalTexture();
 
 		for (const auto& mesh : importedModel.meshes)
 		{
@@ -156,20 +280,38 @@ namespace BetterThanNothing
 				const size_t indexBufferSize = sizeof(mesh.indices[0]) * mesh.indices.size();
 				meshGpuData->indexBuffer = m_renderingDevice->CreateIndexBuffer(mesh.indices.data(), indexBufferSize);
 				meshGpuData->indexCount = static_cast<uint32_t>(mesh.indices.size());
+				meshGpuData->boundsMin = mesh.min;
+				meshGpuData->boundsMax = mesh.max;
 
 				m_meshes[meshId] = std::move(meshGpuData);
 				meshResource.id = meshId;
 			}
 
-			std::string diffusePath;
+			MaterialCreateInfo matInfo{};
+			matInfo.diffuseTextureId = defaultTexId;
+			matInfo.normalTextureId = defaultNormalId;
+			matInfo.alphaMode = EAlphaMode::Opaque;
+
 			if (mesh.materialId.has_value() && mesh.materialId.value() < importedModel.materials.size())
 			{
-				const ImportedMaterial& material = importedModel.materials[mesh.materialId.value()];
-				if (material.diffuseTexturePath.has_value())
-					diffusePath = material.diffuseTexturePath.value();
+				const ImportedMaterial& importedMat = importedModel.materials[mesh.materialId.value()];
+				matInfo.alphaMode = ConvertAlphaMode(importedMat.alphaMode);
+				matInfo.alphaCutoff = importedMat.alphaCutoff;
+
+				if (importedMat.diffuseTexturePath.has_value())
+					matInfo.diffuseTextureId = LoadTexture(importedMat.diffuseTexturePath.value());
+
+				if (importedMat.normalTexturePath.has_value())
+				{
+					std::error_code ec;
+					const std::string resolvedNorm = AssetPath::Resolve(importedMat.normalTexturePath.value());
+					if (std::filesystem::exists(resolvedNorm, ec))
+						matInfo.normalTextureId = LoadTexture(resolvedNorm);
+				}
 			}
 
-			meshResource.textureId = LoadTexture(diffusePath);
+			meshResource.textureId = matInfo.diffuseTextureId;
+			meshResource.materialId = CreateMaterial(matInfo);
 			model.meshes.push_back(meshResource);
 		}
 
@@ -189,16 +331,17 @@ namespace BetterThanNothing
 		const ResourceId modelId = model.id;
 		m_models[modelId] = std::move(model);
 
-		Logger::Log<INFO>("ModelResource cached: {} ({} submeshes, {} nodes)", path, m_models[modelId].meshes.size(), m_models[modelId].nodes.size());
+		Logger::Log<INFO>("ModelResource cached: {} ({} submeshes, {} nodes)", resolvedPath, m_models[modelId].meshes.size(), m_models[modelId].nodes.size());
 
 		return modelId;
 	}
 
 	ResourceId ResourceManager::LoadTexture(const std::string& path)
 	{
-		std::string texturePath = path;
-		if (texturePath.empty())
-			texturePath = "../../../.assets/default_texture.png";
+		if (path.empty())
+			return GetDefaultTexture();
+
+		const std::string texturePath = AssetPath::Resolve(path);
 
 		if (const auto it = m_texturesLUT.find(texturePath); it != m_texturesLUT.end())
 			return it->second;
@@ -220,7 +363,6 @@ namespace BetterThanNothing
 
 		gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
 		gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{});
-		gpuData->descriptorSetHandle = m_renderingDevice->CreateTextureDescriptorSet(gpuData->textureHandle, gpuData->samplerHandle, "Textures");
 
 		const auto textureId = GenerateUniqueResourceId();
 		m_textures[textureId] = std::move(gpuData);
@@ -233,21 +375,22 @@ namespace BetterThanNothing
 
 	ResourceId ResourceManager::LoadShader(const std::string& path)
 	{
-		if (const auto it = m_shadersLUT.find(path); it != m_shadersLUT.end())
+		const std::string resolvedPath = AssetPath::Resolve(path);
+		if (const auto it = m_shadersLUT.find(resolvedPath); it != m_shadersLUT.end())
 			return it->second;
 
-		ImportedShader importedShader = m_importer->ImportShader(path);
+		ImportedShader importedShader = m_importer->ImportShader(resolvedPath);
 
 		auto gpuData = std::make_unique<ShaderResourceCache>();
-		gpuData->name = std::filesystem::path(path).filename().string();
+		gpuData->name = std::filesystem::path(resolvedPath).filename().string();
 		gpuData->type = importedShader.type;
 		gpuData->module = m_renderingDevice->CreateShader({gpuData->name, importedShader.type, std::move(importedShader.spirv)});
 
 		const auto shaderId = GenerateUniqueResourceId();
 		m_shaders[shaderId] = std::move(gpuData);
-		m_shadersLUT[path] = shaderId;
+		m_shadersLUT[resolvedPath] = shaderId;
 
-		Logger::Log<INFO>("ShaderResourceCache created and cached for Shader: {}", path);
+		Logger::Log<INFO>("ShaderResourceCache created and cached for Shader: {}", resolvedPath);
 
 		return shaderId;
 	}
@@ -263,6 +406,12 @@ namespace BetterThanNothing
 		PipelineDescription desc{};
 		desc.vertexLayout = blueprint.GetVertexLayout();
 		desc.layoutName = blueprint.GetPipelineLayout();
+		desc.depthTest = blueprint.GetDepthTest();
+		desc.depthWrite = blueprint.GetDepthWrite();
+		desc.blendEnable = blueprint.GetBlendEnable();
+		desc.alphaToCoverage = blueprint.GetAlphaToCoverage();
+		desc.wireframe = blueprint.GetWireframe();
+		desc.cullMode = blueprint.GetCullMode();
 		desc.shaders.reserve(blueprint.GetShaders().size());
 		for (const auto& shaderId : blueprint.GetShaders())
 			desc.shaders.push_back(GetShaderData(shaderId)->module);
@@ -295,6 +444,14 @@ namespace BetterThanNothing
 		const auto it = m_textures.find(id);
 		if (it == m_textures.end())
 			throw std::runtime_error("No TextureResourceCache for ResourceId: " + std::to_string(id));
+		return it->second.get();
+	}
+
+	MaterialResourceCache* ResourceManager::GetMaterialData(const ResourceId id) const
+	{
+		const auto it = m_materials.find(id);
+		if (it == m_materials.end())
+			throw std::runtime_error("No MaterialResourceCache for ResourceId: " + std::to_string(id));
 		return it->second.get();
 	}
 

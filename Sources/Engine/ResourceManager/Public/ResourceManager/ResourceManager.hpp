@@ -32,12 +32,25 @@ namespace BetterThanNothing
 	struct ShaderResourceCache;
 	struct MeshResourceCache;
 	struct TextureResourceCache;
+	struct MaterialResourceCache;
 	struct MeshData;
+	enum class EAlphaMode : uint8_t;
 
 	struct MeshResource
 	{
 		ResourceId id = InvalidResourceId;
 		ResourceId textureId = InvalidResourceId;
+		ResourceId materialId = InvalidResourceId;
+	};
+
+	struct MaterialCreateInfo
+	{
+		std::string name;
+		ResourceId	diffuseTextureId = InvalidResourceId;
+		ResourceId	normalTextureId = InvalidResourceId;
+		EAlphaMode	alphaMode{};
+		float		alphaCutoff = 0.5f;
+		std::string pipelineName;
 	};
 
 	struct ModelNodeResource
@@ -80,6 +93,9 @@ namespace BetterThanNothing
 	public:
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
 		ResourceId LoadTexture(const std::string& path);
+		ResourceId GetDefaultTexture();
+		ResourceId GetDefaultNormalTexture();
+		ResourceId CreateMaterial(const MaterialCreateInfo& info);
 		ResourceId LoadShader(const std::string& path);
 		ResourceId CreateMesh(const MeshData& meshData);
 		ResourceId CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback);
@@ -88,23 +104,28 @@ namespace BetterThanNothing
 
 		[[nodiscard]] MeshResourceCache*	 GetMeshData(ResourceId id) const;
 		[[nodiscard]] TextureResourceCache*	 GetTextureData(ResourceId id) const;
+		[[nodiscard]] MaterialResourceCache* GetMaterialData(ResourceId id) const;
 		[[nodiscard]] const ModelResource*	 GetModelData(ResourceId id) const;
 		[[nodiscard]] ShaderResourceCache*	 GetShaderData(ResourceId id) const;
 		[[nodiscard]] PipelineResourceCache* GetPipelineData(const std::string& name) const;
 
 	private:
-		RenderingDevice*													   m_renderingDevice;
-		std::unique_ptr<ResourceImporter>									   m_importer;
-		std::unordered_map<ResourceId, std::unique_ptr<MeshResourceCache>>	   m_meshes;
-		std::unordered_map<ResourceId, std::unique_ptr<TextureResourceCache>>  m_textures;
-		std::unordered_map<ResourceId, std::unique_ptr<ShaderResourceCache>>   m_shaders;
-		std::unordered_map<ResourceId, std::unique_ptr<PipelineResourceCache>> m_pipelines;
-		std::unordered_map<ResourceId, ModelResource>						   m_models;
-		std::unordered_map<std::string, ResourceId>							   m_texturesLUT;
-		std::unordered_map<std::string, ResourceId>							   m_modelsLUT;
-		std::unordered_map<std::string, ResourceId>							   m_shadersLUT;
-		std::unordered_map<std::string, ResourceId>							   m_pipelinesLUT;
-		std::vector<ResourceId>												   m_freeIds;
-		ResourceId															   m_nextResourceId = 0;
+		ResourceId CreateSolidColorTexture(const std::string& cacheKey, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+
+		RenderingDevice*														m_renderingDevice;
+		std::unique_ptr<ResourceImporter>										m_importer;
+		std::unordered_map<ResourceId, std::unique_ptr<MeshResourceCache>>		m_meshes;
+		std::unordered_map<ResourceId, std::unique_ptr<TextureResourceCache>>	m_textures;
+		std::unordered_map<ResourceId, std::unique_ptr<MaterialResourceCache>>	m_materials;
+		std::unordered_map<ResourceId, std::unique_ptr<ShaderResourceCache>>	m_shaders;
+		std::unordered_map<ResourceId, std::unique_ptr<PipelineResourceCache>>	m_pipelines;
+		std::unordered_map<ResourceId, ModelResource>							m_models;
+		std::unordered_map<std::string, ResourceId>								m_texturesLUT;
+		std::unordered_map<std::string, ResourceId>								m_materialsLUT;
+		std::unordered_map<std::string, ResourceId>								m_modelsLUT;
+		std::unordered_map<std::string, ResourceId>								m_shadersLUT;
+		std::unordered_map<std::string, ResourceId>								m_pipelinesLUT;
+		std::vector<ResourceId>													m_freeIds;
+		ResourceId																m_nextResourceId = 0;
 	};
 }

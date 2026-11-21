@@ -21,6 +21,7 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 
+#include <Common/AssetPath.hpp>
 #include <Common/Logger.hpp>
 #include <ResourceImporter/Importer.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
@@ -55,12 +56,13 @@ namespace BetterThanNothing
 		std::string		   err;
 		std::string		   warn;
 
-		std::filesystem::path filePath(input.path);
+		const std::string	  resolvedPath = AssetPath::Resolve(input.path);
+		std::filesystem::path filePath(resolvedPath);
 		std::string			  ext = filePath.extension().string();
 		std::ranges::transform(ext, ext.begin(), [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
-		const bool ret = (ext == ".glb") ? loader.LoadBinaryFromFile(&gltfModel, &err, &warn, input.path)
-										 : loader.LoadASCIIFromFile(&gltfModel, &err, &warn, input.path);
+		const bool ret = (ext == ".glb") ? loader.LoadBinaryFromFile(&gltfModel, &err, &warn, resolvedPath)
+										 : loader.LoadASCIIFromFile(&gltfModel, &err, &warn, resolvedPath);
 
 		if (!warn.empty())
 			Logger::Log<WARNING>("TinyGLTF warning: {}", warn);
@@ -86,6 +88,14 @@ namespace BetterThanNothing
 				const int sourceIndex = gltfModel.textures[texIndex].source;
 				if (sourceIndex >= 0 && static_cast<size_t>(sourceIndex) < gltfModel.images.size() && !gltfModel.images[sourceIndex].uri.empty())
 					mat.diffuseTexturePath = (filePath.parent_path() / gltfModel.images[sourceIndex].uri).string();
+			}
+
+			if (gltfMat.normalTexture.index >= 0)
+			{
+				const int texIndex = gltfMat.normalTexture.index;
+				const int sourceIndex = gltfModel.textures[texIndex].source;
+				if (sourceIndex >= 0 && static_cast<size_t>(sourceIndex) < gltfModel.images.size() && !gltfModel.images[sourceIndex].uri.empty())
+					mat.normalTexturePath = (filePath.parent_path() / gltfModel.images[sourceIndex].uri).string();
 			}
 
 			importedModel.materials.push_back(std::move(mat));

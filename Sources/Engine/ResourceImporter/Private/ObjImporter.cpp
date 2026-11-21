@@ -18,6 +18,7 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 
+#include <Common/AssetPath.hpp>
 #include <Common/Logger.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <ResourceImporter/Importer.hpp>
@@ -37,9 +38,9 @@ namespace BetterThanNothing
 		if (shape.mesh.material_ids.empty())
 			return std::nullopt;
 
-		const int materialId = shape.mesh.material_ids.at(0); // We assume that there is only one material
+		const int materialId = shape.mesh.material_ids.at(0);
 
-		if (materialId < 0 || materialId >= materials.size())
+		if (materialId < 0 || static_cast<size_t>(materialId) >= materials.size())
 			return std::nullopt;
 
 		const auto& material = materials[materialId];
@@ -50,14 +51,19 @@ namespace BetterThanNothing
 			importedMaterial.diffuseTexturePath = texPath.string();
 		}
 
-		if (!material.normal_texname.empty())
-		{
+		std::string normalTexName = material.normal_texname;
+		if (normalTexName.empty())
+			normalTexName = material.bump_texname;
+		if (normalTexName.empty() && !material.displacement_texname.empty())
+			normalTexName = material.displacement_texname;
 
-			const std::filesystem::path texPath = parentFolder / material.normal_texname;
+		if (!normalTexName.empty())
+		{
+			const std::filesystem::path texPath = parentFolder / normalTexName;
 			importedMaterial.normalTexturePath = texPath.string();
 		}
 
-		importedMaterial.id = materialId;
+		importedMaterial.id = static_cast<uint32_t>(materialId);
 
 		return importedMaterial;
 	}
@@ -65,6 +71,8 @@ namespace BetterThanNothing
 	ImportedModel ObjImporter::Import(const ModelImportInfo& input)
 	{
 		ImportedModel model;
+
+		const std::string resolvedPath = AssetPath::Resolve(input.path);
 
 		std::unordered_map<uint32_t, uint32_t> materialCache;
 
@@ -74,9 +82,9 @@ namespace BetterThanNothing
 		std::string						 warn;
 		std::string						 err;
 
-		std::filesystem::path parentFolder = std::filesystem::path(input.path).parent_path();
+		std::filesystem::path parentFolder = std::filesystem::path(resolvedPath).parent_path();
 
-		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, input.path.c_str(), parentFolder.string().c_str()))
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, resolvedPath.c_str(), parentFolder.string().c_str()))
 			throw std::runtime_error(err);
 
 		if (!warn.empty())

@@ -129,6 +129,7 @@ namespace BetterThanNothing
 	struct MeshComponent : Component
 	{
 		ResourceId meshId = InvalidResourceId;
+		ResourceId materialId = InvalidResourceId;
 		ResourceId textureId = InvalidResourceId;
 	};
 

@@ -28,6 +28,7 @@ namespace BetterThanNothing
 	{
 		uint32_t frameCount = 0;
 		uint32_t drawCalls = 0;
+		uint32_t culledDrawCalls = 0;
 		uint32_t verticesRendered = 0;
 		uint64_t totalDrawCalls = 0;
 		uint64_t totalVerticesRendered = 0;
@@ -48,6 +49,11 @@ namespace BetterThanNothing
 			s_currentFrameMetrics.verticesRendered += vertexCount;
 		}
 
+		static void AddCulledDrawCall()
+		{
+			s_currentFrameMetrics.culledDrawCalls++;
+		}
+
 		static void SetFrameTime(const float frameTime) { s_currentFrameMetrics.frameTime = frameTime; }
 
 		static void SetFps(const float fps)
@@ -65,6 +71,7 @@ namespace BetterThanNothing
 		static void BeginRecording()
 		{
 			s_currentFrameMetrics.drawCalls = 0;
+			s_currentFrameMetrics.culledDrawCalls = 0;
 			s_currentFrameMetrics.verticesRendered = 0;
 			s_currentFrameMetrics.frameTime = 0.0f;
 		}

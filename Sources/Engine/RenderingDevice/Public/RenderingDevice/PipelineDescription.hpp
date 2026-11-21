@@ -17,10 +17,10 @@
  */
 
 #pragma once
+#include "Types.hpp"
 #include "VertexLayout.hpp"
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {
@@ -31,11 +31,14 @@ namespace BetterThanNothing
 		std::vector<Handle> shaders;
 		std::string			layoutName;
 		VertexLayout		vertexLayout;
+		TextureFormat		colorFormat = TextureFormat::Undefined;
+		TextureFormat		depthFormat = TextureFormat::Undefined;
+		bool				useMsaa = true;
 		bool				wireframe = false;
 		bool				depthTest = true;
 		bool				depthWrite = true;
 		bool				blendEnable = true;
 		bool				alphaToCoverage = true;
-		VkCullModeFlags		cullMode = VK_CULL_MODE_BACK_BIT;
+		CullMode			cullMode = CullMode::Back;
 	};
 }

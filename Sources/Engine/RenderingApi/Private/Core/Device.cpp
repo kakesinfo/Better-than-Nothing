@@ -103,9 +103,14 @@ namespace BetterThanNothing::RenderingApi
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
 		deviceFeatures.sampleRateShading = VK_TRUE; // Enable sample shading for better quality MSAA
 
+		VkPhysicalDeviceSynchronization2Features sync2Features{};
+		sync2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+		sync2Features.synchronization2 = VK_TRUE;
+
 		VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures{};
 		dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
 		dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
+		dynamicRenderingFeatures.pNext = &sync2Features;
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -165,6 +170,11 @@ namespace BetterThanNothing::RenderingApi
 		}
 
 		throw std::runtime_error("Failed to find supported format");
+	}
+
+	VkFormat Device::FindDepthFormat() const
+	{
+		return FindSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 	}
 
 	bool Device::IsSupportedFormatFeature(const VkFormat format, const VkFormatFeatureFlags features) const
@@ -308,15 +318,19 @@ namespace BetterThanNothing::RenderingApi
 			swapchainSupported = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 		}
 
+		VkPhysicalDeviceSynchronization2Features sync2Features{};
+		sync2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+
 		VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures{};
 		dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+		dynamicRenderingFeatures.pNext = &sync2Features;
 
 		VkPhysicalDeviceFeatures2 supportedFeatures2{};
 		supportedFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 		supportedFeatures2.pNext = &dynamicRenderingFeatures;
 		vkGetPhysicalDeviceFeatures2(device, &supportedFeatures2);
 
-		return queueFamiliesSupported && extensionsSupported && swapchainSupported && supportedFeatures2.features.samplerAnisotropy && supportedFeatures2.features.sampleRateShading && dynamicRenderingFeatures.dynamicRendering;
+		return queueFamiliesSupported && extensionsSupported && swapchainSupported && supportedFeatures2.features.samplerAnisotropy && supportedFeatures2.features.sampleRateShading && dynamicRenderingFeatures.dynamicRendering && sync2Features.synchronization2;
 	}
 
 	VkPhysicalDevice Device::FindSuitableDevice(const std::vector<VkPhysicalDevice>& devices) const

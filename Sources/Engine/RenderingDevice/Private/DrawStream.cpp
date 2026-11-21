@@ -46,12 +46,20 @@ namespace BetterThanNothing
 		const float	   clampedDist = drawPacket.distanceToCamera > 0.0f ? drawPacket.distanceToCamera : 0.0f;
 		const uint64_t quantizedDist = static_cast<uint64_t>(std::bit_cast<uint32_t>(clampedDist) >> 16) & 0xFFFFu;
 		const uint64_t meshId = static_cast<uint64_t>(drawPacket.vertexBuffer.GetId()) & 0xFFFFu;
-		const uint64_t textureId = static_cast<uint64_t>(drawPacket.samplerDescriptorSet.GetId()) & 0xFFFFu;
-		const uint64_t pipelineId = static_cast<uint64_t>(drawPacket.pipelineHandle.GetId()) & 0xFFFFu;
+		const uint64_t materialSetId = (drawPacket.descriptorSetCount > 1 ? static_cast<uint64_t>(drawPacket.descriptorSets[1].GetId()) : 0u) & 0xFFFFu;
+		const uint64_t pipelineId = static_cast<uint64_t>(drawPacket.pipeline.GetId()) & 0xFFFFu;
 
 		DrawPacketSortKey sortKey{};
 		sortKey.packetId = packetIndex;
-		sortKey.key = (pipelineId << 48) | (textureId << 32) | (meshId << 16) | quantizedDist;
+		if (drawPacket.sortBackToFront)
+		{
+			const uint64_t invertedDist = 0xFFFFu - quantizedDist;
+			sortKey.key = (invertedDist << 48) | (pipelineId << 32) | (materialSetId << 16) | meshId;
+		}
+		else
+		{
+			sortKey.key = (pipelineId << 48) | (materialSetId << 32) | (meshId << 16) | quantizedDist;
+		}
 
 		m_sortKeys.push_back(sortKey);
 	}

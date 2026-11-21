@@ -153,18 +153,16 @@ namespace BetterThanNothing
 		if (data == nullptr || size == 0)
 			return false;
 
-		const uint64_t offset = m_self->stagingBuffer->Stage(data, size);
+		Internal_EnsureUploadBuffer(size, 4);
 
-		// clang-format off
-		RenderingApi::CommandBuffer::SingleTimeCommands([&](const std::unique_ptr<RenderingApi::CommandBuffer>& cmd) {
-			const auto srcBuffer = m_self->stagingBuffer->GetBuffer();
-			const auto dstBuffer = m_self->buffers.Get(dstBufferHandle)->value;
+		const uint64_t offset = m_self->stagingBuffer->Stage(data, size, 4);
+		const VkBuffer srcBuffer = m_self->stagingBuffer->GetBuffer();
+		const VkBuffer dstBuffer = m_self->buffers.Get(dstBufferHandle)->value;
 
-			cmd->CopyBuffer(srcBuffer, dstBuffer, static_cast<uint32_t>(size), offset);
-		}, m_self->device.get(), m_self->commandPool.get(), m_self->graphicsQueue.get());
-		// clang-format on
+		m_self->uploadCommandBuffer->CopyBuffer(srcBuffer, dstBuffer, size, offset);
 
-		m_self->stagingBuffer->Reset();
+		if (m_self->uploadBatchDepth == 0)
+			Internal_FlushUploadBuffer();
 
 		return true;
 	}
@@ -189,8 +187,14 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid buffer handle!");
 
 		const RenderingApi::Buffer* buffer = m_self->buffers.Get(handle);
-		m_self->allocator->DestroyBuffer(buffer->value, buffer->allocation);
+		const VkBuffer				vkBuffer = buffer->value;
+		const VmaAllocation			allocation = buffer->allocation;
 		m_self->buffers.Destroy(handle);
+
+		RenderingApi::Allocator* allocator = m_self->allocator.get();
+		Internal_EnqueueDeletion([allocator, vkBuffer, allocation]() {
+			allocator->DestroyBuffer(vkBuffer, allocation);
+		});
 	}
 
 	RenderingApi::Buffer* RenderingDevice::GetBuffer(const Handle& handle)

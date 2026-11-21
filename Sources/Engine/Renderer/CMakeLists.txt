@@ -29,19 +29,9 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Data
         Engine::Editor
         Engine::Math
-        Engine::Platform
         Engine::ResourceManager
-        Engine::RenderingApi
         Engine::RenderingDevice
         Engine::Scene
-        SDL3::SDL3
-        stb
-        imgui
-    PUBLIC
-        glslang
-        glslang-default-resource-limits
-        SPIRV
-        spirv_cross
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
