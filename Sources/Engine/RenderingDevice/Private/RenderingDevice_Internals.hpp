@@ -87,7 +87,7 @@ namespace BetterThanNothing
 		std::vector<DescriptorSetUpdateRequest>															descriptorsUpdateRequests;
 		std::vector<VkWriteDescriptorSet>																descriptorsWrites;
 
-		// AMD FidelityFX SDK v2.4.0 state (FSR 4.1.2 Upscaler + Denoiser 1.2.1 configuration)
+		// AMD FidelityFX SDK v2.4.0 state (FSR 4.1.2 Upscaler + Frame Generation 4.0.2/3.1.6 + Denoiser 1.2.1 configuration)
 		void*					 ffxUpscaleContext = nullptr;
 		uint32_t				 ffxContextMaxRenderWidth = 0;
 		uint32_t				 ffxContextMaxRenderHeight = 0;
@@ -99,5 +99,16 @@ namespace BetterThanNothing
 		std::vector<uint64_t>	 ffxUpscalerVersionIds;
 		std::vector<std::string> ffxUpscalerVersionNames;
 		float					 ffxLastVelocityFactor = -1.0f;
+
+		void*					 ffxFrameGenContext = nullptr;
+		uint32_t				 ffxFgMaxRenderWidth = 0;
+		uint32_t				 ffxFgMaxRenderHeight = 0;
+		uint32_t				 ffxFgDisplayWidth = 0;
+		uint32_t				 ffxFgDisplayHeight = 0;
+		uint32_t				 ffxFgVersionIndex = 0;
+		bool					 ffxFrameGenAvailable = false;
+		std::vector<uint64_t>	 ffxFrameGenVersionIds;
+		std::vector<std::string> ffxFrameGenVersionNames;
+		uint64_t				 ffxFrameGenFrameId = 1;
 	};
 }

@@ -26,6 +26,7 @@
 #include <ffx_api.hpp>
 #include <vk/ffx_api_vk.hpp>
 #include <ffx_upscale.hpp>
+#include <ffx_framegeneration.hpp>
 #include <ffx_denoiser.hpp>
 
 #include <algorithm>
@@ -153,6 +154,50 @@ namespace BetterThanNothing
 			settings.fsrActiveVersionId = m_self->ffxUpscalerVersionIds[0];
 		}
 
+		// Enumerate available AMD FSR Frame Generation provider versions from amd_fidelityfx_framegeneration_vk.dll & AMD Adrenalin driver
+		{
+			uint64_t				  fgVersionCount = 0;
+			ffx::QueryDescGetVersions fgVersionQuery{};
+			fgVersionQuery.createDescType = FFX_API_CREATE_CONTEXT_DESC_TYPE_FRAMEGENERATION;
+			fgVersionQuery.device = &vkDevCtx;
+			fgVersionQuery.outputCount = &fgVersionCount;
+			fgVersionQuery.versionIds = nullptr;
+			fgVersionQuery.versionNames = nullptr;
+
+			if (ffx::Query(fgVersionQuery) == ffx::ReturnCode::Ok && fgVersionCount > 0)
+			{
+				m_self->ffxFrameGenVersionIds.resize(fgVersionCount, 0);
+				std::vector<const char*> rawFgNames(fgVersionCount, nullptr);
+
+				fgVersionQuery.versionIds = m_self->ffxFrameGenVersionIds.data();
+				fgVersionQuery.versionNames = rawFgNames.data();
+				if (ffx::Query(fgVersionQuery) == ffx::ReturnCode::Ok)
+				{
+					m_self->ffxFrameGenVersionNames.clear();
+					m_self->ffxFrameGenVersionNames.reserve(fgVersionCount);
+					for (uint64_t i = 0; i < fgVersionCount; ++i)
+					{
+						m_self->ffxFrameGenVersionNames.emplace_back(rawFgNames[i] ? rawFgNames[i] : "Unknown");
+						Logger::Log<INFO>(
+							"FidelityFX SDK v2.4.0 Frame Generation provider [{}]: '{}' (id=0x{:016x})",
+							i,
+							m_self->ffxFrameGenVersionNames.back(),
+							m_self->ffxFrameGenVersionIds[i]
+						);
+					}
+					m_self->ffxFrameGenAvailable = true;
+				}
+			}
+		}
+
+		settings.fgAvailable = m_self->ffxFrameGenAvailable;
+		settings.fgVersionNames = m_self->ffxFrameGenVersionNames;
+		if (!m_self->ffxFrameGenVersionNames.empty())
+		{
+			settings.fgActiveVersionName = m_self->ffxFrameGenVersionNames[0];
+			settings.fgActiveVersionId = m_self->ffxFrameGenVersionIds[0];
+		}
+
 		// Verify and log AMD FidelityFX Denoiser SDK v2.4.0 (v1.2.1 headers + Vulkan FFX_DNSR_Shadows)
 		{
 			ffx::CreateContextDescDenoiser denoiserDesc{};
@@ -186,6 +231,8 @@ namespace BetterThanNothing
 
 	void RenderingDevice::ShutdownFidelityFX()
 	{
+		ShutdownFfxFrameGen();
+
 		if (m_self->ffxUpscaleContext)
 		{
 			m_self->device->WaitIdle();
@@ -197,6 +244,148 @@ namespace BetterThanNothing
 			m_self->ffxContextMaxUpscaleWidth = 0;
 			m_self->ffxContextMaxUpscaleHeight = 0;
 		}
+	}
+
+	void RenderingDevice::ShutdownFfxFrameGen()
+	{
+		if (m_self->ffxFrameGenContext)
+		{
+			m_self->device->WaitIdle();
+
+			ffx::ConfigureDescFrameGeneration disableCfg{};
+			disableCfg.frameGenerationEnabled = false;
+			disableCfg.flags = FFX_FRAMEGENERATION_FLAG_NO_SWAPCHAIN_CONTEXT_NOTIFY;
+			disableCfg.frameID = m_self->ffxFrameGenFrameId;
+			(void)ffx::Configure(m_self->ffxFrameGenContext, disableCfg);
+
+			ffxContext ctx = m_self->ffxFrameGenContext;
+			(void)ffxDestroyContext(&ctx, nullptr);
+			m_self->ffxFrameGenContext = nullptr;
+			m_self->ffxFgMaxRenderWidth = 0;
+			m_self->ffxFgMaxRenderHeight = 0;
+			m_self->ffxFgDisplayWidth = 0;
+			m_self->ffxFgDisplayHeight = 0;
+		}
+	}
+
+	bool RenderingDevice::IsFfxFrameGenAvailable() const
+	{
+		return m_self->ffxFrameGenAvailable;
+	}
+
+	bool RenderingDevice::EnsureFfxFrameGenContext(
+		const uint32_t maxRenderWidth,
+		const uint32_t maxRenderHeight,
+		const uint32_t displayWidth,
+		const uint32_t displayHeight,
+		const uint32_t versionIndex
+	)
+	{
+		if (!m_self->ffxInitialized)
+			InitializeFidelityFX();
+
+		if (!m_self->ffxFrameGenAvailable || maxRenderWidth == 0 || maxRenderHeight == 0 || displayWidth == 0 || displayHeight == 0)
+			return false;
+
+		const uint32_t clampedVersionIdx = m_self->ffxFrameGenVersionIds.empty()
+											   ? 0u
+											   : std::min(versionIndex, static_cast<uint32_t>(m_self->ffxFrameGenVersionIds.size() - 1));
+
+		if (m_self->ffxFrameGenContext != nullptr &&
+			m_self->ffxFgMaxRenderWidth == maxRenderWidth &&
+			m_self->ffxFgMaxRenderHeight == maxRenderHeight &&
+			m_self->ffxFgDisplayWidth == displayWidth &&
+			m_self->ffxFgDisplayHeight == displayHeight &&
+			m_self->ffxFgVersionIndex == clampedVersionIdx)
+		{
+			return true;
+		}
+
+		ShutdownFfxFrameGen();
+
+		VkDeviceContext vkDevCtx{};
+		vkDevCtx.vkDevice = m_self->device->Handle();
+		vkDevCtx.vkPhysicalDevice = m_self->device->PhysicalHandle();
+		vkDevCtx.vkDeviceProcAddr = vkGetDeviceProcAddr;
+
+		ffx::CreateBackendVKDesc backendDesc{};
+		backendDesc.deviceContext = vkDevCtx;
+
+		ffx::CreateContextDescFrameGeneration createFg{};
+		createFg.flags = FFX_FRAMEGENERATION_ENABLE_HIGH_DYNAMIC_RANGE;
+#ifndef NDEBUG
+		createFg.flags |= FFX_FRAMEGENERATION_ENABLE_DEBUG_CHECKING;
+#endif
+		createFg.displaySize = {displayWidth, displayHeight};
+		createFg.maxRenderSize = {maxRenderWidth, maxRenderHeight};
+		createFg.backBufferFormat = FFX_API_SURFACE_FORMAT_R16G16B16A16_FLOAT;
+
+		ffx::CreateContextDescFrameGenerationVersion versionDesc{};
+		versionDesc.version = FFX_FRAMEGENERATION_VERSION;
+
+		ffx::Context	ctx = nullptr;
+		ffx::ReturnCode rc = ffx::ReturnCode::Error;
+
+		if (!m_self->ffxFrameGenVersionIds.empty())
+		{
+			ffx::CreateContextDescOverrideVersion overrideDesc{};
+			overrideDesc.versionId = m_self->ffxFrameGenVersionIds[clampedVersionIdx];
+			rc = ffx::CreateContext(ctx, nullptr, createFg, versionDesc, backendDesc, overrideDesc);
+		}
+		else
+		{
+			rc = ffx::CreateContext(ctx, nullptr, createFg, versionDesc, backendDesc);
+		}
+
+		if (rc != ffx::ReturnCode::Ok || ctx == nullptr)
+		{
+			Logger::Log<ERROR>("FidelityFX SDK: failed to create FSR Frame Generation Vulkan context (rc={})", static_cast<uint32_t>(rc));
+			return false;
+		}
+
+		m_self->ffxFrameGenContext = ctx;
+		m_self->ffxFgMaxRenderWidth = maxRenderWidth;
+		m_self->ffxFgMaxRenderHeight = maxRenderHeight;
+		m_self->ffxFgDisplayWidth = displayWidth;
+		m_self->ffxFgDisplayHeight = displayHeight;
+		m_self->ffxFgVersionIndex = clampedVersionIdx;
+		m_self->ffxFrameGenFrameId = 1;
+
+		auto& settings = RenderSettings::Get();
+		ffxQueryGetProviderVersion providerVer{};
+		providerVer.header.type = FFX_API_QUERY_DESC_TYPE_GET_PROVIDER_VERSION;
+		providerVer.header.pNext = nullptr;
+		if (ffxQuery(&m_self->ffxFrameGenContext, &providerVer.header) == FFX_API_RETURN_OK && providerVer.versionName)
+		{
+			settings.fgActiveVersionName = providerVer.versionName;
+			settings.fgActiveVersionId = providerVer.versionId;
+		}
+		else if (!m_self->ffxFrameGenVersionNames.empty())
+		{
+			settings.fgActiveVersionName = m_self->ffxFrameGenVersionNames[clampedVersionIdx];
+			settings.fgActiveVersionId = m_self->ffxFrameGenVersionIds[clampedVersionIdx];
+		}
+
+		FfxApiEffectMemoryUsage							memUsage{};
+		ffx::QueryDescFrameGenerationGetGPUMemoryUsage memQuery{};
+		memQuery.gpuMemoryUsageFrameGeneration = &memUsage;
+		if (ffx::Query(m_self->ffxFrameGenContext, memQuery) == ffx::ReturnCode::Ok)
+		{
+			settings.fgGpuMemoryMb = static_cast<float>(memUsage.totalUsageInBytes) / (1024.0f * 1024.0f);
+		}
+
+		Logger::Log<SUCCESS>(
+			"FidelityFX Frame Generation Vulkan context created: provider='{}' (0x{:016x}), maxRender={}x{}, display={}x{}, VRAM={:.1f} MB",
+			settings.fgActiveVersionName,
+			settings.fgActiveVersionId,
+			maxRenderWidth,
+			maxRenderHeight,
+			displayWidth,
+			displayHeight,
+			settings.fgGpuMemoryMb
+		);
+
+		return true;
 	}
 
 	bool RenderingDevice::IsFfxUpscalerAvailable() const
@@ -232,7 +421,17 @@ namespace BetterThanNothing
 			return true;
 		}
 
-		ShutdownFidelityFX();
+		if (m_self->ffxUpscaleContext)
+		{
+			m_self->device->WaitIdle();
+			ffxContext oldCtx = m_self->ffxUpscaleContext;
+			(void)ffxDestroyContext(&oldCtx, nullptr);
+			m_self->ffxUpscaleContext = nullptr;
+			m_self->ffxContextMaxRenderWidth = 0;
+			m_self->ffxContextMaxRenderHeight = 0;
+			m_self->ffxContextMaxUpscaleWidth = 0;
+			m_self->ffxContextMaxUpscaleHeight = 0;
+		}
 
 		VkDeviceContext vkDevCtx{};
 		vkDevCtx.vkDevice = m_self->device->Handle();
@@ -483,6 +682,117 @@ namespace BetterThanNothing
 			return false;
 		}
 
+		return true;
+	}
+
+	bool RenderingDevice::DispatchFfxFrameGen(const FfxFrameGenDispatchParams& params)
+	{
+		if (!m_self->ffxFrameGenContext)
+			return false;
+
+		RenderingApi::Texture* presentColorTex = GetTexture(params.presentColor);
+		RenderingApi::Texture* depthTex = GetTexture(params.depth);
+		RenderingApi::Texture* motionTex = GetTexture(params.motionVectors);
+		RenderingApi::Texture* outputTex = GetTexture(params.outputInterpolated);
+		if (!presentColorTex || !depthTex || !motionTex || !outputTex)
+			return false;
+
+		TransitionTexture(params.presentColor, ImageLayout::ShaderReadOnly);
+		TransitionTexture(params.depth, ImageLayout::ShaderReadOnly);
+		TransitionTexture(params.motionVectors, ImageLayout::ShaderReadOnly);
+		TransitionTexture(params.outputInterpolated, ImageLayout::General);
+
+		VkCommandBuffer vkCmd = m_self->commandBuffers[m_currentFrameIndex]->Handle();
+		const uint64_t	frameID = ++m_self->ffxFrameGenFrameId;
+
+		uint32_t fgFlags = FFX_FRAMEGENERATION_FLAG_NO_SWAPCHAIN_CONTEXT_NOTIFY;
+		if (params.drawDebugTearLines)
+			fgFlags |= FFX_FRAMEGENERATION_FLAG_DRAW_DEBUG_TEAR_LINES;
+		if (params.drawDebugResetIndicators)
+			fgFlags |= FFX_FRAMEGENERATION_FLAG_DRAW_DEBUG_RESET_INDICATORS;
+		if (params.drawDebugPacingLines)
+			fgFlags |= FFX_FRAMEGENERATION_FLAG_DRAW_DEBUG_PACING_LINES;
+
+		// 1. Configure Frame Generation for the current frameID
+		ffx::ConfigureDescFrameGeneration cfgDesc{};
+		cfgDesc.swapChain = nullptr;
+		cfgDesc.presentCallback = nullptr;
+		cfgDesc.presentCallbackUserContext = nullptr;
+		cfgDesc.frameGenerationCallback = nullptr;
+		cfgDesc.frameGenerationCallbackUserContext = nullptr;
+		cfgDesc.frameGenerationEnabled = true;
+		cfgDesc.allowAsyncWorkloads = false;
+		cfgDesc.HUDLessColor = {};
+		cfgDesc.flags = fgFlags;
+		cfgDesc.onlyPresentGenerated = false;
+		cfgDesc.generationRect = {0, 0, static_cast<int32_t>(params.displayWidth), static_cast<int32_t>(params.displayHeight)};
+		cfgDesc.frameID = frameID;
+
+		const ffx::ReturnCode cfgRc = ffx::Configure(m_self->ffxFrameGenContext, cfgDesc);
+		if (cfgRc != ffx::ReturnCode::Ok)
+		{
+			Logger::Log<ERROR>("FidelityFX SDK: ffx::Configure(ConfigureDescFrameGeneration) failed with rc={}", static_cast<uint32_t>(cfgRc));
+			return false;
+		}
+
+		// 2. Dispatch Frame Generation Prepare V2 (depth & motion vector dilation + 3D camera vectors for MLFI 4.0.2)
+		ffx::DispatchDescFrameGenerationPrepareV2 prepDesc{};
+		prepDesc.frameID = frameID;
+		prepDesc.flags = fgFlags;
+		prepDesc.commandList = reinterpret_cast<void*>(vkCmd);
+		prepDesc.renderSize = {params.renderWidth, params.renderHeight};
+		prepDesc.jitterOffset = {params.jitterOffsetX, params.jitterOffsetY};
+		prepDesc.motionVectorScale = {params.motionVectorScaleX, params.motionVectorScaleY};
+		prepDesc.frameTimeDelta = std::max(params.frameTimeDeltaMs, 1.0f);
+		prepDesc.reset = params.reset;
+		prepDesc.cameraNear = std::max(params.cameraNear, 0.01f);
+		prepDesc.cameraFar = std::max(params.cameraFar, prepDesc.cameraNear + 1.0f);
+		prepDesc.cameraFovAngleVertical = params.cameraFovAngleVerticalRadians;
+		prepDesc.viewSpaceToMetersFactor = params.viewSpaceToMetersFactor;
+		prepDesc.depth = BuildFfxTextureResource(depthTex, FFX_API_RESOURCE_STATE_COMPUTE_READ, FFX_API_RESOURCE_USAGE_DEPTHTARGET);
+		prepDesc.motionVectors = BuildFfxTextureResource(motionTex, FFX_API_RESOURCE_STATE_COMPUTE_READ, FFX_API_RESOURCE_USAGE_READ_ONLY);
+		for (int i = 0; i < 3; ++i)
+		{
+			prepDesc.cameraPosition[i] = params.cameraPosition[i];
+			prepDesc.cameraUp[i] = params.cameraUp[i];
+			prepDesc.cameraRight[i] = params.cameraRight[i];
+			prepDesc.cameraForward[i] = params.cameraForward[i];
+		}
+
+		const ffx::ReturnCode prepRc = ffx::Dispatch(m_self->ffxFrameGenContext, prepDesc);
+		depthTex->currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		motionTex->currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		if (prepRc != ffx::ReturnCode::Ok)
+		{
+			Logger::Log<ERROR>("FidelityFX SDK: ffx::Dispatch(DispatchDescFrameGenerationPrepareV2) failed with rc={}", static_cast<uint32_t>(prepRc));
+			return false;
+		}
+
+		// 3. Dispatch Frame Generation (Optical Flow / MLFI 4.0.2 interpolation)
+		ffx::DispatchDescFrameGeneration fgDesc{};
+		fgDesc.commandList = reinterpret_cast<void*>(vkCmd);
+		fgDesc.presentColor = BuildFfxTextureResource(presentColorTex, FFX_API_RESOURCE_STATE_COMPUTE_READ, FFX_API_RESOURCE_USAGE_READ_ONLY);
+		fgDesc.outputs[0] = BuildFfxTextureResource(outputTex, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, FFX_API_RESOURCE_USAGE_UAV);
+		fgDesc.numGeneratedFrames = 1;
+		fgDesc.reset = params.reset;
+		fgDesc.backbufferTransferFunction = FFX_API_BACKBUFFER_TRANSFER_FUNCTION_SCRGB;
+		fgDesc.minMaxLuminance[0] = 0.0f;
+		fgDesc.minMaxLuminance[1] = 1000.0f;
+		fgDesc.generationRect = {0, 0, static_cast<int32_t>(params.displayWidth), static_cast<int32_t>(params.displayHeight)};
+		fgDesc.frameID = frameID;
+
+		const ffx::ReturnCode fgRc = ffx::Dispatch(m_self->ffxFrameGenContext, fgDesc);
+		presentColorTex->currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		outputTex->currentLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+		if (fgRc != ffx::ReturnCode::Ok)
+		{
+			Logger::Log<ERROR>("FidelityFX SDK: ffx::Dispatch(DispatchDescFrameGeneration) failed with rc={}", static_cast<uint32_t>(fgRc));
+			return false;
+		}
+
+		++RenderSettings::Get().fgGeneratedFrameCount;
 		return true;
 	}
 

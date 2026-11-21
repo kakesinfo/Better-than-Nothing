@@ -118,6 +118,36 @@ namespace BetterThanNothing
 		bool	 drawDebugView = false;
 	};
 
+	struct FfxFrameGenDispatchParams
+	{
+		Handle	 presentColor{};
+		Handle	 depth{};
+		Handle	 motionVectors{};
+		Handle	 outputInterpolated{};
+		uint32_t renderWidth = 0;
+		uint32_t renderHeight = 0;
+		uint32_t displayWidth = 0;
+		uint32_t displayHeight = 0;
+		float	 jitterOffsetX = 0.0f;
+		float	 jitterOffsetY = 0.0f;
+		float	 motionVectorScaleX = 1.0f;
+		float	 motionVectorScaleY = 1.0f;
+		float	 frameTimeDeltaMs = 16.67f;
+		bool	 reset = false;
+		float	 cameraNear = 0.1f;
+		float	 cameraFar = 1000.0f;
+		float	 cameraFovAngleVerticalRadians = 1.04719755f;
+		float	 viewSpaceToMetersFactor = 1.0f;
+		float	 cameraPosition[3] = {0.0f, 0.0f, 0.0f};
+		float	 cameraUp[3] = {0.0f, 1.0f, 0.0f};
+		float	 cameraRight[3] = {1.0f, 0.0f, 0.0f};
+		float	 cameraForward[3] = {0.0f, 0.0f, -1.0f};
+		uint64_t frameID = 1;
+		bool	 drawDebugTearLines = false;
+		bool	 drawDebugResetIndicators = false;
+		bool	 drawDebugPacingLines = false;
+	};
+
 	struct FfxDenoiserSetupParams
 	{
 		uint32_t maxRenderWidth = 0;
@@ -276,6 +306,10 @@ namespace BetterThanNothing
 		[[nodiscard]] std::pair<float, float> QueryFfxJitterOffset(int32_t index, int32_t phaseCount) const;
 		bool							  ConfigureFfxUpscaler(float velocityFactor);
 		bool							  DispatchFfxUpscale(const FfxUpscaleDispatchParams& params);
+		[[nodiscard]] bool				  IsFfxFrameGenAvailable() const;
+		bool							  EnsureFfxFrameGenContext(uint32_t maxRenderWidth, uint32_t maxRenderHeight, uint32_t displayWidth, uint32_t displayHeight, uint32_t versionIndex = 0);
+		void							  ShutdownFfxFrameGen();
+		bool							  DispatchFfxFrameGen(const FfxFrameGenDispatchParams& params);
 		void							  ConfigureFfxDenoiser(const FfxDenoiserSetupParams& params);
 
 		// Swapchain & device queries (engine-agnostic)

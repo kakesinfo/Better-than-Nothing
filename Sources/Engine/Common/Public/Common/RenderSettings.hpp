@@ -139,6 +139,20 @@ namespace BetterThanNothing
 		uint32_t				 fsrDisplayHeight = 0;
 		std::vector<std::string> fsrVersionNames;
 
+		// AMD FidelityFX Frame Generation (SDK v2.4.0 / FSR Frame Generation 4.0.2 & 3.1.6)
+		bool					 enableFrameGeneration = true;
+		bool					 fgDrawDebugTearLines = false;
+		bool					 fgDrawDebugResetIndicators = false;
+		bool					 fgDrawDebugPacingLines = false;
+		bool					 fgShowInterpolatedFrame = false; // Preview the generated intermediate frame on the swapchain
+		uint32_t				 fgSelectedVersionIndex = 0;
+		bool					 fgAvailable = false;
+		std::string				 fgActiveVersionName = "4.0.2";
+		uint64_t				 fgActiveVersionId = 0;
+		float					 fgGpuMemoryMb = 0.0f;
+		uint64_t				 fgGeneratedFrameCount = 0;
+		std::vector<std::string> fgVersionNames;
+
 		bool					 ffxDenoiserSdkHeaderPresent = true;
 		std::string				 ffxDenoiserSdkVersionName = "1.2.1 (FFX_DNSR_Shadows Vulkan + Ray Regeneration 1.2.1 SDK)";
 

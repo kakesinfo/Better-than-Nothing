@@ -172,6 +172,46 @@ namespace BetterThanNothing
 					ImGui::SliderFloat("TAA Blend", &settings.taaBlendFactor, 0.02f, 0.5f, "%.2f");
 				}
 
+				ImGui::SeparatorText("AMD FidelityFX Frame Generation (SDK 2.4.0)");
+				if (settings.fgAvailable)
+				{
+					ImGui::Checkbox("Enable AMD Frame Generation", &settings.enableFrameGeneration);
+					if (settings.enableFrameGeneration)
+					{
+						ImGui::TextColored(
+							ImVec4(0.35f, 0.92f, 0.45f, 1.0f),
+							"Active: AMD FSR Frame Gen %s (%.1f MB VRAM)",
+							settings.fgActiveVersionName.c_str(),
+							settings.fgGpuMemoryMb
+						);
+						ImGui::TextDisabled(
+							"Effective FPS: ~%d FPS (2x) | Generated: %llu",
+							m_cachedMetrics.fps * 2,
+							static_cast<unsigned long long>(settings.fgGeneratedFrameCount)
+						);
+
+						if (settings.fgVersionNames.size() > 1)
+						{
+							std::vector<const char*> fgVerPtrs;
+							fgVerPtrs.reserve(settings.fgVersionNames.size());
+							for (const auto& name : settings.fgVersionNames)
+								fgVerPtrs.push_back(name.c_str());
+
+							int fgVerIdx = static_cast<int>(settings.fgSelectedVersionIndex);
+							if (ImGui::Combo("FG Provider", &fgVerIdx, fgVerPtrs.data(), static_cast<int>(fgVerPtrs.size())))
+								settings.fgSelectedVersionIndex = static_cast<uint32_t>(std::max(fgVerIdx, 0));
+						}
+
+						ImGui::Checkbox("Preview Interpolated Frame", &settings.fgShowInterpolatedFrame);
+						ImGui::Checkbox("Debug Tear Lines", &settings.fgDrawDebugTearLines);
+						ImGui::Checkbox("Debug Reset Indicators", &settings.fgDrawDebugResetIndicators);
+					}
+				}
+				else
+				{
+					ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "FidelityFX Frame Generation Vulkan provider unavailable");
+				}
+
 				ImGui::EndTabItem();
 			}
 

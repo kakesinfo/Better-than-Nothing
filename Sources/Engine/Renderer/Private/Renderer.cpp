@@ -192,6 +192,7 @@ namespace BetterThanNothing
 			m_taaDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("TAA");
 			m_toneMapDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("ToneMap");
 		}
+		m_fgToneMapDescriptorSet = m_renderingDevice->CreateDescriptorSet("ToneMap");
 
 		CreateBlueNoiseTexture();
 		CreateAtmosphereLuts();
@@ -300,6 +301,7 @@ namespace BetterThanNothing
 			destroySet(h);
 		for (Handle& h : m_toneMapDescriptorSets)
 			destroySet(h);
+		destroySet(m_fgToneMapDescriptorSet);
 
 		for (Handle& h : m_globalDescriptorSets)
 			destroySet(h);
@@ -1091,6 +1093,17 @@ namespace BetterThanNothing
 		settings.fsrRenderWidth = renderWidth;
 		settings.fsrRenderHeight = renderHeight;
 
+		if (settings.enableFrameGeneration && m_renderingDevice->IsFfxFrameGenAvailable())
+		{
+			m_renderingDevice->EnsureFfxFrameGenContext(
+				displayWidth,
+				displayHeight,
+				displayWidth,
+				displayHeight,
+				settings.fgSelectedVersionIndex
+			);
+		}
+
 		if (currentGen == m_lastSwapChainGeneration &&
 			m_depthTarget.IsValid() &&
 			m_renderWidth == renderWidth &&
@@ -1099,7 +1112,8 @@ namespace BetterThanNothing
 			m_displayHeight == displayHeight &&
 			m_lastUpscalerMode == settings.upscalerMode &&
 			m_lastFsrQualityMode == settings.fsrQualityMode &&
-			m_lastFsrVersionIndex == settings.fsrSelectedVersionIndex)
+			m_lastFsrVersionIndex == settings.fsrSelectedVersionIndex &&
+			m_lastFgVersionIndex == settings.fgSelectedVersionIndex)
 		{
 			return;
 		}
@@ -1116,6 +1130,7 @@ namespace BetterThanNothing
 		m_lastUpscalerMode = settings.upscalerMode;
 		m_lastFsrQualityMode = settings.fsrQualityMode;
 		m_lastFsrVersionIndex = settings.fsrSelectedVersionIndex;
+		m_lastFgVersionIndex = settings.fgSelectedVersionIndex;
 
 		auto makeTarget = [&](const uint32_t w, const uint32_t h, const TextureFormat fmt, const TextureUsageFlags usage) -> Handle {
 			TextureCreateInfo info{};
@@ -1174,9 +1189,10 @@ namespace BetterThanNothing
 		m_waterSceneColorCopy = makeTarget(renderWidth, renderHeight, TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_waterDepthCopy = makeTarget(renderWidth, renderHeight, TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 
-		// Resolved / Upscaled HDR output targets (at display resolution)
+		// Resolved / Upscaled HDR output targets & AMD Frame Generation interpolated target (at display resolution)
 		m_taaHistory[0] = makeTarget(displayWidth, displayHeight, TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 		m_taaHistory[1] = makeTarget(displayWidth, displayHeight, TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_fgInterpolatedColor = makeTarget(displayWidth, displayHeight, TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 
 		m_lastSwapChainGeneration = currentGen;
 		m_historyValid = false;
@@ -1338,6 +1354,7 @@ namespace BetterThanNothing
 
 			m_renderingDevice->UpdateDescriptorImage(m_toneMapDescriptorSets[writeIdx], 0, m_taaHistory[writeIdx], m_linearClampSampler);
 		}
+		m_renderingDevice->UpdateDescriptorImage(m_fgToneMapDescriptorSet, 0, m_fgInterpolatedColor, m_linearClampSampler);
 	}
 
 	void Renderer::DestroyRenderTargets()
@@ -1387,6 +1404,7 @@ namespace BetterThanNothing
 		destroyTex(m_waterDepthCopy);
 		destroyTex(m_taaHistory[0]);
 		destroyTex(m_taaHistory[1]);
+		destroyTex(m_fgInterpolatedColor);
 	}
 
 	void Renderer::RenderFrame(Scene* scene)
@@ -1456,6 +1474,7 @@ namespace BetterThanNothing
 		ctx.temporalWriteIndex = writeIdx;
 		ctx.fsrUpscaleActive = (settings.upscalerMode == EUpscalerMode::FSR && m_renderingDevice->IsFfxUpscalerAvailable());
 		ctx.fsrResetHistory = !m_historyValid;
+		ctx.fgActive = (settings.enableFrameGeneration && m_renderingDevice->IsFfxFrameGenAvailable());
 		ctx.jitterPixelsX = m_currentJitterPixelsX;
 		ctx.jitterPixelsY = m_currentJitterPixelsY;
 		ctx.frameTimeDeltaMs = m_currentFrameDeltaMs;
@@ -1463,6 +1482,10 @@ namespace BetterThanNothing
 		ctx.cameraFar = camera->GetFarPlane();
 		ctx.cameraFovVerticalRadians = camera->GetFov() * (3.14159265359f / 180.0f);
 		ctx.cameraPreExposure = camera->GetExposure();
+		ctx.cameraPosition = camera->GetPosition();
+		ctx.cameraUp = camera->GetUp();
+		ctx.cameraRight = camera->GetRight();
+		ctx.cameraForward = camera->GetForward();
 		ctx.unjitteredViewProj = m_prevUnjitteredViewProj;
 		ctx.sunDirection = m_currentSunDirection;
 
@@ -1498,6 +1521,7 @@ namespace BetterThanNothing
 		ctx.waterSceneColorCopy = m_waterSceneColorCopy;
 		ctx.waterDepthCopy = m_waterDepthCopy;
 		ctx.taaHistory = m_taaHistory;
+		ctx.fgInterpolatedColor = m_fgInterpolatedColor;
 
 		ctx.globalDescriptorSet = m_globalDescriptorSets[frameIndex];
 		ctx.pointLightDescriptorSet = m_pointLightDescriptorSets[frameIndex];
@@ -1522,6 +1546,7 @@ namespace BetterThanNothing
 		ctx.volumetricFogNoRtDescriptorSet = m_volumetricFogNoRtDescriptorSet;
 		ctx.taaDescriptorSets = m_taaDescriptorSets;
 		ctx.toneMapDescriptorSets = m_toneMapDescriptorSets;
+		ctx.fgToneMapDescriptorSet = m_fgToneMapDescriptorSet;
 
 		ctx.opaqueStream = m_opaqueDrawStream.get();
 		ctx.waterStream = m_waterDrawStream.get();

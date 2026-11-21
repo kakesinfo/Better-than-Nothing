@@ -136,11 +136,12 @@ namespace BetterThanNothing
 		float	m_lastAtmosphereMultiScatter = -1.0f;
 		Vector3 m_lastSunDirection = Vector3::Zero;
 
-		// HDR, Water snapshots & TAA / FSR Upscaled targets
+		// HDR, Water snapshots & TAA / FSR Upscaled / Frame Generation targets
 		Handle				  m_hdrColor{};
 		Handle				  m_waterSceneColorCopy{};
 		Handle				  m_waterDepthCopy{};
 		std::array<Handle, 2> m_taaHistory{};
+		Handle				  m_fgInterpolatedColor{};
 		uint64_t			  m_lastSwapChainGeneration = 0;
 		uint32_t			  m_renderWidth = 0;
 		uint32_t			  m_renderHeight = 0;
@@ -149,6 +150,7 @@ namespace BetterThanNothing
 		EUpscalerMode		  m_lastUpscalerMode = EUpscalerMode::FSR;
 		EFsrQualityMode		  m_lastFsrQualityMode = EFsrQualityMode::NativeAA;
 		uint32_t			  m_lastFsrVersionIndex = 0;
+		uint32_t			  m_lastFgVersionIndex = 0;
 		float				  m_currentJitterPixelsX = 0.0f;
 		float				  m_currentJitterPixelsY = 0.0f;
 		float				  m_lastFrameElapsedSeconds = 0.0f;
@@ -178,6 +180,7 @@ namespace BetterThanNothing
 		Handle				  m_forwardIblDescriptorSet{};
 		std::array<Handle, 2> m_taaDescriptorSets{};
 		std::array<Handle, 2> m_toneMapDescriptorSets{};
+		Handle				  m_fgToneMapDescriptorSet{};
 
 		// Ray Tracing acceleration structures
 		bool								   m_rtSupported = false;

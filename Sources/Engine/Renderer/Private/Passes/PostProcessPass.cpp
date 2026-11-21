@@ -91,8 +91,54 @@ namespace BetterThanNothing
 			renderingDevice->Dispatch(groupsX, groupsY, 1);
 		}
 
+		// 1b. AMD FidelityFX Frame Generation (SDK v2.4.0: FSR Frame Gen 4.0.2 MLFI / 3.1.6 Optical Flow)
+		bool fgDispatched = false;
+		if (ctx.fgActive && settings.debugView == EDebugViewMode::Final && ctx.fgInterpolatedColor.IsValid())
+		{
+			FfxFrameGenDispatchParams fgParams{};
+			fgParams.presentColor = ctx.taaHistory[writeIdx];
+			fgParams.depth = ctx.depthTarget;
+			fgParams.motionVectors = ctx.gbufferMotion;
+			fgParams.outputInterpolated = ctx.fgInterpolatedColor;
+			fgParams.renderWidth = ctx.viewportWidth;
+			fgParams.renderHeight = ctx.viewportHeight;
+			fgParams.displayWidth = displayW;
+			fgParams.displayHeight = displayH;
+			fgParams.jitterOffsetX = ctx.jitterPixelsX;
+			fgParams.jitterOffsetY = ctx.jitterPixelsY;
+			fgParams.motionVectorScaleX = -static_cast<float>(ctx.viewportWidth);
+			fgParams.motionVectorScaleY = -static_cast<float>(ctx.viewportHeight);
+			fgParams.frameTimeDeltaMs = ctx.frameTimeDeltaMs;
+			fgParams.reset = ctx.fsrResetHistory;
+			fgParams.cameraNear = ctx.cameraNear;
+			fgParams.cameraFar = ctx.cameraFar;
+			fgParams.cameraFovAngleVerticalRadians = ctx.cameraFovVerticalRadians;
+			fgParams.viewSpaceToMetersFactor = 1.0f;
+			fgParams.cameraPosition[0] = ctx.cameraPosition.GetX();
+			fgParams.cameraPosition[1] = ctx.cameraPosition.GetY();
+			fgParams.cameraPosition[2] = ctx.cameraPosition.GetZ();
+			fgParams.cameraUp[0] = ctx.cameraUp.GetX();
+			fgParams.cameraUp[1] = ctx.cameraUp.GetY();
+			fgParams.cameraUp[2] = ctx.cameraUp.GetZ();
+			fgParams.cameraRight[0] = ctx.cameraRight.GetX();
+			fgParams.cameraRight[1] = ctx.cameraRight.GetY();
+			fgParams.cameraRight[2] = ctx.cameraRight.GetZ();
+			fgParams.cameraForward[0] = ctx.cameraForward.GetX();
+			fgParams.cameraForward[1] = ctx.cameraForward.GetY();
+			fgParams.cameraForward[2] = ctx.cameraForward.GetZ();
+			fgParams.drawDebugTearLines = settings.fgDrawDebugTearLines;
+			fgParams.drawDebugResetIndicators = settings.fgDrawDebugResetIndicators;
+			fgParams.drawDebugPacingLines = settings.fgDrawDebugPacingLines;
+
+			fgDispatched = renderingDevice->DispatchFfxFrameGen(fgParams);
+		}
+
 		// 2. Tone Mapping (AgX / ACES / Reinhard) + sRGB output to SwapChain at display resolution
-		renderingDevice->TransitionTexture(ctx.taaHistory[writeIdx], ImageLayout::ShaderReadOnly);
+		const bool presentGenerated = fgDispatched && (settings.fgShowInterpolatedFrame || settings.fgDrawDebugTearLines || settings.fgDrawDebugResetIndicators || settings.fgDrawDebugPacingLines);
+		const Handle toneMapSourceTex = presentGenerated ? ctx.fgInterpolatedColor : ctx.taaHistory[writeIdx];
+		const Handle toneMapSet = presentGenerated ? ctx.fgToneMapDescriptorSet : ctx.toneMapDescriptorSets[writeIdx];
+
+		renderingDevice->TransitionTexture(toneMapSourceTex, ImageLayout::ShaderReadOnly);
 
 		ColorAttachmentDesc swapColor{};
 		swapColor.useSwapChainImage = true;
@@ -106,7 +152,7 @@ namespace BetterThanNothing
 		passDesc.height = displayH;
 
 		const PipelineResourceCache* toneMapPipeline = resourceManager->GetPipelineData("PostProcess::ToneMap");
-		const std::array<Handle, 2>	 toneMapSets = {ctx.globalDescriptorSet, ctx.toneMapDescriptorSets[writeIdx]};
+		const std::array<Handle, 2>	 toneMapSets = {ctx.globalDescriptorSet, toneMapSet};
 
 		renderingDevice->BeginRenderPass(passDesc);
 		renderingDevice->DrawFullscreen(toneMapPipeline->pipeline, toneMapPipeline->layoutName, toneMapSets);

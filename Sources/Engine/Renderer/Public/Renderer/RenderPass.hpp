@@ -61,6 +61,7 @@ namespace BetterThanNothing
 
 		bool  fsrUpscaleActive = false;
 		bool  fsrResetHistory = false;
+		bool  fgActive = false;
 		float jitterPixelsX = 0.0f;
 		float jitterPixelsY = 0.0f;
 		float frameTimeDeltaMs = 16.67f;
@@ -68,6 +69,10 @@ namespace BetterThanNothing
 		float cameraFar = 1000.0f;
 		float cameraFovVerticalRadians = 1.04719755f;
 		float cameraPreExposure = 1.0f;
+		Vector3 cameraPosition = Vector3::Zero;
+		Vector3 cameraUp = Vector3(0.0f, 1.0f, 0.0f);
+		Vector3 cameraRight = Vector3(1.0f, 0.0f, 0.0f);
+		Vector3 cameraForward = Vector3(0.0f, 0.0f, -1.0f);
 
 		Matrix4 unjitteredViewProj = Matrix4::Identity;
 		Vector3 sunDirection = Vector3(0.0f, 1.0f, 0.0f);
@@ -106,11 +111,12 @@ namespace BetterThanNothing
 		Handle prefilteredEnvLUT{};
 		Handle brdfLUT{};
 
-		// HDR, Water snapshots & TAA targets
+		// HDR, Water snapshots, TAA & AMD Frame Generation targets
 		Handle				  hdrColor{};
 		Handle				  waterSceneColorCopy{};
 		Handle				  waterDepthCopy{};
 		std::array<Handle, 2> taaHistory{};
+		Handle				  fgInterpolatedColor{};
 
 		// Descriptor sets
 		Handle				  globalDescriptorSet{};
@@ -136,6 +142,7 @@ namespace BetterThanNothing
 		Handle				  volumetricFogNoRtDescriptorSet{};
 		std::array<Handle, 2> taaDescriptorSets{};
 		std::array<Handle, 2> toneMapDescriptorSets{};
+		Handle				  fgToneMapDescriptorSet{};
 
 		DrawStream* opaqueStream = nullptr;
 		DrawStream* waterStream = nullptr;
