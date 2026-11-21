@@ -62,8 +62,12 @@ namespace BetterThanNothing
 		uint32_t				   id = 0;
 		EImportedAlphaMode		   alphaMode = EImportedAlphaMode::Opaque;
 		float					   alphaCutoff = 0.0f;
+		Vector4					   baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		float					   metallicFactor = 0.0f;
+		float					   roughnessFactor = 0.65f;
 		std::optional<std::string> diffuseTexturePath;
 		std::optional<std::string> normalTexturePath;
+		std::optional<std::string> metallicRoughnessTexturePath;
 	};
 
 	struct ImportedMesh

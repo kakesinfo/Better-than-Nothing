@@ -21,6 +21,7 @@
 #include <Common/EShaderType.hpp>
 #include <Common/ResourceId.hpp>
 #include <Math/Vector3.hpp>
+#include <Math/Vector4.hpp>
 #include <RenderingDevice/Handle.hpp>
 #include <cstdint>
 #include <string>
@@ -60,9 +61,14 @@ namespace BetterThanNothing
 		std::string name;
 		EAlphaMode	alphaMode = EAlphaMode::Opaque;
 		float		alphaCutoff = 0.5f;
+		Vector4		baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		float		metallicFactor = 0.0f;
+		float		roughnessFactor = 0.65f;
 		ResourceId	diffuseTextureId = InvalidResourceId;
 		ResourceId	normalTextureId = InvalidResourceId;
-		std::string pipelineName = "Forward::Opaque";
+		ResourceId	metallicRoughnessTextureId = InvalidResourceId;
+		std::string pipelineName = "GBuffer::Opaque";
+		Handle		uniformBufferHandle;
 		Handle		descriptorSetHandle;
 	};
 

@@ -1,0 +1,332 @@
+#version 450
+
+// Deferred PBR Lighting Pass:
+// - Direct Lighting: Cook-Torrance GGX + Multi-Scattering Energy Compensation
+//   (Sun in lux x Hillaire Transmittance x AMD FFX Denoised RT Shadows + Point Lights in lumens)
+// - Indirect Irradiance Lighting (Split-Sum IBL):
+//   Convolved Diffuse Irradiance E(N) [lux] x Jimenez Multi-Bounce Colored AO
+//   + GGX Prefiltered Specular Environment x Precomputed BRDF LUT x Lagarde Specular AO
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct PointLightData {
+    vec3 position;
+    float radius;
+    vec3 color;
+    float luminousPowerLm;
+};
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 proj;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float sunAngularRadius;
+
+    vec3 lightColor;
+    float sunIlluminanceLux;
+
+    vec3 cameraPosition;
+    float cameraExposure;
+
+    uint pointLightsCount;
+    uint frameIndex;
+    uint screenWidth;
+    uint screenHeight;
+
+    uint debugView;
+    uint toneMapMode;
+    uint flags;
+    float taaBlendFactor;
+
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float aoRadius;
+    float aoPower;
+    float irradianceIntensity;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D gbufferAlbedoTex;
+layout(set = 1, binding = 1) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 2) uniform sampler2D gbufferMaterialTex;
+layout(set = 1, binding = 3) uniform sampler2D gbufferMotionTex;
+layout(set = 1, binding = 4) uniform sampler2D depthTex;
+layout(set = 1, binding = 5) uniform sampler2D rtShadowTex;
+layout(set = 1, binding = 6, rgba16f) uniform writeonly image2D outHdrColor;
+layout(set = 1, binding = 7) uniform sampler2D transmittanceLUT;
+layout(set = 1, binding = 8) uniform sampler2D irradianceLUT;
+layout(set = 1, binding = 9) uniform sampler2D prefilteredEnvLUT;
+layout(set = 1, binding = 10) uniform sampler2D brdfLUT;
+layout(set = 1, binding = 11) uniform sampler2D aoTex;
+layout(set = 1, binding = 12) uniform sampler2D bendSssTex;
+
+layout(std430, set = 2, binding = 0) readonly buffer PointLightBuffer {
+    PointLightData lights[];
+} pointLights;
+
+const float PI = 3.14159265359;
+const float GROUND_RADIUS_KM = 6360.0;
+const float ATMOSPHERE_RADIUS_KM = 6460.0;
+const uint FLAG_RT_SHADOWS_ENABLED = 1u << 0;
+const uint FLAG_AO_ENABLED = 1u << 4;
+const uint FLAG_BEND_SSS_ENABLED = 1u << 5;
+
+vec3 DecodeOctahedral(vec2 f) {
+    vec3 n = vec3(f.x, f.y, 1.0 - abs(f.x) - abs(f.y));
+    float t = max(-n.z, 0.0);
+    n.x += (n.x >= 0.0) ? -t : t;
+    n.y += (n.y >= 0.0) ? -t : t;
+    return normalize(n);
+}
+
+vec3 ReconstructWorldPos(vec2 uv, float depth) {
+    vec4 clipPos = vec4(uv * 2.0 - 1.0, depth, 1.0);
+    vec4 worldPos = globalUniforms.invViewProj * clipPos;
+    return worldPos.xyz / worldPos.w;
+}
+
+float SafeSqrt(float x) {
+    return sqrt(max(x, 0.0));
+}
+
+float DistanceToTopAtmosphereBoundary(float r, float mu) {
+    float discriminant = r * r * (mu * mu - 1.0) + ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM;
+    return max(0.0, -r * mu + SafeSqrt(discriminant));
+}
+
+vec2 TransmittanceUV(float r, float mu) {
+    float H = SafeSqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float rho = SafeSqrt(r * r - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float d = DistanceToTopAtmosphereBoundary(r, mu);
+    float d_min = ATMOSPHERE_RADIUS_KM - r;
+    float d_max = rho + H;
+    float x_mu = (d - d_min) / max(d_max - d_min, 1e-6);
+    float x_r = rho / H;
+    return clamp(vec2(x_mu, x_r), vec2(0.0), vec2(1.0));
+}
+
+vec2 DirectionToEquirectUV(vec3 dir) {
+    float azimuth = atan(dir.z, dir.x);
+    float u = azimuth / (2.0 * PI) + 0.5;
+    float elevation = asin(clamp(dir.y, -1.0, 1.0));
+    float v = elevation / PI + 0.5;
+    return vec2(u, clamp(v, 0.015, 0.985));
+}
+
+vec3 SamplePrefilteredEnv(vec3 dir, float roughness) {
+    const float numBands = 5.0;
+    vec2 baseUV = DirectionToEquirectUV(dir);
+    float scaled = clamp(roughness, 0.0, 1.0) * (numBands - 1.0);
+    float band0 = floor(scaled);
+    float band1 = min(band0 + 1.0, numBands - 1.0);
+    float frac = scaled - band0;
+
+    // Keep sampling strictly inside each 64-px band to avoid vertical cross-band bleed
+    float localV = clamp(baseUV.y, 0.02, 0.98);
+    float v0 = (band0 + localV) / numBands;
+    float v1 = (band1 + localV) / numBands;
+
+    vec3 c0 = textureLod(prefilteredEnvLUT, vec2(baseUV.x, v0), 0.0).rgb;
+    vec3 c1 = textureLod(prefilteredEnvLUT, vec2(baseUV.x, v1), 0.0).rgb;
+    return mix(c0, c1, frac);
+}
+
+float DistributionGGX(vec3 N, vec3 H, float roughness) {
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+
+    float denom = NdotH2 * (a2 - 1.0) + 1.0;
+    return a2 / max(PI * denom * denom, 1e-6);
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness) {
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return NdotV / max(NdotV * (1.0 - k) + k, 1e-6);
+}
+
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
+}
+
+vec3 FresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+// Jimenez et al. (2016) Multi-Bounce Colored Ambient Occlusion
+vec3 MultiBounceAO(float visibility, vec3 albedo) {
+    vec3 a =  2.0404 * albedo - 0.3324;
+    vec3 b = -4.7951 * albedo + 0.6417;
+    vec3 c =  2.7552 * albedo + 0.6903;
+    float x = clamp(visibility, 0.0, 1.0);
+    return max(vec3(x), ((x * a + b) * x + c) * x);
+}
+
+// Lagarde / Frostbite Specular Ambient Occlusion
+float ComputeSpecularAO(float NdotV, float ao, float roughness) {
+    return clamp(pow(NdotV + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao, 0.0, 1.0);
+}
+
+// Direct Cook-Torrance GGX BRDF with Fdez-Aguera multi-scattering energy compensation
+vec3 EvaluatePBR(vec3 N, vec3 V, vec3 L, vec3 illuminanceLux, vec3 albedo, float metallic, float roughness, vec3 F0, vec3 energyCompensation) {
+    float NdotL = max(dot(N, L), 0.0);
+    if (NdotL <= 0.0)
+        return vec3(0.0);
+
+    vec3 H = normalize(V + L);
+    float NDF = DistributionGGX(N, H, roughness);
+    float G = GeometrySmith(N, V, L, roughness);
+    vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    vec3 kS = F;
+    vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
+
+    float NdotV = max(dot(N, V), 0.001);
+    vec3 specular = ((NDF * G * F) / max(4.0 * NdotV * NdotL, 1e-5)) * energyCompensation;
+
+    return (kD * albedo / PI + specular) * illuminanceLux * NdotL;
+}
+
+// Lagarde / Frostbite inverse-square attenuation with smooth finite-radius windowing
+float ComputeSmoothDistanceAttenuation(float distSq, float radius) {
+    float invDistSq = 1.0 / max(distSq, 0.0001);
+    float invRadiusSq = 1.0 / max(radius * radius, 1e-4);
+    float factor = distSq * invRadiusSq;
+    float smoothFactor = clamp(1.0 - factor * factor, 0.0, 1.0);
+    return invDistSq * smoothFactor * smoothFactor;
+}
+
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    if (pixel.x >= int(globalUniforms.screenWidth) || pixel.y >= int(globalUniforms.screenHeight))
+        return;
+
+    vec2 uv = (vec2(pixel) + 0.5) / vec2(globalUniforms.screenWidth, globalUniforms.screenHeight);
+    float depth = textureLod(depthTex, uv, 0.0).r;
+
+    if (depth >= 1.0) {
+        if (globalUniforms.debugView == 0u)
+            return;
+
+        vec3 outRgb = (globalUniforms.debugView == 9u) ? vec3(1.0) : vec3(0.0);
+        imageStore(outHdrColor, pixel, vec4(outRgb, 1.0));
+        return;
+    }
+
+    vec4 albedoSample = textureLod(gbufferAlbedoTex, uv, 0.0);
+    vec2 octNormal = textureLod(gbufferNormalTex, uv, 0.0).rg;
+    vec4 materialSample = textureLod(gbufferMaterialTex, uv, 0.0);
+    vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
+
+    vec3 albedo = albedoSample.rgb;
+    vec3 N = DecodeOctahedral(octNormal);
+    float metallic = materialSample.r;
+    float roughness = clamp(materialSample.g, 0.04, 1.0);
+    float matAO = materialSample.b;
+
+    float shadowVisibility = 1.0;
+    if ((globalUniforms.flags & FLAG_RT_SHADOWS_ENABLED) != 0u)
+        shadowVisibility = clamp(textureLod(rtShadowTex, uv, 0.0).r, 0.0, 1.0);
+
+    float sssVisibility = 1.0;
+    if ((globalUniforms.flags & FLAG_BEND_SSS_ENABLED) != 0u)
+        sssVisibility = clamp(textureLod(bendSssTex, uv, 0.0).r, 0.0, 1.0);
+
+    float combinedShadow = min(shadowVisibility, sssVisibility);
+
+    float screenAO = 1.0;
+    if ((globalUniforms.flags & FLAG_AO_ENABLED) != 0u)
+        screenAO = clamp(textureLod(aoTex, uv, 0.0).r, 0.0, 1.0);
+    float combinedAO = matAO * screenAO;
+
+    // Sample convolved Diffuse Irradiance E(N) [lux = lm/m^2]
+    vec3 irradianceLux = textureLod(irradianceLUT, DirectionToEquirectUV(N), 0.0).rgb * globalUniforms.irradianceIntensity;
+
+    // Debug views
+    if (globalUniforms.debugView != 0u) {
+        vec3 dbg = vec3(0.0);
+        if (globalUniforms.debugView == 1u) dbg = albedo;
+        else if (globalUniforms.debugView == 2u) dbg = N * 0.5 + 0.5;
+        else if (globalUniforms.debugView == 3u) dbg = vec3(metallic);
+        else if (globalUniforms.debugView == 4u) dbg = vec3(roughness);
+        else if (globalUniforms.debugView == 5u) dbg = vec3(abs(motion) * 40.0, 0.0);
+        else if (globalUniforms.debugView == 6u) dbg = vec3(shadowVisibility);
+        else if (globalUniforms.debugView == 7u) dbg = vec3(combinedAO);
+        else if (globalUniforms.debugView == 8u) dbg = clamp((irradianceLux / PI) * globalUniforms.cameraExposure, vec3(0.0), vec3(1.0));
+        else if (globalUniforms.debugView == 9u) dbg = vec3(pow(clamp(depth, 0.0, 1.0), 32.0));
+        else if (globalUniforms.debugView == 10u) dbg = vec3(sssVisibility);
+        imageStore(outHdrColor, pixel, vec4(dbg, 1.0));
+        return;
+    }
+
+    vec3 worldPos = ReconstructWorldPos(uv, depth);
+    vec3 V = normalize(globalUniforms.cameraPosition - worldPos);
+    float NdotV = max(dot(N, V), 0.001);
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
+    // Precomputed GGX BRDF integration LUT + Fdez-Aguera multi-scattering energy compensation
+    vec2 envBRDF = textureLod(brdfLUT, vec2(NdotV, roughness), 0.0).rg;
+    vec3 energyCompensation = 1.0 + F0 * (1.0 / max(envBRDF.x + envBRDF.y, 1e-4) - 1.0);
+
+    float camAltKm = max(globalUniforms.atmosphereAltitudeKm + max(globalUniforms.cameraPosition.y * 0.001, 0.0), 0.005);
+    float camR = min(GROUND_RADIUS_KM + camAltKm, ATMOSPHERE_RADIUS_KM - 0.05);
+
+    vec3 LoNits = vec3(0.0);
+
+    // 1. Direct Directional Light (Sun): lux x Hillaire Transmittance x Combined (FFX RT + Bend SSS) Shadows
+    vec3 sunDir = normalize(-globalUniforms.lightDirection);
+    float sunHorizonFade = smoothstep(-0.04, 0.02, sunDir.y);
+    vec3 sunTransmittance = textureLod(transmittanceLUT, TransmittanceUV(camR, sunDir.y), 0.0).rgb * sunHorizonFade;
+    vec3 sunIlluminance = globalUniforms.lightColor * globalUniforms.sunIlluminanceLux * sunTransmittance * combinedShadow;
+    LoNits += EvaluatePBR(N, V, sunDir, sunIlluminance, albedo, metallic, roughness, F0, energyCompensation);
+
+    // 2. Direct Point Lights: lumens -> candela -> Lagarde smooth inverse-square lux
+    for (uint i = 0u; i < globalUniforms.pointLightsCount; ++i) {
+        PointLightData light = pointLights.lights[i];
+        vec3 toLight = light.position - worldPos;
+        float distSq = dot(toLight, toLight);
+        if (distSq >= light.radius * light.radius)
+            continue;
+
+        float dist = sqrt(max(distSq, 1e-8));
+        vec3 L = toLight / dist;
+        float luminousIntensityCd = light.luminousPowerLm / (4.0 * PI);
+        float illuminanceLux = luminousIntensityCd * ComputeSmoothDistanceAttenuation(distSq, light.radius);
+        LoNits += EvaluatePBR(N, V, L, light.color * illuminanceLux, albedo, metallic, roughness, F0, energyCompensation);
+    }
+
+    // 3. Indirect Irradiance Lighting (Split-Sum IBL + Multi-Bounce AO + Lagarde Specular AO)
+    vec3 F_ibl = FresnelSchlickRoughness(NdotV, F0, roughness);
+    vec3 kS_ibl = F_ibl;
+    vec3 kD_ibl = (1.0 - kS_ibl) * (1.0 - metallic);
+
+    vec3 diffuseAO = MultiBounceAO(combinedAO, albedo);
+    vec3 diffuseIndirectNits = kD_ibl * (albedo / PI) * irradianceLux * diffuseAO;
+
+    vec3 R = reflect(-V, N);
+    vec3 prefilteredNits = SamplePrefilteredEnv(R, roughness) * globalUniforms.irradianceIntensity;
+    float specAO = ComputeSpecularAO(NdotV, combinedAO, roughness);
+    vec3 specularIndirectNits = prefilteredNits * (F0 * envBRDF.x + envBRDF.y) * energyCompensation * specAO;
+
+    vec3 indirectNits = diffuseIndirectNits + specularIndirectNits;
+
+    // Pre-expose physical luminance [cd/m^2] before storing into fp16 HDR buffer
+    vec3 preExposedHdr = clamp((indirectNits + LoNits) * globalUniforms.cameraExposure, vec3(0.0), vec3(65000.0));
+    imageStore(outHdrColor, pixel, vec4(preExposedHdr, 1.0));
+}

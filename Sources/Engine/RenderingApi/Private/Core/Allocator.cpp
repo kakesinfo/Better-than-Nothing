@@ -30,6 +30,8 @@ namespace BetterThanNothing::RenderingApi
 
 		VmaAllocatorCreateInfo allocatorCreateInfo = {};
 		allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT; // Ext: VK_EXT_memory_budget
+		if (m_createInfo.device->IsBufferDeviceAddressSupported())
+			allocatorCreateInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 		allocatorCreateInfo.vulkanApiVersion = m_createInfo.instance->GetApiVersion();
 		allocatorCreateInfo.instance = m_createInfo.instance->Handle();
 		allocatorCreateInfo.device = m_createInfo.device->Handle();

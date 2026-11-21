@@ -144,6 +144,11 @@ namespace BetterThanNothing::RenderingApi
 		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
+	void CommandBuffer::Dispatch(const uint32_t groupCountX, const uint32_t groupCountY, const uint32_t groupCountZ) const
+	{
+		vkCmdDispatch(m_commandBuffer, groupCountX, groupCountY, groupCountZ);
+	}
+
 	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, const uint64_t bufferSize, const uint64_t offset)
 	{
 		VkBufferCopy copyRegion{};
@@ -151,6 +156,18 @@ namespace BetterThanNothing::RenderingApi
 		copyRegion.srcOffset = offset;
 
 		vkCmdCopyBuffer(m_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+	}
+
+	void CommandBuffer::CopyImage(VkImage srcImage, const VkImageLayout srcImageLayout, VkImage dstImage, const VkImageLayout dstImageLayout, const uint32_t width, const uint32_t height, const VkImageAspectFlags aspectMask) const
+	{
+		VkImageCopy region{};
+		region.srcSubresource = {aspectMask, 0, 0, 1};
+		region.srcOffset = {0, 0, 0};
+		region.dstSubresource = {aspectMask, 0, 0, 1};
+		region.dstOffset = {0, 0, 0};
+		region.extent = {width, height, 1};
+
+		vkCmdCopyImage(m_commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 1, &region);
 	}
 
 	static void ResolveLayoutSync2(const VkImageLayout layout, VkPipelineStageFlags2& stageMask, VkAccessFlags2& accessMask)
@@ -172,6 +189,10 @@ namespace BetterThanNothing::RenderingApi
 			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 				stageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 				accessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_GENERAL:
+				stageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+				accessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
 				break;
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 				stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -269,6 +290,23 @@ namespace BetterThanNothing::RenderingApi
 	void CommandBuffer::PipelineBarrier2(const VkDependencyInfo& dependencyInfo) const
 	{
 		vkCmdPipelineBarrier2(m_commandBuffer, &dependencyInfo);
+	}
+
+	void CommandBuffer::MemoryBarrier2(const VkPipelineStageFlags2 srcStageMask, const VkAccessFlags2 srcAccessMask, const VkPipelineStageFlags2 dstStageMask, const VkAccessFlags2 dstAccessMask) const
+	{
+		VkMemoryBarrier2 barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+		barrier.srcStageMask = srcStageMask;
+		barrier.srcAccessMask = srcAccessMask;
+		barrier.dstStageMask = dstStageMask;
+		barrier.dstAccessMask = dstAccessMask;
+
+		VkDependencyInfo depInfo{};
+		depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		depInfo.memoryBarrierCount = 1;
+		depInfo.pMemoryBarriers = &barrier;
+
+		PipelineBarrier2(depInfo);
 	}
 
 	void CommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter)

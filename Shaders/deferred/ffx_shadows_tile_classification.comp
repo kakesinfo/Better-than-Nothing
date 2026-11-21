@@ -1,0 +1,209 @@
+#version 450
+
+// AMD FidelityFX Shadow Denoiser (FFX_DNSR_Shadows) - Stage 1:
+// Tile Classification + 8x4 Bitmask Spatial Moments + Temporal Reprojection & Disocclusion Fixup
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 proj;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float sunAngularRadius;
+
+    vec3 lightColor;
+    float sunIlluminanceLux;
+
+    vec3 cameraPosition;
+    float cameraExposure;
+
+    uint pointLightsCount;
+    uint frameIndex;
+    uint screenWidth;
+    uint screenHeight;
+
+    uint debugView;
+    uint toneMapMode;
+    uint flags;
+    float taaBlendFactor;
+
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float aoRadius;
+    float aoPower;
+    float irradianceIntensity;
+} globalUniforms;
+
+layout(std430, set = 1, binding = 0) readonly buffer ShadowTileMaskBuffer {
+    uint tileMasks[];
+} shadowTileMask;
+layout(std430, set = 1, binding = 1) writeonly buffer ShadowTileMetaBuffer {
+    uint tileMeta[]; // 0 = mixed penumbra (filter), 1 = all lit, 2 = all shadowed
+} shadowTileMeta;
+
+layout(set = 1, binding = 2) uniform sampler2D rawShadowTex;
+layout(set = 1, binding = 3) uniform sampler2D prevMomentsTex; // rgba16f: mean, variance, sampleCount, depth
+layout(set = 1, binding = 4) uniform sampler2D depthTex;
+layout(set = 1, binding = 5) uniform sampler2D prevDepthTex;
+layout(set = 1, binding = 6) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 7) uniform sampler2D prevNormalTex;
+layout(set = 1, binding = 8) uniform sampler2D gbufferMotionTex;
+layout(set = 1, binding = 9, rgba16f) uniform writeonly image2D outCurrMoments;
+layout(set = 1, binding = 10, rg16f) uniform writeonly image2D outShadowPing;
+
+const uint FLAG_SHADOW_DENOISER_ENABLED = 1u << 1;
+const uint FLAG_HISTORY_VALID = 1u << 3;
+
+const uint TILE_MIXED = 0u;
+const uint TILE_ALL_LIT = 1u;
+const uint TILE_ALL_SHADOWED = 2u;
+
+shared uint s_allLit[2];
+shared uint s_allShadowed[2];
+
+vec3 DecodeOctahedral(vec2 f) {
+    vec3 n = vec3(f.x, f.y, 1.0 - abs(f.x) - abs(f.y));
+    float t = max(-n.z, 0.0);
+    n.x += (n.x >= 0.0) ? -t : t;
+    n.y += (n.y >= 0.0) ? -t : t;
+    return normalize(n);
+}
+
+// Fast FFX bitmask spatial mean & variance over surrounding 8x4 tiles (3x5 tile footprint)
+vec2 ComputeBitmaskSpatialMoments(ivec2 pixel, uint tilesX, uint tilesY) {
+    int centerTileX = pixel.x / 8;
+    int centerTileY = pixel.y / 4;
+
+    float litCount = 0.0;
+    float totalCount = 0.0;
+
+    for (int dy = -2; dy <= 2; ++dy) {
+        int ty = centerTileY + dy;
+        if (ty < 0 || ty >= int(tilesY))
+            continue;
+        for (int dx = -1; dx <= 1; ++dx) {
+            int tx = centerTileX + dx;
+            if (tx < 0 || tx >= int(tilesX))
+                continue;
+            uint mask = shadowTileMask.tileMasks[uint(ty) * tilesX + uint(tx)];
+            litCount += float(bitCount(mask));
+            totalCount += 32.0;
+        }
+    }
+
+    float mean = litCount / max(totalCount, 1.0);
+    // For Bernoulli variable X in {0, 1}, Var(X) = p * (1 - p)
+    float variance = max(mean * (1.0 - mean), 0.0);
+    return vec2(mean, variance);
+}
+
+void main() {
+    if (gl_LocalInvocationIndex < 2u) {
+        s_allLit[gl_LocalInvocationIndex] = 1u;
+        s_allShadowed[gl_LocalInvocationIndex] = 1u;
+    }
+    barrier();
+
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = ivec2(globalUniforms.screenWidth, globalUniforms.screenHeight);
+    uint tilesX = (globalUniforms.screenWidth + 7u) / 8u;
+    uint tilesY = (globalUniforms.screenHeight + 3u) / 4u;
+
+    uint subTile = gl_LocalInvocationID.y >> 2u;
+    bool inBounds = (pixel.x < size.x && pixel.y < size.y);
+
+    if (inBounds) {
+        vec2 texelSize = 1.0 / vec2(size);
+        vec2 uv = (vec2(pixel) + 0.5) * texelSize;
+
+        float rawVis = textureLod(rawShadowTex, uv, 0.0).r;
+        float depth = textureLod(depthTex, uv, 0.0).r;
+
+        if (depth >= 1.0 || (globalUniforms.flags & FLAG_SHADOW_DENOISER_ENABLED) == 0u) {
+            imageStore(outCurrMoments, pixel, vec4(rawVis, 0.0, 1.0, depth));
+            imageStore(outShadowPing, pixel, vec4(rawVis, 0.0, 0.0, 0.0));
+            if (rawVis < 0.999) atomicAnd(s_allLit[subTile], 0u);
+            if (rawVis > 0.001) atomicAnd(s_allShadowed[subTile], 0u);
+        } else {
+            vec2 spatialMoments = ComputeBitmaskSpatialMoments(pixel, tilesX, tilesY);
+            float spatialMean = spatialMoments.x;
+            float spatialStd = sqrt(spatialMoments.y);
+
+            vec3 currNormal = DecodeOctahedral(textureLod(gbufferNormalTex, uv, 0.0).rg);
+
+            float mean = rawVis;
+            float variance = spatialMoments.y;
+            float sampleCount = 1.0;
+
+            if ((globalUniforms.flags & FLAG_HISTORY_VALID) != 0u) {
+                vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
+                vec2 prevUV = uv - motion;
+
+                if (prevUV.x >= 0.0 && prevUV.x <= 1.0 && prevUV.y >= 0.0 && prevUV.y <= 1.0) {
+                    float prevDepth = textureLod(prevDepthTex, prevUV, 0.0).r;
+                    vec3 prevNormal = DecodeOctahedral(textureLod(prevNormalTex, prevUV, 0.0).rg);
+
+                    // FFX geometric disocclusion check (depth + normal consistency)
+                    float depthDiff = abs(depth - prevDepth) / max(1e-4, depth * 0.025);
+                    float normalDot = dot(currNormal, prevNormal);
+                    bool validHistory = (prevDepth < 1.0) && (depthDiff < 1.0) && (normalDot > 0.90);
+
+                    if (validHistory) {
+                        vec4 prevMoments = textureLod(prevMomentsTex, prevUV, 0.0);
+                        float prevMean = prevMoments.r;
+                        float prevVar = prevMoments.g;
+                        float prevSamples = prevMoments.b;
+
+                        // FFX neighborhood variance clamping to eliminate moving-object shadow ghosting
+                        float clampRadius = max(spatialStd * 1.5, 0.05);
+                        float clampedPrevMean = clamp(prevMean, spatialMean - clampRadius, spatialMean + clampRadius);
+
+                        sampleCount = min(prevSamples + 1.0, 16.0);
+                        float alpha = max(1.0 / sampleCount, 0.08);
+
+                        mean = mix(clampedPrevMean, rawVis, alpha);
+                        float instVar = (rawVis - mean) * (rawVis - mean);
+                        variance = mix(prevVar, instVar, alpha);
+
+                        // Boost variance slightly on low sample counts so the A-Trous filter cleans disocclusions
+                        if (sampleCount < 4.0)
+                            variance = max(variance, spatialMoments.y);
+                    }
+                }
+            }
+
+            // Detect tile homogeneity (if spatial variance is non-zero or mean not purely 0/1, mark as mixed)
+            if (mean < 0.999 || spatialMean < 0.999)
+                atomicAnd(s_allLit[subTile], 0u);
+            if (mean > 0.001 || spatialMean > 0.001)
+                atomicAnd(s_allShadowed[subTile], 0u);
+
+            imageStore(outCurrMoments, pixel, vec4(mean, variance, sampleCount, depth));
+            imageStore(outShadowPing, pixel, vec4(mean, variance, 0.0, 0.0));
+        }
+    }
+
+    barrier();
+
+    if (gl_LocalInvocationIndex < 2u) {
+        uint tileX = gl_WorkGroupID.x;
+        uint tileY = gl_WorkGroupID.y * 2u + gl_LocalInvocationIndex;
+        if (tileX < tilesX && tileY < tilesY) {
+            uint meta = TILE_MIXED;
+            if (s_allLit[gl_LocalInvocationIndex] != 0u)
+                meta = TILE_ALL_LIT;
+            else if (s_allShadowed[gl_LocalInvocationIndex] != 0u)
+                meta = TILE_ALL_SHADOWED;
+            shadowTileMeta.tileMeta[tileY * tilesX + tileX] = meta;
+        }
+    }
+}

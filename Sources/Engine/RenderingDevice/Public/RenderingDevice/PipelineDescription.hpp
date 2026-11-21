@@ -28,17 +28,19 @@ namespace BetterThanNothing
 
 	struct PipelineDescription
 	{
-		std::vector<Handle> shaders;
-		std::string			layoutName;
-		VertexLayout		vertexLayout;
-		TextureFormat		colorFormat = TextureFormat::Undefined;
-		TextureFormat		depthFormat = TextureFormat::Undefined;
-		bool				useMsaa = true;
-		bool				wireframe = false;
-		bool				depthTest = true;
-		bool				depthWrite = true;
-		bool				blendEnable = true;
-		bool				alphaToCoverage = true;
-		CullMode			cullMode = CullMode::Back;
+		std::vector<Handle>		   shaders;
+		std::string				   layoutName;
+		VertexLayout			   vertexLayout;
+		TextureFormat			   colorFormat = TextureFormat::Undefined;
+		std::vector<TextureFormat> colorFormats;
+		TextureFormat			   depthFormat = TextureFormat::Undefined;
+		bool					   hasDepthAttachment = true;
+		bool					   useMsaa = false;
+		bool					   wireframe = false;
+		bool					   depthTest = true;
+		bool					   depthWrite = true;
+		bool					   blendEnable = true;
+		bool					   alphaToCoverage = false;
+		CullMode				   cullMode = CullMode::Back;
 	};
 }

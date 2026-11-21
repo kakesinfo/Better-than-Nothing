@@ -81,6 +81,18 @@ namespace BetterThanNothing
 			mat.id = static_cast<uint32_t>(matIdx);
 			mat.alphaMode = Internal_RetrieveAlphaMode(gltfMat.alphaMode);
 			mat.alphaCutoff = static_cast<float>(gltfMat.alphaCutoff);
+			mat.metallicFactor = static_cast<float>(gltfMat.pbrMetallicRoughness.metallicFactor);
+			mat.roughnessFactor = static_cast<float>(gltfMat.pbrMetallicRoughness.roughnessFactor);
+
+			if (gltfMat.pbrMetallicRoughness.baseColorFactor.size() == 4)
+			{
+				mat.baseColorFactor = Vector4(
+					static_cast<float>(gltfMat.pbrMetallicRoughness.baseColorFactor[0]),
+					static_cast<float>(gltfMat.pbrMetallicRoughness.baseColorFactor[1]),
+					static_cast<float>(gltfMat.pbrMetallicRoughness.baseColorFactor[2]),
+					static_cast<float>(gltfMat.pbrMetallicRoughness.baseColorFactor[3])
+				);
+			}
 
 			if (gltfMat.pbrMetallicRoughness.baseColorTexture.index >= 0)
 			{
@@ -96,6 +108,14 @@ namespace BetterThanNothing
 				const int sourceIndex = gltfModel.textures[texIndex].source;
 				if (sourceIndex >= 0 && static_cast<size_t>(sourceIndex) < gltfModel.images.size() && !gltfModel.images[sourceIndex].uri.empty())
 					mat.normalTexturePath = (filePath.parent_path() / gltfModel.images[sourceIndex].uri).string();
+			}
+
+			if (gltfMat.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
+			{
+				const int texIndex = gltfMat.pbrMetallicRoughness.metallicRoughnessTexture.index;
+				const int sourceIndex = gltfModel.textures[texIndex].source;
+				if (sourceIndex >= 0 && static_cast<size_t>(sourceIndex) < gltfModel.images.size() && !gltfModel.images[sourceIndex].uri.empty())
+					mat.metallicRoughnessTexturePath = (filePath.parent_path() / gltfModel.images[sourceIndex].uri).string();
 			}
 
 			importedModel.materials.push_back(std::move(mat));

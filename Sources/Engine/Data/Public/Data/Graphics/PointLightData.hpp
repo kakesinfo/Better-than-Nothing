@@ -26,19 +26,15 @@ namespace BetterThanNothing
 	struct PointLightData
 	{
 		alignas(16) Vector3 position;
-		alignas(16) Vector3 color;
+		float radius = 15.0f; // Attenuation cutoff radius in meters (m)
 
-		float constant = 1.0f;
-		float linear = 0.0f;
-		float quadratic = 0.0f;
-		float intensity = 0.0f;
+		alignas(16) Vector3 color;
+		float luminousPowerLm = 1600.0f; // Luminous flux in lumens (lm)
 	};
 
 	static_assert(offsetof(PointLightData, position) == 0);
+	static_assert(offsetof(PointLightData, radius) == 12);
 	static_assert(offsetof(PointLightData, color) == 16);
-	static_assert(offsetof(PointLightData, constant) == 28);
-	static_assert(offsetof(PointLightData, linear) == 32);
-	static_assert(offsetof(PointLightData, quadratic) == 36);
-	static_assert(offsetof(PointLightData, intensity) == 40);
-	static_assert(sizeof(PointLightData) == 48);
+	static_assert(offsetof(PointLightData, luminousPowerLm) == 28);
+	static_assert(sizeof(PointLightData) == 32);
 }

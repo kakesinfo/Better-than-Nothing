@@ -84,6 +84,14 @@ namespace BetterThanNothing
 		Handle	 samplerHandle{};
 	};
 
+	struct TlasInstanceDesc
+	{
+		float	 transform[12] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0}; // 3x4 row-major matrix
+		Handle	 blasHandle{};
+		uint32_t instanceCustomIndex = 0;
+		uint32_t mask = 0xFF;
+	};
+
 	class RenderingDevice
 	{
 	public:
@@ -145,6 +153,13 @@ namespace BetterThanNothing
 		void				  DestroyBuffer(const Handle& handle);
 		RenderingApi::Buffer* GetBuffer(const Handle& handle);
 		void*				  GetBufferData(const Handle& handle);
+		[[nodiscard]] uint64_t GetBufferDeviceAddress(const Handle& handle);
+
+		// Acceleration Structures (Ray Query)
+		[[nodiscard]] bool	 IsRayQuerySupported() const;
+		[[nodiscard]] Handle CreateBlas(const Handle& vertexBuffer, uint32_t vertexCount, uint32_t vertexStride, const Handle& indexBuffer, uint32_t indexCount);
+		void				 BuildOrUpdateTlas(Handle& tlasHandle, Handle& scratchBufferHandle, Handle& instanceBufferHandle, std::span<const TlasInstanceDesc> instances);
+		void				 DestroyAccelerationStructure(const Handle& handle);
 
 	private:
 		bool Internal_CreateTextureImage(const TextureImageDescription& desc);
@@ -173,6 +188,10 @@ namespace BetterThanNothing
 		[[nodiscard]] Handle		 CreateStorageBufferDescriptorSet(const Handle& storageBufferHandle, size_t size, std::string_view layoutType);
 		[[nodiscard]] Handle		 CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, std::string_view layoutType);
 		[[nodiscard]] Handle		 CreateCombinedImageDescriptorSet(std::span<const TextureBindingUpdate> bindings, std::string_view layoutType);
+		void						 UpdateDescriptorBuffer(const Handle& setHandle, uint32_t binding, const Handle& bufferHandle, size_t size, DescriptorType type);
+		void						 UpdateDescriptorImage(const Handle& setHandle, uint32_t binding, const Handle& textureHandle, const Handle& samplerHandle);
+		void						 UpdateDescriptorStorageImage(const Handle& setHandle, uint32_t binding, const Handle& textureHandle);
+		void						 UpdateDescriptorAccelerationStructure(const Handle& setHandle, uint32_t binding, const Handle& asHandle);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void						 FlushDescriptorSetUpdateRequests();
 		void						 DestroyDescriptorSet(const Handle& handle);
@@ -196,9 +215,17 @@ namespace BetterThanNothing
 
 		void TransitionTexture(const Handle& textureHandle, ImageLayout newLayout);
 		void TransitionSwapChainImage(uint32_t imageIndex, ImageLayout newLayout);
+		void CopyTexture(const Handle& srcTextureHandle, const Handle& dstTextureHandle);
 		void BeginRenderPass(const RenderPassDescriptor& desc);
 		void EndRenderPass();
 		void ExecuteDrawStream(const DrawStreamView& drawStream);
+		void DrawFullscreen(const Handle& pipelineHandle, const std::string& layoutName, std::span<const Handle> descriptorSets, const void* pushConstantData = nullptr, uint32_t pushConstantSize = 0, ShaderStageFlags pushConstantStages = ShaderStageFlags::Fragment);
+
+		void BindComputePipeline(const Handle& pipelineHandle);
+		void BindComputeDescriptorSets(const std::string& layoutName, uint32_t firstSet, std::span<const Handle> descriptorSets);
+		void PushComputeConstants(const std::string& layoutName, const void* data, uint32_t size);
+		void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
+		void ComputeBarrier();
 
 		void WaitIdle() const;
 

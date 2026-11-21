@@ -35,6 +35,11 @@ namespace BetterThanNothing
 		PipelineBlueprint* AddShader(ResourceId id);
 		PipelineBlueprint* SetPipelineLayout(const std::string& name);
 		PipelineBlueprint* SetVertexLayout(const VertexLayout& layout);
+		PipelineBlueprint* SetColorFormat(TextureFormat format);
+		PipelineBlueprint* SetColorFormats(std::vector<TextureFormat> formats);
+		PipelineBlueprint* SetDepthFormat(TextureFormat format);
+		PipelineBlueprint* SetHasDepthAttachment(bool enable);
+		PipelineBlueprint* SetUseMsaa(bool enable);
 		PipelineBlueprint* SetDepthTest(bool enable);
 		PipelineBlueprint* SetDepthWrite(bool enable);
 		PipelineBlueprint* SetBlendEnable(bool enable);
@@ -42,25 +47,35 @@ namespace BetterThanNothing
 		PipelineBlueprint* SetWireframe(bool enable);
 		PipelineBlueprint* SetCullMode(CullMode mode);
 
-		[[nodiscard]] std::vector<ResourceId> GetShaders() const;
-		[[nodiscard]] std::string			  GetPipelineLayout() const;
-		[[nodiscard]] VertexLayout			  GetVertexLayout() const;
-		[[nodiscard]] bool					  GetDepthTest() const { return m_depthTest; }
-		[[nodiscard]] bool					  GetDepthWrite() const { return m_depthWrite; }
-		[[nodiscard]] bool					  GetBlendEnable() const { return m_blendEnable; }
-		[[nodiscard]] bool					  GetAlphaToCoverage() const { return m_alphaToCoverage; }
-		[[nodiscard]] bool					  GetWireframe() const { return m_wireframe; }
-		[[nodiscard]] CullMode				  GetCullMode() const { return m_cullMode; }
+		[[nodiscard]] std::vector<ResourceId>	 GetShaders() const;
+		[[nodiscard]] std::string				 GetPipelineLayout() const;
+		[[nodiscard]] VertexLayout				 GetVertexLayout() const;
+		[[nodiscard]] TextureFormat				 GetColorFormat() const { return m_colorFormat; }
+		[[nodiscard]] std::vector<TextureFormat> GetColorFormats() const { return m_colorFormats; }
+		[[nodiscard]] TextureFormat				 GetDepthFormat() const { return m_depthFormat; }
+		[[nodiscard]] bool						 GetHasDepthAttachment() const { return m_hasDepthAttachment; }
+		[[nodiscard]] bool						 GetUseMsaa() const { return m_useMsaa; }
+		[[nodiscard]] bool						 GetDepthTest() const { return m_depthTest; }
+		[[nodiscard]] bool						 GetDepthWrite() const { return m_depthWrite; }
+		[[nodiscard]] bool						 GetBlendEnable() const { return m_blendEnable; }
+		[[nodiscard]] bool						 GetAlphaToCoverage() const { return m_alphaToCoverage; }
+		[[nodiscard]] bool						 GetWireframe() const { return m_wireframe; }
+		[[nodiscard]] CullMode					 GetCullMode() const { return m_cullMode; }
 
 	private:
-		std::vector<ResourceId> m_shaders;
-		std::string				m_pipelineLayout;
-		VertexLayout			m_vertexLayout = {};
-		bool					m_depthTest = true;
-		bool					m_depthWrite = true;
-		bool					m_blendEnable = true;
-		bool					m_alphaToCoverage = true;
-		bool					m_wireframe = false;
-		CullMode				m_cullMode = CullMode::Back;
+		std::vector<ResourceId>	   m_shaders;
+		std::string				   m_pipelineLayout;
+		VertexLayout			   m_vertexLayout = {};
+		TextureFormat			   m_colorFormat = TextureFormat::Undefined;
+		std::vector<TextureFormat> m_colorFormats;
+		TextureFormat			   m_depthFormat = TextureFormat::Undefined;
+		bool					   m_hasDepthAttachment = true;
+		bool					   m_useMsaa = false;
+		bool					   m_depthTest = true;
+		bool					   m_depthWrite = true;
+		bool					   m_blendEnable = false;
+		bool					   m_alphaToCoverage = false;
+		bool					   m_wireframe = false;
+		CullMode				   m_cullMode = CullMode::Back;
 	};
 }

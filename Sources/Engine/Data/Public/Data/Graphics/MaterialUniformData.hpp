@@ -18,14 +18,19 @@
 
 #pragma once
 
-#include <Renderer/RenderPass.hpp>
+#include <Math/Vector4.hpp>
+#include <cstddef>
 
 namespace BetterThanNothing
 {
-	class ForwardOpaquePass final : public IRenderPass
+	struct MaterialUniformData
 	{
-	public:
-		[[nodiscard]] std::string_view GetName() const override { return "ForwardOpaquePass"; }
-		void						   Execute(RenderPassContext& ctx) override;
+		alignas(16) Vector4 baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		float metallicFactor = 0.0f;
+		float roughnessFactor = 0.65f;
+		float alphaCutoff = 0.5f;
+		float _pad = 0.0f;
 	};
+
+	static_assert(sizeof(MaterialUniformData) == 32);
 }

@@ -329,7 +329,7 @@ namespace BetterThanNothing
 			auto&			   light = view.get<DirectionalLightComponent>(entity);
 			light.direction = data.revDirection;
 			light.color = data.color;
-			light.intensity = data.intensity;
+			light.illuminanceLux = data.illuminanceLux;
 			return GetObject(entity);
 		}
 
@@ -337,7 +337,7 @@ namespace BetterThanNothing
 		auto&		light = obj.AddComponent<DirectionalLightComponent>();
 		light.direction = data.revDirection;
 		light.color = data.color;
-		light.intensity = data.intensity;
+		light.illuminanceLux = data.illuminanceLux;
 		return obj;
 	}
 
@@ -349,10 +349,8 @@ namespace BetterThanNothing
 
 		auto& light = obj.AddComponent<PointLightComponent>();
 		light.color = data.color;
-		light.constant = data.constant;
-		light.linear = data.linear;
-		light.quadratic = data.quadratic;
-		light.intensity = data.intensity;
+		light.luminousPowerLm = data.luminousPowerLm;
+		light.radius = data.radius;
 		return obj;
 	}
 
@@ -386,6 +384,13 @@ namespace BetterThanNothing
 		const auto view = m_registry.view<TransformComponent>();
 		for (const entt::entity entity : view)
 		{
+			auto& transform = view.get<TransformComponent>(entity);
+			if (transform.hasPrevWorldMatrix)
+				transform.prevWorldMatrix = transform.worldMatrix;
+		}
+
+		for (const entt::entity entity : view)
+		{
 			const auto* hierarchy = m_registry.try_get<HierarchyComponent>(entity);
 			if (hierarchy && hierarchy->parent != entt::null)
 				continue;
@@ -409,6 +414,12 @@ namespace BetterThanNothing
 			transform->worldMatrix = parentWorldMatrix * transform->localMatrix;
 			transform->inverseWorldMatrix = transform->worldMatrix.Inverted();
 			transform->dirty = false;
+		}
+
+		if (!transform->hasPrevWorldMatrix)
+		{
+			transform->prevWorldMatrix = transform->worldMatrix;
+			transform->hasPrevWorldMatrix = true;
 		}
 
 		if (const auto* hierarchy = m_registry.try_get<HierarchyComponent>(entity))

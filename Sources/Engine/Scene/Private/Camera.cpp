@@ -22,6 +22,7 @@
 #include "Math/Quaternion.hpp"
 #include "Math/Vector3.hpp"
 #include <algorithm>
+#include <cmath>
 
 namespace BetterThanNothing
 {
@@ -50,9 +51,32 @@ namespace BetterThanNothing
 		m_fov = std::clamp(fov, 1.0f, 179.0f);
 	}
 
-	void Camera::SetExposure(const float exposure)
+	void Camera::SetAperture(const float fNumber)
 	{
-		m_exposure = std::max(0.01f, exposure);
+		m_aperture = std::clamp(fNumber, 0.7f, 64.0f);
+	}
+
+	void Camera::SetShutterSpeed(const float seconds)
+	{
+		m_shutterSpeed = std::clamp(seconds, 1.0f / 8000.0f, 30.0f);
+	}
+
+	void Camera::SetIso(const float iso)
+	{
+		m_iso = std::clamp(iso, 25.0f, 25600.0f);
+	}
+
+	void Camera::SetEvCompensation(const float evStops)
+	{
+		m_evCompensation = std::clamp(evStops, -10.0f, 10.0f);
+	}
+
+	void Camera::SetPhysicalExposure(const float aperture, const float shutterSpeed, const float iso, const float evCompensation)
+	{
+		SetAperture(aperture);
+		SetShutterSpeed(shutterSpeed);
+		SetIso(iso);
+		SetEvCompensation(evCompensation);
 	}
 
 	void Camera::Move(const Vector3& delta)
@@ -138,8 +162,18 @@ namespace BetterThanNothing
 		return m_farPlane;
 	}
 
+	float Camera::GetEV100() const
+	{
+		// EV100 = log2((N^2 / t) * (100 / S)) - EV_compensation
+		return std::log2((m_aperture * m_aperture) / m_shutterSpeed * (100.0f / m_iso)) - m_evCompensation;
+	}
+
 	float Camera::GetExposure() const
 	{
-		return m_exposure;
+		// Saturation-based sensitivity (SBS, Frostbite / Filament):
+		// L_max = (78 / (q * S_sat)) * 2^EV100 ≈ 1.2 * 2^EV100  [cd/m^2]
+		// exposure = 1.0 / L_max
+		const float maxLuminance = 1.2f * std::exp2(GetEV100());
+		return 1.0f / std::max(maxLuminance, 1e-6f);
 	}
 }

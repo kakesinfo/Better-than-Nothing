@@ -24,11 +24,10 @@ namespace BetterThanNothing
 {
 	struct DescriptorSetUpdateRequest
 	{
-		union
-		{
-			VkDescriptorImageInfo imageInfo;
-			VkDescriptorBufferInfo bufferInfo;
-		};
-		VkWriteDescriptorSet write;
+		VkDescriptorImageInfo						 imageInfo{};
+		VkDescriptorBufferInfo						 bufferInfo{};
+		VkWriteDescriptorSetAccelerationStructureKHR asInfo{};
+		VkAccelerationStructureKHR					 asHandle = VK_NULL_HANDLE;
+		VkWriteDescriptorSet						 write{};
 	};
 }

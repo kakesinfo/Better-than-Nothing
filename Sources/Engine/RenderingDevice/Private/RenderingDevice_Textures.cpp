@@ -36,14 +36,22 @@ namespace BetterThanNothing
 	{
 		switch (format)
 		{
+			case TextureFormat::R8_UNORM:
+				return VK_FORMAT_R8_UNORM;
 			case TextureFormat::R8G8B8A8_UNORM:
 				return VK_FORMAT_R8G8B8A8_UNORM;
 			case TextureFormat::R8G8B8A8_SRGB:
 				return VK_FORMAT_R8G8B8A8_SRGB;
 			case TextureFormat::B8G8R8A8_UNORM:
 				return VK_FORMAT_B8G8R8A8_UNORM;
+			case TextureFormat::R16_SFLOAT:
+				return VK_FORMAT_R16_SFLOAT;
+			case TextureFormat::R16G16_SFLOAT:
+				return VK_FORMAT_R16G16_SFLOAT;
 			case TextureFormat::R16G16B16A16_SFLOAT:
 				return VK_FORMAT_R16G16B16A16_SFLOAT;
+			case TextureFormat::R32_SFLOAT:
+				return VK_FORMAT_R32_SFLOAT;
 			case TextureFormat::D32_SFLOAT:
 				return VK_FORMAT_D32_SFLOAT;
 			case TextureFormat::D24_UNORM_S8_UINT:
@@ -268,6 +276,9 @@ namespace BetterThanNothing
 			TextureImageViewDescription viewDesc{};
 			viewDesc.destination = handle;
 			viewDesc.aspectFlags = Internal_AspectFlagsForFormat(vkFormat);
+			// Vulkan forbids sampling a depth-stencil image view that includes STENCIL_BIT
+			if ((desc.usage & TextureUsageFlags::Sampled) && (viewDesc.aspectFlags & VK_IMAGE_ASPECT_DEPTH_BIT))
+				viewDesc.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 			if (!Internal_CreateTextureImageView(viewDesc))
 				throw std::runtime_error("Cannot create texture image view");
@@ -307,7 +318,7 @@ namespace BetterThanNothing
 		desc.width = width;
 		desc.height = height;
 		desc.format = engineFormat;
-		desc.usage = TextureUsageFlags::DepthStencilAttachment;
+		desc.usage = TextureUsageFlags::DepthStencilAttachment | (useMsaa ? TextureUsageFlags::None : (TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc));
 		desc.useMsaa = useMsaa;
 		desc.dedicated = true;
 		desc.mipLevels = 1;

@@ -30,7 +30,8 @@ namespace BetterThanNothing
 		Texture,
 		Sampler,
 		Shader,
-		Pipeline
+		Pipeline,
+		AccelerationStructure
 	};
 
 	class Handle

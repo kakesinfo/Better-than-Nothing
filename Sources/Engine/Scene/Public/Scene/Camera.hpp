@@ -33,7 +33,13 @@ namespace BetterThanNothing
 		void SetPosition(const Vector3& position);
 		void SetOrientation(const Quaternion& orientation);
 		void SetFov(float fov);
-		void SetExposure(float exposure);
+
+		// Physical camera exposure controls (ISO 100 / SBS standard)
+		void SetAperture(float fNumber);
+		void SetShutterSpeed(float seconds);
+		void SetIso(float iso);
+		void SetEvCompensation(float evStops);
+		void SetPhysicalExposure(float aperture, float shutterSpeed, float iso, float evCompensation = 0.0f);
 
 		void Move(const Vector3& delta);
 		void Rotate(float yaw, float pitch);
@@ -49,7 +55,13 @@ namespace BetterThanNothing
 		[[nodiscard]] float		 GetFov() const;
 		[[nodiscard]] float		 GetNearPlane() const;
 		[[nodiscard]] float		 GetFarPlane() const;
-		[[nodiscard]] float		 GetExposure() const;
+
+		[[nodiscard]] float GetAperture() const { return m_aperture; }
+		[[nodiscard]] float GetShutterSpeed() const { return m_shutterSpeed; }
+		[[nodiscard]] float GetIso() const { return m_iso; }
+		[[nodiscard]] float GetEvCompensation() const { return m_evCompensation; }
+		[[nodiscard]] float GetEV100() const;
+		[[nodiscard]] float GetExposure() const;
 
 	private:
 		void UpdateOrientationFromAngles();
@@ -57,7 +69,12 @@ namespace BetterThanNothing
 		float m_fov;
 		float m_nearPlane;
 		float m_farPlane;
-		float m_exposure = 0.5f;
+
+		// Default: bright afternoon courtyard exposure (f/11, 1/125s, ISO 100 -> EV100 ≈ 13.89)
+		float m_aperture = 11.0f;
+		float m_shutterSpeed = 1.0f / 125.0f;
+		float m_iso = 100.0f;
+		float m_evCompensation = 0.0f;
 
 		Vector3	   m_position;
 		Quaternion m_orientation;

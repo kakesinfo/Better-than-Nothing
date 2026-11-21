@@ -17,6 +17,7 @@
  */
 
 #include <ResourceManager/PipelineBlueprint.hpp>
+#include <utility>
 
 namespace BetterThanNothing
 {
@@ -35,6 +36,36 @@ namespace BetterThanNothing
 	PipelineBlueprint* PipelineBlueprint::SetVertexLayout(const VertexLayout& layout)
 	{
 		m_vertexLayout = layout;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetColorFormat(const TextureFormat format)
+	{
+		m_colorFormat = format;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetColorFormats(std::vector<TextureFormat> formats)
+	{
+		m_colorFormats = std::move(formats);
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetDepthFormat(const TextureFormat format)
+	{
+		m_depthFormat = format;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetHasDepthAttachment(const bool enable)
+	{
+		m_hasDepthAttachment = enable;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetUseMsaa(const bool enable)
+	{
+		m_useMsaa = enable;
 		return this;
 	}
 

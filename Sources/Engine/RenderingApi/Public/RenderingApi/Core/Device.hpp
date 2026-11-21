@@ -54,6 +54,12 @@ namespace BetterThanNothing::RenderingApi
 			VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
 			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 		};
+
+		std::vector<const char*> rayTracingExtensions = {
+			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+			VK_KHR_RAY_QUERY_EXTENSION_NAME,
+			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
+		};
 	};
 
 	class Device
@@ -88,6 +94,13 @@ namespace BetterThanNothing::RenderingApi
 		VkResult CreateShaderModule(const VkShaderModuleCreateInfo& createInfo, VkShaderModule* shaderModule) const;
 		void	 DestroyShaderModule(VkShaderModule shaderModule) const;
 
+		// Acceleration Structure / Ray Query helpers
+		[[nodiscard]] VkDeviceAddress GetBufferDeviceAddress(VkBuffer buffer) const;
+		void						  GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildTypeKHR buildType, const VkAccelerationStructureBuildGeometryInfoKHR* pBuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR* pSizeInfo) const;
+		VkResult					  CreateAccelerationStructure(const VkAccelerationStructureCreateInfoKHR* pCreateInfo, VkAccelerationStructureKHR* pAccelerationStructure) const;
+		void						  DestroyAccelerationStructure(VkAccelerationStructureKHR accelerationStructure) const;
+		void						  CmdBuildAccelerationStructures(VkCommandBuffer commandBuffer, uint32_t infoCount, const VkAccelerationStructureBuildGeometryInfoKHR* pInfos, const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) const;
+		[[nodiscard]] VkDeviceAddress GetAccelerationStructureDeviceAddress(const VkAccelerationStructureDeviceAddressInfoKHR* pInfo) const;
 
 		[[nodiscard]] VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 		[[nodiscard]] VkFormat FindDepthFormat() const;
@@ -95,6 +108,7 @@ namespace BetterThanNothing::RenderingApi
 
 	private:
 		bool								  CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept;
+		bool								  CheckRayQuerySupport(VkPhysicalDevice device) const noexcept;
 		[[nodiscard]] QueueFamilyIndices	  FindQueueFamilies(VkPhysicalDevice device) const;
 		[[nodiscard]] SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 		bool								  IsDeviceSuitable(VkPhysicalDevice device) const noexcept;
@@ -108,11 +122,14 @@ namespace BetterThanNothing::RenderingApi
 		[[nodiscard]] std::string			  GetDeviceName() const;
 		[[nodiscard]] std::string			  GetApiVersion() const;
 		[[nodiscard]] uint32_t				  GetMinUniformBufferOffsetAlignment() const;
+		[[nodiscard]] uint32_t				  GetMinAccelerationStructureScratchOffsetAlignment() const;
 		[[nodiscard]] VkSampleCountFlagBits	  GetMaxMsaaSamples() const;
 		[[nodiscard]] float					  GetMaxAnisotropy() const;
 		[[nodiscard]] uint32_t				  GetMaxTexture2DSize() const;
 		[[nodiscard]] uint32_t				  GetMaxTexture3DSize() const;
 		[[nodiscard]] uint32_t				  GetMaxTextureCubeSize() const;
+		[[nodiscard]] bool					  IsBufferDeviceAddressSupported() const;
+		[[nodiscard]] bool					  IsRayQuerySupported() const;
 		[[nodiscard]] VkDevice				  Handle() const;
 		[[nodiscard]] VkPhysicalDevice		  PhysicalHandle() const;
 
@@ -125,10 +142,19 @@ namespace BetterThanNothing::RenderingApi
 		std::string			  m_deviceName;
 		std::string			  m_apiVersion;
 		uint32_t			  m_minUniformBufferOffsetAlignment = 0;
+		uint32_t			  m_minAccelerationStructureScratchOffsetAlignment = 256;
 		VkSampleCountFlagBits m_maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
 		float				  m_maxAnisotropy = 1;
 		uint32_t			  m_maxTexture2DSize = 0;
 		uint32_t			  m_maxTexture3DSize = 0;
 		uint32_t			  m_maxTextureCubeSize = 0;
+		bool				  m_bufferDeviceAddressSupported = false;
+		bool				  m_rayQuerySupported = false;
+
+		PFN_vkGetAccelerationStructureBuildSizesKHR	   m_vkGetAccelerationStructureBuildSizesKHR = nullptr;
+		PFN_vkCreateAccelerationStructureKHR		   m_vkCreateAccelerationStructureKHR = nullptr;
+		PFN_vkDestroyAccelerationStructureKHR		   m_vkDestroyAccelerationStructureKHR = nullptr;
+		PFN_vkCmdBuildAccelerationStructuresKHR		   m_vkCmdBuildAccelerationStructuresKHR = nullptr;
+		PFN_vkGetAccelerationStructureDeviceAddressKHR m_vkGetAccelerationStructureDeviceAddressKHR = nullptr;
 	};
 };

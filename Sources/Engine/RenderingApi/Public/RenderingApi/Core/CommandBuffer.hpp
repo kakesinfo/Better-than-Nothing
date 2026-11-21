@@ -71,13 +71,16 @@ namespace BetterThanNothing::RenderingApi
 
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
+		void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) const;
 
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint64_t bufferSize, uint64_t offset);
+		void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t width, uint32_t height, VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT) const;
 		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 		void TransitionImageLayout2(VkImage image, VkImageAspectFlags aspectMask, uint32_t mipLevels, VkImageLayout oldLayout, VkImageLayout newLayout) const;
 		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint64_t offset);
 		void PipelineBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const VkMemoryBarrier* memoryBarriers, uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* bufferMemoryBarriers, uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* imageMemoryBarriers) const;
 		void PipelineBarrier2(const VkDependencyInfo& dependencyInfo) const;
+		void MemoryBarrier2(VkPipelineStageFlags2 srcStageMask, VkAccessFlags2 srcAccessMask, VkPipelineStageFlags2 dstStageMask, VkAccessFlags2 dstAccessMask) const;
 		void BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter);
 		void PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values);
 

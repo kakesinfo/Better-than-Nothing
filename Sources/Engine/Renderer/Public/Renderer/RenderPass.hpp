@@ -18,8 +18,12 @@
 
 #pragma once
 
+#include <Common/RenderSettings.hpp>
+#include <Math/Matrix4.hpp>
+#include <Math/Vector3.hpp>
 #include <RenderingDevice/DrawStream.hpp>
 #include <RenderingDevice/Handle.hpp>
+#include <array>
 #include <cstdint>
 #include <string_view>
 
@@ -41,10 +45,76 @@ namespace BetterThanNothing
 		uint32_t swapChainImageIndex = 0;
 		uint32_t viewportWidth = 0;
 		uint32_t viewportHeight = 0;
-		bool	 useMsaa = false;
 
-		Handle colorTarget{};
+		bool	 rtSupported = false;
+		bool	 rtShadowsActive = false;
+		bool	 bendSssActive = false;
+		bool	 tlasValid = false;
+		EAOMode	 activeAoMode = EAOMode::GTAO;
+		bool	 atmosphereStaticLutsDirty = true;
+		bool	 brdfLutDirty = true;
+		uint32_t temporalReadIndex = 0;
+		uint32_t temporalWriteIndex = 1;
+
+		Matrix4 unjitteredViewProj = Matrix4::Identity;
+		Vector3 sunDirection = Vector3(0.0f, 1.0f, 0.0f);
+
+		// G-Buffer targets & previous-frame geometry history
+		Handle gbufferAlbedo{};
+		Handle gbufferNormal{};
+		Handle gbufferMaterial{};
+		Handle gbufferMotion{};
 		Handle depthTarget{};
+		Handle prevDepthTarget{};
+		Handle prevNormalTarget{};
+
+		// RT Shadow & AMD FFX Shadow Denoiser targets
+		Handle				  rtShadowRaw{};
+		Handle				  rtShadowPing{};
+		Handle				  rtShadowPong{};
+		Handle				  rtShadowDenoised{};
+		std::array<Handle, 2> rtShadowMoments{};
+
+		// Bend Studio Screen Space Shadow target
+		Handle screenSpaceShadow{};
+
+		// Ambient Occlusion targets
+		Handle aoRaw{};
+		Handle aoDenoised{};
+		Handle aoHistory{};
+
+		// Hillaire Sky & Irradiance / IBL LUTs
+		Handle transmittanceLUT{};
+		Handle multiScatteringLUT{};
+		Handle skyViewLUT{};
+		Handle irradianceLUT{};
+		Handle prefilteredEnvLUT{};
+		Handle brdfLUT{};
+
+		// HDR & TAA targets
+		Handle				  hdrColor{};
+		std::array<Handle, 2> taaHistory{};
+
+		// Descriptor sets
+		Handle				  globalDescriptorSet{};
+		Handle				  pointLightDescriptorSet{};
+		Handle				  rtShadowDescriptorSet{};
+		std::array<Handle, 2> ffxTileClassDescriptorSets{};
+		std::array<Handle, 3> ffxFilterDescriptorSets{}; // pass 0: ping->pong, pass 1: pong->ping, pass 2: ping->denoised
+		Handle				  bendSssDescriptorSet{};
+		Handle				  rtaoDescriptorSet{};
+		Handle				  gtaoDescriptorSet{};
+		Handle				  aoDenoiseDescriptorSet{};
+		Handle				  skyTransmittanceDescriptorSet{};
+		Handle				  skyMultiScatteringDescriptorSet{};
+		Handle				  skyViewDescriptorSet{};
+		Handle				  skyIrradianceDescriptorSet{};
+		Handle				  skyPrefilterDescriptorSet{};
+		Handle				  skyBrdfDescriptorSet{};
+		Handle				  skyRenderDescriptorSet{};
+		Handle				  deferredLightingDescriptorSet{};
+		std::array<Handle, 2> taaDescriptorSets{};
+		std::array<Handle, 2> toneMapDescriptorSets{};
 
 		DrawStream* opaqueStream = nullptr;
 		DrawStream* transparentStream = nullptr;

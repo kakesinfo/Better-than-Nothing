@@ -29,8 +29,12 @@ namespace BetterThanNothing
 		{
 			case EShaderType::Vertex:
 				return VK_SHADER_STAGE_VERTEX_BIT;
+			case EShaderType::Geometry:
+				return VK_SHADER_STAGE_GEOMETRY_BIT;
 			case EShaderType::Fragment:
 				return VK_SHADER_STAGE_FRAGMENT_BIT;
+			case EShaderType::Compute:
+				return VK_SHADER_STAGE_COMPUTE_BIT;
 			default:
 				throw std::runtime_error("Invalid shader type");
 		}
@@ -55,12 +59,15 @@ namespace BetterThanNothing
 
 	static std::vector<VkVertexInputBindingDescription> Internal_GetVertexBindingDescription(const VertexLayout& layout)
 	{
+		if (layout.GetAttributes().empty())
+			return {};
+
 		VkVertexInputBindingDescription bindingDescription{};
 		bindingDescription.binding = 0;
 		bindingDescription.stride = layout.GetStride();
 		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-		return { bindingDescription };
+		return {bindingDescription};
 	}
 
 	static std::vector<VkVertexInputAttributeDescription> Internal_GetVertexAttributeDescriptions(const VertexLayout& layout)
@@ -102,14 +109,22 @@ namespace BetterThanNothing
 	{
 		switch (format)
 		{
+			case TextureFormat::R8_UNORM:
+				return VK_FORMAT_R8_UNORM;
 			case TextureFormat::R8G8B8A8_UNORM:
 				return VK_FORMAT_R8G8B8A8_UNORM;
 			case TextureFormat::R8G8B8A8_SRGB:
 				return VK_FORMAT_R8G8B8A8_SRGB;
 			case TextureFormat::B8G8R8A8_UNORM:
 				return VK_FORMAT_B8G8R8A8_UNORM;
+			case TextureFormat::R16_SFLOAT:
+				return VK_FORMAT_R16_SFLOAT;
+			case TextureFormat::R16G16_SFLOAT:
+				return VK_FORMAT_R16G16_SFLOAT;
 			case TextureFormat::R16G16B16A16_SFLOAT:
 				return VK_FORMAT_R16G16B16A16_SFLOAT;
+			case TextureFormat::R32_SFLOAT:
+				return VK_FORMAT_R32_SFLOAT;
 			case TextureFormat::D32_SFLOAT:
 				return VK_FORMAT_D32_SFLOAT;
 			case TextureFormat::D24_UNORM_S8_UINT:
@@ -122,8 +137,35 @@ namespace BetterThanNothing
 		}
 	}
 
+	static bool Internal_CreateComputePipeline(RenderingApi::Pipeline* dstPipeline, const PipelineDescription& desc, RenderingDeviceInternals* self)
+	{
+		if (!self->pipelineLayouts.contains(desc.layoutName))
+			return false;
+
+		const auto* shader = self->shaders.Get(desc.shaders[0]);
+
+		VkPipelineShaderStageCreateInfo stageInfo{};
+		stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+		stageInfo.module = shader->module;
+		stageInfo.pName = "main";
+
+		VkComputePipelineCreateInfo pipelineInfo{};
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+		pipelineInfo.stage = stageInfo;
+		pipelineInfo.layout = self->pipelineLayouts.at(desc.layoutName)->Handle();
+
+		return vkCreateComputePipelines(self->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &dstPipeline->pipeline) == VK_SUCCESS;
+	}
+
 	static bool Internal_CreatePipeline(RenderingApi::Pipeline* dstPipeline, const PipelineDescription& desc, RenderingDeviceInternals* self)
 	{
+		if (desc.shaders.empty())
+			return false;
+
+		if (desc.shaders.size() == 1 && self->shaders.Get(desc.shaders[0])->type == EShaderType::Compute)
+			return Internal_CreateComputePipeline(dstPipeline, desc, self);
+
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		for (const auto shaderHandle : desc.shaders)
 		{
@@ -142,11 +184,11 @@ namespace BetterThanNothing
 
 		const auto vertexBindings = Internal_GetVertexBindingDescription(desc.vertexLayout);
 		vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertexBindings.size());
-		vertexInputInfo.pVertexBindingDescriptions = vertexBindings.data();
+		vertexInputInfo.pVertexBindingDescriptions = vertexBindings.empty() ? nullptr : vertexBindings.data();
 
 		const auto vertexAttributes = Internal_GetVertexAttributeDescriptions(desc.vertexLayout);
 		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributes.size());
-		vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes.data();
+		vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes.empty() ? nullptr : vertexAttributes.data();
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -163,9 +205,9 @@ namespace BetterThanNothing
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		viewportState.viewportCount = 1;
-		viewportState.pViewports = nullptr; // Dynamic
+		viewportState.pViewports = nullptr;
 		viewportState.scissorCount = 1;
-		viewportState.pScissors = nullptr; // Dynamic
+		viewportState.pScissors = nullptr;
 
 		VkPipelineRasterizationStateCreateInfo rasterizer{};
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -187,9 +229,22 @@ namespace BetterThanNothing
 		multisampling.alphaToCoverageEnable = (desc.alphaToCoverage && multisampling.rasterizationSamples > VK_SAMPLE_COUNT_1_BIT) ? VK_TRUE : VK_FALSE;
 		multisampling.minSampleShading = 1.0f;
 
-		const std::vector colorAttachmentFormats = {Internal_PipelineFormatToVk(desc.colorFormat, self->swapChain->GetImageFormat())};
-		const VkFormat	  depthAttachmentFormat = Internal_PipelineFormatToVk(desc.depthFormat, self->device->FindDepthFormat());
-		const VkFormat	  stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+		std::vector<VkFormat> colorAttachmentFormats;
+		if (!desc.colorFormats.empty())
+		{
+			colorAttachmentFormats.reserve(desc.colorFormats.size());
+			for (const TextureFormat fmt : desc.colorFormats)
+				colorAttachmentFormats.push_back(Internal_PipelineFormatToVk(fmt, self->swapChain->GetImageFormat()));
+		}
+		else
+		{
+			colorAttachmentFormats.push_back(Internal_PipelineFormatToVk(desc.colorFormat, self->swapChain->GetImageFormat()));
+		}
+
+		const VkFormat depthAttachmentFormat = desc.hasDepthAttachment
+												   ? Internal_PipelineFormatToVk(desc.depthFormat, self->device->FindDepthFormat())
+												   : VK_FORMAT_UNDEFINED;
+		const VkFormat stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
 		pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -208,8 +263,7 @@ namespace BetterThanNothing
 		colorBlendState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		colorBlendState.alphaBlendOp = VK_BLEND_OP_ADD;
 
-		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
-		blendAttachments.resize(colorAttachmentFormats.size(), colorBlendState);
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments(colorAttachmentFormats.size(), colorBlendState);
 
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -220,8 +274,8 @@ namespace BetterThanNothing
 
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
 		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable = desc.depthTest ? VK_TRUE : VK_FALSE;
-		depthStencil.depthWriteEnable = desc.depthWrite ? VK_TRUE : VK_FALSE;
+		depthStencil.depthTestEnable = (desc.hasDepthAttachment && desc.depthTest) ? VK_TRUE : VK_FALSE;
+		depthStencil.depthWriteEnable = (desc.hasDepthAttachment && desc.depthWrite) ? VK_TRUE : VK_FALSE;
 		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 		depthStencil.depthBoundsTestEnable = VK_FALSE;
 		depthStencil.minDepthBounds = 0.0f;

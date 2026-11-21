@@ -35,6 +35,7 @@
 #include <RenderingApi/Core/Semaphore.hpp>
 #include <RenderingApi/Core/Surface.hpp>
 #include <RenderingApi/Core/SwapChain.hpp>
+#include <RenderingApi/Resources/AccelerationStructure.hpp>
 #include <RenderingApi/Resources/Buffer.hpp>
 #include <RenderingApi/Resources/DescriptorSet.hpp>
 #include <RenderingApi/Resources/Pipeline.hpp>
@@ -78,8 +79,9 @@ namespace BetterThanNothing
 		HandleRegistry<RenderingApi::Texture, HandleType::Texture>			   textures;
 		HandleRegistry<RenderingApi::Sampler, HandleType::Sampler>			   samplers;
 		HandleRegistry<RenderingApi::DescriptorSet, HandleType::DescriptorSet> descriptors;
-		HandleRegistry<RenderingApi::Shader, HandleType::Shader>			   shaders;
-		HandleRegistry<RenderingApi::Pipeline, HandleType::Pipeline>		   pipelines;
+		HandleRegistry<RenderingApi::Shader, HandleType::Shader>							   shaders;
+		HandleRegistry<RenderingApi::Pipeline, HandleType::Pipeline>						   pipelines;
+		HandleRegistry<RenderingApi::AccelerationStructure, HandleType::AccelerationStructure> accelerationStructures;
 
 		std::unordered_map<SamplerDescription, Handle, SamplerDescriptionHash, SamplerDescriptionEqual> samplersLUT;
 		std::vector<DescriptorSetUpdateRequest>															descriptorsUpdateRequests;

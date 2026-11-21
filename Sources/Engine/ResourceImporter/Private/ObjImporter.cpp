@@ -22,6 +22,8 @@
 #include <Common/Logger.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <ResourceImporter/Importer.hpp>
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <meshoptimizer.h>
@@ -61,6 +63,19 @@ namespace BetterThanNothing
 		{
 			const std::filesystem::path texPath = parentFolder / normalTexName;
 			importedMaterial.normalTexturePath = texPath.string();
+		}
+
+		if (material.metallic > 0.0f)
+			importedMaterial.metallicFactor = std::clamp(material.metallic, 0.0f, 1.0f);
+		if (material.roughness > 0.0f)
+			importedMaterial.roughnessFactor = std::clamp(material.roughness, 0.05f, 1.0f);
+		else if (material.shininess > 0.0f)
+			importedMaterial.roughnessFactor = std::clamp(std::sqrt(2.0f / (material.shininess + 2.0f)), 0.15f, 0.95f);
+
+		if (!material.alpha_texname.empty())
+		{
+			importedMaterial.alphaMode = EImportedAlphaMode::Mask;
+			importedMaterial.alphaCutoff = 0.5f;
 		}
 
 		importedMaterial.id = static_cast<uint32_t>(materialId);

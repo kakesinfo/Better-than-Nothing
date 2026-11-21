@@ -16,44 +16,50 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ForwardOpaquePass.hpp"
+#include "GBufferPass.hpp"
 
 #include <RenderingDevice/RenderPassDescription.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 
 namespace BetterThanNothing
 {
-	void ForwardOpaquePass::Execute(RenderPassContext& ctx)
+	void GBufferPass::Execute(RenderPassContext& ctx)
 	{
 		RenderingDevice* renderingDevice = ctx.renderingDevice;
-		const bool		 hasTransparent = ctx.transparentStream && !ctx.transparentStream->Empty();
 
-		ColorAttachmentDesc colorAttachment{};
-		colorAttachment.loadOp = LoadOp::Clear;
-		colorAttachment.clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-		if (ctx.useMsaa)
-		{
-			colorAttachment.target = ctx.colorTarget;
-			colorAttachment.storeOp = hasTransparent ? StoreOp::Store : StoreOp::DontCare;
-			colorAttachment.resolveToSwapChain = !hasTransparent;
-			colorAttachment.swapChainImageIndex = ctx.swapChainImageIndex;
-		}
-		else
-		{
-			colorAttachment.useSwapChainImage = true;
-			colorAttachment.swapChainImageIndex = ctx.swapChainImageIndex;
-			colorAttachment.storeOp = StoreOp::Store;
-		}
+		ColorAttachmentDesc albedoAttachment{};
+		albedoAttachment.target = ctx.gbufferAlbedo;
+		albedoAttachment.loadOp = LoadOp::Clear;
+		albedoAttachment.storeOp = StoreOp::Store;
+		albedoAttachment.clearColor = {0.0f, 0.0f, 0.0f, 0.0f};
+
+		ColorAttachmentDesc normalAttachment{};
+		normalAttachment.target = ctx.gbufferNormal;
+		normalAttachment.loadOp = LoadOp::Clear;
+		normalAttachment.storeOp = StoreOp::Store;
+		normalAttachment.clearColor = {0.0f, 0.0f, 0.0f, 0.0f};
+
+		ColorAttachmentDesc materialAttachment{};
+		materialAttachment.target = ctx.gbufferMaterial;
+		materialAttachment.loadOp = LoadOp::Clear;
+		materialAttachment.storeOp = StoreOp::Store;
+		materialAttachment.clearColor = {0.0f, 0.5f, 1.0f, 0.0f};
+
+		ColorAttachmentDesc motionAttachment{};
+		motionAttachment.target = ctx.gbufferMotion;
+		motionAttachment.loadOp = LoadOp::Clear;
+		motionAttachment.storeOp = StoreOp::Store;
+		motionAttachment.clearColor = {0.0f, 0.0f, 0.0f, 0.0f};
 
 		DepthAttachmentDesc depthAttachment{};
 		depthAttachment.target = ctx.depthTarget;
 		depthAttachment.loadOp = LoadOp::Clear;
-		depthAttachment.storeOp = hasTransparent ? StoreOp::Store : StoreOp::DontCare;
+		depthAttachment.storeOp = StoreOp::Store;
 		depthAttachment.clearDepth = 1.0f;
 		depthAttachment.clearStencil = 0;
 
 		RenderPassDescriptor passDesc{};
-		passDesc.colorAttachments = {colorAttachment};
+		passDesc.colorAttachments = {albedoAttachment, normalAttachment, materialAttachment, motionAttachment};
 		passDesc.depthAttachment = depthAttachment;
 		passDesc.width = ctx.viewportWidth;
 		passDesc.height = ctx.viewportHeight;

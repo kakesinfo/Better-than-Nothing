@@ -117,6 +117,8 @@ namespace BetterThanNothing
 		BufferDescription desc{};
 		desc.size = size;
 		desc.bufferUsage = BufferUsageFlags::TransferDst | BufferUsageFlags::Vertex;
+		if (m_self->device->IsRayQuerySupported())
+			desc.bufferUsage = desc.bufferUsage | BufferUsageFlags::ShaderDeviceAddress | BufferUsageFlags::AccelerationStructureBuildInputReadOnly;
 		desc.memoryUsage = BufferMemoryUsage::GpuOnly;
 
 		const Handle handle = CreateBuffer(desc);
@@ -135,6 +137,8 @@ namespace BetterThanNothing
 		BufferDescription desc{};
 		desc.size = size;
 		desc.bufferUsage = BufferUsageFlags::TransferDst | BufferUsageFlags::Index;
+		if (m_self->device->IsRayQuerySupported())
+			desc.bufferUsage = desc.bufferUsage | BufferUsageFlags::ShaderDeviceAddress | BufferUsageFlags::AccelerationStructureBuildInputReadOnly;
 		desc.memoryUsage = BufferMemoryUsage::GpuOnly;
 
 		const Handle handle = CreateBuffer(desc);
@@ -210,5 +214,13 @@ namespace BetterThanNothing
 			throw std::runtime_error("Invalid buffer handle!");
 
 		return m_self->buffers.Get(handle)->allocInfo.pMappedData;
+	}
+
+	uint64_t RenderingDevice::GetBufferDeviceAddress(const Handle& handle)
+	{
+		if (!m_self->buffers.Has(handle))
+			throw std::runtime_error("Invalid buffer handle!");
+
+		return m_self->device->GetBufferDeviceAddress(m_self->buffers.Get(handle)->value);
 	}
 }

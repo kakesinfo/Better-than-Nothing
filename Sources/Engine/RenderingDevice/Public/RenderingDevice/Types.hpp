@@ -27,7 +27,8 @@ namespace BetterThanNothing
 		UniformBuffer,
 		StorageBuffer,
 		CombinedImageSampler,
-		StorageImage
+		StorageImage,
+		AccelerationStructure
 	};
 
 	enum class ShaderStageFlags : uint32_t
@@ -81,6 +82,7 @@ namespace BetterThanNothing
 	enum class ImageLayout : uint8_t
 	{
 		Undefined,
+		General,
 		ColorAttachment,
 		DepthStencilAttachment,
 		ShaderReadOnly,
@@ -92,10 +94,14 @@ namespace BetterThanNothing
 	enum class TextureFormat : uint8_t
 	{
 		Undefined = 0,
+		R8_UNORM = 9,
 		R8G8B8A8_UNORM = 37,
 		R8G8B8A8_SRGB = 43,
 		B8G8R8A8_UNORM = 44,
+		R16_SFLOAT = 76,
+		R16G16_SFLOAT = 83,
 		R16G16B16A16_SFLOAT = 97,
+		R32_SFLOAT = 100,
 		D32_SFLOAT = 126,
 		D24_UNORM_S8_UINT = 129,
 		D32_SFLOAT_S8_UINT = 130,
@@ -185,6 +191,9 @@ namespace BetterThanNothing
 		Storage = 0x00000020,
 		Index = 0x00000040,
 		Vertex = 0x00000080,
+		ShaderDeviceAddress = 0x00020000,
+		AccelerationStructureBuildInputReadOnly = 0x00080000,
+		AccelerationStructureStorage = 0x00100000,
 	};
 
 	enum class BufferAllocationFlags : uint32_t

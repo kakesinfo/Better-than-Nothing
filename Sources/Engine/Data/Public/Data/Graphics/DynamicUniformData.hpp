@@ -25,5 +25,8 @@ namespace BetterThanNothing
 	struct DynamicUniformData
 	{
 		alignas(16) Matrix4 model;
+		alignas(16) Matrix4 prevModel;
 	};
+
+	static_assert(sizeof(DynamicUniformData) == 128);
 }

@@ -24,6 +24,7 @@
 
 #include <Common/AssetPath.hpp>
 #include <Common/Logger.hpp>
+#include <Data/Graphics/MaterialUniformData.hpp>
 #include <Data/Graphics/MeshData.hpp>
 #include <Data/Graphics/VertexData.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
@@ -115,6 +116,8 @@ namespace BetterThanNothing
 		{
 			if (material->descriptorSetHandle.IsValid())
 				m_renderingDevice->DestroyDescriptorSet(material->descriptorSetHandle);
+			if (material->uniformBufferHandle.IsValid())
+				m_renderingDevice->DestroyBuffer(material->uniformBufferHandle);
 		}
 		m_materials.clear();
 		m_materialsLUT.clear();
@@ -179,34 +182,59 @@ namespace BetterThanNothing
 		return CreateSolidColorTexture("__builtin_flat_normal__", 128, 128, 255, 255);
 	}
 
+	ResourceId ResourceManager::GetDefaultMetallicRoughnessTexture()
+	{
+		return CreateSolidColorTexture("__builtin_white_mr__", 255, 255, 255, 255);
+	}
+
 	ResourceId ResourceManager::CreateMaterial(const MaterialCreateInfo& info)
 	{
-		const ResourceId diffuseId = info.diffuseTextureId != InvalidResourceId ? info.diffuseTextureId : GetDefaultTexture();
-		const ResourceId normalId = info.normalTextureId != InvalidResourceId ? info.normalTextureId : GetDefaultNormalTexture();
+		const ResourceId  diffuseId = info.diffuseTextureId != InvalidResourceId ? info.diffuseTextureId : GetDefaultTexture();
+		const ResourceId  normalId = info.normalTextureId != InvalidResourceId ? info.normalTextureId : GetDefaultNormalTexture();
+		const ResourceId  mrId = info.metallicRoughnessTextureId != InvalidResourceId ? info.metallicRoughnessTextureId : GetDefaultMetallicRoughnessTexture();
 		const std::string pipelineName = !info.pipelineName.empty()
 											 ? info.pipelineName
-											 : (info.alphaMode == EAlphaMode::Blend ? "Forward::Transparent" : "Forward::Opaque");
+											 : (info.alphaMode == EAlphaMode::Blend ? "Forward::Transparent" : "GBuffer::Opaque");
 
-		const std::string cacheKey = std::to_string(diffuseId) + "|" + std::to_string(normalId) + "|" + std::to_string(static_cast<uint8_t>(info.alphaMode)) + "|" + pipelineName;
+		const std::string cacheKey = std::to_string(diffuseId) + "|" + std::to_string(normalId) + "|" + std::to_string(mrId) + "|" +
+									 std::to_string(static_cast<int>(info.metallicFactor * 100.0f)) + "|" +
+									 std::to_string(static_cast<int>(info.roughnessFactor * 100.0f)) + "|" +
+									 std::to_string(static_cast<uint8_t>(info.alphaMode)) + "|" + pipelineName;
 		if (const auto it = m_materialsLUT.find(cacheKey); it != m_materialsLUT.end())
 			return it->second;
 
 		const TextureResourceCache* diffuseTex = GetTextureData(diffuseId);
 		const TextureResourceCache* normalTex = GetTextureData(normalId);
+		const TextureResourceCache* mrTex = GetTextureData(mrId);
 
-		const std::array<TextureBindingUpdate, 2> bindings = {{
-			{.binding = 0, .textureHandle = diffuseTex->textureHandle, .samplerHandle = diffuseTex->samplerHandle},
-			{.binding = 1, .textureHandle = normalTex->textureHandle, .samplerHandle = normalTex->samplerHandle},
-		}};
+		MaterialUniformData matUbo{};
+		matUbo.baseColorFactor = info.baseColorFactor;
+		matUbo.metallicFactor = info.metallicFactor;
+		matUbo.roughnessFactor = info.roughnessFactor;
+		matUbo.alphaCutoff = (info.alphaMode == EAlphaMode::Mask) ? info.alphaCutoff : 0.0f;
+
+		const Handle uboHandle = m_renderingDevice->CreateUniformBuffer(sizeof(MaterialUniformData));
+		m_renderingDevice->CopyDataToBuffer(uboHandle, &matUbo, sizeof(MaterialUniformData));
+
+		const Handle setHandle = m_renderingDevice->CreateDescriptorSet("Material");
+		m_renderingDevice->UpdateDescriptorImage(setHandle, 0, diffuseTex->textureHandle, diffuseTex->samplerHandle);
+		m_renderingDevice->UpdateDescriptorImage(setHandle, 1, normalTex->textureHandle, normalTex->samplerHandle);
+		m_renderingDevice->UpdateDescriptorImage(setHandle, 2, mrTex->textureHandle, mrTex->samplerHandle);
+		m_renderingDevice->UpdateDescriptorBuffer(setHandle, 3, uboHandle, sizeof(MaterialUniformData), DescriptorType::UniformBuffer);
 
 		auto material = std::make_unique<MaterialResourceCache>();
 		material->name = info.name.empty() ? ("Material_" + std::to_string(m_materials.size())) : info.name;
 		material->alphaMode = info.alphaMode;
 		material->alphaCutoff = info.alphaCutoff;
+		material->baseColorFactor = info.baseColorFactor;
+		material->metallicFactor = info.metallicFactor;
+		material->roughnessFactor = info.roughnessFactor;
 		material->diffuseTextureId = diffuseId;
 		material->normalTextureId = normalId;
+		material->metallicRoughnessTextureId = mrId;
 		material->pipelineName = pipelineName;
-		material->descriptorSetHandle = m_renderingDevice->CreateCombinedImageDescriptorSet(bindings, "Material");
+		material->uniformBufferHandle = uboHandle;
+		material->descriptorSetHandle = setHandle;
 
 		const ResourceId materialId = GenerateUniqueResourceId();
 		m_materials[materialId] = std::move(material);
@@ -263,6 +291,7 @@ namespace BetterThanNothing
 
 		const ResourceId defaultTexId = GetDefaultTexture();
 		const ResourceId defaultNormalId = GetDefaultNormalTexture();
+		const ResourceId defaultMrId = GetDefaultMetallicRoughnessTexture();
 
 		for (const auto& mesh : importedModel.meshes)
 		{
@@ -290,6 +319,7 @@ namespace BetterThanNothing
 			MaterialCreateInfo matInfo{};
 			matInfo.diffuseTextureId = defaultTexId;
 			matInfo.normalTextureId = defaultNormalId;
+			matInfo.metallicRoughnessTextureId = defaultMrId;
 			matInfo.alphaMode = EAlphaMode::Opaque;
 
 			if (mesh.materialId.has_value() && mesh.materialId.value() < importedModel.materials.size())
@@ -297,16 +327,27 @@ namespace BetterThanNothing
 				const ImportedMaterial& importedMat = importedModel.materials[mesh.materialId.value()];
 				matInfo.alphaMode = ConvertAlphaMode(importedMat.alphaMode);
 				matInfo.alphaCutoff = importedMat.alphaCutoff;
+				matInfo.baseColorFactor = importedMat.baseColorFactor;
+				matInfo.metallicFactor = importedMat.metallicFactor;
+				matInfo.roughnessFactor = importedMat.roughnessFactor;
 
 				if (importedMat.diffuseTexturePath.has_value())
 					matInfo.diffuseTextureId = LoadTexture(importedMat.diffuseTexturePath.value());
 
 				if (importedMat.normalTexturePath.has_value())
 				{
-					std::error_code ec;
+					std::error_code	  ec;
 					const std::string resolvedNorm = AssetPath::Resolve(importedMat.normalTexturePath.value());
 					if (std::filesystem::exists(resolvedNorm, ec))
 						matInfo.normalTextureId = LoadTexture(resolvedNorm);
+				}
+
+				if (importedMat.metallicRoughnessTexturePath.has_value())
+				{
+					std::error_code	  ec;
+					const std::string resolvedMr = AssetPath::Resolve(importedMat.metallicRoughnessTexturePath.value());
+					if (std::filesystem::exists(resolvedMr, ec))
+						matInfo.metallicRoughnessTextureId = LoadTexture(resolvedMr);
 				}
 			}
 
@@ -406,6 +447,11 @@ namespace BetterThanNothing
 		PipelineDescription desc{};
 		desc.vertexLayout = blueprint.GetVertexLayout();
 		desc.layoutName = blueprint.GetPipelineLayout();
+		desc.colorFormat = blueprint.GetColorFormat();
+		desc.colorFormats = blueprint.GetColorFormats();
+		desc.depthFormat = blueprint.GetDepthFormat();
+		desc.hasDepthAttachment = blueprint.GetHasDepthAttachment();
+		desc.useMsaa = blueprint.GetUseMsaa();
 		desc.depthTest = blueprint.GetDepthTest();
 		desc.depthWrite = blueprint.GetDepthWrite();
 		desc.blendEnable = blueprint.GetBlendEnable();

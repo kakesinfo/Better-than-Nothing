@@ -16,7 +16,7 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Data/Graphics/GlobalUniformData.hpp"
+#include "RenderingApi/Resources/AccelerationStructure.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
@@ -57,86 +57,105 @@ namespace BetterThanNothing
 
 	Handle RenderingDevice::CreateCombinedImageDescriptorSet(const std::span<const TextureBindingUpdate> bindings, const std::string_view layoutType)
 	{
-		const Handle					   handle = CreateDescriptorSet(layoutType);
-		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
-
+		const Handle handle = CreateDescriptorSet(layoutType);
 		for (const auto& b : bindings)
-		{
-			const RenderingApi::Texture* texture = GetTexture(b.textureHandle);
-			const RenderingApi::Sampler* sampler = GetSampler(b.samplerHandle);
-
-			DescriptorSetUpdateRequest request{};
-			request.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			request.imageInfo.imageView = texture->defaultView;
-			request.imageInfo.sampler = sampler->value;
-
-			request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			request.write.dstSet = descriptor->value;
-			request.write.dstBinding = b.binding;
-			request.write.dstArrayElement = 0;
-			request.write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			request.write.descriptorCount = 1;
-			request.write.pImageInfo = &request.imageInfo;
-
-			RequestDescriptorSetUpdate(request);
-		}
-
+			UpdateDescriptorImage(handle, b.binding, b.textureHandle, b.samplerHandle);
 		return handle;
 	}
 
 	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const std::string_view layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
-
-		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
-		const RenderingApi::Buffer*		   buffer = GetBuffer(uniformBufferHandle);
-
-		DescriptorSetUpdateRequest request{};
-
-		request.bufferInfo = {};
-		request.bufferInfo.buffer = buffer->value;
-		request.bufferInfo.offset = 0;
-		request.bufferInfo.range = size;
-
-		request.write = {};
-		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		request.write.dstSet = descriptor->value;
-		request.write.dstBinding = 0;
-		request.write.dstArrayElement = 0;
-		request.write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		request.write.descriptorCount = 1;
-		request.write.pBufferInfo = &request.bufferInfo;
-
-		RequestDescriptorSetUpdate(request);
-
+		UpdateDescriptorBuffer(handle, 0, uniformBufferHandle, size, DescriptorType::UniformBuffer);
 		return handle;
 	}
 
 	Handle RenderingDevice::CreateStorageBufferDescriptorSet(const Handle& storageBufferHandle, const size_t size, const std::string_view layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);
+		UpdateDescriptorBuffer(handle, 0, storageBufferHandle, size, DescriptorType::StorageBuffer);
+		return handle;
+	}
 
-		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
-		const RenderingApi::Buffer*		   buffer = GetBuffer(storageBufferHandle);
+	void RenderingDevice::UpdateDescriptorBuffer(const Handle& setHandle, const uint32_t binding, const Handle& bufferHandle, const size_t size, const DescriptorType type)
+	{
+		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(setHandle);
+		const RenderingApi::Buffer*		   buffer = GetBuffer(bufferHandle);
 
 		DescriptorSetUpdateRequest request{};
-
-		request.bufferInfo = {};
 		request.bufferInfo.buffer = buffer->value;
 		request.bufferInfo.offset = 0;
 		request.bufferInfo.range = size;
 
-		request.write = {};
 		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		request.write.dstSet = descriptor->value;
-		request.write.dstBinding = 0;
-		request.write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		request.write.dstBinding = binding;
+		request.write.dstArrayElement = 0;
+		request.write.descriptorType = (type == DescriptorType::StorageBuffer) ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		request.write.descriptorCount = 1;
-		request.write.pBufferInfo = &request.bufferInfo;
 
 		RequestDescriptorSetUpdate(request);
+	}
 
-		return handle;
+	void RenderingDevice::UpdateDescriptorImage(const Handle& setHandle, const uint32_t binding, const Handle& textureHandle, const Handle& samplerHandle)
+	{
+		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(setHandle);
+		const RenderingApi::Texture*	   texture = GetTexture(textureHandle);
+		const RenderingApi::Sampler*	   sampler = GetSampler(samplerHandle);
+
+		DescriptorSetUpdateRequest request{};
+		request.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		request.imageInfo.imageView = texture->defaultView;
+		request.imageInfo.sampler = sampler->value;
+
+		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		request.write.dstSet = descriptor->value;
+		request.write.dstBinding = binding;
+		request.write.dstArrayElement = 0;
+		request.write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		request.write.descriptorCount = 1;
+
+		RequestDescriptorSetUpdate(request);
+	}
+
+	void RenderingDevice::UpdateDescriptorStorageImage(const Handle& setHandle, const uint32_t binding, const Handle& textureHandle)
+	{
+		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(setHandle);
+		const RenderingApi::Texture*	   texture = GetTexture(textureHandle);
+
+		DescriptorSetUpdateRequest request{};
+		request.imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		request.imageInfo.imageView = texture->defaultView;
+		request.imageInfo.sampler = VK_NULL_HANDLE;
+
+		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		request.write.dstSet = descriptor->value;
+		request.write.dstBinding = binding;
+		request.write.dstArrayElement = 0;
+		request.write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		request.write.descriptorCount = 1;
+
+		RequestDescriptorSetUpdate(request);
+	}
+
+	void RenderingDevice::UpdateDescriptorAccelerationStructure(const Handle& setHandle, const uint32_t binding, const Handle& asHandle)
+	{
+		const RenderingApi::DescriptorSet*		   descriptor = GetDescriptorSet(setHandle);
+		const RenderingApi::AccelerationStructure* as = m_self->accelerationStructures.Get(asHandle);
+
+		DescriptorSetUpdateRequest request{};
+		request.asHandle = as->handle;
+		request.asInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+		request.asInfo.accelerationStructureCount = 1;
+
+		request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		request.write.dstSet = descriptor->value;
+		request.write.dstBinding = binding;
+		request.write.dstArrayElement = 0;
+		request.write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		request.write.descriptorCount = 1;
+
+		RequestDescriptorSetUpdate(request);
 	}
 
 	void RenderingDevice::RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request)
@@ -152,7 +171,7 @@ namespace BetterThanNothing
 		m_self->descriptorsWrites.clear();
 		m_self->descriptorsWrites.reserve(m_self->descriptorsUpdateRequests.size());
 
-		for (const auto& request : m_self->descriptorsUpdateRequests)
+		for (auto& request : m_self->descriptorsUpdateRequests)
 		{
 			VkWriteDescriptorSet write = request.write;
 
@@ -174,6 +193,14 @@ namespace BetterThanNothing
 				case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
 				case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
 					write.pBufferInfo = &request.bufferInfo;
+					break;
+
+				case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+					request.asInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+					request.asInfo.pNext = nullptr;
+					request.asInfo.accelerationStructureCount = 1;
+					request.asInfo.pAccelerationStructures = &request.asHandle;
+					write.pNext = &request.asInfo;
 					break;
 
 				default:

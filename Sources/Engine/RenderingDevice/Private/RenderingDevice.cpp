@@ -47,6 +47,8 @@ namespace BetterThanNothing
 				return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			case DescriptorType::StorageImage:
 				return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case DescriptorType::AccelerationStructure:
+				return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 		}
 		throw std::runtime_error("Unknown DescriptorType");
 	}
@@ -97,6 +99,8 @@ namespace BetterThanNothing
 		{
 			case ImageLayout::Undefined:
 				return VK_IMAGE_LAYOUT_UNDEFINED;
+			case ImageLayout::General:
+				return VK_IMAGE_LAYOUT_GENERAL;
 			case ImageLayout::ColorAttachment:
 				return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			case ImageLayout::DepthStencilAttachment:
@@ -188,6 +192,14 @@ namespace BetterThanNothing
 		m_self->samplers.ForEachActive([&](const uint32_t idx, RenderingApi::Sampler& sampler) {
 			m_self->device->DestroySampler(sampler.value);
 			m_self->samplers.Destroy(idx);
+		});
+
+		m_self->accelerationStructures.ForEachActive([&](const uint32_t idx, RenderingApi::AccelerationStructure& as) {
+			if (as.handle != VK_NULL_HANDLE)
+				m_self->device->DestroyAccelerationStructure(as.handle);
+			if (as.buffer != VK_NULL_HANDLE)
+				m_self->allocator->DestroyBuffer(as.buffer, as.allocation);
+			m_self->accelerationStructures.Destroy(idx);
 		});
 
 		m_self->buffers.ForEachActive([&](const uint32_t idx, RenderingApi::Buffer& buffer) {
@@ -448,13 +460,29 @@ namespace BetterThanNothing
 		const VkImageLayout	   vkNewLayout = ToVkImageLayout(newLayout);
 		const VkImageLayout	   vkOldLayout = texture->currentLayout;
 
-		const bool isAttachmentSync = (vkNewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
-									   vkNewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-		if (vkOldLayout == vkNewLayout && !isAttachmentSync)
+		const bool needsSyncEvenIfSame = (vkNewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
+										  vkNewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+										  vkNewLayout == VK_IMAGE_LAYOUT_GENERAL);
+		if (vkOldLayout == vkNewLayout && !needsSyncEvenIfSame)
 			return;
 
 		m_self->commandBuffers[m_currentFrameIndex]->TransitionImageLayout2(texture->value, texture->aspectMask, texture->mipLevels, vkOldLayout, vkNewLayout);
 		texture->currentLayout = vkNewLayout;
+	}
+
+	void RenderingDevice::CopyTexture(const Handle& srcTextureHandle, const Handle& dstTextureHandle)
+	{
+		TransitionTexture(srcTextureHandle, ImageLayout::TransferSrc);
+		TransitionTexture(dstTextureHandle, ImageLayout::TransferDst);
+
+		const RenderingApi::Texture* src = GetTexture(srcTextureHandle);
+		const RenderingApi::Texture* dst = GetTexture(dstTextureHandle);
+
+		m_self->commandBuffers[m_currentFrameIndex]->CopyImage(
+			src->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			dst->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			src->width, src->height, src->aspectMask
+		);
 	}
 
 	void RenderingDevice::TransitionSwapChainImage(const uint32_t imageIndex, const ImageLayout newLayout)
@@ -573,6 +601,7 @@ namespace BetterThanNothing
 
 	void RenderingDevice::ExecuteDrawStream(const DrawStreamView& drawStream)
 	{
+		FlushDescriptorSetUpdateRequests();
 		const auto cmd = m_self->commandBuffers[m_currentFrameIndex].get();
 
 		Handle												  lastPipeline{};
@@ -632,6 +661,73 @@ namespace BetterThanNothing
 
 			cmd->DrawIndexed(packet.indexCount, packet.instanceCount, 0, 0, 0);
 		}
+	}
+
+	void RenderingDevice::DrawFullscreen(const Handle& pipelineHandle, const std::string& layoutName, const std::span<const Handle> descriptorSets, const void* pushConstantData, const uint32_t pushConstantSize, const ShaderStageFlags pushConstantStages)
+	{
+		FlushDescriptorSetUpdateRequests();
+		const auto cmd = m_self->commandBuffers[m_currentFrameIndex].get();
+		const auto* pipeline = GetPipeline(pipelineHandle);
+		const VkPipelineLayout vkLayout = GetPipelineLayout(layoutName)->Handle();
+
+		cmd->BindPipeline(pipeline->pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+
+		for (uint32_t setIdx = 0; setIdx < descriptorSets.size(); ++setIdx)
+		{
+			if (!descriptorSets[setIdx].IsValid())
+				continue;
+			const auto* descSet = GetDescriptorSet(descriptorSets[setIdx]);
+			cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, vkLayout, setIdx, 1, &descSet->value, 0, nullptr);
+		}
+
+		if (pushConstantData && pushConstantSize > 0)
+			cmd->PushConstants(vkLayout, ToVkShaderStageFlags(pushConstantStages), 0, pushConstantSize, pushConstantData);
+
+		cmd->Draw(3, 1, 0, 0);
+	}
+
+	void RenderingDevice::BindComputePipeline(const Handle& pipelineHandle)
+	{
+		const auto* pipeline = GetPipeline(pipelineHandle);
+		m_self->commandBuffers[m_currentFrameIndex]->BindPipeline(pipeline->pipeline, VK_PIPELINE_BIND_POINT_COMPUTE);
+	}
+
+	void RenderingDevice::BindComputeDescriptorSets(const std::string& layoutName, const uint32_t firstSet, const std::span<const Handle> descriptorSets)
+	{
+		FlushDescriptorSetUpdateRequests();
+		const auto cmd = m_self->commandBuffers[m_currentFrameIndex].get();
+		const VkPipelineLayout vkLayout = GetPipelineLayout(layoutName)->Handle();
+
+		for (uint32_t i = 0; i < descriptorSets.size(); ++i)
+		{
+			if (!descriptorSets[i].IsValid())
+				continue;
+			const auto* descSet = GetDescriptorSet(descriptorSets[i]);
+			cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_COMPUTE, vkLayout, firstSet + i, 1, &descSet->value, 0, nullptr);
+		}
+	}
+
+	void RenderingDevice::PushComputeConstants(const std::string& layoutName, const void* data, const uint32_t size)
+	{
+		if (!data || size == 0)
+			return;
+		const VkPipelineLayout vkLayout = GetPipelineLayout(layoutName)->Handle();
+		m_self->commandBuffers[m_currentFrameIndex]->PushConstants(vkLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, size, data);
+	}
+
+	void RenderingDevice::Dispatch(const uint32_t groupCountX, const uint32_t groupCountY, const uint32_t groupCountZ)
+	{
+		m_self->commandBuffers[m_currentFrameIndex]->Dispatch(groupCountX, groupCountY, groupCountZ);
+	}
+
+	void RenderingDevice::ComputeBarrier()
+	{
+		m_self->commandBuffers[m_currentFrameIndex]->MemoryBarrier2(
+			VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+			VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+			VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+			VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT
+		);
 	}
 
 	void RenderingDevice::WaitIdle() const

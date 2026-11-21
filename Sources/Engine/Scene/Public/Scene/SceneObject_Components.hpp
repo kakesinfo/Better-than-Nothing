@@ -55,9 +55,11 @@ namespace BetterThanNothing
 
 		Matrix4 localMatrix = Matrix4::Identity;
 		Matrix4 worldMatrix = Matrix4::Identity;
+		Matrix4 prevWorldMatrix = Matrix4::Identity;
 		Matrix4 inverseWorldMatrix = Matrix4::Identity;
 
 		bool dirty = true;
+		bool hasPrevWorldMatrix = false;
 
 		void SetPosition(const Vector3& pos)
 		{
@@ -137,16 +139,14 @@ namespace BetterThanNothing
 	{
 		Vector3 direction = Vector3(0.0f, -1.0f, 0.0f);
 		Vector3 color = Vector3::One;
-		float	intensity = 1.0f;
+		float	illuminanceLux = 80000.0f; // Illuminance in lux (lm/m^2)
 	};
 
 	struct PointLightComponent : Component
 	{
 		Vector3 color = Vector3::One;
-		float	constant = 1.0f;
-		float	linear = 0.09f;
-		float	quadratic = 0.032f;
-		float	intensity = 1.0f;
+		float	luminousPowerLm = 1600.0f; // Luminous flux in lumens (lm)
+		float	radius = 15.0f;			   // Attenuation cutoff radius in meters (m)
 	};
 
 	struct UpdateComponent : Component

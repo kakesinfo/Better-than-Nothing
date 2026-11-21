@@ -110,7 +110,18 @@ namespace BetterThanNothing
 			if (ImGui::ColorEdit3("Color", color))
 				dirLight->color = Vector3(color[0], color[1], color[2]);
 
-			ImGui::DragFloat("Intensity", &dirLight->intensity, 0.1f, 0.0f, 100.0f);
+			ImGui::DragFloat("Illuminance", &dirLight->illuminanceLux, 500.0f, 0.0f, 150000.0f, "%.0f lx");
+			if (ImGui::SmallButton("Sun 100k"))
+				dirLight->illuminanceLux = 100000.0f;
+			ImGui::SameLine();
+			if (ImGui::SmallButton("Overcast 15k"))
+				dirLight->illuminanceLux = 15000.0f;
+			ImGui::SameLine();
+			if (ImGui::SmallButton("Sunset 3k"))
+				dirLight->illuminanceLux = 3000.0f;
+			ImGui::SameLine();
+			if (ImGui::SmallButton("Moon 0.25"))
+				dirLight->illuminanceLux = 0.25f;
 		}
 
 		if (auto* pointLight = obj.TryGetComponent<PointLightComponent>())
@@ -120,9 +131,10 @@ namespace BetterThanNothing
 			if (ImGui::ColorEdit3("Color", color))
 				pointLight->color = Vector3(color[0], color[1], color[2]);
 
-			ImGui::DragFloat("Intensity", &pointLight->intensity, 0.1f, 0.0f, 100.0f);
-			ImGui::DragFloat("Linear", &pointLight->linear, 0.005f, 0.0f, 2.0f);
-			ImGui::DragFloat("Quadratic", &pointLight->quadratic, 0.002f, 0.0f, 2.0f);
+			ImGui::DragFloat("Power", &pointLight->luminousPowerLm, 100.0f, 0.0f, 500000.0f, "%.0f lm");
+			ImGui::DragFloat("Radius", &pointLight->radius, 0.5f, 0.5f, 200.0f, "%.1f m");
+			const float candela = pointLight->luminousPowerLm / (4.0f * 3.14159265359f);
+			ImGui::TextDisabled("Intensity: %.1f cd", candela);
 		}
 
 		if (const auto* meshComp = obj.TryGetComponent<MeshComponent>())

@@ -20,8 +20,13 @@
 
 #include "RenderPass.hpp"
 #include "RenderingDevice/Handle.hpp"
+#include "RenderingDevice/RenderingDevice.hpp"
+#include <Common/ResourceId.hpp>
 #include <Data/Graphics/PointLightData.hpp>
+#include <Math/Matrix4.hpp>
+#include <array>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace BetterThanNothing
@@ -50,6 +55,8 @@ namespace BetterThanNothing
 		void RenderFrame(Scene* scene);
 
 	private:
+		void CreateLayoutsAndPipelines();
+		void CreateAtmosphereLuts();
 		void CreateGlobalUniformBuffers();
 		void CreateGlobalUniformDescriptorSets();
 		auto GetGlobalUniformBuffer(uint32_t frameIndex) const -> GlobalUniformData*;
@@ -59,8 +66,10 @@ namespace BetterThanNothing
 
 		void EnsureRenderTargets();
 		void DestroyRenderTargets();
+		void UpdateRenderTargetDescriptorSets();
 
-		void	 BuildDrawStreams(Scene* scene, uint32_t frameIndex);
+		void	 BuildDrawStreams(Scene* scene, uint32_t frameIndex, uint32_t viewportWidth, uint32_t viewportHeight, bool tlasValid);
+		bool	 BuildAccelerationStructures(Scene* scene, uint32_t frameIndex);
 		uint32_t UploadPointLights(const Scene* scene, uint32_t frameIndex) const;
 
 		RenderingDevice*			m_renderingDevice = nullptr;
@@ -71,15 +80,98 @@ namespace BetterThanNothing
 
 		std::vector<std::unique_ptr<IRenderPass>> m_passes;
 
-		Handle	 m_colorTarget{};
-		Handle	 m_depthTarget{};
-		uint64_t m_lastSwapChainGeneration = 0;
+		// Samplers
+		Handle m_nearestClampSampler{};
+		Handle m_pointBorderWhiteSampler{};
+		Handle m_linearClampSampler{};
+		Handle m_skyViewSampler{};
 
+		// G-Buffer targets & previous-frame geometry history
+		Handle m_gbufferAlbedo{};
+		Handle m_gbufferNormal{};
+		Handle m_gbufferMaterial{};
+		Handle m_gbufferMotion{};
+		Handle m_depthTarget{};
+		Handle m_prevDepthTarget{};
+		Handle m_prevNormalTarget{};
+
+		// RT Shadow & AMD FidelityFX Shadow Denoiser targets + tile buffers
+		Handle				  m_rtShadowRaw{};
+		Handle				  m_rtShadowPing{};
+		Handle				  m_rtShadowPong{};
+		Handle				  m_rtShadowDenoised{};
+		std::array<Handle, 2> m_rtShadowMoments{};
+		Handle				  m_rtShadowTileMaskBuffer{};
+		Handle				  m_rtShadowTileMetaBuffer{};
+		size_t				  m_rtShadowTileBufferBytes = 0;
+
+		// Bend Studio Screen Space Shadow target
+		Handle m_screenSpaceShadow{};
+
+		// Ambient Occlusion targets
+		Handle m_aoRaw{};
+		Handle m_aoDenoised{};
+		Handle m_aoHistory{};
+
+		// Hillaire Sky & Irradiance / IBL LUTs (resolution-independent)
+		Handle m_transmittanceLUT{};
+		Handle m_multiScatteringLUT{};
+		Handle m_skyViewLUT{};
+		Handle m_irradianceLUT{};
+		Handle m_prefilteredEnvLUT{};
+		Handle m_brdfLUT{};
+		bool   m_atmosphereStaticLutsDirty = true;
+		bool   m_brdfLutDirty = true;
+		float  m_lastAtmosphereDensityScale = 1.0f;
+
+		// HDR & TAA targets
+		Handle				  m_hdrColor{};
+		std::array<Handle, 2> m_taaHistory{};
+		uint64_t			  m_lastSwapChainGeneration = 0;
+
+		// Pass descriptor sets
+		std::vector<Handle>	  m_rtShadowDescriptorSets;
+		std::vector<Handle>	  m_rtaoDescriptorSets;
+		std::vector<bool>	  m_tlasBoundToSets;
+		std::array<Handle, 2> m_ffxTileClassDescriptorSets{};
+		std::array<Handle, 3> m_ffxFilterDescriptorSets{};
+		Handle				  m_bendSssDescriptorSet{};
+		Handle				  m_gtaoDescriptorSet{};
+		Handle				  m_aoDenoiseDescriptorSet{};
+		Handle				  m_skyTransmittanceDescriptorSet{};
+		Handle				  m_skyMultiScatteringDescriptorSet{};
+		Handle				  m_skyViewDescriptorSet{};
+		Handle				  m_skyIrradianceDescriptorSet{};
+		Handle				  m_skyPrefilterDescriptorSet{};
+		Handle				  m_skyBrdfDescriptorSet{};
+		Handle				  m_skyRenderDescriptorSet{};
+		Handle				  m_deferredLightingDescriptorSet{};
+		Handle				  m_forwardIblDescriptorSet{};
+		std::array<Handle, 2> m_taaDescriptorSets{};
+		std::array<Handle, 2> m_toneMapDescriptorSets{};
+
+		// Ray Tracing acceleration structures
+		bool								   m_rtSupported = false;
+		std::unordered_map<ResourceId, Handle> m_blasCache;
+		std::vector<Handle>					   m_tlasHandles;
+		std::vector<Handle>					   m_tlasScratchBuffers;
+		std::vector<Handle>					   m_tlasInstanceBuffers;
+		std::vector<TlasInstanceDesc>		   m_tlasInstancesScratch;
+
+		// Per-frame uniforms & lights
 		std::vector<Handle>					m_globalUniformBuffer;
 		std::vector<Handle>					m_globalDescriptorSets;
 		std::vector<Handle>					m_pointLightBuffer;
 		std::vector<Handle>					m_pointLightDescriptorSets;
 		mutable std::vector<PointLightData> m_pointLightsScratch;
 		mutable bool						m_warnedLightLimit = false;
+
+		// Temporal state
+		Matrix4	 m_prevUnjitteredViewProj = Matrix4::Identity;
+		Vector3	 m_currentSunDirection = Vector3(0.0f, 1.0f, 0.0f);
+		uint64_t m_frameCounter = 0;
+		bool	 m_historyValid = false;
+		bool	 m_prevTaaEnabled = true;
+		uint32_t m_temporalReadIndex = 0;
 	};
 }

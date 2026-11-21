@@ -18,19 +18,29 @@
 
 #include "Renderer/Renderer.hpp"
 
+#include "Passes/AmbientOcclusionPass.hpp"
+#include "Passes/DeferredLightingPass.hpp"
 #include "Passes/EditorPass.hpp"
-#include "Passes/ForwardOpaquePass.hpp"
 #include "Passes/ForwardTransparentPass.hpp"
+#include "Passes/GBufferPass.hpp"
+#include "Passes/PostProcessPass.hpp"
+#include "Passes/RTShadowPass.hpp"
+#include "Passes/ScreenSpaceShadowPass.hpp"
+#include "Passes/SkyAtmospherePass.hpp"
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
+#include <Common/RenderSettings.hpp>
 #include <Data/Graphics/DynamicUniformData.hpp>
 #include <Data/Graphics/GlobalUniformData.hpp>
 #include <Data/Graphics/VertexData.hpp>
 #include <Math/Frustum.hpp>
 #include <RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp>
+#include <RenderingDevice/BufferDescription.hpp>
 #include <RenderingDevice/DrawStream.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
+#include <RenderingDevice/SamplerDescription.hpp>
+#include <RenderingDevice/TextureDescription.hpp>
 #include <RenderingDevice/Types.hpp>
 #include <RenderingDevice/VertexLayout.hpp>
 #include <ResourceManager/PipelineBlueprint.hpp>
@@ -46,73 +56,145 @@ namespace BetterThanNothing
 {
 	constexpr uint32_t MAX_LIGHT_COUNT = 1000;
 
+	struct FfxShadowFilterPushLayout
+	{
+		int32_t stepSize = 1;
+		float	depthSigma = 0.015f;
+		float	normalSigma = 16.0f;
+		float	shadowPhi = 4.0f;
+	};
+
+	static float Halton(uint32_t index, const uint32_t base)
+	{
+		float result = 0.0f;
+		float f = 1.0f / static_cast<float>(base);
+		while (index > 0)
+		{
+			result += f * static_cast<float>(index % base);
+			index /= base;
+			f /= static_cast<float>(base);
+		}
+		return result;
+	}
+
 	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
 		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager), m_editor(editor)
 	{
-		// Set 0: Global per-frame uniforms (camera + directional light + counts)
-		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", DescriptorType::UniformBuffer, ShaderStageFlags::Vertex | ShaderStageFlags::Fragment);
+		m_rtSupported = m_renderingDevice->IsRayQuerySupported();
+		RenderSettings::Get().rtSupported = m_rtSupported;
+		if (!m_rtSupported && RenderSettings::Get().aoMode == EAOMode::RTAO)
+			RenderSettings::Get().aoMode = EAOMode::GTAO;
 
-		// Set 1: Material textures (binding 0 = diffuse/albedo, binding 1 = normal map)
-		const std::array<DescriptorBindingDesc, 2> materialBindings = {{
-			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
-			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
-		}};
-		m_renderingDevice->CreateDescriptorSetLayout("Material", materialBindings);
+		SamplerDescription nearestSamplerDesc{};
+		nearestSamplerDesc.magFilter = SamplerFilter::Nearest;
+		nearestSamplerDesc.minFilter = SamplerFilter::Nearest;
+		nearestSamplerDesc.addressModeU = SamplerAddressMode::ClampToEdge;
+		nearestSamplerDesc.addressModeV = SamplerAddressMode::ClampToEdge;
+		nearestSamplerDesc.addressModeW = SamplerAddressMode::ClampToEdge;
+		nearestSamplerDesc.anisotropyEnable = false;
+		nearestSamplerDesc.mipmapMode = SamplerMipmapMode::Nearest;
+		m_nearestClampSampler = m_renderingDevice->GetOrCreateTextureSampler(nearestSamplerDesc);
 
-		// Set 2: Point lights SSBO
-		m_renderingDevice->CreateDescriptorSetLayout("PointLights", DescriptorType::StorageBuffer, ShaderStageFlags::Fragment);
+		SamplerDescription pointBorderWhiteDesc{};
+		pointBorderWhiteDesc.magFilter = SamplerFilter::Nearest;
+		pointBorderWhiteDesc.minFilter = SamplerFilter::Nearest;
+		pointBorderWhiteDesc.addressModeU = SamplerAddressMode::ClampToBorder;
+		pointBorderWhiteDesc.addressModeV = SamplerAddressMode::ClampToBorder;
+		pointBorderWhiteDesc.addressModeW = SamplerAddressMode::ClampToBorder;
+		pointBorderWhiteDesc.borderColor = BorderColor::FloatOpaqueWhite;
+		pointBorderWhiteDesc.anisotropyEnable = false;
+		pointBorderWhiteDesc.mipmapMode = SamplerMipmapMode::Nearest;
+		m_pointBorderWhiteSampler = m_renderingDevice->GetOrCreateTextureSampler(pointBorderWhiteDesc);
 
-		m_renderingDevice->CreatePipelineLayout("Forward", [&](PipelineLayoutBlueprint* blueprint) {
-			blueprint->AddDescriptorSetLayout("GlobalUniforms");
-			blueprint->AddDescriptorSetLayout("Material");
-			blueprint->AddDescriptorSetLayout("PointLights");
-			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
-		});
+		SamplerDescription linearSamplerDesc{};
+		linearSamplerDesc.magFilter = SamplerFilter::Linear;
+		linearSamplerDesc.minFilter = SamplerFilter::Linear;
+		linearSamplerDesc.addressModeU = SamplerAddressMode::ClampToEdge;
+		linearSamplerDesc.addressModeV = SamplerAddressMode::ClampToEdge;
+		linearSamplerDesc.addressModeW = SamplerAddressMode::ClampToEdge;
+		linearSamplerDesc.anisotropyEnable = false;
+		linearSamplerDesc.mipmapMode = SamplerMipmapMode::Nearest;
+		m_linearClampSampler = m_renderingDevice->GetOrCreateTextureSampler(linearSamplerDesc);
 
-		const VertexLayout vertexLayout = {VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3};
+		SamplerDescription skyViewSamplerDesc{};
+		skyViewSamplerDesc.magFilter = SamplerFilter::Linear;
+		skyViewSamplerDesc.minFilter = SamplerFilter::Linear;
+		skyViewSamplerDesc.addressModeU = SamplerAddressMode::Repeat;
+		skyViewSamplerDesc.addressModeV = SamplerAddressMode::ClampToEdge;
+		skyViewSamplerDesc.addressModeW = SamplerAddressMode::ClampToEdge;
+		skyViewSamplerDesc.anisotropyEnable = false;
+		skyViewSamplerDesc.mipmapMode = SamplerMipmapMode::Nearest;
+		m_skyViewSampler = m_renderingDevice->GetOrCreateTextureSampler(skyViewSamplerDesc);
 
-		const auto vertShader = m_resourceManager->LoadShader("Shaders/main/main.vert");
-		const auto fragShader = m_resourceManager->LoadShader("Shaders/main/main.frag");
-
-		m_resourceManager->CreatePipeline("Forward::Opaque", [&](PipelineBlueprint* blueprint) {
-			blueprint->SetVertexLayout(vertexLayout)
-				->AddShader(vertShader)
-				->AddShader(fragShader)
-				->SetPipelineLayout("Forward")
-				->SetDepthTest(true)
-				->SetDepthWrite(true)
-				->SetBlendEnable(false)
-				->SetAlphaToCoverage(true);
-		});
-
-		m_resourceManager->CreatePipeline("Forward::Transparent", [&](PipelineBlueprint* blueprint) {
-			blueprint->SetVertexLayout(vertexLayout)
-				->AddShader(vertShader)
-				->AddShader(fragShader)
-				->SetPipelineLayout("Forward")
-				->SetDepthTest(true)
-				->SetDepthWrite(false)
-				->SetBlendEnable(true)
-				->SetAlphaToCoverage(false);
-		});
+		CreateLayoutsAndPipelines();
 
 		m_opaqueDrawStream = std::make_unique<DrawStream>();
 		m_transparentDrawStream = std::make_unique<DrawStream>();
+
+		const uint32_t frameCount = m_renderingDevice->GetMaxFramesInFlight();
+		m_tlasHandles.resize(frameCount);
+		m_tlasScratchBuffers.resize(frameCount);
+		m_tlasInstanceBuffers.resize(frameCount);
+		m_tlasBoundToSets.assign(frameCount, false);
 
 		CreateGlobalUniformBuffers();
 		CreateGlobalUniformDescriptorSets();
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
+
+		// Allocate persistent descriptor sets
+		if (m_rtSupported)
+		{
+			m_rtShadowDescriptorSets.resize(frameCount);
+			m_rtaoDescriptorSets.resize(frameCount);
+			for (uint32_t i = 0; i < frameCount; ++i)
+			{
+				m_rtShadowDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("RTShadow");
+				m_rtaoDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("RTAO");
+			}
+		}
+		for (uint32_t i = 0; i < 2; ++i)
+			m_ffxTileClassDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("FFXShadowTileClass");
+		for (uint32_t i = 0; i < 3; ++i)
+			m_ffxFilterDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("FFXShadowFilter");
+
+		m_bendSssDescriptorSet = m_renderingDevice->CreateDescriptorSet("BendSSS");
+		m_gtaoDescriptorSet = m_renderingDevice->CreateDescriptorSet("GTAO");
+		m_aoDenoiseDescriptorSet = m_renderingDevice->CreateDescriptorSet("AODenoise");
+
+		m_skyTransmittanceDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyTransmittance");
+		m_skyMultiScatteringDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyMultiScattering");
+		m_skyViewDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyView");
+		m_skyIrradianceDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyIrradiance");
+		m_skyPrefilterDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyPrefilter");
+		m_skyBrdfDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyBrdf");
+		m_skyRenderDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyRender");
+
+		m_deferredLightingDescriptorSet = m_renderingDevice->CreateDescriptorSet("DeferredLighting");
+		m_forwardIblDescriptorSet = m_renderingDevice->CreateDescriptorSet("ForwardIBL");
+		for (uint32_t i = 0; i < 2; ++i)
+		{
+			m_taaDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("TAA");
+			m_toneMapDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("ToneMap");
+		}
+
+		CreateAtmosphereLuts();
 		EnsureRenderTargets();
 
-		AddPass(std::make_unique<ForwardOpaquePass>());
+		AddPass(std::make_unique<GBufferPass>());
+		AddPass(std::make_unique<RTShadowPass>());
+		AddPass(std::make_unique<ScreenSpaceShadowPass>());
+		AddPass(std::make_unique<AmbientOcclusionPass>());
+		AddPass(std::make_unique<SkyAtmospherePass>());
+		AddPass(std::make_unique<DeferredLightingPass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
+		AddPass(std::make_unique<PostProcessPass>());
 #ifndef NDEBUG
 		if (m_editor)
 			AddPass(std::make_unique<EditorPass>());
 #endif
 
-		Logger::Log<SUCCESS>("Renderer: initialized successfully ({} passes)", m_passes.size());
+		Logger::Log<SUCCESS>("Renderer: deferred + FFX RT shadows + Bend SSS + AO + Hillaire sky + Irradiance IBL initialized ({} passes, HW Ray Query: {})", m_passes.size(), m_rtSupported ? "enabled" : "unavailable");
 	}
 
 	Renderer::~Renderer()
@@ -124,25 +206,89 @@ namespace BetterThanNothing
 
 		DestroyRenderTargets();
 
-		for (const Handle& handle : m_globalDescriptorSets)
+		auto destroyTex = [&](Handle& handle) {
+			if (handle.IsValid())
+			{
+				m_renderingDevice->DestroyTexture(handle);
+				handle = {};
+			}
+		};
+		destroyTex(m_transmittanceLUT);
+		destroyTex(m_multiScatteringLUT);
+		destroyTex(m_skyViewLUT);
+		destroyTex(m_irradianceLUT);
+		destroyTex(m_prefilteredEnvLUT);
+		destroyTex(m_brdfLUT);
+
+		for (const auto& [meshId, blasHandle] : m_blasCache)
+		{
+			if (blasHandle.IsValid())
+				m_renderingDevice->DestroyAccelerationStructure(blasHandle);
+		}
+		m_blasCache.clear();
+
+		for (const Handle& handle : m_tlasHandles)
 		{
 			if (handle.IsValid())
-				m_renderingDevice->DestroyDescriptorSet(handle);
+				m_renderingDevice->DestroyAccelerationStructure(handle);
 		}
-		for (const Handle& handle : m_globalUniformBuffer)
+		for (const Handle& handle : m_tlasScratchBuffers)
 		{
 			if (handle.IsValid())
 				m_renderingDevice->DestroyBuffer(handle);
 		}
-		for (const Handle& handle : m_pointLightDescriptorSets)
-		{
-			if (handle.IsValid())
-				m_renderingDevice->DestroyDescriptorSet(handle);
-		}
-		for (const Handle& handle : m_pointLightBuffer)
+		for (const Handle& handle : m_tlasInstanceBuffers)
 		{
 			if (handle.IsValid())
 				m_renderingDevice->DestroyBuffer(handle);
+		}
+
+		auto destroySet = [&](Handle& handle) {
+			if (handle.IsValid())
+			{
+				m_renderingDevice->DestroyDescriptorSet(handle);
+				handle = {};
+			}
+		};
+
+		for (Handle& h : m_rtShadowDescriptorSets)
+			destroySet(h);
+		for (Handle& h : m_rtaoDescriptorSets)
+			destroySet(h);
+		for (Handle& h : m_ffxTileClassDescriptorSets)
+			destroySet(h);
+		for (Handle& h : m_ffxFilterDescriptorSets)
+			destroySet(h);
+		destroySet(m_bendSssDescriptorSet);
+		destroySet(m_gtaoDescriptorSet);
+		destroySet(m_aoDenoiseDescriptorSet);
+		destroySet(m_skyTransmittanceDescriptorSet);
+		destroySet(m_skyMultiScatteringDescriptorSet);
+		destroySet(m_skyViewDescriptorSet);
+		destroySet(m_skyIrradianceDescriptorSet);
+		destroySet(m_skyPrefilterDescriptorSet);
+		destroySet(m_skyBrdfDescriptorSet);
+		destroySet(m_skyRenderDescriptorSet);
+		destroySet(m_deferredLightingDescriptorSet);
+		destroySet(m_forwardIblDescriptorSet);
+		for (Handle& h : m_taaDescriptorSets)
+			destroySet(h);
+		for (Handle& h : m_toneMapDescriptorSets)
+			destroySet(h);
+
+		for (Handle& h : m_globalDescriptorSets)
+			destroySet(h);
+		for (const Handle& h : m_globalUniformBuffer)
+		{
+			if (h.IsValid())
+				m_renderingDevice->DestroyBuffer(h);
+		}
+		for (Handle& h : m_pointLightDescriptorSets)
+			destroySet(h);
+		for (const Handle& h : m_pointLightBuffer)
+		{
+			if (h.IsValid())
+				m_renderingDevice->DestroyBuffer(h);
 		}
 	}
 
@@ -154,6 +300,460 @@ namespace BetterThanNothing
 	void Renderer::AddPass(std::unique_ptr<IRenderPass> pass)
 	{
 		m_passes.push_back(std::move(pass));
+	}
+
+	void Renderer::CreateLayoutsAndPipelines()
+	{
+		// Set 0: Global per-frame uniforms
+		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", DescriptorType::UniformBuffer, ShaderStageFlags::Vertex | ShaderStageFlags::Fragment | ShaderStageFlags::Compute);
+
+		// Set 1: PBR Material
+		const std::array<DescriptorBindingDesc, 4> materialBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 3, .type = DescriptorType::UniformBuffer, .count = 1, .stages = ShaderStageFlags::Fragment},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("Material", materialBindings);
+
+		// Set 2: Point lights SSBO
+		m_renderingDevice->CreateDescriptorSetLayout("PointLights", DescriptorType::StorageBuffer, ShaderStageFlags::Fragment | ShaderStageFlags::Compute);
+
+		// Forward IBL (Set 3 for ForwardTransparentPass)
+		const std::array<DescriptorBindingDesc, 4> forwardIblBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("ForwardIBL", forwardIblBindings);
+
+		// RTShadow trace + FFX 8x4 bitmask packing
+		if (m_rtSupported)
+		{
+			const std::array<DescriptorBindingDesc, 5> rtShadowBindings = {{
+				{.binding = 0, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 4, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+			}};
+			m_renderingDevice->CreateDescriptorSetLayout("RTShadow", rtShadowBindings);
+
+			const std::array<DescriptorBindingDesc, 4> rtaoBindings = {{
+				{.binding = 0, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			}};
+			m_renderingDevice->CreateDescriptorSetLayout("RTAO", rtaoBindings);
+		}
+
+		// AMD FidelityFX Shadow Denoiser - Stage 1: Tile Classification + Temporal Moments
+		const std::array<DescriptorBindingDesc, 11> ffxTileClassBindings = {{
+			{.binding = 0, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 5, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 6, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 7, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 8, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 9, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 10, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("FFXShadowTileClass", ffxTileClassBindings);
+
+		// AMD FidelityFX Shadow Denoiser - Stage 2: A-Trous Soft Shadow Filter
+		const std::array<DescriptorBindingDesc, 5> ffxFilterBindings = {{
+			{.binding = 0, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("FFXShadowFilter", ffxFilterBindings);
+
+		// Bend Studio Screen Space Shadows (depth sampler + output storage image)
+		const std::array<DescriptorBindingDesc, 2> bendSssBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("BendSSS", bendSssBindings);
+
+		// Ambient Occlusion (GTAO & Denoise)
+		const std::array<DescriptorBindingDesc, 3> gtaoBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("GTAO", gtaoBindings);
+
+		const std::array<DescriptorBindingDesc, 8> aoDenoiseBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 5, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 6, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 7, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("AODenoise", aoDenoiseBindings);
+
+		// Hillaire Sky & Irradiance / IBL LUT layouts
+		m_renderingDevice->CreateDescriptorSetLayout("SkyTransmittance", DescriptorType::StorageImage, ShaderStageFlags::Compute);
+		m_renderingDevice->CreateDescriptorSetLayout("SkyBrdf", DescriptorType::StorageImage, ShaderStageFlags::Compute);
+
+		const std::array<DescriptorBindingDesc, 2> skyMsBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("SkyMultiScattering", skyMsBindings);
+		m_renderingDevice->CreateDescriptorSetLayout("SkyIrradiance", skyMsBindings);
+		m_renderingDevice->CreateDescriptorSetLayout("SkyPrefilter", skyMsBindings);
+
+		const std::array<DescriptorBindingDesc, 3> skyViewBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("SkyView", skyViewBindings);
+
+		const std::array<DescriptorBindingDesc, 4> skyRenderBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("SkyRender", skyRenderBindings);
+
+		// DeferredLighting set (G-Buffer + FFX RT Shadows + HDR out + Transmittance + Irradiance + Prefiltered Env + BRDF LUT + AO + Bend SSS)
+		const std::array<DescriptorBindingDesc, 13> deferredLightingBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 5, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 6, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 7, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 8, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 9, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 10, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 11, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 12, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("DeferredLighting", deferredLightingBindings);
+
+		// TAA set
+		const std::array<DescriptorBindingDesc, 5> taaBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("TAA", taaBindings);
+
+		// ToneMap set
+		m_renderingDevice->CreateDescriptorSetLayout("ToneMap", DescriptorType::CombinedImageSampler, ShaderStageFlags::Fragment);
+
+		// Pipeline layouts
+		m_renderingDevice->CreatePipelineLayout("GBuffer", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("Material");
+			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
+		});
+
+		m_renderingDevice->CreatePipelineLayout("Forward", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("Material");
+			blueprint->AddDescriptorSetLayout("PointLights");
+			blueprint->AddDescriptorSetLayout("ForwardIBL");
+			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
+		});
+
+		if (m_rtSupported)
+		{
+			m_renderingDevice->CreatePipelineLayout("RTShadow", [&](PipelineLayoutBlueprint* blueprint) {
+				blueprint->AddDescriptorSetLayout("GlobalUniforms");
+				blueprint->AddDescriptorSetLayout("RTShadow");
+			});
+			m_renderingDevice->CreatePipelineLayout("RTAO", [&](PipelineLayoutBlueprint* blueprint) {
+				blueprint->AddDescriptorSetLayout("GlobalUniforms");
+				blueprint->AddDescriptorSetLayout("RTAO");
+			});
+		}
+
+		m_renderingDevice->CreatePipelineLayout("FFXShadowTileClass", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("FFXShadowTileClass");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("FFXShadowFilter", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("FFXShadowFilter");
+			blueprint->AddPushConstant<FfxShadowFilterPushLayout>(EShaderType::Compute);
+		});
+
+		m_renderingDevice->CreatePipelineLayout("BendSSS", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("BendSSS");
+			blueprint->AddPushConstant<BendSssPushConstants>(EShaderType::Compute);
+		});
+
+		m_renderingDevice->CreatePipelineLayout("GTAO", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("GTAO");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("AODenoise", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("AODenoise");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("SkyTransmittance", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("SkyTransmittance");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("SkyMultiScattering", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("SkyMultiScattering");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("SkyView", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("SkyView");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("SkyIrradiance", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("SkyIrradiance");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("SkyPrefilter", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("SkyPrefilter");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("SkyBrdf", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("SkyBrdf");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("SkyRender", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("SkyRender");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("DeferredLighting", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("DeferredLighting");
+			blueprint->AddDescriptorSetLayout("PointLights");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("TAA", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("TAA");
+		});
+
+		m_renderingDevice->CreatePipelineLayout("ToneMap", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("ToneMap");
+		});
+
+		const VertexLayout vertexLayout = {VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3};
+
+		// G-Buffer Opaque pipeline
+		const auto gbufferVert = m_resourceManager->LoadShader("Shaders/deferred/gbuffer.vert");
+		const auto gbufferFrag = m_resourceManager->LoadShader("Shaders/deferred/gbuffer.frag");
+		m_resourceManager->CreatePipeline("GBuffer::Opaque", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(gbufferVert)
+				->AddShader(gbufferFrag)
+				->SetPipelineLayout("GBuffer")
+				->SetColorFormats({
+					TextureFormat::R8G8B8A8_UNORM,
+					TextureFormat::R16G16_SFLOAT,
+					TextureFormat::R8G8B8A8_UNORM,
+					TextureFormat::R16G16_SFLOAT,
+				})
+				->SetHasDepthAttachment(true)
+				->SetUseMsaa(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false);
+		});
+
+		// Forward Transparent pipeline
+		const auto forwardVert = m_resourceManager->LoadShader("Shaders/main/main.vert");
+		const auto forwardFrag = m_resourceManager->LoadShader("Shaders/main/main.frag");
+		m_resourceManager->CreatePipeline("Forward::Transparent", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(forwardVert)
+				->AddShader(forwardFrag)
+				->SetPipelineLayout("Forward")
+				->SetColorFormat(TextureFormat::R16G16B16A16_SFLOAT)
+				->SetHasDepthAttachment(true)
+				->SetUseMsaa(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(false)
+				->SetBlendEnable(true)
+				->SetAlphaToCoverage(false);
+		});
+
+		// RT Shadow + AMD FidelityFX Shadow Denoiser pipelines
+		if (m_rtSupported)
+		{
+			const auto rtShadowComp = m_resourceManager->LoadShader("Shaders/deferred/rt_shadows.comp");
+			m_resourceManager->CreatePipeline("RTShadow::Trace", [&](PipelineBlueprint* blueprint) {
+				blueprint->AddShader(rtShadowComp)->SetPipelineLayout("RTShadow");
+			});
+
+			const auto rtaoComp = m_resourceManager->LoadShader("Shaders/ao/rtao.comp");
+			m_resourceManager->CreatePipeline("AO::RTAO", [&](PipelineBlueprint* blueprint) {
+				blueprint->AddShader(rtaoComp)->SetPipelineLayout("RTAO");
+			});
+		}
+
+		const auto ffxTileClassComp = m_resourceManager->LoadShader("Shaders/deferred/ffx_shadows_tile_classification.comp");
+		m_resourceManager->CreatePipeline("RTShadow::FFXTileClassification", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(ffxTileClassComp)->SetPipelineLayout("FFXShadowTileClass");
+		});
+
+		const auto ffxFilterComp = m_resourceManager->LoadShader("Shaders/deferred/ffx_shadows_filter.comp");
+		m_resourceManager->CreatePipeline("RTShadow::FFXFilterSoftShadows", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(ffxFilterComp)->SetPipelineLayout("FFXShadowFilter");
+		});
+
+		// Bend Studio Screen Space Shadows compute pipeline
+		const auto bendSssComp = m_resourceManager->LoadShader("Shaders/deferred/bend_sss.comp");
+		m_resourceManager->CreatePipeline("Bend::SSS", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(bendSssComp)->SetPipelineLayout("BendSSS");
+		});
+
+		// AO pipelines
+		const auto gtaoComp = m_resourceManager->LoadShader("Shaders/ao/gtao.comp");
+		m_resourceManager->CreatePipeline("AO::GTAO", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(gtaoComp)->SetPipelineLayout("GTAO");
+		});
+
+		const auto aoDenoiseComp = m_resourceManager->LoadShader("Shaders/ao/ao_denoise.comp");
+		m_resourceManager->CreatePipeline("AO::Denoise", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(aoDenoiseComp)->SetPipelineLayout("AODenoise");
+		});
+
+		// Hillaire Sky & Irradiance / IBL pipelines
+		const auto skyTransComp = m_resourceManager->LoadShader("Shaders/atmosphere/transmittance_lut.comp");
+		m_resourceManager->CreatePipeline("Sky::TransmittanceLUT", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(skyTransComp)->SetPipelineLayout("SkyTransmittance");
+		});
+
+		const auto skyMsComp = m_resourceManager->LoadShader("Shaders/atmosphere/multiscattering_lut.comp");
+		m_resourceManager->CreatePipeline("Sky::MultiScatteringLUT", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(skyMsComp)->SetPipelineLayout("SkyMultiScattering");
+		});
+
+		const auto skyViewComp = m_resourceManager->LoadShader("Shaders/atmosphere/skyview_lut.comp");
+		m_resourceManager->CreatePipeline("Sky::SkyViewLUT", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(skyViewComp)->SetPipelineLayout("SkyView");
+		});
+
+		const auto skyIrrComp = m_resourceManager->LoadShader("Shaders/atmosphere/irradiance_convolve.comp");
+		m_resourceManager->CreatePipeline("Sky::IrradianceConvolve", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(skyIrrComp)->SetPipelineLayout("SkyIrradiance");
+		});
+
+		const auto skyPrefComp = m_resourceManager->LoadShader("Shaders/atmosphere/prefilter_env.comp");
+		m_resourceManager->CreatePipeline("Sky::PrefilterEnv", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(skyPrefComp)->SetPipelineLayout("SkyPrefilter");
+		});
+
+		const auto skyBrdfComp = m_resourceManager->LoadShader("Shaders/atmosphere/brdf_lut.comp");
+		m_resourceManager->CreatePipeline("Sky::BrdfLUT", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(skyBrdfComp)->SetPipelineLayout("SkyBrdf");
+		});
+
+		const auto skyRenderComp = m_resourceManager->LoadShader("Shaders/atmosphere/sky_render.comp");
+		m_resourceManager->CreatePipeline("Sky::Render", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(skyRenderComp)->SetPipelineLayout("SkyRender");
+		});
+
+		// Deferred Lighting compute pipeline
+		const auto deferredLightingComp = m_resourceManager->LoadShader("Shaders/deferred/deferred_lighting.comp");
+		m_resourceManager->CreatePipeline("Deferred::Lighting", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(deferredLightingComp)->SetPipelineLayout("DeferredLighting");
+		});
+
+		// Post-Process TAA & ToneMap pipelines
+		const auto taaComp = m_resourceManager->LoadShader("Shaders/postprocess/taa.comp");
+		m_resourceManager->CreatePipeline("PostProcess::TAA", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(taaComp)->SetPipelineLayout("TAA");
+		});
+
+		const auto tonemapVert = m_resourceManager->LoadShader("Shaders/postprocess/tonemap.vert");
+		const auto tonemapFrag = m_resourceManager->LoadShader("Shaders/postprocess/tonemap.frag");
+		m_resourceManager->CreatePipeline("PostProcess::ToneMap", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(tonemapVert)
+				->AddShader(tonemapFrag)
+				->SetPipelineLayout("ToneMap")
+				->SetColorFormat(TextureFormat::Undefined)
+				->SetHasDepthAttachment(false)
+				->SetUseMsaa(false)
+				->SetDepthTest(false)
+				->SetDepthWrite(false)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false)
+				->SetCullMode(CullMode::None);
+		});
+	}
+
+	void Renderer::CreateAtmosphereLuts()
+	{
+		auto makeLut = [&](const uint32_t width, const uint32_t height, const TextureFormat fmt) -> Handle {
+			TextureCreateInfo info{};
+			info.width = width;
+			info.height = height;
+			info.format = fmt;
+			info.usage = TextureUsageFlags::Storage | TextureUsageFlags::Sampled;
+			info.useMsaa = false;
+			info.dedicated = false;
+			info.mipLevels = 1;
+			return m_renderingDevice->CreateTexture(info);
+		};
+
+		m_transmittanceLUT = makeLut(SkyAtmospherePass::kTransmittanceWidth, SkyAtmospherePass::kTransmittanceHeight, TextureFormat::R16G16B16A16_SFLOAT);
+		m_multiScatteringLUT = makeLut(SkyAtmospherePass::kMultiScatteringSize, SkyAtmospherePass::kMultiScatteringSize, TextureFormat::R16G16B16A16_SFLOAT);
+		m_skyViewLUT = makeLut(SkyAtmospherePass::kSkyViewWidth, SkyAtmospherePass::kSkyViewHeight, TextureFormat::R16G16B16A16_SFLOAT);
+		m_irradianceLUT = makeLut(SkyAtmospherePass::kIrradianceWidth, SkyAtmospherePass::kIrradianceHeight, TextureFormat::R16G16B16A16_SFLOAT);
+		m_prefilteredEnvLUT = makeLut(SkyAtmospherePass::kPrefilterWidth, SkyAtmospherePass::kPrefilterHeight, TextureFormat::R16G16B16A16_SFLOAT);
+		m_brdfLUT = makeLut(SkyAtmospherePass::kBrdfLutSize, SkyAtmospherePass::kBrdfLutSize, TextureFormat::R16G16_SFLOAT);
+
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyTransmittanceDescriptorSet, 0, m_transmittanceLUT);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyBrdfDescriptorSet, 0, m_brdfLUT);
+
+		m_renderingDevice->UpdateDescriptorImage(m_skyMultiScatteringDescriptorSet, 0, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyMultiScatteringDescriptorSet, 1, m_multiScatteringLUT);
+
+		m_renderingDevice->UpdateDescriptorImage(m_skyViewDescriptorSet, 0, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_skyViewDescriptorSet, 1, m_multiScatteringLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyViewDescriptorSet, 2, m_skyViewLUT);
+
+		m_renderingDevice->UpdateDescriptorImage(m_skyIrradianceDescriptorSet, 0, m_skyViewLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyIrradianceDescriptorSet, 1, m_irradianceLUT);
+
+		m_renderingDevice->UpdateDescriptorImage(m_skyPrefilterDescriptorSet, 0, m_skyViewLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyPrefilterDescriptorSet, 1, m_prefilteredEnvLUT);
+
+		m_renderingDevice->UpdateDescriptorImage(m_forwardIblDescriptorSet, 0, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_forwardIblDescriptorSet, 1, m_irradianceLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_forwardIblDescriptorSet, 2, m_prefilteredEnvLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_forwardIblDescriptorSet, 3, m_brdfLUT, m_linearClampSampler);
+
+		m_atmosphereStaticLutsDirty = true;
+		m_brdfLutDirty = true;
 	}
 
 	void Renderer::EnsureRenderTargets()
@@ -168,26 +768,224 @@ namespace BetterThanNothing
 		if (width == 0 || height == 0)
 			return;
 
-		const bool useMsaa = m_renderingDevice->IsMsaaEnabled();
-		if (useMsaa)
-			m_colorTarget = m_renderingDevice->CreateColorAttachment(width, height, true);
+		auto makeTarget = [&](const TextureFormat fmt, const TextureUsageFlags usage) -> Handle {
+			TextureCreateInfo info{};
+			info.width = width;
+			info.height = height;
+			info.format = fmt;
+			info.usage = usage;
+			info.useMsaa = false;
+			info.dedicated = true;
+			info.mipLevels = 1;
+			return m_renderingDevice->CreateTexture(info);
+		};
 
-		m_depthTarget = m_renderingDevice->CreateDepthAttachment(width, height, useMsaa);
+		// G-Buffer targets + previous-frame geometry history
+		m_gbufferAlbedo = makeTarget(TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_gbufferNormal = makeTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_gbufferMaterial = makeTarget(TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_gbufferMotion = makeTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_depthTarget = m_renderingDevice->CreateDepthAttachment(width, height, false);
+		m_prevDepthTarget = makeTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+		m_prevNormalTarget = makeTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+
+		// RT Shadow & AMD FidelityFX Shadow Denoiser targets + 8x4 tile SSBOs
+		const auto storageSampled = TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc | TextureUsageFlags::TransferDst;
+		m_rtShadowRaw = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_rtShadowPing = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_rtShadowPong = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_rtShadowDenoised = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_rtShadowMoments[0] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, storageSampled);
+		m_rtShadowMoments[1] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, storageSampled);
+
+		const uint32_t tilesX = (width + 7u) / 8u;
+		const uint32_t tilesY = (height + 3u) / 4u;
+		m_rtShadowTileBufferBytes = std::max<size_t>(1, static_cast<size_t>(tilesX) * tilesY) * sizeof(uint32_t);
+		{
+			BufferDescription tileBufDesc{};
+			tileBufDesc.size = m_rtShadowTileBufferBytes;
+			tileBufDesc.bufferUsage = BufferUsageFlags::Storage;
+			tileBufDesc.memoryUsage = BufferMemoryUsage::GpuOnly;
+			m_rtShadowTileMaskBuffer = m_renderingDevice->CreateBuffer(tileBufDesc);
+			m_rtShadowTileMetaBuffer = m_renderingDevice->CreateBuffer(tileBufDesc);
+		}
+
+		// Bend Studio Screen Space Shadow target
+		m_screenSpaceShadow = makeTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+
+		// Ambient Occlusion targets
+		m_aoRaw = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_aoDenoised = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
+		m_aoHistory = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
+
+		// HDR lighting buffer & TAA ping-pong history buffers
+		m_hdrColor = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_taaHistory[0] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_taaHistory[1] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+
 		m_lastSwapChainGeneration = currentGen;
+		m_historyValid = false;
+
+		UpdateRenderTargetDescriptorSets();
+	}
+
+	void Renderer::UpdateRenderTargetDescriptorSets()
+	{
+		if (m_rtSupported)
+		{
+			for (size_t i = 0; i < m_rtShadowDescriptorSets.size(); ++i)
+			{
+				const Handle shadowSet = m_rtShadowDescriptorSets[i];
+				m_renderingDevice->UpdateDescriptorImage(shadowSet, 1, m_depthTarget, m_nearestClampSampler);
+				m_renderingDevice->UpdateDescriptorImage(shadowSet, 2, m_gbufferNormal, m_nearestClampSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(shadowSet, 3, m_rtShadowRaw);
+				m_renderingDevice->UpdateDescriptorBuffer(shadowSet, 4, m_rtShadowTileMaskBuffer, m_rtShadowTileBufferBytes, DescriptorType::StorageBuffer);
+
+				const Handle rtaoSet = m_rtaoDescriptorSets[i];
+				m_renderingDevice->UpdateDescriptorImage(rtaoSet, 1, m_depthTarget, m_nearestClampSampler);
+				m_renderingDevice->UpdateDescriptorImage(rtaoSet, 2, m_gbufferNormal, m_nearestClampSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(rtaoSet, 3, m_aoRaw);
+
+				if (m_tlasHandles[i].IsValid())
+				{
+					m_renderingDevice->UpdateDescriptorAccelerationStructure(shadowSet, 0, m_tlasHandles[i]);
+					m_renderingDevice->UpdateDescriptorAccelerationStructure(rtaoSet, 0, m_tlasHandles[i]);
+					m_tlasBoundToSets[i] = true;
+				}
+				else
+				{
+					m_tlasBoundToSets[i] = false;
+				}
+			}
+		}
+
+		// AMD FFX Shadow Denoiser - Stage 1 (ping-pong moments by writeIdx)
+		for (uint32_t writeIdx = 0; writeIdx < 2; ++writeIdx)
+		{
+			const uint32_t readIdx = 1u - writeIdx;
+			const Handle   set = m_ffxTileClassDescriptorSets[writeIdx];
+			m_renderingDevice->UpdateDescriptorBuffer(set, 0, m_rtShadowTileMaskBuffer, m_rtShadowTileBufferBytes, DescriptorType::StorageBuffer);
+			m_renderingDevice->UpdateDescriptorBuffer(set, 1, m_rtShadowTileMetaBuffer, m_rtShadowTileBufferBytes, DescriptorType::StorageBuffer);
+			m_renderingDevice->UpdateDescriptorImage(set, 2, m_rtShadowRaw, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 3, m_rtShadowMoments[readIdx], m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 4, m_depthTarget, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 5, m_prevDepthTarget, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 6, m_gbufferNormal, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 7, m_prevNormalTarget, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 8, m_gbufferMotion, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 9, m_rtShadowMoments[writeIdx]);
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 10, m_rtShadowPing);
+		}
+
+		// AMD FFX Shadow Denoiser - Stage 2 (3 A-Trous passes: ping->pong, pong->ping, ping->denoised)
+		const std::array<Handle, 3> filterSrc = {m_rtShadowPing, m_rtShadowPong, m_rtShadowPing};
+		const std::array<Handle, 3> filterDst = {m_rtShadowPong, m_rtShadowPing, m_rtShadowDenoised};
+		for (uint32_t passIdx = 0; passIdx < 3; ++passIdx)
+		{
+			const Handle set = m_ffxFilterDescriptorSets[passIdx];
+			m_renderingDevice->UpdateDescriptorBuffer(set, 0, m_rtShadowTileMetaBuffer, m_rtShadowTileBufferBytes, DescriptorType::StorageBuffer);
+			m_renderingDevice->UpdateDescriptorImage(set, 1, filterSrc[passIdx], m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 2, m_depthTarget, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(set, 3, m_gbufferNormal, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 4, filterDst[passIdx]);
+		}
+
+		// Bend Studio Screen Space Shadow set (Nearest + ClampToBorder white = FarDepthValue 1.0)
+		m_renderingDevice->UpdateDescriptorImage(m_bendSssDescriptorSet, 0, m_depthTarget, m_pointBorderWhiteSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_bendSssDescriptorSet, 1, m_screenSpaceShadow);
+
+		// GTAO & AO Denoise sets
+		m_renderingDevice->UpdateDescriptorImage(m_gtaoDescriptorSet, 0, m_depthTarget, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_gtaoDescriptorSet, 1, m_gbufferNormal, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_gtaoDescriptorSet, 2, m_aoRaw);
+
+		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 0, m_aoRaw, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 1, m_aoHistory, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 2, m_depthTarget, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 3, m_prevDepthTarget, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 4, m_gbufferNormal, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 5, m_prevNormalTarget, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_aoDenoiseDescriptorSet, 6, m_gbufferMotion, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_aoDenoiseDescriptorSet, 7, m_aoDenoised);
+
+		// Sky Render set
+		m_renderingDevice->UpdateDescriptorImage(m_skyRenderDescriptorSet, 0, m_depthTarget, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_skyRenderDescriptorSet, 1, m_skyViewLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_skyRenderDescriptorSet, 2, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyRenderDescriptorSet, 3, m_hdrColor);
+
+		// Deferred Lighting set (full PBR + Irradiance IBL + AO + FFX Shadows)
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 0, m_gbufferAlbedo, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 1, m_gbufferNormal, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 2, m_gbufferMaterial, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 3, m_gbufferMotion, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 4, m_depthTarget, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 5, m_rtShadowDenoised, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_deferredLightingDescriptorSet, 6, m_hdrColor);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 7, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 8, m_irradianceLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 9, m_prefilteredEnvLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 10, m_brdfLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 11, m_aoDenoised, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 12, m_screenSpaceShadow, m_nearestClampSampler);
+
+		// TAA ping-pong & ToneMap sets
+		for (uint32_t writeIdx = 0; writeIdx < 2; ++writeIdx)
+		{
+			const uint32_t readIdx = 1u - writeIdx;
+			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 0, m_hdrColor, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 1, m_taaHistory[readIdx], m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 2, m_gbufferMotion, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorImage(m_taaDescriptorSets[writeIdx], 3, m_depthTarget, m_nearestClampSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(m_taaDescriptorSets[writeIdx], 4, m_taaHistory[writeIdx]);
+
+			m_renderingDevice->UpdateDescriptorImage(m_toneMapDescriptorSets[writeIdx], 0, m_taaHistory[writeIdx], m_linearClampSampler);
+		}
 	}
 
 	void Renderer::DestroyRenderTargets()
 	{
-		if (m_colorTarget.IsValid())
-		{
-			m_renderingDevice->DestroyTexture(m_colorTarget);
-			m_colorTarget = {};
-		}
-		if (m_depthTarget.IsValid())
-		{
-			m_renderingDevice->DestroyTexture(m_depthTarget);
-			m_depthTarget = {};
-		}
+		auto destroyTex = [&](Handle& handle) {
+			if (handle.IsValid())
+			{
+				m_renderingDevice->DestroyTexture(handle);
+				handle = {};
+			}
+		};
+		auto destroyBuf = [&](Handle& handle) {
+			if (handle.IsValid())
+			{
+				m_renderingDevice->DestroyBuffer(handle);
+				handle = {};
+			}
+		};
+
+		destroyTex(m_gbufferAlbedo);
+		destroyTex(m_gbufferNormal);
+		destroyTex(m_gbufferMaterial);
+		destroyTex(m_gbufferMotion);
+		destroyTex(m_depthTarget);
+		destroyTex(m_prevDepthTarget);
+		destroyTex(m_prevNormalTarget);
+
+		destroyTex(m_rtShadowRaw);
+		destroyTex(m_rtShadowPing);
+		destroyTex(m_rtShadowPong);
+		destroyTex(m_rtShadowDenoised);
+		destroyTex(m_rtShadowMoments[0]);
+		destroyTex(m_rtShadowMoments[1]);
+		destroyBuf(m_rtShadowTileMaskBuffer);
+		destroyBuf(m_rtShadowTileMetaBuffer);
+
+		destroyTex(m_screenSpaceShadow);
+
+		destroyTex(m_aoRaw);
+		destroyTex(m_aoDenoised);
+		destroyTex(m_aoHistory);
+
+		destroyTex(m_hdrColor);
+		destroyTex(m_taaHistory[0]);
+		destroyTex(m_taaHistory[1]);
 	}
 
 	void Renderer::RenderFrame(Scene* scene)
@@ -205,7 +1003,18 @@ namespace BetterThanNothing
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
 		const auto [viewportWidth, viewportHeight] = m_renderingDevice->GetSwapChainExtent();
 
-		BuildDrawStreams(scene, frameIndex);
+		const bool tlasBuilt = BuildAccelerationStructures(scene, frameIndex);
+		BuildDrawStreams(scene, frameIndex, viewportWidth, viewportHeight, tlasBuilt);
+
+		const auto&	   settings = RenderSettings::Get();
+		const uint32_t readIdx = m_temporalReadIndex;
+		const uint32_t writeIdx = 1u - readIdx;
+
+		if (settings.atmosphereDensityScale != m_lastAtmosphereDensityScale)
+		{
+			m_atmosphereStaticLutsDirty = true;
+			m_lastAtmosphereDensityScale = settings.atmosphereDensityScale;
+		}
 
 		RenderPassContext ctx{};
 		ctx.renderingDevice = m_renderingDevice;
@@ -216,49 +1025,265 @@ namespace BetterThanNothing
 		ctx.swapChainImageIndex = imageIndex;
 		ctx.viewportWidth = viewportWidth;
 		ctx.viewportHeight = viewportHeight;
-		ctx.useMsaa = m_renderingDevice->IsMsaaEnabled();
-		ctx.colorTarget = m_colorTarget;
+		ctx.rtSupported = m_rtSupported;
+		ctx.rtShadowsActive = m_rtSupported && settings.enableRTShadows && tlasBuilt;
+		ctx.bendSssActive = settings.enableBendSSS;
+		ctx.tlasValid = tlasBuilt;
+		ctx.activeAoMode = (settings.aoMode == EAOMode::RTAO && !m_rtSupported) ? EAOMode::GTAO : settings.aoMode;
+		ctx.atmosphereStaticLutsDirty = m_atmosphereStaticLutsDirty;
+		ctx.brdfLutDirty = m_brdfLutDirty;
+		ctx.temporalReadIndex = readIdx;
+		ctx.temporalWriteIndex = writeIdx;
+		ctx.unjitteredViewProj = m_prevUnjitteredViewProj;
+		ctx.sunDirection = m_currentSunDirection;
+
+		ctx.gbufferAlbedo = m_gbufferAlbedo;
+		ctx.gbufferNormal = m_gbufferNormal;
+		ctx.gbufferMaterial = m_gbufferMaterial;
+		ctx.gbufferMotion = m_gbufferMotion;
 		ctx.depthTarget = m_depthTarget;
+		ctx.prevDepthTarget = m_prevDepthTarget;
+		ctx.prevNormalTarget = m_prevNormalTarget;
+
+		ctx.rtShadowRaw = m_rtShadowRaw;
+		ctx.rtShadowPing = m_rtShadowPing;
+		ctx.rtShadowPong = m_rtShadowPong;
+		ctx.rtShadowDenoised = m_rtShadowDenoised;
+		ctx.rtShadowMoments = m_rtShadowMoments;
+		ctx.screenSpaceShadow = m_screenSpaceShadow;
+
+		ctx.aoRaw = m_aoRaw;
+		ctx.aoDenoised = m_aoDenoised;
+		ctx.aoHistory = m_aoHistory;
+
+		ctx.transmittanceLUT = m_transmittanceLUT;
+		ctx.multiScatteringLUT = m_multiScatteringLUT;
+		ctx.skyViewLUT = m_skyViewLUT;
+		ctx.irradianceLUT = m_irradianceLUT;
+		ctx.prefilteredEnvLUT = m_prefilteredEnvLUT;
+		ctx.brdfLUT = m_brdfLUT;
+
+		ctx.hdrColor = m_hdrColor;
+		ctx.taaHistory = m_taaHistory;
+
+		ctx.globalDescriptorSet = m_globalDescriptorSets[frameIndex];
+		ctx.pointLightDescriptorSet = m_pointLightDescriptorSets[frameIndex];
+		ctx.rtShadowDescriptorSet = m_rtSupported ? m_rtShadowDescriptorSets[frameIndex] : Handle{};
+		ctx.ffxTileClassDescriptorSets = m_ffxTileClassDescriptorSets;
+		ctx.ffxFilterDescriptorSets = m_ffxFilterDescriptorSets;
+		ctx.bendSssDescriptorSet = m_bendSssDescriptorSet;
+		ctx.rtaoDescriptorSet = m_rtSupported ? m_rtaoDescriptorSets[frameIndex] : Handle{};
+		ctx.gtaoDescriptorSet = m_gtaoDescriptorSet;
+		ctx.aoDenoiseDescriptorSet = m_aoDenoiseDescriptorSet;
+		ctx.skyTransmittanceDescriptorSet = m_skyTransmittanceDescriptorSet;
+		ctx.skyMultiScatteringDescriptorSet = m_skyMultiScatteringDescriptorSet;
+		ctx.skyViewDescriptorSet = m_skyViewDescriptorSet;
+		ctx.skyIrradianceDescriptorSet = m_skyIrradianceDescriptorSet;
+		ctx.skyPrefilterDescriptorSet = m_skyPrefilterDescriptorSet;
+		ctx.skyBrdfDescriptorSet = m_skyBrdfDescriptorSet;
+		ctx.skyRenderDescriptorSet = m_skyRenderDescriptorSet;
+		ctx.deferredLightingDescriptorSet = m_deferredLightingDescriptorSet;
+		ctx.taaDescriptorSets = m_taaDescriptorSets;
+		ctx.toneMapDescriptorSets = m_toneMapDescriptorSets;
+
 		ctx.opaqueStream = m_opaqueDrawStream.get();
 		ctx.transparentStream = m_transparentDrawStream.get();
 
 		for (const auto& pass : m_passes)
 			pass->Execute(ctx);
 
+		// Snapshot current frame's depth & normals for next frame's FFX Shadow Denoiser & AO disocclusion checks
+		m_renderingDevice->CopyTexture(m_depthTarget, m_prevDepthTarget);
+		m_renderingDevice->CopyTexture(m_gbufferNormal, m_prevNormalTarget);
+
 		m_renderingDevice->EndFrame(imageIndex);
+
+		m_atmosphereStaticLutsDirty = false;
+		m_brdfLutDirty = false;
+		m_temporalReadIndex = writeIdx;
+		m_historyValid = true;
+		++m_frameCounter;
 	}
 
-	void Renderer::BuildDrawStreams(Scene* scene, const uint32_t frameIndex)
+	bool Renderer::BuildAccelerationStructures(Scene* scene, const uint32_t frameIndex)
+	{
+		const auto& settings = RenderSettings::Get();
+		const bool	needTlas = m_rtSupported && (settings.enableRTShadows || settings.aoMode == EAOMode::RTAO);
+		if (!needTlas)
+			return false;
+
+		m_tlasInstancesScratch.clear();
+
+		const auto meshView = scene->GetView<TransformComponent, MeshComponent>();
+		for (auto [entity, transform, meshComp] : meshView.each())
+		{
+			if (meshComp.meshId == InvalidResourceId)
+				continue;
+
+			const MeshResourceCache* meshData = m_resourceManager->GetMeshData(meshComp.meshId);
+			if (!meshData || meshData->vertexCount == 0 || meshData->indexCount < 3)
+				continue;
+
+			if (meshComp.materialId != InvalidResourceId)
+			{
+				const MaterialResourceCache* material = m_resourceManager->GetMaterialData(meshComp.materialId);
+				if (material && material->alphaMode == EAlphaMode::Blend)
+					continue;
+			}
+
+			Handle blasHandle{};
+			if (const auto it = m_blasCache.find(meshComp.meshId); it != m_blasCache.end())
+			{
+				blasHandle = it->second;
+			}
+			else
+			{
+				blasHandle = m_renderingDevice->CreateBlas(
+					meshData->vertexBuffer,
+					meshData->vertexCount,
+					sizeof(VertexData),
+					meshData->indexBuffer,
+					meshData->indexCount
+				);
+				m_blasCache[meshComp.meshId] = blasHandle;
+			}
+
+			if (!blasHandle.IsValid())
+				continue;
+
+			const glm::mat4& m = transform.worldMatrix.Value();
+			TlasInstanceDesc inst{};
+			inst.blasHandle = blasHandle;
+			inst.instanceCustomIndex = static_cast<uint32_t>(m_tlasInstancesScratch.size());
+			inst.mask = 0xFF;
+			inst.transform[0] = m[0][0];
+			inst.transform[1] = m[1][0];
+			inst.transform[2] = m[2][0];
+			inst.transform[3] = m[3][0];
+			inst.transform[4] = m[0][1];
+			inst.transform[5] = m[1][1];
+			inst.transform[6] = m[2][1];
+			inst.transform[7] = m[3][1];
+			inst.transform[8] = m[0][2];
+			inst.transform[9] = m[1][2];
+			inst.transform[10] = m[2][2];
+			inst.transform[11] = m[3][2];
+			m_tlasInstancesScratch.push_back(inst);
+		}
+
+		if (m_tlasInstancesScratch.empty())
+			return false;
+
+		const Handle prevTlas = m_tlasHandles[frameIndex];
+		m_renderingDevice->BuildOrUpdateTlas(
+			m_tlasHandles[frameIndex],
+			m_tlasScratchBuffers[frameIndex],
+			m_tlasInstanceBuffers[frameIndex],
+			m_tlasInstancesScratch
+		);
+
+		if (m_tlasHandles[frameIndex].IsValid() && (m_tlasHandles[frameIndex] != prevTlas || !m_tlasBoundToSets[frameIndex]))
+		{
+			m_renderingDevice->UpdateDescriptorAccelerationStructure(m_rtShadowDescriptorSets[frameIndex], 0, m_tlasHandles[frameIndex]);
+			m_renderingDevice->UpdateDescriptorAccelerationStructure(m_rtaoDescriptorSets[frameIndex], 0, m_tlasHandles[frameIndex]);
+			m_tlasBoundToSets[frameIndex] = true;
+		}
+
+		return m_tlasHandles[frameIndex].IsValid();
+	}
+
+	void Renderer::BuildDrawStreams(Scene* scene, const uint32_t frameIndex, const uint32_t viewportWidth, const uint32_t viewportHeight, const bool tlasValid)
 	{
 		const float	  aspectRatio = m_renderingDevice->GetAspectRatio();
 		const Camera* camera = scene->GetCamera();
+		const auto&	  settings = RenderSettings::Get();
+
+		if (settings.enableTAA != m_prevTaaEnabled)
+		{
+			m_historyValid = false;
+			m_prevTaaEnabled = settings.enableTAA;
+		}
 
 		Vector3 dirLightDirection = Vector3(0.0f, -1.0f, 0.0f);
 		Vector3 dirLightColor = Vector3::One;
-		float	dirLightIntensity = 0.0f;
+		float	sunIlluminanceLux = 0.0f;
 		if (const auto dirLightView = scene->GetView<DirectionalLightComponent>(); dirLightView.begin() != dirLightView.end())
 		{
 			const auto& dirLight = dirLightView.get<DirectionalLightComponent>(*dirLightView.begin());
 			dirLightDirection = dirLight.direction;
 			dirLightColor = dirLight.color;
-			dirLightIntensity = dirLight.intensity;
+			sunIlluminanceLux = dirLight.illuminanceLux;
 		}
 
 		const uint32_t pointLightCount = UploadPointLights(scene, frameIndex);
 
 		const Matrix4& viewMatrix = camera->GetViewMatrix();
-		const Matrix4  projMatrix = camera->GetProjectionMatrix(aspectRatio);
-		const Frustum  frustum = Frustum::FromViewProjection(projMatrix * viewMatrix);
+		const Matrix4  unjitteredProj = camera->GetProjectionMatrix(aspectRatio);
+		const Matrix4  unjitteredViewProj = unjitteredProj * viewMatrix;
+
+		Matrix4 projMatrix = unjitteredProj;
+		if (settings.enableTAA && settings.debugView == EDebugViewMode::Final && viewportWidth > 0 && viewportHeight > 0)
+		{
+			const uint32_t sampleIdx = static_cast<uint32_t>((m_frameCounter % 16u) + 1u);
+			const float	   jitterX = (Halton(sampleIdx, 2) - 0.5f) * 2.0f / static_cast<float>(viewportWidth);
+			const float	   jitterY = (Halton(sampleIdx, 3) - 0.5f) * 2.0f / static_cast<float>(viewportHeight);
+			projMatrix = Matrix4::Identity.Translate(jitterX, jitterY, 0.0f) * unjitteredProj;
+		}
+
+		const Matrix4 viewProj = projMatrix * viewMatrix;
+		const Matrix4 invViewProj = viewProj.Inverted();
+		const Matrix4 prevViewProj = m_historyValid ? m_prevUnjitteredViewProj : unjitteredViewProj;
+		const Frustum frustum = Frustum::FromViewProjection(unjitteredViewProj);
+
+		uint32_t renderFlags = 0;
+		if (m_rtSupported && settings.enableRTShadows && tlasValid)
+			renderFlags |= GlobalRenderFlags::RTShadowsEnabled;
+		if (settings.enableShadowDenoiser)
+			renderFlags |= GlobalRenderFlags::ShadowDenoiserEnabled;
+		if (settings.enableTAA)
+			renderFlags |= GlobalRenderFlags::TAAEnabled;
+		if (m_historyValid)
+			renderFlags |= GlobalRenderFlags::HistoryValid;
+		if (settings.aoMode != EAOMode::Off)
+			renderFlags |= GlobalRenderFlags::AOEnabled;
+		if (settings.enableBendSSS)
+			renderFlags |= GlobalRenderFlags::BendSSSEnabled;
+
+		m_currentSunDirection = (dirLightDirection * -1.0f).Normalized();
+		if (m_currentSunDirection.SquaredMagnitude() < 1e-6f)
+			m_currentSunDirection = Vector3(0.0f, 1.0f, 0.0f);
 
 		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
-		globalUniform->view = viewMatrix;
 		globalUniform->projection = projMatrix;
+		globalUniform->view = viewMatrix;
+		globalUniform->viewProj = viewProj;
+		globalUniform->invViewProj = invViewProj;
+		globalUniform->unjitteredViewProj = unjitteredViewProj;
+		globalUniform->prevUnjitteredViewProj = prevViewProj;
+		globalUniform->lightDirection = dirLightDirection;
+		globalUniform->sunAngularRadius = settings.sunAngularRadius;
+		globalUniform->lightColor = dirLightColor;
+		globalUniform->sunIlluminanceLux = sunIlluminanceLux;
 		globalUniform->cameraPosition = camera->GetPosition();
 		globalUniform->cameraExposure = camera->GetExposure();
-		globalUniform->lightDirection = dirLightDirection;
-		globalUniform->lightColor = dirLightColor;
-		globalUniform->lightIntensity = dirLightIntensity;
 		globalUniform->pointLightCount = pointLightCount;
+		globalUniform->frameIndex = static_cast<uint32_t>(m_frameCounter);
+		globalUniform->screenWidth = viewportWidth;
+		globalUniform->screenHeight = viewportHeight;
+		globalUniform->debugView = static_cast<uint32_t>(settings.debugView);
+		globalUniform->toneMapMode = static_cast<uint32_t>(settings.toneMapMode);
+		globalUniform->flags = renderFlags;
+		globalUniform->taaBlendFactor = settings.taaBlendFactor;
+		globalUniform->skyLuminanceNits = settings.skyLuminanceNits;
+		globalUniform->atmosphereAltitudeKm = settings.atmosphereAltitudeKm;
+		globalUniform->atmosphereMieAnisotropy = settings.atmosphereMieAnisotropy;
+		globalUniform->atmosphereMultiScatteringFactor = settings.atmosphereMultiScatteringFactor;
+		globalUniform->atmosphereDensityScale = settings.atmosphereDensityScale;
+		globalUniform->aoRadius = settings.aoRadius;
+		globalUniform->aoPower = settings.aoPower;
+		globalUniform->irradianceIntensity = settings.irradianceIntensity;
+
+		m_prevUnjitteredViewProj = unjitteredViewProj;
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
@@ -280,14 +1305,12 @@ namespace BetterThanNothing
 			if (!meshData)
 				continue;
 
-			// Frustum culling against mesh world-space AABB
 			if (!frustum.IntersectsLocalAABB(meshData->boundsMin, meshData->boundsMax, transform.worldMatrix))
 			{
 				Metrics::AddCulledDrawCall();
 				continue;
 			}
 
-			// Resolve Material (lazy fallback to default material if entity only set textureId)
 			ResourceId materialId = meshComp.materialId;
 			if (materialId == InvalidResourceId)
 			{
@@ -311,9 +1334,17 @@ namespace BetterThanNothing
 			packet.indexCount = meshData->indexCount;
 			packet.descriptorSets[0] = globalSetHandle;
 			packet.descriptorSets[1] = material->descriptorSetHandle;
-			packet.descriptorSets[2] = pointLightSetHandle;
-			packet.descriptorSetCount = 3;
-			packet.SetPushConstant(DynamicUniformData{transform.worldMatrix}, ShaderStageFlags::Vertex);
+			if (isTransparent)
+			{
+				packet.descriptorSets[2] = pointLightSetHandle;
+				packet.descriptorSets[3] = m_forwardIblDescriptorSet;
+				packet.descriptorSetCount = 4;
+			}
+			else
+			{
+				packet.descriptorSetCount = 2;
+			}
+			packet.SetPushConstant(DynamicUniformData{transform.worldMatrix, transform.prevWorldMatrix}, ShaderStageFlags::Vertex);
 			packet.distanceToCamera = distance;
 			packet.sortBackToFront = isTransparent;
 
@@ -345,11 +1376,9 @@ namespace BetterThanNothing
 
 			PointLightData data{};
 			data.position = transform.GetWorldPosition();
+			data.radius = light.radius;
 			data.color = light.color;
-			data.constant = light.constant;
-			data.linear = light.linear;
-			data.quadratic = light.quadratic;
-			data.intensity = light.intensity;
+			data.luminousPowerLm = light.luminousPowerLm;
 			m_pointLightsScratch.push_back(data);
 		}
 

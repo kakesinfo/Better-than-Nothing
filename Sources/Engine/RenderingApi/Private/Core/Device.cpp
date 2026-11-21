@@ -59,17 +59,28 @@ namespace BetterThanNothing::RenderingApi
 
 	void Device::GetPhysicalDeviceProperties()
 	{
-		VkPhysicalDeviceProperties deviceProperties;
-		vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProperties);
+		VkPhysicalDeviceAccelerationStructurePropertiesKHR asProps{};
+		asProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
 
+		VkPhysicalDeviceProperties2 deviceProperties2{};
+		deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+		if (CheckRayQuerySupport(m_physicalDevice))
+			deviceProperties2.pNext = &asProps;
+
+		vkGetPhysicalDeviceProperties2(m_physicalDevice, &deviceProperties2);
+
+		const VkPhysicalDeviceProperties& deviceProperties = deviceProperties2.properties;
 		m_vendorName = GetVendorById(deviceProperties.vendorID);
 		m_deviceName = deviceProperties.deviceName;
 		m_apiVersion = std::format("{}.{}.{}", VK_API_VERSION_MAJOR(deviceProperties.apiVersion), VK_API_VERSION_MINOR(deviceProperties.apiVersion), VK_API_VERSION_PATCH(deviceProperties.apiVersion));
-		m_minUniformBufferOffsetAlignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
+		m_minUniformBufferOffsetAlignment = static_cast<uint32_t>(deviceProperties.limits.minUniformBufferOffsetAlignment);
 		m_maxAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 		m_maxTexture2DSize = deviceProperties.limits.maxImageDimension2D;
 		m_maxTexture3DSize = deviceProperties.limits.maxImageDimension3D;
 		m_maxTextureCubeSize = deviceProperties.limits.maxImageDimensionCube;
+
+		if (asProps.minAccelerationStructureScratchOffsetAlignment > 0)
+			m_minAccelerationStructureScratchOffsetAlignment = asProps.minAccelerationStructureScratchOffsetAlignment;
 
 		const VkSampleCountFlags counts = deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
 
@@ -99,18 +110,51 @@ namespace BetterThanNothing::RenderingApi
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
 
+		// Query optional buffer device address and ray query support
+		VkPhysicalDeviceBufferDeviceAddressFeatures supportedBda{};
+		supportedBda.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+		VkPhysicalDeviceFeatures2 queryFeatures2{};
+		queryFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		queryFeatures2.pNext = &supportedBda;
+		vkGetPhysicalDeviceFeatures2(m_physicalDevice, &queryFeatures2);
+
+		m_bufferDeviceAddressSupported = (supportedBda.bufferDeviceAddress == VK_TRUE);
+		m_rayQuerySupported = CheckRayQuerySupport(m_physicalDevice);
+
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
-		deviceFeatures.sampleRateShading = VK_TRUE; // Enable sample shading for better quality MSAA
+		deviceFeatures.sampleRateShading = VK_TRUE;
+
+		VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{};
+		rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+		rayQueryFeatures.rayQuery = VK_TRUE;
+
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{};
+		asFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+		asFeatures.accelerationStructure = VK_TRUE;
+		asFeatures.pNext = &rayQueryFeatures;
+
+		VkPhysicalDeviceBufferDeviceAddressFeatures bdaFeatures{};
+		bdaFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+		bdaFeatures.bufferDeviceAddress = VK_TRUE;
+		bdaFeatures.pNext = m_rayQuerySupported ? static_cast<void*>(&asFeatures) : nullptr;
 
 		VkPhysicalDeviceSynchronization2Features sync2Features{};
 		sync2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
 		sync2Features.synchronization2 = VK_TRUE;
+		sync2Features.pNext = m_bufferDeviceAddressSupported ? static_cast<void*>(&bdaFeatures) : nullptr;
 
 		VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures{};
 		dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
 		dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
 		dynamicRenderingFeatures.pNext = &sync2Features;
+
+		std::vector<const char*> enabledExtensions = m_createInfo.deviceExtensions;
+		if (m_rayQuerySupported)
+		{
+			for (const char* ext : m_createInfo.rayTracingExtensions)
+				enabledExtensions.push_back(ext);
+		}
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -120,13 +164,34 @@ namespace BetterThanNothing::RenderingApi
 		createInfo.pNext = &dynamicRenderingFeatures;
 		createInfo.enabledLayerCount = 0;
 		createInfo.ppEnabledLayerNames = nullptr;
-
-		const auto& deviceExtensions = m_createInfo.deviceExtensions;
-		createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+		createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+		createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
 		if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create logical device");
+
+		if (m_rayQuerySupported)
+		{
+			m_vkGetAccelerationStructureBuildSizesKHR = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(m_device, "vkGetAccelerationStructureBuildSizesKHR"));
+			m_vkCreateAccelerationStructureKHR = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(m_device, "vkCreateAccelerationStructureKHR"));
+			m_vkDestroyAccelerationStructureKHR = reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(m_device, "vkDestroyAccelerationStructureKHR"));
+			m_vkCmdBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(m_device, "vkCmdBuildAccelerationStructuresKHR"));
+			m_vkGetAccelerationStructureDeviceAddressKHR = reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(m_device, "vkGetAccelerationStructureDeviceAddressKHR"));
+
+			if (!m_vkGetAccelerationStructureBuildSizesKHR || !m_vkCreateAccelerationStructureKHR || !m_vkDestroyAccelerationStructureKHR || !m_vkCmdBuildAccelerationStructuresKHR || !m_vkGetAccelerationStructureDeviceAddressKHR)
+			{
+				Logger::Log<WARNING>("Vulkan ray query extensions enabled, but failed to load function pointers");
+				m_rayQuerySupported = false;
+			}
+			else
+			{
+				Logger::Log<SUCCESS>("Vulkan hardware ray query (VK_KHR_ray_query + AS): ok");
+			}
+		}
+		else
+		{
+			Logger::Log<WARNING>("Vulkan hardware ray query not supported on this GPU; RT shadows will fall back to lit");
+		}
 
 		Logger::Log<SUCCESS>("Vulkan logical device: ok");
 	}
@@ -174,7 +239,11 @@ namespace BetterThanNothing::RenderingApi
 
 	VkFormat Device::FindDepthFormat() const
 	{
-		return FindSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		return FindSupportedFormat(
+			{VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT
+		);
 	}
 
 	bool Device::IsSupportedFormatFeature(const VkFormat format, const VkFormatFeatureFlags features) const
@@ -222,6 +291,76 @@ namespace BetterThanNothing::RenderingApi
 	{
 		if (shaderModule != VK_NULL_HANDLE)
 			vkDestroyShaderModule(m_device, shaderModule, nullptr);
+	}
+
+	VkDeviceAddress Device::GetBufferDeviceAddress(VkBuffer buffer) const
+	{
+		VkBufferDeviceAddressInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+		info.buffer = buffer;
+		return vkGetBufferDeviceAddress(m_device, &info);
+	}
+
+	void Device::GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildTypeKHR buildType, const VkAccelerationStructureBuildGeometryInfoKHR* pBuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR* pSizeInfo) const
+	{
+		m_vkGetAccelerationStructureBuildSizesKHR(m_device, buildType, pBuildInfo, pMaxPrimitiveCounts, pSizeInfo);
+	}
+
+	VkResult Device::CreateAccelerationStructure(const VkAccelerationStructureCreateInfoKHR* pCreateInfo, VkAccelerationStructureKHR* pAccelerationStructure) const
+	{
+		return m_vkCreateAccelerationStructureKHR(m_device, pCreateInfo, nullptr, pAccelerationStructure);
+	}
+
+	void Device::DestroyAccelerationStructure(VkAccelerationStructureKHR accelerationStructure) const
+	{
+		if (accelerationStructure != VK_NULL_HANDLE && m_vkDestroyAccelerationStructureKHR)
+			m_vkDestroyAccelerationStructureKHR(m_device, accelerationStructure, nullptr);
+	}
+
+	void Device::CmdBuildAccelerationStructures(VkCommandBuffer commandBuffer, const uint32_t infoCount, const VkAccelerationStructureBuildGeometryInfoKHR* pInfos, const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) const
+	{
+		m_vkCmdBuildAccelerationStructuresKHR(commandBuffer, infoCount, pInfos, ppBuildRangeInfos);
+	}
+
+	VkDeviceAddress Device::GetAccelerationStructureDeviceAddress(const VkAccelerationStructureDeviceAddressInfoKHR* pInfo) const
+	{
+		return m_vkGetAccelerationStructureDeviceAddressKHR(m_device, pInfo);
+	}
+
+	bool Device::CheckRayQuerySupport(VkPhysicalDevice device) const noexcept
+	{
+		uint32_t extensionCount = 0;
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+		std::set<std::string> requiredRtExtensions(m_createInfo.rayTracingExtensions.begin(), m_createInfo.rayTracingExtensions.end());
+		for (const auto& [extensionName, _] : availableExtensions)
+			requiredRtExtensions.erase(extensionName);
+
+		if (!requiredRtExtensions.empty())
+			return false;
+
+		VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{};
+		rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{};
+		asFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+		asFeatures.pNext = &rayQueryFeatures;
+
+		VkPhysicalDeviceBufferDeviceAddressFeatures bdaFeatures{};
+		bdaFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+		bdaFeatures.pNext = &asFeatures;
+
+		VkPhysicalDeviceFeatures2 features2{};
+		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		features2.pNext = &bdaFeatures;
+		vkGetPhysicalDeviceFeatures2(device, &features2);
+
+		return bdaFeatures.bufferDeviceAddress == VK_TRUE &&
+			   asFeatures.accelerationStructure == VK_TRUE &&
+			   rayQueryFeatures.rayQuery == VK_TRUE;
 	}
 
 	bool Device::CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept
@@ -352,6 +491,9 @@ namespace BetterThanNothing::RenderingApi
 			else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
 				score += 100;
 
+			if (CheckRayQuerySupport(device))
+				score += 500;
+
 			if (score > bestScore)
 			{
 				bestScore = score;
@@ -410,6 +552,21 @@ namespace BetterThanNothing::RenderingApi
 	uint32_t Device::GetMinUniformBufferOffsetAlignment() const
 	{
 		return m_minUniformBufferOffsetAlignment;
+	}
+
+	uint32_t Device::GetMinAccelerationStructureScratchOffsetAlignment() const
+	{
+		return m_minAccelerationStructureScratchOffsetAlignment;
+	}
+
+	bool Device::IsBufferDeviceAddressSupported() const
+	{
+		return m_bufferDeviceAddressSupported;
+	}
+
+	bool Device::IsRayQuerySupported() const
+	{
+		return m_rayQuerySupported;
 	}
 
 	VkSampleCountFlagBits Device::GetMaxMsaaSamples() const
