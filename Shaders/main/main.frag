@@ -28,6 +28,7 @@ layout(location = 3) in vec3 fragNormal;
 layout(location = 0) out vec4 outColor;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
+layout(set = 1, binding = 1) uniform sampler2D normalSampler;
 
 layout(std430, set = 2, binding = 0) readonly buffer PointLightBuffer {
     PointLightData lights[];
@@ -35,6 +36,33 @@ layout(std430, set = 2, binding = 0) readonly buffer PointLightBuffer {
 
 const float ambientStrength = 0.1;
 const float specularStrength = 0.3;
+
+// Screen-space cotangent frame (Christian Schuler, "Followup: Normal Mapping Without Precomputed Tangents")
+mat3 ComputeCotangentFrame(vec3 N, vec3 p, vec2 uv)
+{
+    vec3 dp1 = dFdx(p);
+    vec3 dp2 = dFdy(p);
+    vec2 duv1 = dFdx(uv);
+    vec2 duv2 = dFdy(uv);
+
+    vec3 dp2perp = cross(dp2, N);
+    vec3 dp1perp = cross(N, dp1);
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+
+    float invMax = inversesqrt(max(dot(T, T), dot(B, B)) + 1e-8);
+    return mat3(T * invMax, B * invMax, N);
+}
+
+vec3 PerturbNormal(vec3 N, vec3 pos, vec2 uv)
+{
+    vec3 mapN = texture(normalSampler, uv).xyz * 2.0 - 1.0;
+    // Fast path for default flat normal (0, 0, 1)
+    if (abs(mapN.x) < 0.01 && abs(mapN.y) < 0.01)
+        return N;
+    mat3 TBN = ComputeCotangentFrame(N, pos, uv);
+    return normalize(TBN * mapN);
+}
 
 float CalculateEnergyConservation(vec3 norm, vec3 halfwayDir)
 {
@@ -95,7 +123,8 @@ void main() {
     vec4 textureColor = texture(texSampler, fragTexCoord);
     textureColor.rgb = pow(textureColor.rgb, vec3(gammaCorrection));
 
-    const vec3 norm = normalize(fragNormal);
+    const vec3 geomNorm = normalize(fragNormal);
+    const vec3 norm = PerturbNormal(geomNorm, fragPosition, fragTexCoord);
     const vec3 viewDir = normalize(globalUniforms.cameraPosition - fragPosition);
 
     vec3 resultColor = CalculateDirectionalLight(norm, viewDir);

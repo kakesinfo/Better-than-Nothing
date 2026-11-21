@@ -18,6 +18,7 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 
+#include <Common/AssetPath.hpp>
 #include <Common/Logger.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <ResourceImporter/Importer.hpp>
@@ -37,9 +38,9 @@ namespace BetterThanNothing
 		if (shape.mesh.material_ids.empty())
 			return std::nullopt;
 
-		const int materialId = shape.mesh.material_ids.at(0); // We assume that there is only one material
+		const int materialId = shape.mesh.material_ids.at(0);
 
-		if (materialId < 0 || materialId >= materials.size())
+		if (materialId < 0 || static_cast<size_t>(materialId) >= materials.size())
 			return std::nullopt;
 
 		const auto& material = materials[materialId];
@@ -50,14 +51,19 @@ namespace BetterThanNothing
 			importedMaterial.diffuseTexturePath = texPath.string();
 		}
 
-		if (!material.normal_texname.empty())
-		{
+		std::string normalTexName = material.normal_texname;
+		if (normalTexName.empty())
+			normalTexName = material.bump_texname;
+		if (normalTexName.empty() && !material.displacement_texname.empty())
+			normalTexName = material.displacement_texname;
 
-			const std::filesystem::path texPath = parentFolder / material.normal_texname;
+		if (!normalTexName.empty())
+		{
+			const std::filesystem::path texPath = parentFolder / normalTexName;
 			importedMaterial.normalTexturePath = texPath.string();
 		}
 
-		importedMaterial.id = materialId;
+		importedMaterial.id = static_cast<uint32_t>(materialId);
 
 		return importedMaterial;
 	}
@@ -65,6 +71,8 @@ namespace BetterThanNothing
 	ImportedModel ObjImporter::Import(const ModelImportInfo& input)
 	{
 		ImportedModel model;
+
+		const std::string resolvedPath = AssetPath::Resolve(input.path);
 
 		std::unordered_map<uint32_t, uint32_t> materialCache;
 
@@ -74,9 +82,9 @@ namespace BetterThanNothing
 		std::string						 warn;
 		std::string						 err;
 
-		std::filesystem::path parentFolder = std::filesystem::path(input.path).parent_path();
+		std::filesystem::path parentFolder = std::filesystem::path(resolvedPath).parent_path();
 
-		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, input.path.c_str(), parentFolder.string().c_str()))
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, resolvedPath.c_str(), parentFolder.string().c_str()))
 			throw std::runtime_error(err);
 
 		if (!warn.empty())
@@ -90,11 +98,20 @@ namespace BetterThanNothing
 		float maxY = std::numeric_limits<float>::lowest();
 		float maxZ = std::numeric_limits<float>::lowest();
 
+		model.path = input.path;
+
 		for (const auto& shape : shapes)
 		{
-			uint32_t	 currentMeshIndex = model.meshes.size();
-			ImportedMesh currentMesh;
-			ImportedNode currentNode;
+			if (shape.mesh.indices.empty())
+				continue;
+
+			const auto	 currentMeshIndex = static_cast<uint32_t>(model.meshes.size());
+			ImportedMesh currentMesh{};
+			currentMesh.id = currentMeshIndex;
+			currentMesh.vertices.reserve(shape.mesh.indices.size());
+
+			ImportedNode currentNode{};
+			currentNode.name = shape.name;
 
 			const std::optional<ImportedMaterial> currentMaterial = ImportMaterial(parentFolder, shape, materials);
 			if (currentMaterial.has_value())
@@ -102,7 +119,7 @@ namespace BetterThanNothing
 				uint32_t rawId = currentMaterial.value().id;
 				if (!materialCache.contains(rawId))
 				{
-					materialCache[rawId] = model.materials.size();
+					materialCache[rawId] = static_cast<uint32_t>(model.materials.size());
 					model.materials.push_back(currentMaterial.value());
 				}
 				currentMesh.materialId = materialCache[rawId];
@@ -112,100 +129,93 @@ namespace BetterThanNothing
 			{
 				VertexData vertex{};
 
-				float rawX = attrib.vertices[3 * index.vertex_index + 0];
-				float rawY = attrib.vertices[3 * index.vertex_index + 1];
-				float rawZ = attrib.vertices[3 * index.vertex_index + 2];
+				const float rawX = attrib.vertices[3 * index.vertex_index + 0];
+				const float rawY = attrib.vertices[3 * index.vertex_index + 1];
+				const float rawZ = attrib.vertices[3 * index.vertex_index + 2];
 
 				// Coordinate system transformation:
 				// If preTransform is false, convert from Y-up (OBJ/Blender) to Z-up (engine) coordinate system.
-				// This maps (X, Y, Z) -> (X, Z, -Y):
-				//   - X remains the same.
-				//   - Y becomes Z (up axis).
-				//   - Z becomes -Y (to maintain right-handedness).
 				if (input.preTransform)
-				{
 					vertex.position = {rawX, rawY, rawZ};
-				}
 				else
-				{
 					vertex.position = {rawX, rawZ, -rawY};
-				}
 
 				vertex.color = {1.0f, 1.0f, 1.0f};
 
-				if (!attrib.texcoords.empty() && index.texcoord_index != -1)
-				{
+				if (!attrib.texcoords.empty() && index.texcoord_index >= 0)
 					vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
-				}
 				else
-				{
 					vertex.uv = {0.0f, 0.0f};
-				}
 
-				if (!attrib.normals.empty() && index.normal_index != -1)
+				if (!attrib.normals.empty() && index.normal_index >= 0)
 				{
-					auto xNormal = attrib.normals[3 * index.normal_index + 0];
-					auto yNormal = attrib.normals[3 * index.normal_index + 1];
-					auto zNormal = attrib.normals[3 * index.normal_index + 2];
+					const auto xNormal = attrib.normals[3 * index.normal_index + 0];
+					const auto yNormal = attrib.normals[3 * index.normal_index + 1];
+					const auto zNormal = attrib.normals[3 * index.normal_index + 2];
 
 					vertex.normal = input.preTransform ? Vector3{xNormal, yNormal, zNormal} : Vector3{xNormal, zNormal, -yNormal};
 				}
 				else
 				{
-					vertex.normal = {0.0f, 0.0f, 0.0f};
+					vertex.normal = {0.0f, 1.0f, 0.0f};
 				}
 
-				if (vertex.position.GetX() < minX)
-					minX = vertex.position.GetX();
-				if (vertex.position.GetY() < minY)
-					minY = vertex.position.GetY();
-				if (vertex.position.GetZ() < minZ)
-					minZ = vertex.position.GetZ();
-
-				if (vertex.position.GetX() > maxX)
-					maxX = vertex.position.GetX();
-				if (vertex.position.GetY() > maxY)
-					maxY = vertex.position.GetY();
-				if (vertex.position.GetZ() > maxZ)
-					maxZ = vertex.position.GetZ();
+				minX = std::min(minX, vertex.position.GetX());
+				minY = std::min(minY, vertex.position.GetY());
+				minZ = std::min(minZ, vertex.position.GetZ());
+				maxX = std::max(maxX, vertex.position.GetX());
+				maxY = std::max(maxY, vertex.position.GetY());
+				maxZ = std::max(maxZ, vertex.position.GetZ());
 
 				currentMesh.vertices.push_back(vertex);
 			}
 
-			currentNode.mesh = currentMeshIndex;
+			const auto nodeIdx = static_cast<ImportedId>(model.nodes.size());
+			currentNode.meshes.push_back(currentMeshIndex);
 			currentNode.transform = Matrix4::Identity;
 
-			model.meshes.push_back(currentMesh);
-			model.children.push_back(currentNode);
+			model.meshes.push_back(std::move(currentMesh));
+			model.nodes.push_back(std::move(currentNode));
+			model.rootNodes.push_back(nodeIdx);
 		}
+
+		if (model.meshes.empty())
+			return model;
 
 		const Vector3 center = Vector3(minX + maxX, minY + maxY, minZ + maxZ) / 2.0f;
 		for (auto& mesh : model.meshes)
 		{
-			const size_t vertex_count_in = mesh.vertices.size();
+			const size_t vertexCountIn = mesh.vertices.size();
+			if (vertexCountIn == 0)
+				continue;
 
-			std::vector<unsigned int> remap(vertex_count_in);
-			const size_t unique_vertex_count = meshopt_generateVertexRemap(remap.data(), nullptr, vertex_count_in, mesh.vertices.data(), vertex_count_in, sizeof(VertexData));
+			std::vector<unsigned int> remap(vertexCountIn);
+			const size_t uniqueVertexCount = meshopt_generateVertexRemap(remap.data(), nullptr, vertexCountIn, mesh.vertices.data(), vertexCountIn, sizeof(VertexData));
 
-			std::vector<VertexData> new_vertices(unique_vertex_count);
-			std::vector<uint32_t>	new_indices(vertex_count_in);
+			std::vector<VertexData> newVertices(uniqueVertexCount);
+			std::vector<uint32_t>	newIndices(vertexCountIn);
 
-			meshopt_remapVertexBuffer(new_vertices.data(), mesh.vertices.data(), vertex_count_in, sizeof(VertexData), remap.data());
-			meshopt_remapIndexBuffer(new_indices.data(), nullptr, vertex_count_in, remap.data());
+			meshopt_remapVertexBuffer(newVertices.data(), mesh.vertices.data(), vertexCountIn, sizeof(VertexData), remap.data());
+			meshopt_remapIndexBuffer(newIndices.data(), nullptr, vertexCountIn, remap.data());
 
-			meshopt_optimizeVertexCache(new_indices.data(), new_indices.data(), vertex_count_in, unique_vertex_count);
-			meshopt_optimizeOverdraw(new_indices.data(), new_indices.data(), vertex_count_in, &new_vertices[0].position.x(), unique_vertex_count, sizeof(VertexData), 1.05f);
-			meshopt_optimizeVertexFetch(new_vertices.data(), new_indices.data(), vertex_count_in, new_vertices.data(), unique_vertex_count, sizeof(VertexData));
+			meshopt_optimizeVertexCache(newIndices.data(), newIndices.data(), vertexCountIn, uniqueVertexCount);
+			meshopt_optimizeOverdraw(newIndices.data(), newIndices.data(), vertexCountIn, &newVertices[0].position.x(), uniqueVertexCount, sizeof(VertexData), 1.05f);
+			meshopt_optimizeVertexFetch(newVertices.data(), newIndices.data(), vertexCountIn, newVertices.data(), uniqueVertexCount, sizeof(VertexData));
 
-			mesh.vertices = new_vertices;
-			mesh.indices = new_indices;
-
-			for (auto& vert : mesh.vertices)
+			Vector3 meshMin(std::numeric_limits<float>::max());
+			Vector3 meshMax(std::numeric_limits<float>::lowest());
+			for (auto& vert : newVertices)
+			{
 				vert.position -= center;
-		}
+				meshMin = Vector3::Min(meshMin, vert.position);
+				meshMax = Vector3::Max(meshMax, vert.position);
+			}
 
-		for (auto& node : model.children)
-			node.transform = node.transform.Translate(center);
+			mesh.min = meshMin;
+			mesh.max = meshMax;
+			mesh.vertices = std::move(newVertices);
+			mesh.indices = std::move(newIndices);
+		}
 
 		return model;
 	};

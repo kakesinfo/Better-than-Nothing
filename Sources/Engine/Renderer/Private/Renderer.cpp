@@ -18,22 +18,20 @@
 
 #include "Renderer/Renderer.hpp"
 
+#include "Passes/EditorPass.hpp"
+#include "Passes/ForwardOpaquePass.hpp"
+#include "Passes/ForwardTransparentPass.hpp"
+
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
-#include <Data/Graphics/CameraData.hpp>
-#include <Data/Graphics/DirectionalLightData.hpp>
 #include <Data/Graphics/DynamicUniformData.hpp>
 #include <Data/Graphics/GlobalUniformData.hpp>
 #include <Data/Graphics/VertexData.hpp>
-#include <Editor/Editor.hpp>
-#include <RenderingApi.hpp>
-#include <RenderingApi/Core/PipelineLayout.hpp>
-#include <RenderingApi/Resources/Buffer.hpp>
-#include <RenderingApi/Resources/DescriptorSet.hpp>
-#include <RenderingApi/Resources/Pipeline.hpp>
+#include <Math/Frustum.hpp>
 #include <RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp>
 #include <RenderingDevice/DrawStream.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
+#include <RenderingDevice/Types.hpp>
 #include <RenderingDevice/VertexLayout.hpp>
 #include <ResourceManager/PipelineBlueprint.hpp>
 #include <ResourceManager/ResourceManager.hpp>
@@ -42,7 +40,7 @@
 #include <Scene/Scene.hpp>
 #include <Scene/SceneObject.hpp>
 #include <Scene/SceneObject_Components.hpp>
-#include <optional>
+#include <array>
 
 namespace BetterThanNothing
 {
@@ -51,169 +49,321 @@ namespace BetterThanNothing
 	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
 		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager), m_editor(editor)
 	{
-		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-		m_renderingDevice->CreateDescriptorSetLayout("Textures", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-		m_renderingDevice->CreateDescriptorSetLayout("PointLights", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+		// Set 0: Global per-frame uniforms (camera + directional light + counts)
+		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", DescriptorType::UniformBuffer, ShaderStageFlags::Vertex | ShaderStageFlags::Fragment);
+
+		// Set 1: Material textures (binding 0 = diffuse/albedo, binding 1 = normal map)
+		const std::array<DescriptorBindingDesc, 2> materialBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("Material", materialBindings);
+
+		// Set 2: Point lights SSBO
+		m_renderingDevice->CreateDescriptorSetLayout("PointLights", DescriptorType::StorageBuffer, ShaderStageFlags::Fragment);
 
 		m_renderingDevice->CreatePipelineLayout("Forward", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
-			blueprint->AddDescriptorSetLayout("Textures");
+			blueprint->AddDescriptorSetLayout("Material");
 			blueprint->AddDescriptorSetLayout("PointLights");
 			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
 		});
 
 		const VertexLayout vertexLayout = {VertexType::Float3, VertexType::Float3, VertexType::Float2, VertexType::Float3};
 
-		const auto vertShader = m_resourceManager->LoadShader("../../../Shaders/main/main.vert");
-		const auto fragShader = m_resourceManager->LoadShader("../../../Shaders/main/main.frag");
+		const auto vertShader = m_resourceManager->LoadShader("Shaders/main/main.vert");
+		const auto fragShader = m_resourceManager->LoadShader("Shaders/main/main.frag");
 
 		m_resourceManager->CreatePipeline("Forward::Opaque", [&](PipelineBlueprint* blueprint) {
-			blueprint->SetVertexLayout(vertexLayout);
-			blueprint->AddShader(vertShader);
-			blueprint->AddShader(fragShader);
-			blueprint->SetPipelineLayout("Forward");
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(vertShader)
+				->AddShader(fragShader)
+				->SetPipelineLayout("Forward")
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(true);
 		});
 
-		m_drawStream = std::make_unique<DrawStream>();
+		m_resourceManager->CreatePipeline("Forward::Transparent", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(vertShader)
+				->AddShader(fragShader)
+				->SetPipelineLayout("Forward")
+				->SetDepthTest(true)
+				->SetDepthWrite(false)
+				->SetBlendEnable(true)
+				->SetAlphaToCoverage(false);
+		});
+
+		m_opaqueDrawStream = std::make_unique<DrawStream>();
+		m_transparentDrawStream = std::make_unique<DrawStream>();
 
 		CreateGlobalUniformBuffers();
 		CreateGlobalUniformDescriptorSets();
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
+		EnsureRenderTargets();
 
-		Logger::Log<SUCCESS>("Renderer: initialized successfully");
+		AddPass(std::make_unique<ForwardOpaquePass>());
+		AddPass(std::make_unique<ForwardTransparentPass>());
+#ifndef NDEBUG
+		if (m_editor)
+			AddPass(std::make_unique<EditorPass>());
+#endif
+
+		Logger::Log<SUCCESS>("Renderer: initialized successfully ({} passes)", m_passes.size());
 	}
 
 	Renderer::~Renderer()
 	{
-		if (m_renderingDevice)
-			m_renderingDevice->GetDevice()->WaitIdle();
+		if (!m_renderingDevice)
+			return;
+
+		m_renderingDevice->WaitIdle();
+
+		DestroyRenderTargets();
+
+		for (const Handle& handle : m_globalDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (const Handle& handle : m_globalUniformBuffer)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyBuffer(handle);
+		}
+		for (const Handle& handle : m_pointLightDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (const Handle& handle : m_pointLightBuffer)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyBuffer(handle);
+		}
 	}
 
-	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* debugUI)
+	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
 	{
-		return std::make_unique<Renderer>(renderingDevice, resourceManager, debugUI);
+		return std::make_unique<Renderer>(renderingDevice, resourceManager, editor);
 	}
 
-	void Renderer::RenderFrame(Scene* scene) const
+	void Renderer::AddPass(std::unique_ptr<IRenderPass> pass)
 	{
+		m_passes.push_back(std::move(pass));
+	}
+
+	void Renderer::EnsureRenderTargets()
+	{
+		const uint64_t currentGen = m_renderingDevice->GetSwapChainGeneration();
+		if (currentGen == m_lastSwapChainGeneration && m_depthTarget.IsValid())
+			return;
+
+		DestroyRenderTargets();
+
+		const auto [width, height] = m_renderingDevice->GetSwapChainExtent();
+		if (width == 0 || height == 0)
+			return;
+
+		const bool useMsaa = m_renderingDevice->IsMsaaEnabled();
+		if (useMsaa)
+			m_colorTarget = m_renderingDevice->CreateColorAttachment(width, height, true);
+
+		m_depthTarget = m_renderingDevice->CreateDepthAttachment(width, height, useMsaa);
+		m_lastSwapChainGeneration = currentGen;
+	}
+
+	void Renderer::DestroyRenderTargets()
+	{
+		if (m_colorTarget.IsValid())
+		{
+			m_renderingDevice->DestroyTexture(m_colorTarget);
+			m_colorTarget = {};
+		}
+		if (m_depthTarget.IsValid())
+		{
+			m_renderingDevice->DestroyTexture(m_depthTarget);
+			m_depthTarget = {};
+		}
+	}
+
+	void Renderer::RenderFrame(Scene* scene)
+	{
+		if (!scene || !scene->HasCamera())
+			return;
+
 		const auto imageIndexOpt = m_renderingDevice->BeginFrame();
 		if (!imageIndexOpt)
 			return;
 
-		const uint32_t imageIndex = imageIndexOpt.value();
+		EnsureRenderTargets();
 
-		RecordCommandBuffer(scene, imageIndex);
+		const uint32_t imageIndex = imageIndexOpt.value();
+		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
+		const auto [viewportWidth, viewportHeight] = m_renderingDevice->GetSwapChainExtent();
+
+		BuildDrawStreams(scene, frameIndex);
+
+		RenderPassContext ctx{};
+		ctx.renderingDevice = m_renderingDevice;
+		ctx.resourceManager = m_resourceManager;
+		ctx.editor = m_editor;
+		ctx.scene = scene;
+		ctx.frameIndex = frameIndex;
+		ctx.swapChainImageIndex = imageIndex;
+		ctx.viewportWidth = viewportWidth;
+		ctx.viewportHeight = viewportHeight;
+		ctx.useMsaa = m_renderingDevice->IsMsaaEnabled();
+		ctx.colorTarget = m_colorTarget;
+		ctx.depthTarget = m_depthTarget;
+		ctx.opaqueStream = m_opaqueDrawStream.get();
+		ctx.transparentStream = m_transparentDrawStream.get();
+
+		for (const auto& pass : m_passes)
+			pass->Execute(ctx);
 
 		m_renderingDevice->EndFrame(imageIndex);
 	}
 
-	struct RenderObject
+	void Renderer::BuildDrawStreams(Scene* scene, const uint32_t frameIndex)
 	{
-		ResourceId meshId;
-		ResourceId textureId;
-		Matrix4	   localMatrix;
-	};
+		const float	  aspectRatio = m_renderingDevice->GetAspectRatio();
+		const Camera* camera = scene->GetCamera();
 
-	static std::vector<RenderObject> FlattenScene(const Scene* scene)
-	{
-		const auto modelView = scene->GetView<TransformComponent, ModelComponent>();
-
-		std::vector<RenderObject> objects;
-		for (auto [entity, transform, model] : modelView.each())
+		Vector3 dirLightDirection = Vector3(0.0f, -1.0f, 0.0f);
+		Vector3 dirLightColor = Vector3::One;
+		float	dirLightIntensity = 0.0f;
+		if (const auto dirLightView = scene->GetView<DirectionalLightComponent>(); dirLightView.begin() != dirLightView.end())
 		{
-			for (const auto& sceneObj : model.children)
-			{
-				if (!sceneObj.HasComponent<MeshComponent>())
-					continue;
-
-				const auto& meshComp = sceneObj.GetComponent<MeshComponent>();
-
-				objects.emplace_back(RenderObject{.meshId = meshComp.meshId, .textureId = meshComp.textureId, .localMatrix = transform.localTransform});
-			}
+			const auto& dirLight = dirLightView.get<DirectionalLightComponent>(*dirLightView.begin());
+			dirLightDirection = dirLight.direction;
+			dirLightColor = dirLight.color;
+			dirLightIntensity = dirLight.intensity;
 		}
 
-		return objects;
-	}
+		const uint32_t pointLightCount = UploadPointLights(scene, frameIndex);
 
-	void Renderer::RecordCommandBuffer(Scene* scene, const uint32_t imageIndex) const
-	{
-		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
-		const float	   aspectRatio = m_renderingDevice->GetAspectRatio();
-
-		const auto& directionalLight = scene->GetDirectionalLight();
-		const auto& camera = scene->GetCamera();
+		const Matrix4& viewMatrix = camera->GetViewMatrix();
+		const Matrix4  projMatrix = camera->GetProjectionMatrix(aspectRatio);
+		const Frustum  frustum = Frustum::FromViewProjection(projMatrix * viewMatrix);
 
 		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
-		globalUniform->view = camera->GetViewMatrix();
-		globalUniform->projection = camera->GetProjectionMatrix(aspectRatio);
+		globalUniform->view = viewMatrix;
+		globalUniform->projection = projMatrix;
 		globalUniform->cameraPosition = camera->GetPosition();
-		globalUniform->cameraExposure = 0.5f;
-		globalUniform->lightDirection = directionalLight.revDirection;
-		globalUniform->lightColor = directionalLight.color;
-		globalUniform->lightIntensity = directionalLight.intensity;
-		globalUniform->pointLightCount = scene->GetPointLightCount();
-
-		DrawPointLights(scene, frameIndex);
+		globalUniform->cameraExposure = camera->GetExposure();
+		globalUniform->lightDirection = dirLightDirection;
+		globalUniform->lightColor = dirLightColor;
+		globalUniform->lightIntensity = dirLightIntensity;
+		globalUniform->pointLightCount = pointLightCount;
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
-		const auto flattenedScene = FlattenScene(scene);
+		const auto meshView = scene->GetView<TransformComponent, MeshComponent>();
+		const auto estimatedCount = static_cast<uint32_t>(meshView.size_hint());
+		m_opaqueDrawStream->Reset(estimatedCount);
+		m_transparentDrawStream->Reset(estimatedCount / 4);
 
-		m_drawStream->Reset(flattenedScene.size());
+		const Handle  globalSetHandle = m_globalDescriptorSets[frameIndex];
+		const Handle  pointLightSetHandle = m_pointLightDescriptorSets[frameIndex];
+		const Vector3 cameraPos = camera->GetPosition();
 
-		const auto defaultPipeline = m_resourceManager->GetPipelineData("Forward::Opaque");
-
-		for (const auto& [meshId, textureId, localMatrix] : flattenedScene)
+		for (auto [entity, transform, meshComp] : meshView.each())
 		{
-			if (!meshId || !textureId)
+			if (meshComp.meshId == InvalidResourceId)
 				continue;
 
-			const auto meshData = m_resourceManager->GetMeshData(meshId);
-			const auto textureData = m_resourceManager->GetTextureData(textureId);
-
-			if (!meshData || !textureData)
+			const MeshResourceCache* meshData = m_resourceManager->GetMeshData(meshComp.meshId);
+			if (!meshData)
 				continue;
 
-			const float distance =
-				Vector3::Distance2(camera->GetPosition(), Vector3(localMatrix.Value()[3][0], localMatrix.Value()[3][1], localMatrix.Value()[3][2]));
+			// Frustum culling against mesh world-space AABB
+			if (!frustum.IntersectsLocalAABB(meshData->boundsMin, meshData->boundsMax, transform.worldMatrix))
+			{
+				Metrics::AddCulledDrawCall();
+				continue;
+			}
 
-			// clang-format off
-			m_drawStream->Draw({
-				.pipeline = m_renderingDevice->GetPipeline(defaultPipeline->pipeline)->pipeline,
-				.pipelineLayout = m_renderingDevice->GetPipelineLayout("Forward")->Handle(),
-				.vertexBuffer = meshData->vertexBuffer,
-				.indexBuffer = meshData->indexBuffer,
-				.indexCount = meshData->indexCount,
-				.globalDescriptorSet = m_renderingDevice->GetDescriptorSet(m_globalDescriptorSets[frameIndex])->value,
-				.samplerDescriptorSet = textureData->descriptorSetHandle,
-				.pointLightDescriptorSet = m_renderingDevice->GetDescriptorSet(m_pointLightDescriptorSets[frameIndex])->value,
-				.transform = localMatrix,
-				.distanceToCamera = distance
-			});
-			// clang-format on
+			// Resolve Material (lazy fallback to default material if entity only set textureId)
+			ResourceId materialId = meshComp.materialId;
+			if (materialId == InvalidResourceId)
+			{
+				MaterialCreateInfo fallbackMat{};
+				fallbackMat.diffuseTextureId = meshComp.textureId;
+				materialId = m_resourceManager->CreateMaterial(fallbackMat);
+				meshComp.materialId = materialId;
+			}
+
+			const MaterialResourceCache* material = m_resourceManager->GetMaterialData(materialId);
+			const PipelineResourceCache* pipeline = m_resourceManager->GetPipelineData(material->pipelineName);
+
+			const float distance = Vector3::Distance2(cameraPos, transform.GetWorldPosition());
+			const bool	isTransparent = (material->alphaMode == EAlphaMode::Blend);
+
+			DrawPacket packet{};
+			packet.pipeline = pipeline->pipeline;
+			packet.pipelineLayoutName = pipeline->layoutName;
+			packet.vertexBuffer = meshData->vertexBuffer;
+			packet.indexBuffer = meshData->indexBuffer;
+			packet.indexCount = meshData->indexCount;
+			packet.descriptorSets[0] = globalSetHandle;
+			packet.descriptorSets[1] = material->descriptorSetHandle;
+			packet.descriptorSets[2] = pointLightSetHandle;
+			packet.descriptorSetCount = 3;
+			packet.SetPushConstant(DynamicUniformData{transform.worldMatrix}, ShaderStageFlags::Vertex);
+			packet.distanceToCamera = distance;
+			packet.sortBackToFront = isTransparent;
+
+			if (isTransparent)
+				m_transparentDrawStream->Draw(packet);
+			else
+				m_opaqueDrawStream->Draw(packet);
 
 			Metrics::AddDrawCall(meshData->vertexCount);
 		}
-
-		const auto drawStream = m_drawStream->Build();
-
-		ExecuteForwardPass(imageIndex, drawStream);
-		ExecuteEditorPass(scene, imageIndex);
 	}
 
-	void Renderer::DrawPointLights(const Scene* scene, const uint32_t frameIndex) const
+	uint32_t Renderer::UploadPointLights(const Scene* scene, const uint32_t frameIndex) const
 	{
-		const uint32_t count = scene->GetPointLightCount();
+		m_pointLightsScratch.clear();
 
-		if (count == 0)
-			return;
+		const auto lightView = scene->GetView<TransformComponent, PointLightComponent>();
+		for (auto [entity, transform, light] : lightView.each())
+		{
+			if (m_pointLightsScratch.size() >= MAX_LIGHT_COUNT)
+			{
+				if (!m_warnedLightLimit)
+				{
+					Logger::Log<WARNING>("Point light count exceeds MAX_LIGHT_COUNT ({}); extra lights will be ignored", MAX_LIGHT_COUNT);
+					m_warnedLightLimit = true;
+				}
+				break;
+			}
 
-		const auto handle = m_pointLightBuffer.at(frameIndex);
-		m_renderingDevice->CopyDataToBuffer(handle, scene->GetPointLights().data(), count * sizeof(PointLightData));
+			PointLightData data{};
+			data.position = transform.GetWorldPosition();
+			data.color = light.color;
+			data.constant = light.constant;
+			data.linear = light.linear;
+			data.quadratic = light.quadratic;
+			data.intensity = light.intensity;
+			m_pointLightsScratch.push_back(data);
+		}
+
+		const auto count = static_cast<uint32_t>(m_pointLightsScratch.size());
+		if (count > 0)
+		{
+			const auto handle = m_pointLightBuffer.at(frameIndex);
+			m_renderingDevice->CopyDataToBuffer(handle, m_pointLightsScratch.data(), count * sizeof(PointLightData));
+		}
+
+		return count;
 	}
 
-	auto Renderer::CreateGlobalUniformBuffers() -> void
+	void Renderer::CreateGlobalUniformBuffers()
 	{
 		const uint32_t frameCount = m_renderingDevice->GetMaxFramesInFlight();
 
@@ -261,8 +411,7 @@ namespace BetterThanNothing
 		const auto frameCount = m_renderingDevice->GetMaxFramesInFlight();
 
 		m_pointLightDescriptorSets.resize(frameCount);
-
-		for (size_t i = 0; i < m_renderingDevice->GetMaxFramesInFlight(); i++)
+		for (size_t i = 0; i < frameCount; i++)
 		{
 			const auto	   handle = m_pointLightBuffer.at(i);
 			constexpr auto size = MAX_LIGHT_COUNT * sizeof(PointLightData);
@@ -271,210 +420,5 @@ namespace BetterThanNothing
 		}
 
 		Logger::Log<SUCCESS>("Point light descriptor sets: ok (count: {})", m_pointLightDescriptorSets.size());
-	}
-
-	void Renderer::ExecuteForwardPass(const uint32_t imageIndex, const DrawStreamView& drawStream) const
-	{
-		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
-
-		{
-			std::array<VkImageMemoryBarrier, 3> barriers{};
-
-			barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barriers[0].srcAccessMask = 0;
-			barriers[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barriers[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barriers[0].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[0].image = m_renderingDevice->GetSwapChain()->GetImage(imageIndex);
-			barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barriers[0].subresourceRange.baseMipLevel = 0;
-			barriers[0].subresourceRange.levelCount = 1;
-			barriers[0].subresourceRange.baseArrayLayer = 0;
-			barriers[0].subresourceRange.layerCount = 1;
-
-			barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barriers[1].srcAccessMask = 0;
-			barriers[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-			barriers[1].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barriers[1].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[1].image = m_renderingDevice->GetSwapChain()->GetColorImage();
-			barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barriers[1].subresourceRange.baseMipLevel = 0;
-			barriers[1].subresourceRange.levelCount = 1;
-			barriers[1].subresourceRange.baseArrayLayer = 0;
-			barriers[1].subresourceRange.layerCount = 1;
-
-			barriers[2].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barriers[2].srcAccessMask = 0;
-			barriers[2].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			barriers[2].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barriers[2].newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barriers[2].image = m_renderingDevice->GetSwapChain()->GetDepthImage();
-			barriers[2].subresourceRange.aspectMask = m_renderingDevice->GetSwapChain()->GetDepthAspectFlags();
-			barriers[2].subresourceRange.baseMipLevel = 0;
-			barriers[2].subresourceRange.levelCount = 1;
-			barriers[2].subresourceRange.baseArrayLayer = 0;
-			barriers[2].subresourceRange.layerCount = 1;
-
-			commandBuffer->PipelineBarrier(
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr,
-				barriers.size(), barriers.data()
-			);
-		}
-
-		VkRenderingAttachmentInfo colorAttachment{};
-		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = m_renderingDevice->GetSwapChain()->GetColorImageView();
-		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-		colorAttachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorAttachment.resolveImageView = m_renderingDevice->GetSwapChain()->GetImageView(imageIndex);
-		colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkRenderingAttachmentInfo depthAttachment{};
-		depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		depthAttachment.imageView = m_renderingDevice->GetSwapChain()->GetDepthImageView();
-		depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-		depthAttachment.clearValue.depthStencil = {1.0f, 0};
-
-		VkRenderingInfo renderingInfo{};
-		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.renderArea = {{0, 0}, m_renderingDevice->GetSwapChain()->GetExtent()};
-		renderingInfo.layerCount = 1;
-		renderingInfo.colorAttachmentCount = 1;
-		renderingInfo.pColorAttachments = &colorAttachment;
-		renderingInfo.pDepthAttachment = &depthAttachment;
-
-		commandBuffer->ExecuteRenderPass(
-			[&](RenderingApi::CommandBuffer* cmd) {
-				cmd->SetViewport(0, 0, m_renderingDevice->GetSwapChain()->GetExtent(), 0, 1);
-				cmd->SetScissor(0, 0, m_renderingDevice->GetSwapChain()->GetExtent());
-
-				VkPipeline lastPipeline = VK_NULL_HANDLE;
-				Handle	   lastSamplerHandle = {};
-
-				bool boundGlobalDescriptor = false;
-				bool boundPointLightDescriptor = false;
-
-				for (const DrawPacket& drawPacket : drawStream)
-				{
-					if (lastPipeline != drawPacket.pipeline)
-					{
-						commandBuffer->BindPipeline(drawPacket.pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
-						lastPipeline = drawPacket.pipeline;
-					}
-
-					if (!boundGlobalDescriptor)
-					{
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 0, 1, &drawPacket.globalDescriptorSet, 0, nullptr);
-						boundGlobalDescriptor = true;
-					}
-
-					if (!boundPointLightDescriptor)
-					{
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 2, 1, &drawPacket.pointLightDescriptorSet, 0, nullptr);
-						boundPointLightDescriptor = true;
-					}
-
-					if (lastSamplerHandle != drawPacket.samplerDescriptorSet)
-					{
-						const auto samplerDescriptorSet = m_renderingDevice->GetDescriptorSet(drawPacket.samplerDescriptorSet);
-						commandBuffer->BindDescriptorSets(drawPacket.pipelineLayout, 1, 1, &samplerDescriptorSet->value, 0, nullptr);
-						lastSamplerHandle = drawPacket.samplerDescriptorSet;
-					}
-
-					const DynamicUniformData dynamicUniforms = {drawPacket.transform};
-					commandBuffer->PushConstants(drawPacket.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DynamicUniformData), &dynamicUniforms);
-
-					const auto vertexBuffer = m_renderingDevice->GetBuffer(drawPacket.vertexBuffer);
-					const auto indexBuffer = m_renderingDevice->GetBuffer(drawPacket.indexBuffer);
-
-					const VkBuffer		   vertexBuffers[] = {vertexBuffer->value};
-					constexpr VkDeviceSize offsets[] = {0};
-					commandBuffer->BindVertexBuffers(0, 1, vertexBuffers, offsets);
-					commandBuffer->BindIndexBuffer(indexBuffer->value, 0, VK_INDEX_TYPE_UINT32);
-
-					commandBuffer->DrawIndexed(drawPacket.indexCount, 1, 0, 0, 0);
-				}
-			},
-			renderingInfo
-		);
-	}
-
-	void Renderer::ExecuteEditorPass(Scene* scene, uint32_t imageIndex) const
-	{
-		const auto commandBuffer = m_renderingDevice->GetCurrentCommandBuffer();
-		const auto swapChain = m_renderingDevice->GetSwapChain();
-
-#ifndef NDEBUG
-		m_editor->RenderPanels(scene);
-#endif
-
-		{
-			VkImageMemoryBarrier barrier{};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.image = swapChain->GetImage(imageIndex);
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = 1;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 1;
-
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-		}
-
-#ifndef NDEBUG
-		VkRenderingAttachmentInfo colorAttachment = {};
-		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = swapChain->GetImageView(imageIndex);
-		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-		VkRenderingInfo renderingInfo = {};
-		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.renderArea = {{0, 0}, swapChain->GetExtent()};
-		renderingInfo.layerCount = 1;
-		renderingInfo.colorAttachmentCount = 1;
-		renderingInfo.pColorAttachments = &colorAttachment;
-
-		commandBuffer->ExecuteRenderPass([&](const RenderingApi::CommandBuffer* cmd) { m_editor->RenderDrawData(cmd); }, renderingInfo);
-#endif
-
-		{
-			VkImageMemoryBarrier presentationBarrier{};
-			presentationBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			presentationBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			presentationBarrier.dstAccessMask = 0;
-			presentationBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			presentationBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			presentationBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			presentationBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			presentationBarrier.image = swapChain->GetImage(imageIndex);
-			presentationBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			presentationBarrier.subresourceRange.baseMipLevel = 0;
-			presentationBarrier.subresourceRange.levelCount = 1;
-			presentationBarrier.subresourceRange.baseArrayLayer = 0;
-			presentationBarrier.subresourceRange.layerCount = 1;
-
-			commandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentationBarrier);
-		}
 	}
 }

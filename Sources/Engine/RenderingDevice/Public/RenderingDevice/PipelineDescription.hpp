@@ -17,7 +17,10 @@
  */
 
 #pragma once
+#include "Types.hpp"
 #include "VertexLayout.hpp"
+#include <string>
+#include <vector>
 
 namespace BetterThanNothing
 {
@@ -28,5 +31,14 @@ namespace BetterThanNothing
 		std::vector<Handle> shaders;
 		std::string			layoutName;
 		VertexLayout		vertexLayout;
+		TextureFormat		colorFormat = TextureFormat::Undefined;
+		TextureFormat		depthFormat = TextureFormat::Undefined;
+		bool				useMsaa = true;
+		bool				wireframe = false;
+		bool				depthTest = true;
+		bool				depthWrite = true;
+		bool				blendEnable = true;
+		bool				alphaToCoverage = true;
+		CullMode			cullMode = CullMode::Back;
 	};
 }

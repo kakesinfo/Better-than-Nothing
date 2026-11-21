@@ -42,8 +42,9 @@ namespace BetterThanNothing
 
 		[[nodiscard]] uint32_t GetId() const { return m_id; }
 		[[nodiscard]] uint32_t GetGeneration() const { return m_generation; }
-		[[nodiscard]] uint8_t GetType() const { return m_type; }
-		[[nodiscard]] bool	   IsValid() const { return m_id != 0 && m_generation != 0 && m_type != 0; }
+		[[nodiscard]] uint8_t  GetType() const { return m_type; }
+		[[nodiscard]] bool	   IsValid() const { return m_generation != 0 && m_type != 0; }
+		explicit			   operator bool() const { return IsValid(); }
 
 		bool operator==(const Handle& other) const
 		{
@@ -52,17 +53,21 @@ namespace BetterThanNothing
 
 		bool operator!=(const Handle& other) const
 		{
-			return m_id != other.GetId() || m_generation != other.GetGeneration() || m_type != other.GetType();
+			return !(*this == other);
 		}
 
 		bool operator<(const Handle& other) const
 		{
-			return m_id < other.GetId() || (m_id == other.GetId() && m_generation < other.GetGeneration());
+			if (m_type != other.m_type)
+				return m_type < other.m_type;
+			if (m_id != other.m_id)
+				return m_id < other.m_id;
+			return m_generation < other.m_generation;
 		}
 
 		bool operator>(const Handle& other) const
 		{
-			return m_id > other.GetId() || (m_id == other.GetId() && m_generation > other.GetGeneration());
+			return other < *this;
 		}
 
 	private:

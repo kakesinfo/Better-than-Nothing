@@ -60,7 +60,8 @@ namespace BetterThanNothing::RenderingApi
 
 	void Allocator::DestroyBuffer(VkBuffer buffer, VmaAllocation allocation) const
 	{
-		vmaDestroyBuffer(m_allocator, buffer, allocation);
+		if (buffer != VK_NULL_HANDLE || allocation != VK_NULL_HANDLE)
+			vmaDestroyBuffer(m_allocator, buffer, allocation);
 	}
 
 	VkResult Allocator::CreateImage(const VkImageCreateInfo* imageCreateInfo, const VmaAllocationCreateInfo* allocCreateInfo, VkImage* image, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const
@@ -70,7 +71,8 @@ namespace BetterThanNothing::RenderingApi
 
 	void Allocator::DestroyImage(VkImage image, VmaAllocation allocation) const
 	{
-		vmaDestroyImage(m_allocator, image, allocation);
+		if (image != VK_NULL_HANDLE || allocation != VK_NULL_HANDLE)
+			vmaDestroyImage(m_allocator, image, allocation);
 	}
 
 	VkResult Allocator::MapMemory(VmaAllocation allocation, void** data) const

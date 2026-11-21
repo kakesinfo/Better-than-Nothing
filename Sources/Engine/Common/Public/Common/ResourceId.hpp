@@ -23,4 +23,5 @@
 namespace BetterThanNothing
 {
 	using ResourceId = uint64_t;
+	inline constexpr ResourceId InvalidResourceId = 0;
 }

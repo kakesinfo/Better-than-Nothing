@@ -33,7 +33,12 @@ namespace BetterThanNothing
 	{
 	public:
 		explicit Engine(IEngineApplication* application);
-		~Engine() = default;
+		~Engine();
+
+		Engine(const Engine&) = delete;
+		Engine& operator=(const Engine&) = delete;
+		Engine(Engine&&) = delete;
+		Engine& operator=(Engine&&) = delete;
 
 		void Run() const;
 

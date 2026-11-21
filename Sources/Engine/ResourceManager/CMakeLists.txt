@@ -21,24 +21,17 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE Private
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ../../../ThirdParty/tinyobjloader)
-
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Engine::Common
         Engine::Data
-        Engine::Math
         Engine::RenderingApi
         Engine::RenderingDevice
         Engine::ResourceImporter
-        meshoptimizer
     PUBLIC
-        glslang
-        glslang-default-resource-limits
-        SPIRV
-        spirv_cross
+        Engine::Math
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

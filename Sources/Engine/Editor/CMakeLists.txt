@@ -22,13 +22,14 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-        PRIVATE
+        PUBLIC
             Engine::Common
+            Engine::Scene
+        PRIVATE
             Engine::Math
             Engine::Platform
             Engine::RenderingApi
             Engine::RenderingDevice
-            Engine::Scene
             imgui
             Vulkan::Headers
 )

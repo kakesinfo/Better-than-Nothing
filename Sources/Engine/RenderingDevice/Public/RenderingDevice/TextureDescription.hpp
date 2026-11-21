@@ -20,22 +20,36 @@
 
 #include "Types.hpp"
 #include "Handle.hpp"
+#include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {
 	struct TextureFromDataDescription
 	{
-		void*	 data = nullptr;
-		size_t	 dataSize = 0;
-		uint32_t width = 1;
-		uint32_t height = 1;
-		uint32_t channels = 4;
+		const void*	  data = nullptr;
+		size_t		  dataSize = 0;
+		uint32_t	  width = 1;
+		uint32_t	  height = 1;
+		uint32_t	  channels = 4;
+		TextureFormat format = TextureFormat::R8G8B8A8_UNORM;
+		bool		  generateMipmaps = true;
+	};
+
+	struct TextureCreateInfo
+	{
+		uint32_t		  width = 1;
+		uint32_t		  height = 1;
+		TextureFormat	  format = TextureFormat::R8G8B8A8_UNORM;
+		TextureUsageFlags usage = TextureUsageFlags::Sampled;
+		bool			  useMsaa = false;
+		bool			  dedicated = false;
+		uint8_t			  mipLevels = 1;
 	};
 
 	struct CopyDataToTextureImageDescription
 	{
-		Handle destination;
-		void*		  data{};
+		Handle		  destination;
+		const void*	  data{};
 		std::uint32_t dataSize{};
 		VkFormat	  format{};
 		VkImageLayout oldLayout{};

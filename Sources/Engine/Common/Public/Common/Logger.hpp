@@ -48,6 +48,8 @@ namespace BetterThanNothing
 		template <uint8_t Level, typename... Args>
 		static void Log(const LogFormat arg, Args&&... args)
 		{
+			if (Level < s_currentLogLevel)
+				return;
 			Print(Level, arg.location, std::vformat(arg.format, std::make_format_args(args...)));
 		}
 

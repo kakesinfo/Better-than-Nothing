@@ -25,6 +25,6 @@ namespace BetterThanNothing
 	class MeshFactory
 	{
 	public:
-		static MeshData CreatePlane(float size = 1.0f);
+		static MeshData CreatePlane(float size = 1.0f, uint32_t subdivisions = 1);
 	};
 }

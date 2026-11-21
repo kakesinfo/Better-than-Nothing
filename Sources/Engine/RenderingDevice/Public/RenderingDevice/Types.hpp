@@ -22,11 +22,71 @@
 
 namespace BetterThanNothing
 {
-	enum class DescriptorSetLayoutType : uint8_t
+	enum class DescriptorType : uint8_t
 	{
-		GlobalUniforms = 0,
-		Textures = 1,
-		PointLights = 2
+		UniformBuffer,
+		StorageBuffer,
+		CombinedImageSampler,
+		StorageImage
+	};
+
+	enum class ShaderStageFlags : uint32_t
+	{
+		None = 0,
+		Vertex = 1u << 0,
+		Geometry = 1u << 3,
+		Fragment = 1u << 4,
+		Compute = 1u << 5,
+		AllGraphics = Vertex | Geometry | Fragment
+	};
+
+	inline ShaderStageFlags operator|(ShaderStageFlags a, ShaderStageFlags b)
+	{
+		return static_cast<ShaderStageFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline bool operator&(ShaderStageFlags a, ShaderStageFlags b)
+	{
+		return (static_cast<uint32_t>(a) & static_cast<uint32_t>(b)) != 0;
+	}
+
+	struct DescriptorBindingDesc
+	{
+		uint32_t		 binding = 0;
+		DescriptorType	 type = DescriptorType::UniformBuffer;
+		uint32_t		 count = 1;
+		ShaderStageFlags stages = ShaderStageFlags::AllGraphics;
+	};
+
+	enum class CullMode : uint8_t
+	{
+		None,
+		Front,
+		Back
+	};
+
+	enum class LoadOp : uint8_t
+	{
+		Load,
+		Clear,
+		DontCare
+	};
+
+	enum class StoreOp : uint8_t
+	{
+		Store,
+		DontCare
+	};
+
+	enum class ImageLayout : uint8_t
+	{
+		Undefined,
+		ColorAttachment,
+		DepthStencilAttachment,
+		ShaderReadOnly,
+		TransferSrc,
+		TransferDst,
+		Present
 	};
 
 	enum class TextureFormat : uint8_t
@@ -34,6 +94,8 @@ namespace BetterThanNothing
 		Undefined = 0,
 		R8G8B8A8_UNORM = 37,
 		R8G8B8A8_SRGB = 43,
+		B8G8R8A8_UNORM = 44,
+		R16G16B16A16_SFLOAT = 97,
 		D32_SFLOAT = 126,
 		D24_UNORM_S8_UINT = 129,
 		D32_SFLOAT_S8_UINT = 130,
@@ -45,12 +107,20 @@ namespace BetterThanNothing
 		TransferSrc = 1 << 0,
 		TransferDst = 1 << 1,
 		Sampled = 1 << 2,
-		Storage = 1 << 3
+		Storage = 1 << 3,
+		ColorAttachment = 1 << 4,
+		DepthStencilAttachment = 1 << 5,
+		TransientAttachment = 1 << 6
 	};
 
 	inline TextureUsageFlags operator|(TextureUsageFlags a, TextureUsageFlags b)
 	{
 		return static_cast<TextureUsageFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline bool operator&(TextureUsageFlags a, TextureUsageFlags b)
+	{
+		return (static_cast<uint32_t>(a) & static_cast<uint32_t>(b)) != 0;
 	}
 
 	enum class SamplerFilter : uint8_t

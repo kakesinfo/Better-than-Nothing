@@ -22,8 +22,3 @@
 
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
-
-#include <glslang/Include/glslang_c_interface.h>
-#include <glslang/Include/glslang_c_shader_types.h>
-#include <glslang/Public/resource_limits_c.h>
-#include <spirv_cross/spirv_cross.hpp>

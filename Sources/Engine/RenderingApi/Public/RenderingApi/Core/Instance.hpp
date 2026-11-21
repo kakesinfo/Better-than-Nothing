@@ -51,7 +51,7 @@ namespace BetterThanNothing::RenderingApi
 
 		static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT* createInfo) noexcept;
 		void		CreateDebugMessenger();
-		void		DestroyDebugMessenger() const;
+		void		DestroyDebugMessenger() const noexcept;
 
 		[[nodiscard]] static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* debugMessenger) noexcept;
 		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* allocator) noexcept;

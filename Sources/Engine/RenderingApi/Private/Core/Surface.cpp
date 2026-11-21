@@ -31,7 +31,8 @@ namespace BetterThanNothing::RenderingApi
 
 	Surface::~Surface()
 	{
-		vkDestroySurfaceKHR(m_createInfo.instance->Handle(), m_surface, nullptr);
+		if (m_surface != VK_NULL_HANDLE)
+			vkDestroySurfaceKHR(m_createInfo.instance->Handle(), m_surface, nullptr);
 	}
 
 	std::unique_ptr<Surface> Surface::Create(const SurfaceCreateInfo& createInfo)

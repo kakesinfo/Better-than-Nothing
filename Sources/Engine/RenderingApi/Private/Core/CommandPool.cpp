@@ -37,7 +37,8 @@ namespace BetterThanNothing::RenderingApi
 
 	CommandPool::~CommandPool()
 	{
-		vkDestroyCommandPool(m_createInfo.device->Handle(), m_commandPool, nullptr);
+		if (m_commandPool != VK_NULL_HANDLE)
+			vkDestroyCommandPool(m_createInfo.device->Handle(), m_commandPool, nullptr);
 	}
 
 	std::unique_ptr<CommandPool> CommandPool::Create(const CommandPoolCreateInfo& createInfo)

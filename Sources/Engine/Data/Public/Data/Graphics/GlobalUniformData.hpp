@@ -20,6 +20,8 @@
 
 #include "Math/Matrix4.hpp"
 #include "Math/Vector3.hpp"
+#include <cstddef>
+#include <cstdint>
 
 namespace BetterThanNothing
 {
@@ -30,10 +32,20 @@ namespace BetterThanNothing
 
 		alignas(16) Vector3 lightDirection;
 		alignas(16) Vector3 lightColor;
-		float lightIntensity;
+		float lightIntensity = 0.0f;
 
 		alignas(16) Vector3 cameraPosition;
-		float cameraExposure;
-		uint32_t pointLightCount;
+		float cameraExposure = 1.0f;
+		uint32_t pointLightCount = 0;
 	};
+
+	static_assert(offsetof(GlobalUniformData, projection) == 0);
+	static_assert(offsetof(GlobalUniformData, view) == 64);
+	static_assert(offsetof(GlobalUniformData, lightDirection) == 128);
+	static_assert(offsetof(GlobalUniformData, lightColor) == 144);
+	static_assert(offsetof(GlobalUniformData, lightIntensity) == 156);
+	static_assert(offsetof(GlobalUniformData, cameraPosition) == 160);
+	static_assert(offsetof(GlobalUniformData, cameraExposure) == 172);
+	static_assert(offsetof(GlobalUniformData, pointLightCount) == 176);
+	static_assert(sizeof(GlobalUniformData) == 192);
 }

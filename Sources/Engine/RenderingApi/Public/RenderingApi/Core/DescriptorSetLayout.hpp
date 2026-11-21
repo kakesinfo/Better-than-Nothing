@@ -19,6 +19,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace BetterThanNothing::RenderingApi
@@ -27,17 +28,23 @@ namespace BetterThanNothing::RenderingApi
 
 	struct DescriptorSetLayoutCreateInfo
 	{
-		Device*			   device;
-		VkDescriptorType   descriptorType;
-		uint32_t		   descriptorCount;
-		VkShaderStageFlags stageFlags;
+		Device*									  device = nullptr;
+		VkDescriptorType						  descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uint32_t								  descriptorCount = 1;
+		VkShaderStageFlags						  stageFlags = 0;
+		std::vector<VkDescriptorSetLayoutBinding> bindings;
 	};
 
 	class DescriptorSetLayout
 	{
 	public:
-		DescriptorSetLayout(const DescriptorSetLayoutCreateInfo& createInfo);
+		explicit DescriptorSetLayout(const DescriptorSetLayoutCreateInfo& createInfo);
 		~DescriptorSetLayout();
+
+		DescriptorSetLayout(const DescriptorSetLayout&) = delete;
+		DescriptorSetLayout& operator=(const DescriptorSetLayout&) = delete;
+		DescriptorSetLayout(DescriptorSetLayout&&) = delete;
+		DescriptorSetLayout& operator=(DescriptorSetLayout&&) = delete;
 
 		[[nodiscard]] static std::unique_ptr<DescriptorSetLayout> Create(const DescriptorSetLayoutCreateInfo& createInfo);
 		[[nodiscard]] VkDescriptorSetLayout						  Handle() const;

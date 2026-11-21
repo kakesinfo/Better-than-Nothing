@@ -41,9 +41,9 @@ namespace BetterThanNothing
 
 	struct ImportedShader
 	{
-		std::string		  path;
-		EShaderType		  type;
-		std::vector<char> data;
+		std::string			  path;
+		EShaderType			  type = EShaderType::Vertex;
+		std::vector<uint32_t> spirv;
 	};
 
 	struct ImportedTexture
@@ -51,38 +51,40 @@ namespace BetterThanNothing
 		std::string				   name;
 		std::optional<std::string> path;
 		std::vector<uint8_t>	   data;
-		uint32_t				   width;
-		uint32_t				   height;
-		uint32_t				   channels;
-		uint32_t				   size;
+		uint32_t				   width = 0;
+		uint32_t				   height = 0;
+		uint32_t				   channels = 0;
+		uint32_t				   size = 0;
 	};
 
 	struct ImportedMaterial
 	{
-		uint32_t				   id;
-		EImportedAlphaMode		   alphaMode;
-		float					   alphaCutoff;
+		uint32_t				   id = 0;
+		EImportedAlphaMode		   alphaMode = EImportedAlphaMode::Opaque;
+		float					   alphaCutoff = 0.0f;
 		std::optional<std::string> diffuseTexturePath;
 		std::optional<std::string> normalTexturePath;
 	};
 
 	struct ImportedMesh
 	{
-		uint32_t id;
+		uint32_t id = 0;
 
 		std::vector<VertexData> vertices;
 		std::vector<uint32_t>	indices;
 
 		std::optional<ImportedId> materialId;
 
-		Vector3 min;
-		Vector3 max;
+		Vector3 min = Vector3::Zero;
+		Vector3 max = Vector3::Zero;
 	};
 
 	struct ImportedNode
 	{
-		Matrix4					  transform;
-		std::optional<ImportedId> mesh;
+		std::string				name;
+		Matrix4					transform = Matrix4::Identity;
+		std::vector<ImportedId> meshes;
+		std::vector<ImportedId> children;
 	};
 
 	struct ImportedModel
@@ -91,7 +93,7 @@ namespace BetterThanNothing
 
 		std::vector<ImportedMesh>	  meshes;
 		std::vector<ImportedMaterial> materials;
-
-		std::vector<ImportedNode> children;
+		std::vector<ImportedNode>	  nodes;
+		std::vector<ImportedId>		  rootNodes;
 	};
 }

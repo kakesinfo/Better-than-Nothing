@@ -23,6 +23,8 @@
 #include <Common/Metrics.hpp>
 #include <Editor/Panel.hpp>
 #include <Scene/Scene.hpp>
+#include <algorithm>
+#include <cstdio>
 #include <imgui.h>
 
 namespace BetterThanNothing
@@ -31,33 +33,31 @@ namespace BetterThanNothing
 
 	void PerfPanel::OnRender(Scene* scene)
 	{
-		constexpr int value_count = 100;
-		static float  values[value_count] = {0};
-		static int	  values_offset = 0;
+		(void) scene;
 
-		static auto updateTimed = 0.0f;
-		static auto cachedMetrics = Metrics::GetLastFrameMetrics();
-
-		updateTimed += ImGui::GetIO().DeltaTime;
-		if (updateTimed > 0.1f)
+		m_updateTimer += ImGui::GetIO().DeltaTime;
+		if (m_updateTimer > 0.1f)
 		{
-			cachedMetrics = Metrics::GetLastFrameMetrics();
-			updateTimed = 0.0f;
+			m_cachedMetrics = Metrics::GetLastFrameMetrics();
+			m_updateTimer = 0.0f;
 
-			values[values_offset] = static_cast<float>(cachedMetrics.fps);
-			values_offset = (values_offset + 1) % value_count;
+			m_fpsHistory[m_historyOffset] = static_cast<float>(m_cachedMetrics.fps);
+			m_historyOffset = (m_historyOffset + 1) % kHistorySize;
 		}
 
+		const float maxRecorded = *std::ranges::max_element(m_fpsHistory);
+		const float scaleMax = std::max(60.0f, maxRecorded * 1.25f);
+
 		const ImVec2 pos = ImGui::GetCursorScreenPos();
-		const ImVec2 size = ImVec2(ImGui::GetContentRegionAvail().x, 80);
+		const ImVec2 size = ImVec2(ImGui::GetContentRegionAvail().x, 80.0f);
 
 		char overlay[32];
-		sprintf(overlay, "FPS: %d", cachedMetrics.fps);
-		ImGui::PlotLines("##FPS", values, value_count, values_offset, overlay, 120, 360, ImVec2(-1, 80));
+		std::snprintf(overlay, sizeof(overlay), "FPS: %d", m_cachedMetrics.fps);
+		ImGui::PlotLines("##FPS", m_fpsHistory.data(), kHistorySize, m_historyOffset, overlay, 0.0f, scaleMax, ImVec2(-1.0f, 80.0f));
 
 		const float lineY = pos.y + size.y * 0.5f;
 		ImGui::GetWindowDrawList()->AddLine(ImVec2(pos.x, lineY), ImVec2(pos.x + size.x, lineY), IM_COL32(255, 255, 0, 100));
 
-		ImGui::Text("Frame Time: %.3f ms", cachedMetrics.frameTime);
+		ImGui::Text("Frame Time: %.3f ms", m_cachedMetrics.frameTime);
 	}
 }

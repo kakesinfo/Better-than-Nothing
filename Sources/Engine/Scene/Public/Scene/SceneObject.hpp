@@ -19,25 +19,37 @@
 #pragma once
 
 #include "SceneObject_Components.hpp"
+#include <concepts>
 #include <entt/entt.hpp>
+#include <string_view>
 
 namespace BetterThanNothing
 {
+	class Scene;
 
 	class SceneObject
 	{
 	public:
-		SceneObject() : m_registry(nullptr), m_entity(entt::null) {}
+		SceneObject() = default;
 
-		explicit SceneObject(entt::registry* registry, entt::entity entity)
-			: m_registry(registry), m_entity(entity)
+		explicit SceneObject(Scene* scene, entt::registry* registry, const entt::entity entity)
+			: m_scene(scene), m_registry(registry), m_entity(entity)
 		{}
 
 		~SceneObject() = default;
 
-		void SetName(const std::string_view& name)
+		void SetName(const std::string_view name)
 		{
-			m_name = name;
+			if (!IsValid())
+				return;
+			m_registry->get_or_emplace<NameComponent>(m_entity).name = std::string(name);
+		}
+
+		[[nodiscard]] std::string_view GetName() const
+		{
+			if (const auto* nameComp = TryGetComponent<NameComponent>())
+				return nameComp->name;
+			return {};
 		}
 
 		template <typename T, typename... Args>
@@ -45,6 +57,13 @@ namespace BetterThanNothing
 			requires std::derived_from<T, Component>
 		{
 			return m_registry->emplace<T>(m_entity, std::forward<Args>(args)...);
+		}
+
+		template <typename T, typename... Args>
+		T& GetOrAddComponent(Args&&... args)
+			requires std::derived_from<T, Component>
+		{
+			return m_registry->get_or_emplace<T>(m_entity, std::forward<Args>(args)...);
 		}
 
 		template <typename T>
@@ -55,30 +74,47 @@ namespace BetterThanNothing
 		}
 
 		template <typename T>
+		[[nodiscard]] T* TryGetComponent() const
+			requires std::derived_from<T, Component>
+		{
+			return IsValid() ? m_registry->try_get<T>(m_entity) : nullptr;
+		}
+
+		template <typename T>
 		[[nodiscard]] bool HasComponent() const
 			requires std::derived_from<T, Component>
 		{
-			return m_registry->all_of<T>(m_entity);
+			return IsValid() && m_registry->all_of<T>(m_entity);
 		}
 
 		template <typename T>
 		void RemoveComponent() const
 			requires std::derived_from<T, Component>
 		{
-			m_registry->remove<T>(m_entity);
+			if (IsValid())
+				m_registry->remove<T>(m_entity);
 		}
 
-		[[nodiscard]] bool IsValid() const { return m_registry != nullptr && m_registry->valid(m_entity); }
+		[[nodiscard]] TransformComponent& GetTransform() const { return GetComponent<TransformComponent>(); }
+
+		void					  SetParent(const SceneObject& parent) const;
+		void					  RemoveParent() const;
+		[[nodiscard]] SceneObject GetParent() const;
+		[[nodiscard]] bool		  HasChildren() const;
+		void					  Destroy();
+
+		[[nodiscard]] bool IsValid() const { return m_registry != nullptr && m_entity != entt::null && m_registry->valid(m_entity); }
 		explicit		   operator bool() const { return IsValid(); }
 
 		[[nodiscard]] entt::entity GetEntity() const { return m_entity; }
+		[[nodiscard]] Scene*	   GetScene() const { return m_scene; }
 
 		bool operator==(const SceneObject& other) const { return m_registry == other.m_registry && m_entity == other.m_entity; }
 		bool operator!=(const SceneObject& other) const { return !(*this == other); }
 
 	private:
-		entt::registry*	 m_registry;
-		entt::entity	 m_entity;
-		std::string		 m_name;
+		Scene*			m_scene = nullptr;
+		entt::registry* m_registry = nullptr;
+		entt::entity	m_entity = entt::null;
 	};
 }

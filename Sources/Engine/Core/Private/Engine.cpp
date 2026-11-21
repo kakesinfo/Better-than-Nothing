@@ -35,6 +35,7 @@
 #include <Scene/Scene.hpp>
 #include <Scene/SceneObject.hpp>
 #include <Scene/SceneObject_Components.hpp>
+#include <algorithm>
 #include <chrono>
 #include <format>
 
@@ -45,7 +46,7 @@ namespace BetterThanNothing
 		m_platform = Platform::Create("Better Than Nothing", 1280, 720);
 		LegacyInputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Double});
+		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Immediate});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 #ifndef NDEBUG
@@ -60,12 +61,26 @@ namespace BetterThanNothing
 		m_defaultScene = Scene::Create(m_resourceManager.get());
 	}
 
+	Engine::~Engine()
+	{
+		if (m_renderingDevice)
+			m_renderingDevice->WaitIdle();
+
+		m_defaultScene.reset();
+		m_renderer.reset();
+		m_editor.reset();
+		m_resourceManager.reset();
+		m_renderingDevice.reset();
+		m_platform.reset();
+	}
+
 	void Engine::Run() const
 	{
 		bool shouldClose = false;
-		auto lastTime = std::chrono::high_resolution_clock::now();
+		auto lastTime = std::chrono::steady_clock::now();
 
 		m_application->OnEnable(m_defaultScene.get());
+		m_defaultScene->UpdateTransforms();
 
 		m_platform->ShowWindow();
 
@@ -73,30 +88,26 @@ namespace BetterThanNothing
 		{
 			Metrics::BeginRecording();
 
-			const auto currentTime = std::chrono::high_resolution_clock::now();
-			const auto elapsedCount = static_cast<std::chrono::duration<float>>(currentTime - lastTime).count();
+			const auto	currentTime = std::chrono::steady_clock::now();
+			const float rawDeltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
 			lastTime = currentTime;
 
-			Metrics::SetFrameTime(elapsedCount * 1000.0f);
-			Metrics::SetFps(1.0f / elapsedCount);
+			const float deltaTime = std::clamp(rawDeltaTime, 0.0f, 0.1f);
 
-			// LegacyWindowManager::GetWindow()->PollEvents();
+			Metrics::SetFrameTime(rawDeltaTime * 1000.0f);
+			Metrics::SetFps(rawDeltaTime > 0.0f ? (1.0f / rawDeltaTime) : 0.0f);
+
 			m_platform->PollEvents();
 
 			if (LegacyInputManager::IsKeyPressed(EKey::Escape))
 				shouldClose = true;
 
-			m_application->OnUpdate(m_defaultScene.get(), elapsedCount);
-
-			for (auto [entity, update] : m_defaultScene->GetView<UpdateComponent>().each())
-			{
-				auto sceneObject = m_defaultScene->GetObject(entity);
-				update.onUpdate(sceneObject, elapsedCount);
-			}
+			m_application->OnUpdate(m_defaultScene.get(), deltaTime);
+			m_defaultScene->Update(deltaTime);
 
 			m_renderer->RenderFrame(m_defaultScene.get());
 
-			LegacyInputManager::ResetMousePosition();
+			LegacyInputManager::EndFrame();
 
 			Metrics::EndRecording();
 		}

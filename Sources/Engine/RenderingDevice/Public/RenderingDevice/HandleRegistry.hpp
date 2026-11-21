@@ -19,19 +19,13 @@
 #pragma once
 
 #include "Handle.hpp"
-#include <vector>
+#include <Common/Containers/SlotMap.hpp>
+#include <stdexcept>
+#include <utility>
 
 namespace BetterThanNothing
 {
-	template <typename dataType>
-	struct HandleRegistrySlot
-	{
-		dataType	  data;
-		uint32_t generation = 1;
-		bool		  active = false;
-	};
-
-	template <typename dataType, HandleType handleType>
+	template <typename DataType, HandleType Type>
 	class HandleRegistry
 	{
 	public:
@@ -44,161 +38,114 @@ namespace BetterThanNothing
 		HandleRegistry& operator=(HandleRegistry&&) = delete;
 
 		template <typename... Args>
-		Handle Create(Args&&... args);
-		Handle Allocate();
-		Handle Append(dataType&& data);
-
-		bool	 Has(Handle handle);
-		dataType*		 Get(Handle handle);
-		const dataType* Get(Handle handle) const;
-		void	 Destroy(std::uint32_t index);
-		void	 Destroy(Handle handle);
-
-		std::uint32_t Size();
-		dataType*			  Get(std::uint32_t index);
-
-	private:
-		std::vector<HandleRegistrySlot<dataType>> m_slots;
-		std::vector<std::uint32_t>			 m_freeIndices;
-	};
-
-	template <typename dataType, HandleType handleType>
-	static uint32_t Internal_GetFreeIndex(std::vector<HandleRegistrySlot<dataType>>& slots, std::vector<std::uint32_t>& freeIndices)
-	{
-		uint32_t idx;
-
-		if (!freeIndices.empty())
+		Handle Create(Args&&... args)
 		{
-			idx = freeIndices.back();
-			freeIndices.pop_back();
-			return idx;
+			const auto key = m_storage.Emplace(std::forward<Args>(args)...);
+			return ToHandle(key);
 		}
 
-		idx = static_cast<uint32_t>(slots.size());
-		slots.emplace_back();
-		return idx;
-	}
+		Handle Allocate()
+		{
+			const auto key = m_storage.Emplace();
+			return ToHandle(key);
+		}
 
-	template <typename dataType, HandleType handleType>
-	static bool Internal_IsValidHandle(std::vector<HandleRegistrySlot<dataType>>& slots, Handle handle)
-	{
-		if (handle.GetType() != static_cast<uint8_t>(handleType))
-			return false;
+		Handle Append(DataType&& data)
+		{
+			const auto key = m_storage.Insert(std::move(data));
+			return ToHandle(key);
+		}
 
-		if (handle.GetId() >= slots.size())
-			return false;
+		[[nodiscard]] bool Has(const Handle handle) const
+		{
+			if (!IsMatchingHandle(handle))
+				return false;
+			return m_storage.Contains(ToSlotKey(handle));
+		}
 
-		const HandleRegistrySlot<dataType>& slot = slots[handle.GetId()];
+		[[nodiscard]] DataType* Get(const Handle handle)
+		{
+			if (!IsMatchingHandle(handle))
+				throw std::runtime_error("Invalid handle!");
 
-		if (!slot.active)
-			return false;
-		if (slot.generation != handle.GetGeneration())
-			return false;
+			DataType* ptr = m_storage.Get(ToSlotKey(handle));
+			if (!ptr)
+				throw std::runtime_error("Invalid handle!");
+			return ptr;
+		}
 
-		return true;
-	}
+		[[nodiscard]] const DataType* Get(const Handle handle) const
+		{
+			if (!IsMatchingHandle(handle))
+				throw std::runtime_error("Invalid handle!");
 
-	template <typename dataType, HandleType handleType>
-	template <typename... Args>
-	Handle HandleRegistry<dataType, handleType>::Create(Args&&... args)
-	{
-		uint32_t idx = Internal_GetFreeIndex<dataType, handleType>(m_slots, m_freeIndices);
+			const DataType* ptr = m_storage.Get(ToSlotKey(handle));
+			if (!ptr)
+				throw std::runtime_error("Invalid handle!");
+			return ptr;
+		}
 
-		HandleRegistrySlot<dataType>& slot = m_slots[idx];
-		slot.active = true;
-		slot.data = T(std::forward<Args>(args)...);
+		void Destroy(const std::uint32_t index)
+		{
+			m_storage.EraseBySlot(index);
+		}
 
-		return Handle(idx, slot.generation, static_cast<uint8_t>(handleType));
-	}
+		void Destroy(const Handle handle)
+		{
+			if (!IsMatchingHandle(handle) || !m_storage.Erase(ToSlotKey(handle)))
+				throw std::runtime_error("Invalid handle!");
+		}
 
-	template <typename dataType, HandleType handleType>
-	Handle HandleRegistry<dataType, handleType>::Allocate()
-	{
-		std::uint32_t			 idx = Internal_GetFreeIndex<dataType, handleType>(m_slots, m_freeIndices);
-		HandleRegistrySlot<dataType>& slot = m_slots[idx];
+		void Clear() noexcept
+		{
+			m_storage.Clear();
+		}
 
-		slot.active = true;
+		[[nodiscard]] std::uint32_t Size() const noexcept
+		{
+			return static_cast<std::uint32_t>(m_storage.Size());
+		}
 
-		return Handle(idx, slot.generation, static_cast<uint8_t>(handleType));
-	}
+		[[nodiscard]] bool IsActive(const std::uint32_t index) const noexcept
+		{
+			return m_storage.IsSlotOccupied(index);
+		}
 
-	template <typename dataType, HandleType handleType>
-	Handle HandleRegistry<dataType, handleType>::Append(dataType&& data)
-	{
-		std::uint32_t			 idx = Internal_GetFreeIndex<dataType, handleType>(m_slots, m_freeIndices);
-		HandleRegistrySlot<dataType>& slot = m_slots[idx];
+		[[nodiscard]] DataType* Get(const std::uint32_t index)
+		{
+			DataType* ptr = m_storage.GetBySlot(index);
+			if (!ptr)
+				throw std::out_of_range("HandleRegistry: inactive or out-of-range index");
+			return ptr;
+		}
 
-		slot.active = true;
-		slot.data = std::move(data);
+		template <typename Fn>
+		void ForEachActive(Fn&& fn)
+		{
+			m_storage.ForEach([&](const typename Storage::key_type key, DataType& value) {
+				fn(key.index, value);
+			});
+		}
 
-		return Handle(idx, slot.generation, static_cast<uint8_t>(handleType));
-	}
+	private:
+		static constexpr uint32_t MaxGeneration = 0x00FFFFFFu;
+		using Storage = SlotMap<DataType, void, MaxGeneration>;
 
-	template <typename dataType, HandleType handleType>
-	bool HandleRegistry<dataType, handleType>::Has(Handle handle)
-	{
-		return Internal_IsValidHandle<dataType, handleType>(m_slots, handle);
-	}
+		[[nodiscard]] static bool IsMatchingHandle(const Handle handle) noexcept
+		{
+			return handle.IsValid() && handle.GetType() == static_cast<uint8_t>(Type);
+		}
 
-	template <typename dataType, HandleType handleType>
-	dataType* HandleRegistry<dataType, handleType>::Get(Handle handle)
-	{
-		if (!Internal_IsValidHandle<dataType, handleType>(m_slots, handle))
-			throw std::runtime_error("Invalid handle!");
-		return &m_slots.at(handle.GetId()).data;
-	}
+		[[nodiscard]] static typename Storage::key_type ToSlotKey(const Handle handle) noexcept
+		{
+			return {handle.GetId(), handle.GetGeneration()};
+		}
 
-	template <typename dataType, HandleType handleType>
-	const dataType* HandleRegistry<dataType, handleType>::Get(Handle handle) const
-	{
-		if (!Internal_IsValidHandle<dataType, handleType>(m_slots, handle))
-			throw std::runtime_error("Invalid handle!");
-		return &m_slots[handle.GetId()].data;
-	}
+		[[nodiscard]] static Handle ToHandle(const typename Storage::key_type key) noexcept
+		{
+			return Handle(key.index, key.generation, static_cast<uint8_t>(Type));
+		}
 
-	template <typename dataType, HandleType handleType>
-	void HandleRegistry<dataType, handleType>::Destroy(std::uint32_t index)
-	{
-		if (index >= m_slots.size())
-			throw std::overflow_error("Index out of range");
-
-		HandleRegistrySlot<dataType>& slot = m_slots.at(index);
-
-		slot.active = false;
-		slot.data = dataType{};
-		++slot.generation;
-
-		// TODO: Prevent m_generation to overflow
-
-		m_freeIndices.push_back(index);
-	}
-
-	template <typename dataType, HandleType handleType>
-	void HandleRegistry<dataType, handleType>::Destroy(Handle handle)
-	{
-		if (!Internal_IsValidHandle<dataType, handleType>(m_slots, handle))
-			throw std::runtime_error("Invalid handle!");
-
-		HandleRegistrySlot<dataType>& slot = m_slots.at(handle.GetId());
-
-		slot.active = false;
-		slot.data = dataType{};
-		++slot.generation;
-
-		// TODO: Prevent m_generation to overflow
-
-		m_freeIndices.push_back(handle.GetId());
-	}
-
-	template <typename dataType, HandleType handleType>
-	std::uint32_t HandleRegistry<dataType, handleType>::Size()
-	{
-		return m_slots.size();
-	}
-
-	template <typename dataType, HandleType handleType>
-	dataType* HandleRegistry<dataType, handleType>::Get(std::uint32_t index)
-	{
-		return &m_slots.at(index).data;
-	}
+		Storage m_storage;
+	};
 }

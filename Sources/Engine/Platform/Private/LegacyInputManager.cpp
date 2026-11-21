@@ -27,11 +27,14 @@ namespace BetterThanNothing
 {
 	EKeyAction LegacyInputManager::m_keys[KEYBOARD_KEY_COUNT] = {};
 
-	float LegacyInputManager::m_mouseX = 0;
-	float LegacyInputManager::m_mouseY = 0;
-	float LegacyInputManager::m_lastMouseX = 0;
-	float LegacyInputManager::m_lastMouseY = 0;
-	float LegacyInputManager::m_mouseScroll = 0;
+	float LegacyInputManager::m_mouseX = 0.0f;
+	float LegacyInputManager::m_mouseY = 0.0f;
+	float LegacyInputManager::m_lastMouseX = 0.0f;
+	float LegacyInputManager::m_lastMouseY = 0.0f;
+	float LegacyInputManager::m_mouseDeltaX = 0.0f;
+	float LegacyInputManager::m_mouseDeltaY = 0.0f;
+	float LegacyInputManager::m_mouseScroll = 0.0f;
+	bool  LegacyInputManager::m_hasMousePosition = false;
 
 	EMouseButtonAction LegacyInputManager::m_buttons[MOUSE_BUTTON_COUNT] = {};
 
@@ -39,50 +42,80 @@ namespace BetterThanNothing
 	{
 		std::ranges::fill(m_keys, EKeyAction::Released);
 		std::ranges::fill(m_buttons, EMouseButtonAction::Released);
+		m_mouseX = 0.0f;
+		m_mouseY = 0.0f;
+		m_lastMouseX = 0.0f;
+		m_lastMouseY = 0.0f;
+		m_mouseDeltaX = 0.0f;
+		m_mouseDeltaY = 0.0f;
+		m_mouseScroll = 0.0f;
+		m_hasMousePosition = false;
+	}
+
+	void LegacyInputManager::EndFrame()
+	{
+		m_lastMouseX = m_mouseX;
+		m_lastMouseY = m_mouseY;
+		m_mouseDeltaX = 0.0f;
+		m_mouseDeltaY = 0.0f;
+		m_mouseScroll = 0.0f;
 	}
 
 	void LegacyInputManager::UpdateKey(const int key, const EKeyAction action)
 	{
+		if (key < 0 || key >= KEYBOARD_KEY_COUNT)
+			return;
 		m_keys[key] = action;
 	}
 
 	void LegacyInputManager::PressKey(const int key)
 	{
-		m_keys[key] = EKeyAction::Pressed;
+		UpdateKey(key, EKeyAction::Pressed);
 	}
 
 	void LegacyInputManager::ReleaseKey(const int key)
 	{
-		m_keys[key] = EKeyAction::Released;
+		UpdateKey(key, EKeyAction::Released);
 	}
 
 	void LegacyInputManager::UpdateMouseButton(const int button, const EMouseButtonAction action)
 	{
+		if (button < 0 || button >= MOUSE_BUTTON_COUNT)
+			return;
 		m_buttons[button] = action;
 	}
 
 	void LegacyInputManager::PressMouseButton(const int button)
 	{
-		m_buttons[button] = EMouseButtonAction::Pressed;
+		UpdateMouseButton(button, EMouseButtonAction::Pressed);
 	}
 
 	void LegacyInputManager::ReleaseMouseButton(const int button)
 	{
-		m_buttons[button] = EMouseButtonAction::Released;
+		UpdateMouseButton(button, EMouseButtonAction::Released);
 	}
 
 	void LegacyInputManager::UpdateMousePosition(const float x, const float y)
 	{
-		m_lastMouseX = m_mouseX;
-		m_lastMouseY = m_mouseY;
+		if (m_hasMousePosition)
+		{
+			m_mouseDeltaX += x - m_mouseX;
+			m_mouseDeltaY += y - m_mouseY;
+		}
+		else
+		{
+			m_lastMouseX = x;
+			m_lastMouseY = y;
+			m_hasMousePosition = true;
+		}
+
 		m_mouseX = x;
 		m_mouseY = y;
 	}
 
 	void LegacyInputManager::ResetMousePosition()
 	{
-		m_lastMouseX = m_mouseX;
-		m_lastMouseY = m_mouseY;
+		EndFrame();
 	}
 
 	Vector2 LegacyInputManager::GetMousePosition()
@@ -97,12 +130,12 @@ namespace BetterThanNothing
 
 	Vector2 LegacyInputManager::GetMouseDelta()
 	{
-		return GetMousePosition() - GetLastMousePosition();
+		return {m_mouseDeltaX, m_mouseDeltaY};
 	}
 
 	void LegacyInputManager::UpdateMouseScroll(const float y)
 	{
-		m_mouseScroll = y;
+		m_mouseScroll += y;
 	}
 
 	float LegacyInputManager::GetMouseScroll()
@@ -117,7 +150,9 @@ namespace BetterThanNothing
 
 	bool LegacyInputManager::IsKeyPressed(const int16_t key)
 	{
-		return m_keys[key] == EKeyAction::Pressed; // or repeat ?
+		if (key < 0 || key >= KEYBOARD_KEY_COUNT)
+			return false;
+		return m_keys[key] == EKeyAction::Pressed;
 	}
 
 	bool LegacyInputManager::IsMouseButtonPressed(EMouseButton button)
@@ -126,6 +161,8 @@ namespace BetterThanNothing
 	}
 	bool LegacyInputManager::IsMouseButtonPressed(const int16_t button)
 	{
-		return m_buttons[button] == EMouseButtonAction::Pressed; // or repeat ?
+		if (button < 0 || button >= MOUSE_BUTTON_COUNT)
+			return false;
+		return m_buttons[button] == EMouseButtonAction::Pressed;
 	}
 };

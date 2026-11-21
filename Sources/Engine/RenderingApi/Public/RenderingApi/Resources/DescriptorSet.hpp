@@ -24,6 +24,7 @@ namespace BetterThanNothing::RenderingApi
 {
 	struct DescriptorSet
 	{
-		VkDescriptorSet value = VK_NULL_HANDLE;
+		VkDescriptorSet	 value = VK_NULL_HANDLE;
+		VkDescriptorPool ownerPool = VK_NULL_HANDLE;
 	};
 }

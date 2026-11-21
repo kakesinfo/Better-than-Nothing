@@ -52,7 +52,7 @@ namespace BetterThanNothing
 		throw std::runtime_error("Unknown sampler adress mode");
 	}
 
-	static VkBorderColor Internal_RetrieveBolderColor(const BorderColor& borderColor)
+	static VkBorderColor Internal_RetrieveBorderColor(const BorderColor& borderColor)
 	{
 		switch (borderColor)
 		{
@@ -125,7 +125,7 @@ namespace BetterThanNothing
 		samplerInfo.addressModeW = Internal_RetrieveSamplerAddressMode(desc.addressModeW);
 		samplerInfo.anisotropyEnable = desc.anisotropyEnable;
 		samplerInfo.maxAnisotropy = desc.maxAnisotropy == -1 ? m_self->device->GetMaxAnisotropy() : desc.maxAnisotropy;
-		samplerInfo.borderColor = Internal_RetrieveBolderColor(desc.borderColor);
+		samplerInfo.borderColor = Internal_RetrieveBorderColor(desc.borderColor);
 		samplerInfo.compareEnable = desc.compareEnable;
 		samplerInfo.compareOp = Internal_RetrieveCompareOp(desc.compareOp);
 		samplerInfo.mipmapMode = Internal_RetrieveSamplerMipmapMode(desc.mipmapMode);
@@ -134,7 +134,10 @@ namespace BetterThanNothing
 		samplerInfo.mipLodBias = desc.mipLodBias;
 
 		if (m_self->device->CreateSampler(samplerInfo, &newSampler->value) != VK_SUCCESS)
+		{
+			m_self->samplers.Destroy(handle);
 			throw std::runtime_error("failed to create vulkan sampler");
+		}
 
 		m_self->samplersLUT[desc] = handle;
 
@@ -146,9 +149,16 @@ namespace BetterThanNothing
 		if (!m_self->samplers.Has(handle))
 			throw std::runtime_error("Invalid sampler handle!");
 
+		std::erase_if(m_self->samplersLUT, [&](const auto& pair) { return pair.second == handle; });
+
 		const RenderingApi::Sampler* sampler = m_self->samplers.Get(handle);
-		m_self->device->DestroySampler(sampler->value);
+		const VkSampler				 vkSampler = sampler->value;
 		m_self->samplers.Destroy(handle);
+
+		RenderingApi::Device* device = m_self->device.get();
+		Internal_EnqueueDeletion([device, vkSampler]() {
+			device->DestroySampler(vkSampler);
+		});
 	}
 
 	RenderingApi::Sampler* RenderingDevice::GetSampler(const Handle& handle)

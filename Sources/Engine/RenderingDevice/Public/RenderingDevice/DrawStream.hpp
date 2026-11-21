@@ -19,8 +19,14 @@
 #pragma once
 
 #include "Handle.hpp"
+#include "Types.hpp"
 
-#include <Math/Matrix4.hpp>
+#include <Common/EShaderType.hpp>
+#include <array>
+#include <cstddef>
+#include <cstring>
+#include <string>
+#include <type_traits>
 #include <vector>
 
 namespace BetterThanNothing
@@ -30,30 +36,38 @@ namespace BetterThanNothing
 
 	struct DrawPacket
 	{
-		VkPipeline		 pipeline{};
-		VkPipelineLayout pipelineLayout{};
-		Handle			 vertexBuffer{};
-		Handle			 indexBuffer{};
-		uint32_t		 indexCount{};
-		VkDescriptorSet	 globalDescriptorSet{};
-		Handle			 samplerDescriptorSet{};
-		VkDescriptorSet	 pointLightDescriptorSet{};
-		Matrix4			 transform;
-		float			 distanceToCamera{};
-	};
+		static constexpr uint32_t MaxDescriptorSets = 4;
+		static constexpr uint32_t MaxPushConstantSize = 128;
 
-	struct DrawPacketSortKeyData
-	{
-		uint64_t distance : 16 = 0;
-		uint64_t _padding1 : 16 = 0;
-		uint64_t textureId : 16 = 0;
-		uint64_t _padding2 : 16 = 0; // TODO: change to pipelineId
+		Handle									   pipeline{};
+		std::string								   pipelineLayoutName;
+		Handle									   vertexBuffer{};
+		Handle									   indexBuffer{};
+		uint32_t								   indexCount = 0;
+		uint32_t								   instanceCount = 1;
+		std::array<Handle, MaxDescriptorSets>	   descriptorSets{};
+		uint32_t								   descriptorSetCount = 0;
+		std::array<std::byte, MaxPushConstantSize> pushConstantData{};
+		uint32_t								   pushConstantSize = 0;
+		ShaderStageFlags						   pushConstantStages = ShaderStageFlags::Vertex;
+		float									   distanceToCamera = 0.0f;
+		bool									   sortBackToFront = false;
+
+		template <typename T>
+		void SetPushConstant(const T& value, const ShaderStageFlags stages = ShaderStageFlags::Vertex)
+		{
+			static_assert(std::is_trivially_copyable_v<T>, "Push constant data must be trivially copyable");
+			static_assert(sizeof(T) <= MaxPushConstantSize, "Push constant exceeds 128-byte minimum Vulkan guarantee");
+			std::memcpy(pushConstantData.data(), &value, sizeof(T));
+			pushConstantSize = static_cast<uint32_t>(sizeof(T));
+			pushConstantStages = stages;
+		}
 	};
 
 	struct DrawPacketSortKey
 	{
 		uint32_t packetId = 0;
-		DrawPacketSortKeyData data;
+		uint64_t key = 0;
 
 		bool operator<(const DrawPacketSortKey& other) const;
 	};
@@ -67,6 +81,8 @@ namespace BetterThanNothing
 		void						 Reset(std::uint32_t newSize);
 		void						 Draw(const DrawPacket& drawPacket);
 		[[nodiscard]] DrawStreamView Build();
+		[[nodiscard]] bool			 Empty() const { return m_packets.empty(); }
+		[[nodiscard]] size_t		 Size() const { return m_packets.size(); }
 
 	private:
 		std::vector<DrawPacket>		   m_packets;

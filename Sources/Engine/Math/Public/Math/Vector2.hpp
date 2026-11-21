@@ -28,6 +28,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <cmath>
 #include <ostream>
 
 namespace BetterThanNothing
@@ -47,14 +48,18 @@ namespace BetterThanNothing
 		explicit Vector2(const glm::vec2& other) : m_data(other) {}
 		explicit Vector2(float value) : m_data(value) {}
 
-		// TODO: Add copy constructor and copy assignment operator
-		Vector2(const Vector2& other) : m_data(other.m_data) {}
+		Vector2(const Vector2&) = default;
+		Vector2& operator=(const Vector2&) = default;
+		Vector2(Vector2&&) noexcept = default;
+		Vector2& operator=(Vector2&&) noexcept = default;
 
 		[[nodiscard]] float GetX() const { return m_data.x; }
 		[[nodiscard]] float GetY() const { return m_data.y; }
 
 		[[nodiscard]] float& x() { return m_data.x; }
 		[[nodiscard]] float& y() { return m_data.y; }
+		[[nodiscard]] const float& x() const { return m_data.x; }
+		[[nodiscard]] const float& y() const { return m_data.y; }
 
 		void SetX(float x) { m_data.x = x; }
 		void SetY(float y) { m_data.y = y; }
@@ -65,40 +70,42 @@ namespace BetterThanNothing
 		[[nodiscard]] Vector2 operator/(float scalar) const { return Vector2(m_data / scalar); }
 		[[nodiscard]] Vector2 operator-() const { return Vector2(-m_data); }
 
-		Vector2 operator+=(const Vector2& other)
+		Vector2& operator+=(const Vector2& other)
 		{
 			m_data += other.m_data;
 			return *this;
 		}
 
-		Vector2 operator-=(const Vector2& other)
+		Vector2& operator-=(const Vector2& other)
 		{
 			m_data -= other.m_data;
 			return *this;
 		}
 
-		Vector2 operator*=(float scalar)
+		Vector2& operator*=(float scalar)
 		{
 			m_data *= scalar;
 			return *this;
 		}
 
-		Vector2 operator/=(float scalar)
+		Vector2& operator/=(float scalar)
 		{
 			m_data /= scalar;
 			return *this;
 		}
 
-		Vector2& operator=(const Vector2& other)
-		{
-			m_data = other.m_data;
-			return *this;
-		}
+		[[nodiscard]] bool operator==(const Vector2& other) const { return m_data == other.m_data; }
+		[[nodiscard]] bool operator!=(const Vector2& other) const { return m_data != other.m_data; }
 
-		[[nodiscard]] bool		Equals(const Vector2& other) const { return m_data == other.m_data; }
-		[[nodiscard]] float		Magnitude() const { return glm::length(m_data); }
-		[[nodiscard]] Vector2	Normalized() const { return Vector2(glm::normalize(m_data)); }
-		[[nodiscard]] glm::vec2 Value() const { return m_data; }
+		[[nodiscard]] bool			   Equals(const Vector2& other) const { return m_data == other.m_data; }
+		[[nodiscard]] float			   Magnitude() const { return glm::length(m_data); }
+		[[nodiscard]] float			   SquaredMagnitude() const { return glm::dot(m_data, m_data); }
+		[[nodiscard]] Vector2		   Normalized() const
+		{
+			const float lenSq = SquaredMagnitude();
+			return lenSq > 0.0f ? Vector2(m_data / std::sqrt(lenSq)) : Vector2::Zero;
+		}
+		[[nodiscard]] const glm::vec2& Value() const { return m_data; }
 
 		static float   Dot(const Vector2& a, const Vector2& b) { return glm::dot(a.m_data, b.m_data); }
 		static Vector2 Lerp(const Vector2& a, const Vector2& b, float t) { return Vector2(glm::mix(a.m_data, b.m_data, t)); }

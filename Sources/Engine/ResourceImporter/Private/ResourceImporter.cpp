@@ -19,18 +19,26 @@
 #include <ResourceImporter/Importer.hpp>
 #include <ResourceImporter/ResourceImporter.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+#include <glslang/Include/glslang_c_interface.h>
 
 namespace BetterThanNothing
 {
 	ResourceImporter::ResourceImporter()
 	{
+		glslang_initialize_process();
 		m_textureImporter = std::make_unique<TextureImporter>();
 		m_objImporter = std::make_unique<ObjImporter>();
 		m_gltfImporter = std::make_unique<GltfImporter>();
 		m_shaderImporter = std::make_unique<ShaderImporter>();
 	}
 
-	ResourceImporter::~ResourceImporter() {}
+	ResourceImporter::~ResourceImporter()
+	{
+		glslang_finalize_process();
+	}
 
 	ImportedTexture ResourceImporter::ImportTexture(const std::string& input) const
 	{
@@ -39,13 +47,16 @@ namespace BetterThanNothing
 
 	ImportedModel ResourceImporter::ImportModel(const std::string& path, bool preTransform) const
 	{
-		if (path.find(".obj") != std::string::npos)
+		std::string ext = std::filesystem::path(path).extension().string();
+		std::ranges::transform(ext, ext.begin(), [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+		if (ext == ".obj")
 			return m_objImporter->Import({path, preTransform});
 
-		if (path.find(".gltf") != std::string::npos)
+		if (ext == ".gltf" || ext == ".glb")
 			return m_gltfImporter->Import({path, preTransform});
 
-		throw std::runtime_error("Unsupported file type");
+		throw std::runtime_error("Unsupported model file type: " + path);
 	}
 
 	ImportedShader ResourceImporter::ImportShader(const std::string& path) const

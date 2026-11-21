@@ -28,6 +28,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <cmath>
 #include <ostream>
 
 namespace BetterThanNothing
@@ -43,8 +44,10 @@ namespace BetterThanNothing
 		explicit Vector4(const glm::vec4& other) : m_data(other) {}
 		explicit Vector4(float value) : m_data(value) {}
 
-		// TODO: Add copy constructor and copy assignment operator
-		Vector4(const Vector4& other) : m_data(other.m_data) {}
+		Vector4(const Vector4&) = default;
+		Vector4& operator=(const Vector4&) = default;
+		Vector4(Vector4&&) noexcept = default;
+		Vector4& operator=(Vector4&&) noexcept = default;
 
 		[[nodiscard]] float GetW() const { return m_data.w; }
 		[[nodiscard]] float GetX() const { return m_data.x; }
@@ -62,43 +65,45 @@ namespace BetterThanNothing
 		[[nodiscard]] Vector4 operator/(float scalar) const { return Vector4(m_data / scalar); }
 		[[nodiscard]] Vector4 operator-() const { return Vector4(-m_data); }
 
-		Vector4 operator+=(const Vector4& other)
+		Vector4& operator+=(const Vector4& other)
 		{
 			m_data += other.m_data;
 			return *this;
 		}
 
-		Vector4 operator-=(const Vector4& other)
+		Vector4& operator-=(const Vector4& other)
 		{
 			m_data -= other.m_data;
 			return *this;
 		}
 
-		Vector4 operator*=(float scalar)
+		Vector4& operator*=(float scalar)
 		{
 			m_data *= scalar;
 			return *this;
 		}
 
-		Vector4 operator/=(float scalar)
+		Vector4& operator/=(float scalar)
 		{
 			m_data /= scalar;
 			return *this;
 		}
 
-		Vector4 operator=(const Vector4& other)
-		{
-			m_data = other.m_data;
-			return *this;
-		}
+		[[nodiscard]] bool operator==(const Vector4& other) const { return m_data == other.m_data; }
+		[[nodiscard]] bool operator!=(const Vector4& other) const { return m_data != other.m_data; }
 
 		[[nodiscard]] bool Equals(const Vector4& other) const { return m_data == other.m_data; }
 
 		[[nodiscard]] float Magnitude() const { return glm::length(m_data); }
+		[[nodiscard]] float SquaredMagnitude() const { return glm::dot(m_data, m_data); }
 
-		[[nodiscard]] Vector4 Normalized() const { return Vector4(glm::normalize(m_data)); }
+		[[nodiscard]] Vector4 Normalized() const
+		{
+			const float lenSq = SquaredMagnitude();
+			return lenSq > 0.0f ? Vector4(m_data / std::sqrt(lenSq)) : Vector4::Zero;
+		}
 
-		[[nodiscard]] glm::vec3 Value() const { return m_data; }
+		[[nodiscard]] const glm::vec4& Value() const { return m_data; }
 
 		static float   Dot(const Vector4& a, const Vector4& b) { return glm::dot(a.m_data, b.m_data); }
 		static float   Distance(const Vector4& a, const Vector4& b) { return glm::distance(a.m_data, b.m_data); }
@@ -107,7 +112,7 @@ namespace BetterThanNothing
 
 		friend std::ostream& operator<<(std::ostream& os, const Vector4& vec)
 		{
-			os << "Vector4(" << vec.GetX() << ", " << vec.GetY() << ")";
+			os << "Vector4(" << vec.GetX() << ", " << vec.GetY() << ", " << vec.GetZ() << ", " << vec.GetW() << ")";
 			return os;
 		}
 

@@ -20,20 +20,41 @@
 
 #include "Common/Logger.hpp"
 #include "RenderingApi/Core/Allocator.hpp"
+#include <algorithm>
+#include <cstring>
 
 namespace BetterThanNothing
 {
-	StagingBuffer::StagingBuffer(RenderingApi::Allocator* allocator, const uint64_t size): m_allocator(allocator)
+	StagingBuffer::StagingBuffer(RenderingApi::Allocator* allocator, const uint64_t size) : m_allocator(allocator)
 	{
-		m_size = size * 1024 * 1024;
+		AllocateBuffer(size * 1024 * 1024);
+	}
+
+	StagingBuffer::~StagingBuffer()
+	{
+		if (m_allocator && m_buffer != VK_NULL_HANDLE)
+			m_allocator->DestroyBuffer(m_buffer, m_bufferAlloc);
+	}
+
+	void StagingBuffer::AllocateBuffer(const uint64_t sizeBytes)
+	{
+		if (m_allocator && m_buffer != VK_NULL_HANDLE)
+		{
+			m_allocator->DestroyBuffer(m_buffer, m_bufferAlloc);
+			m_buffer = VK_NULL_HANDLE;
+			m_bufferAlloc = VK_NULL_HANDLE;
+			m_bufferAllocInfo = {};
+		}
+
+		m_size = sizeBytes;
 
 		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 		bufferInfo.size = m_size;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
 		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-		allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+		allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 		if (m_allocator->CreateBuffer(&bufferInfo, &allocInfo, &m_buffer, &m_bufferAlloc, &m_bufferAllocInfo) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create staging buffer");
@@ -42,27 +63,41 @@ namespace BetterThanNothing
 			throw std::runtime_error("Failed to map staging buffer");
 	}
 
-	StagingBuffer::~StagingBuffer()
-	{
-		if (m_allocator && m_buffer)
-			m_allocator->DestroyBuffer(m_buffer, m_bufferAlloc);
-	}
-
 	std::unique_ptr<StagingBuffer> StagingBuffer::Create(RenderingApi::Allocator* allocator, uint64_t size)
 	{
 		return std::make_unique<StagingBuffer>(allocator, size);
 	}
 
-	uint64_t StagingBuffer::Stage(const void* data, const uint64_t dataSize, const uint32_t alignment)
+	bool StagingBuffer::CanFit(const uint64_t dataSize, const uint64_t alignment) const
 	{
-		const uint32_t alignedOffset = (m_offset + alignment - 1) & ~(alignment - 1);
+		const uint64_t alignMask = alignment > 1 ? (alignment - 1) : 0;
+		const uint64_t alignedOffset = (m_offset + alignMask) & ~alignMask;
+		return (dataSize + alignedOffset) <= m_size;
+	}
 
-		if (dataSize + alignedOffset >= m_size)
-			throw std::runtime_error("Staging buffer is too small");
+	uint64_t StagingBuffer::Stage(const void* data, const uint64_t dataSize, const uint64_t alignment)
+	{
+		const uint64_t alignMask = alignment > 1 ? (alignment - 1) : 0;
+		uint64_t	   alignedOffset = (m_offset + alignMask) & ~alignMask;
+
+		if (dataSize + alignedOffset > m_size)
+		{
+			if (m_offset == 0)
+			{
+				const uint64_t newSize = std::max(m_size * 2, dataSize + alignMask + 1);
+				Logger::Log<WARNING>("StagingBuffer resized from {} bytes to {} bytes", m_size, newSize);
+				AllocateBuffer(newSize);
+				alignedOffset = 0;
+			}
+			else
+			{
+				throw std::runtime_error("Staging buffer is too small");
+			}
+		}
 
 		auto* destination = static_cast<uint8_t*>(m_bufferAllocInfo.pMappedData) + alignedOffset;
 
-		memcpy(destination, data, dataSize);
+		std::memcpy(destination, data, dataSize);
 
 		m_offset = alignedOffset + dataSize;
 

@@ -24,16 +24,14 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE
+    PUBLIC
         Engine::Common
+        Vulkan::Headers
+    PRIVATE
         Engine::Data
         Engine::Math
         Engine::Platform
         Engine::RenderingApi
-        glslang
-        glslang-default-resource-limits
-        SPIRV
-        spirv_cross
 )
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE "pch.hpp")

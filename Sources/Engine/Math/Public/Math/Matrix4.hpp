@@ -26,10 +26,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 #include "Quaternion.hpp"
 #include "Vector3.hpp"
+#include "Vector4.hpp"
 
 #include <ostream>
 
@@ -41,7 +44,7 @@ namespace BetterThanNothing
 		static const Matrix4 Identity;
 		static const Matrix4 Zero;
 
-		Matrix4() : m_data(0.0f) {}
+		Matrix4() : m_data(1.0f) {}
 
 		// clang-format off
 		Matrix4(
@@ -68,14 +71,47 @@ namespace BetterThanNothing
 		) {}
 		// clang-format on
 
+		[[nodiscard]] static Matrix4 FromColumnMajor(const float elements[16])
+		{
+			return Matrix4(glm::make_mat4(elements));
+		}
+
+		[[nodiscard]] static Matrix4 TRS(const Vector3& position, const Quaternion& rotation, const Vector3& scale)
+		{
+			glm::mat4 mat = glm::translate(glm::mat4(1.0f), position.Value());
+			mat *= glm::mat4_cast(rotation.Value());
+			mat = glm::scale(mat, scale.Value());
+			return Matrix4(mat);
+		}
+
+		bool Decompose(Vector3& outPosition, Quaternion& outRotation, Vector3& outScale) const
+		{
+			glm::vec3 scale{};
+			glm::quat rotation{};
+			glm::vec3 translation{};
+			glm::vec3 skew{};
+			glm::vec4 perspective{};
+
+			if (!glm::decompose(m_data, scale, rotation, translation, skew, perspective))
+				return false;
+
+			outPosition = Vector3(translation);
+			outRotation = Quaternion(rotation).Normalized();
+			outScale = Vector3(scale);
+			return true;
+		}
+
 		explicit Matrix4(float value) : m_data(value) {}
 		explicit Matrix4(const glm::mat4& glmMat) : m_data(glmMat) {}
 		explicit Matrix4(const Quaternion& quat) : m_data(glm::mat4_cast(quat.Value())) {}
 
 		[[nodiscard]] Matrix4 operator*(float value) const { return Matrix4(m_data * value); }
 		[[nodiscard]] Matrix4 operator*(const Matrix4& other) const { return Matrix4(m_data * other.m_data); }
+		[[nodiscard]] Vector4 operator*(const Vector4& vec) const { return Vector4(m_data * vec.Value()); }
 		[[nodiscard]] Matrix4 operator+(const Matrix4& other) const { return Matrix4(m_data + other.m_data); }
 		[[nodiscard]] Matrix4 operator-(const Matrix4& other) const { return Matrix4(m_data - other.m_data); }
+		[[nodiscard]] bool	  operator==(const Matrix4& other) const { return m_data == other.m_data; }
+		[[nodiscard]] bool	  operator!=(const Matrix4& other) const { return m_data != other.m_data; }
 
 		[[nodiscard]] Matrix4 Rotate(float angleInDegrees, float x, float y, float z) const
 		{
@@ -89,18 +125,26 @@ namespace BetterThanNothing
 
 		[[nodiscard]] Matrix4 Rotate(const Quaternion& quat) const
 		{
-			return Matrix4(glm::mat4_cast(quat.Value()) * m_data);
+			return Matrix4(m_data * glm::mat4_cast(quat.Value()));
 		}
 
-		[[nodiscard]] Matrix4	Translate(float x, float y, float z) const { return Matrix4(glm::translate(m_data, glm::vec3(x, y, z))); }
-		[[nodiscard]] Matrix4	Translate(const Vector3& vec) const { return Translate(vec.GetX(), vec.GetY(), vec.GetZ()); }
-		[[nodiscard]] Matrix4	Scale(float x, float y, float z) const { return Matrix4(glm::scale(m_data, glm::vec3(x, y, z))); }
-		[[nodiscard]] Matrix4	Scale(const float uniformScale) const { return Scale(uniformScale, uniformScale, uniformScale); }
-		[[nodiscard]] Matrix4	Scale(const Vector3& vec) const { return Scale(vec.GetX(), vec.GetY(), vec.GetZ()); }
-		[[nodiscard]] Matrix4	Transposed() const { return Matrix4(glm::transpose(m_data)); }
-		[[nodiscard]] Matrix4	Inverted() const { return Matrix4(glm::inverse(m_data)); }
-		[[nodiscard]] bool		Equals(const Matrix4& other) const { return m_data == other.m_data; }
-		[[nodiscard]] glm::mat4 Value() const { return m_data; }
+		[[nodiscard]] Matrix4		   Translate(float x, float y, float z) const { return Matrix4(glm::translate(m_data, glm::vec3(x, y, z))); }
+		[[nodiscard]] Matrix4		   Translate(const Vector3& vec) const { return Translate(vec.GetX(), vec.GetY(), vec.GetZ()); }
+		[[nodiscard]] Matrix4		   Scale(float x, float y, float z) const { return Matrix4(glm::scale(m_data, glm::vec3(x, y, z))); }
+		[[nodiscard]] Matrix4		   Scale(const float uniformScale) const { return Scale(uniformScale, uniformScale, uniformScale); }
+		[[nodiscard]] Matrix4		   Scale(const Vector3& vec) const { return Scale(vec.GetX(), vec.GetY(), vec.GetZ()); }
+		[[nodiscard]] Matrix4		   Transposed() const { return Matrix4(glm::transpose(m_data)); }
+		[[nodiscard]] Matrix4		   Inverted() const { return Matrix4(glm::inverse(m_data)); }
+		[[nodiscard]] Vector3 GetTranslation() const { return Vector3(m_data[3][0], m_data[3][1], m_data[3][2]); }
+		[[nodiscard]] Vector4 GetRow(const int row) const { return Vector4(m_data[0][row], m_data[1][row], m_data[2][row], m_data[3][row]); }
+		[[nodiscard]] Vector4 GetColumn(const int col) const { return Vector4(m_data[col]); }
+		[[nodiscard]] Vector3 TransformPoint(const Vector3& point) const
+		{
+			const glm::vec4 res = m_data * glm::vec4(point.Value(), 1.0f);
+			return Vector3(res.x, res.y, res.z);
+		}
+		[[nodiscard]] bool			   Equals(const Matrix4& other) const { return m_data == other.m_data; }
+		[[nodiscard]] const glm::mat4& Value() const { return m_data; }
 
 		static Matrix4 Perspective(float fovY, float aspect, float nearPlane, float farPlane)
 		{

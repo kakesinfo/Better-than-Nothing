@@ -31,11 +31,9 @@ target_link_libraries(${PROJECT_NAME}
         stb
         meshoptimizer
         tinygltf
-    PUBLIC
         glslang
         glslang-default-resource-limits
         SPIRV
-        spirv_cross
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

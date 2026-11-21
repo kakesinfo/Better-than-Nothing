@@ -74,7 +74,7 @@ namespace BetterThanNothing
 		m_internals->pipelineInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 		m_internals->pipelineInfo.colorAttachmentCount = static_cast<uint32_t>(m_internals->formats.size());
 		m_internals->pipelineInfo.pColorAttachmentFormats = m_internals->formats.data();
-		m_internals->pipelineInfo.depthAttachmentFormat = renderingDevice->GetSwapChain()->GetDepthFormat();
+		m_internals->pipelineInfo.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 		ImGui_ImplVulkan_InitInfo initInfo = {};
 		initInfo.ApiVersion = renderingDevice->GetInstance()->GetApiVersion();
@@ -113,13 +113,18 @@ namespace BetterThanNothing
 
 	Editor::~Editor()
 	{
-		m_renderingDevice->WaitIdle();
+		if (m_platform)
+			m_platform->ClearEventCallback();
+
+		if (m_renderingDevice)
+			m_renderingDevice->WaitIdle();
 
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplSDL3_Shutdown();
 		ImGui::DestroyContext();
 
-		vkDestroyDescriptorPool(m_renderingDevice->GetDevice()->Handle(), m_internals->imguiPool, nullptr);
+		if (m_renderingDevice && m_internals && m_internals->imguiPool != VK_NULL_HANDLE)
+			vkDestroyDescriptorPool(m_renderingDevice->GetDevice()->Handle(), m_internals->imguiPool, nullptr);
 	}
 
 	std::unique_ptr<Editor> Editor::Create(Platform* platform, RenderingDevice* renderingDevice)
@@ -153,8 +158,8 @@ namespace BetterThanNothing
 		ImGui::Render();
 	}
 
-	void Editor::RenderDrawData(const RenderingApi::CommandBuffer* commandBuffer) const
+	void Editor::RenderDrawData() const
 	{
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer->Handle());
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_renderingDevice->GetCurrentCommandBuffer()->Handle());
 	}
 }

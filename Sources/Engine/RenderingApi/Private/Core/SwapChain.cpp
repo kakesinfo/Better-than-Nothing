@@ -25,8 +25,6 @@ namespace BetterThanNothing::RenderingApi
 	{
 		CreateSwapChain(createInfo.width, createInfo.height);
 		CreateImages();
-		CreateColorResources();
-		CreateDepthResources();
 		CreateSyncObjects();
 
 		Logger::Log<SUCCESS>("Vulkan swap chain: ok");
@@ -116,95 +114,9 @@ namespace BetterThanNothing::RenderingApi
 		}
 	}
 
-	void SwapChain::CreateDepthResources()
-	{
-		m_depthFormat = ChooseDepthFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT});
-
-		VkImageCreateInfo imageInfo{};
-		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageInfo.imageType = VK_IMAGE_TYPE_2D;
-		imageInfo.extent.width = m_extent.width;
-		imageInfo.extent.height = m_extent.height;
-		imageInfo.extent.depth = 1;
-		imageInfo.mipLevels = 1;
-		imageInfo.arrayLayers = 1;
-		imageInfo.samples = m_createInfo.device->GetMaxMsaaSamples();
-		imageInfo.format = m_depthFormat;
-		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		VmaAllocationCreateInfo allocCreateInfo{};
-		allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-		allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-		allocCreateInfo.priority = 1.0f;
-
-		if (m_createInfo.allocator->CreateImage(&imageInfo, &allocCreateInfo, &m_depthImage, &m_depthAllocation, nullptr) != VK_SUCCESS)
-			throw std::runtime_error("Cannot allocate depth image");
-
-		m_depthAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-		if (m_depthFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || m_depthFormat == VK_FORMAT_D24_UNORM_S8_UINT)
-			m_depthAspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
-
-		VkImageViewCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		createInfo.image = m_depthImage;
-		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		createInfo.format = m_depthFormat;
-		createInfo.subresourceRange.aspectMask = m_depthAspectFlags;
-		createInfo.subresourceRange.baseMipLevel = 0;
-		createInfo.subresourceRange.levelCount = 1;
-		createInfo.subresourceRange.baseArrayLayer = 0;
-		createInfo.subresourceRange.layerCount = 1;
-
-		if (m_createInfo.device->CreateImageView(createInfo, &m_depthImageView) != VK_SUCCESS)
-			throw std::runtime_error("Cannot allocate depth image view");
-	}
-
-	void SwapChain::CreateColorResources()
-	{
-		VkImageCreateInfo imageInfo{};
-		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageInfo.imageType = VK_IMAGE_TYPE_2D;
-		imageInfo.extent.width = m_extent.width;
-		imageInfo.extent.height = m_extent.height;
-		imageInfo.extent.depth = 1;
-		imageInfo.mipLevels = 1;
-		imageInfo.arrayLayers = 1;
-		imageInfo.samples = m_createInfo.device->GetMaxMsaaSamples();
-		imageInfo.format = m_imageFormat;
-		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageInfo.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		VmaAllocationCreateInfo allocCreateInfo{};
-		allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-		allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-		allocCreateInfo.priority = 1.0f;
-
-		if (m_createInfo.allocator->CreateImage(&imageInfo, &allocCreateInfo, &m_colorImage, &m_colorAllocation, nullptr) != VK_SUCCESS)
-			throw std::runtime_error("Cannot allocate color image");
-
-		VkImageViewCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		createInfo.image = m_colorImage;
-		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		createInfo.format = m_imageFormat;
-		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		createInfo.subresourceRange.baseMipLevel = 0;
-		createInfo.subresourceRange.levelCount = 1;
-		createInfo.subresourceRange.baseArrayLayer = 0;
-		createInfo.subresourceRange.layerCount = 1;
-
-		if (m_createInfo.device->CreateImageView(createInfo, &m_colorImageView) != VK_SUCCESS)
-			throw std::runtime_error("Cannot allocate depth image view");
-	}
-
 	void SwapChain::CreateSyncObjects()
 	{
-		const uint32_t imageCount = m_images.size();
+		const auto imageCount = static_cast<uint32_t>(m_images.size());
 
 		m_imageFinishedSemaphores.resize(imageCount);
 		for (uint32_t i = 0; i < imageCount; i++)
@@ -213,7 +125,7 @@ namespace BetterThanNothing::RenderingApi
 
 	std::optional<uint32_t> SwapChain::AcquireNextImage(const VkSemaphore imageAvailableSemaphore) const
 	{
-		uint32_t imageIndex;
+		uint32_t	   imageIndex;
 		const VkResult result = vkAcquireNextImageKHR(m_createInfo.device->Handle(), m_swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -227,34 +139,34 @@ namespace BetterThanNothing::RenderingApi
 
 	void SwapChain::RecreateSwapChain(const uint32_t newWidth, const uint32_t newHeight)
 	{
+		if (newWidth == 0 || newHeight == 0)
+			return;
+
 		m_createInfo.device->WaitIdle();
 
 		CleanupSwapChain();
 
 		CreateSwapChain(newWidth, newHeight);
 		CreateImages();
-		CreateColorResources();
-		CreateDepthResources();
 		CreateSyncObjects();
+		++m_generation;
 	}
 
 	void SwapChain::CleanupSwapChain()
 	{
 		m_imageFinishedSemaphores.clear();
 
-		m_createInfo.device->DestroyImageView(m_depthImageView);
-		m_createInfo.allocator->DestroyImage(m_depthImage, m_depthAllocation);
-
-		m_createInfo.device->DestroyImageView(m_colorImageView);
-		m_createInfo.allocator->DestroyImage(m_colorImage, m_colorAllocation);
-
-		for (size_t i = 0; i < m_images.size(); i++)
-			m_createInfo.device->DestroyImageView(m_imageViews.at(i));
+		for (const VkImageView view : m_imageViews)
+			m_createInfo.device->DestroyImageView(view);
 
 		m_imageViews.clear();
 		m_images.clear();
 
-		vkDestroySwapchainKHR(m_createInfo.device->Handle(), m_swapChain, nullptr);
+		if (m_swapChain != VK_NULL_HANDLE)
+		{
+			vkDestroySwapchainKHR(m_createInfo.device->Handle(), m_swapChain, nullptr);
+			m_swapChain = VK_NULL_HANDLE;
+		}
 	}
 
 	VkSurfaceFormatKHR SwapChain::ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
@@ -321,11 +233,6 @@ namespace BetterThanNothing::RenderingApi
 		return imageCount;
 	}
 
-	VkFormat SwapChain::ChooseDepthFormat(const std::vector<VkFormat>& candidates) const
-	{
-		return m_createInfo.device->FindSupportedFormat(candidates, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-	}
-
 	VkExtent2D SwapChain::GetExtent() const
 	{
 		return m_extent;
@@ -343,12 +250,14 @@ namespace BetterThanNothing::RenderingApi
 
 	float SwapChain::GetAspectRatio() const
 	{
+		if (m_extent.height == 0)
+			return 1.0f;
 		return static_cast<float>(m_extent.width) / static_cast<float>(m_extent.height);
 	}
 
 	uint32_t SwapChain::GetImageCount() const
 	{
-		return m_images.size();
+		return static_cast<uint32_t>(m_images.size());
 	}
 
 	VkFormat SwapChain::GetImageFormat() const
@@ -377,47 +286,9 @@ namespace BetterThanNothing::RenderingApi
 		return m_imageFinishedSemaphores.at(index)->Handle();
 	}
 
-	VkFormat SwapChain::GetDepthFormat() const
+	uint64_t SwapChain::GetGeneration() const
 	{
-		return m_depthFormat;
-	}
-
-	VkImageAspectFlags SwapChain::GetDepthAspectFlags() const
-	{
-		return m_depthAspectFlags;
-	}
-
-	VkImage SwapChain::GetDepthImage() const
-	{
-		if (!m_depthImage)
-			throw std::runtime_error("Depth image not created");
-		return m_depthImage;
-	}
-
-	VkImageView SwapChain::GetDepthImageView() const
-	{
-		if (!m_depthImageView)
-			throw std::runtime_error("Depth image view not created");
-		return m_depthImageView;
-	}
-
-	VkFormat SwapChain::GetColorFormat() const
-	{
-		return m_imageFormat;
-	}
-
-	VkImage SwapChain::GetColorImage() const
-	{
-		if (!m_colorImage)
-			throw std::runtime_error("Color image not created");
-		return m_colorImage;
-	}
-
-	VkImageView SwapChain::GetColorImageView() const
-	{
-		if (!m_colorImageView)
-			throw std::runtime_error("Color image view not created");
-		return m_colorImageView;
+		return m_generation;
 	}
 
 	VkSwapchainKHR SwapChain::Handle() const

@@ -25,13 +25,15 @@ namespace BetterThanNothing::RenderingApi
 {
 	struct Texture
 	{
-		VkImage			   value = VK_NULL_HANDLE;
-		VmaAllocation	   allocation = VK_NULL_HANDLE;
-		VkImageView		   defaultView = VK_NULL_HANDLE;
-		std::uint32_t	   width = 0;
-		std::uint32_t	   height = 0;
-		std::uint8_t	   mipLevels = 1;
-		VkFormat		   format = VK_FORMAT_UNDEFINED;
-		VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		VkImage				  value = VK_NULL_HANDLE;
+		VmaAllocation		  allocation = VK_NULL_HANDLE;
+		VkImageView			  defaultView = VK_NULL_HANDLE;
+		std::uint32_t		  width = 0;
+		std::uint32_t		  height = 0;
+		std::uint8_t		  mipLevels = 1;
+		VkFormat			  format = VK_FORMAT_UNDEFINED;
+		VkImageAspectFlags	  aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+		VkImageLayout		  currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	};
 }

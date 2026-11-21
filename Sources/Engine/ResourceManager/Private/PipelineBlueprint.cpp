@@ -38,6 +38,42 @@ namespace BetterThanNothing
 		return this;
 	}
 
+	PipelineBlueprint* PipelineBlueprint::SetDepthTest(const bool enable)
+	{
+		m_depthTest = enable;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetDepthWrite(const bool enable)
+	{
+		m_depthWrite = enable;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetBlendEnable(const bool enable)
+	{
+		m_blendEnable = enable;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetAlphaToCoverage(const bool enable)
+	{
+		m_alphaToCoverage = enable;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetWireframe(const bool enable)
+	{
+		m_wireframe = enable;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetCullMode(const CullMode mode)
+	{
+		m_cullMode = mode;
+		return this;
+	}
+
 	std::vector<ResourceId> PipelineBlueprint::GetShaders() const
 	{
 		return m_shaders;

@@ -79,17 +79,16 @@ namespace BetterThanNothing
 		scene->AddPointLight(greenLight);
 		scene->AddPointLight(blueLight);
 
-		auto sponza = scene->LoadModel("../../../.assets/sponza/sponza.obj", true);
-		sponza.GetComponent<TransformComponent>().localTransform = Matrix4::Identity.Translate(0.0f, 0.0f, 0.0f).Scale(0.01f);
+		auto sponza = scene->LoadModel(".assets/sponza/sponza.obj", true);
+		sponza.GetTransform().SetScale(0.01f);
 
-		auto robot = scene->LoadModel("../../../.assets/robot/robot.obj", true);
-		robot.GetComponent<TransformComponent>().localTransform = Matrix4::Identity.Translate(0.0f, 1.0f, 0.0f);
-		robot.AddComponent<UpdateComponent>().onUpdate = [](const SceneObject& obj, const float deltaTime) -> void {
+		auto robot = scene->LoadModel(".assets/robot/robot.obj", true);
+		robot.GetTransform().SetPosition(0.0f, 1.0f, 0.0f);
+		robot.AddComponent<UpdateComponent>().onUpdate = [](SceneObject& obj, const float deltaTime) -> void {
 			if (!obj.HasComponent<TransformComponent>())
 				return;
 
-			auto& transform = obj.GetComponent<TransformComponent>();
-			transform.localTransform = transform.localTransform.Rotate(20.0f * deltaTime, Vector3::Up);
+			obj.GetTransform().Rotate(20.0f * deltaTime, Vector3::Up);
 		};
 	}
 

@@ -29,11 +29,6 @@ namespace BetterThanNothing
 	class Panel;
 	class Scene;
 
-	namespace RenderingApi
-	{
-		class CommandBuffer;
-	}
-
 	struct EditorInternals;
 
 	class Editor
@@ -52,7 +47,7 @@ namespace BetterThanNothing
 		}
 
 		void RenderPanels(Scene* scene) const;
-		void RenderDrawData(const RenderingApi::CommandBuffer* commandBuffer) const;
+		void RenderDrawData() const;
 
 	private:
 		Platform*							m_platform;
