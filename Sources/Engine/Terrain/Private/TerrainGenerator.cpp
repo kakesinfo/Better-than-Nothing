@@ -125,28 +125,20 @@ namespace BetterThanNothing
 		const float n1 = TerrainNoise::FBM2D(worldX * 0.055f, worldZ * 0.055f, m_config.seed + 4129u, 3) * 0.5f + 0.5f;
 		const float n2 = TerrainNoise::FBM2D(worldX * 0.03f + 41.0f, worldZ * 0.03f - 19.0f, m_config.seed + 6151u, 3) * 0.5f + 0.5f;
 
-		// Layer 0 (R): Sand / Riverbed & Shoreline
+		// Layer 0 (R): Sand / Riverbed & narrow Shoreline
 		const float heightAboveWater = height - m_config.waterLevel;
-		float		wSand = 1.0f - TerrainNoise::Smoothstep(-0.35f, 1.35f + (n1 - 0.5f) * 0.7f, heightAboveWater);
+		float		wSand = 1.0f - TerrainNoise::Smoothstep(-0.35f, 0.55f + (n1 - 0.5f) * 0.35f, heightAboveWater);
 
-		// Layer 3 (1 - R - G - B): Rocky Cliffs / Gravel on steep slopes & high peaks
-		const float slopeRock = TerrainNoise::Smoothstep(0.14f, 0.36f, slope + (n1 - 0.5f) * 0.06f);
-		const float highRock = TerrainNoise::Smoothstep(10.0f, 20.0f, height + (n2 - 0.5f) * 4.0f) * 0.85f;
+		// Layer 3 (1 - R - G - B): Rocky Cliffs / Gravel only on steeper slopes & high peaks
+		const float slopeRock = TerrainNoise::Smoothstep(0.24f, 0.48f, slope + (n1 - 0.5f) * 0.05f);
+		const float highRock = TerrainNoise::Smoothstep(16.0f, 25.0f, height + (n2 - 0.5f) * 3.0f) * 0.70f;
 		float		wRock = std::clamp(std::max(slopeRock, highRock), 0.0f, 1.0f);
 
-		// Layer 2 (B): Forest Dirt around Sponza edges and organic forest soil patches
-		float courtyardDirt = 0.0f;
-		for (const auto& zone : m_config.flattenZones)
-		{
-			const float ex = std::max(std::abs(worldX - zone.centerX) - (zone.halfExtentX + 2.0f), 0.0f);
-			const float ez = std::max(std::abs(worldZ - zone.centerZ) - (zone.halfExtentZ + 2.0f), 0.0f);
-			const float d = std::sqrt(ex * ex + ez * ez);
-			courtyardDirt = std::max(courtyardDirt, (1.0f - TerrainNoise::Smoothstep(0.0f, 14.0f, d)) * 0.85f);
-		}
-		const float soilPatch = TerrainNoise::Smoothstep(0.54f, 0.82f, n2) * 0.45f;
-		float		wDirt = std::clamp(std::max(courtyardDirt * 0.65f, soilPatch), 0.0f, 1.0f);
+		// Layer 2 (B): Subtle Forest Dirt accents
+		const float soilPatch = TerrainNoise::Smoothstep(0.68f, 0.92f, n2) * 0.25f;
+		float		wDirt = std::clamp(soilPatch, 0.0f, 1.0f);
 
-		// Layer 1 (G): Lush Grass002 fills remaining flat/gentle lowlands & meadows
+		// Layer 1 (G): Lush Grass002 dominates plains, hills, and Sponza surroundings
 		float wGrass = std::max(0.0f, 1.0f - wDirt);
 
 		// Priority: rock dominates steep slopes, sand dominates shorelines/underwater
@@ -331,53 +323,40 @@ namespace BetterThanNothing
 		const uint32_t chunkSeed = m_config.seed ^ (static_cast<uint32_t>(chunkX + 127) * 73856093u) ^ (static_cast<uint32_t>(chunkZ + 127) * 19349663u);
 		TerrainNoise::SeededRng rng(chunkSeed);
 
-		constexpr uint32_t kBladesPerTuft = 3u;
+		constexpr uint32_t kBladesPerTuft = 4u;
 		mesh.vertices.reserve(static_cast<size_t>(m_config.grassTuftsPerChunk) * kBladesPerTuft * 5u);
 		mesh.indices.reserve(static_cast<size_t>(m_config.grassTuftsPerChunk) * kBladesPerTuft * 9u);
 
 		for (uint32_t tuftIdx = 0; tuftIdx < m_config.grassTuftsPerChunk; ++tuftIdx)
 		{
-			const float localX = rng.Range(0.25f, m_config.chunkSize - 0.25f);
-			const float localZ = rng.Range(0.25f, m_config.chunkSize - 0.25f);
+			const float localX = rng.Range(0.15f, m_config.chunkSize - 0.15f);
+			const float localZ = rng.Range(0.15f, m_config.chunkSize - 0.15f);
 			const float worldX = chunkOriginX + localX;
 			const float worldZ = chunkOriginZ + localZ;
 
-			// Keep Sponza courtyard interior & immediate walls clear of grass tufts
-			bool insideCourtyard = false;
-			for (const auto& zone : m_config.flattenZones)
-			{
-				if (std::abs(worldX - zone.centerX) < (zone.halfExtentX + 2.5f) &&
-					std::abs(worldZ - zone.centerZ) < (zone.halfExtentZ + 2.5f))
-				{
-					insideCourtyard = true;
-					break;
-				}
-			}
-			if (insideCourtyard)
+			// Only exclude Sponza's actual building footprint so dense grass grows right up to the exterior walls
+			if (worldX >= -19.4f && worldX <= 18.2f && worldZ >= -12.0f && worldZ <= 11.2f)
 				continue;
 
-			const float	  terrainY = SampleHeight(worldX, worldZ);
-			if (terrainY < m_config.waterLevel + 0.55f)
+			const float terrainY = SampleHeight(worldX, worldZ);
+			if (terrainY < m_config.waterLevel + 0.22f)
 				continue;
 
 			const Vector3 terrainN = SampleNormal(worldX, worldZ);
 			const float	  slope = std::clamp(1.0f - terrainN.GetY(), 0.0f, 1.0f);
-			if (slope > 0.24f)
+			if (slope > 0.42f)
 				continue;
 
 			const Vector3 splat = ComputeSplatWeights(worldX, worldZ, terrainY, slope);
-			const float	  wGrass = splat.GetY();
-			if (wGrass < 0.35f)
+			const float	  wGrassAndSoil = splat.GetY() + splat.GetZ() * 0.75f;
+			if (wGrassAndSoil < 0.15f)
 				continue;
 
-			// Clump modulation: natural patches of taller and shorter meadow grass
-			const float patchNoise = TerrainNoise::FBM2D(worldX * 0.09f, worldZ * 0.09f, m_config.seed + 8819u, 2) * 0.5f + 0.5f;
-			if (rng.NextFloat() > wGrass * (0.55f + 0.45f * patchNoise))
-				continue;
-
+			// Clump modulation: natural patches of taller and shorter meadow grass without sparse holes
+			const float patchNoise = TerrainNoise::FBM2D(worldX * 0.08f, worldZ * 0.08f, m_config.seed + 8819u, 2) * 0.5f + 0.5f;
 			const float tuftHue = rng.Range(0.0f, 1.0f);
 			const float tuftPhase = rng.Range(0.0f, 1.0f);
-			const float tuftScale = (0.75f + 0.55f * patchNoise) * std::clamp((wGrass - 0.25f) * 1.4f, 0.45f, 1.15f);
+			const float tuftScale = (0.82f + 0.58f * patchNoise) * std::clamp(wGrassAndSoil * 1.25f, 0.55f, 1.25f);
 
 			for (uint32_t b = 0; b < kBladesPerTuft; ++b)
 			{
@@ -385,15 +364,15 @@ namespace BetterThanNothing
 				const float cosA = std::cos(angle);
 				const float sinA = std::sin(angle);
 
-				const float offsetR = rng.Range(0.0f, 0.22f);
+				const float offsetR = rng.Range(0.0f, 0.34f);
 				const float bx = localX + cosA * offsetR;
 				const float bz = localZ + sinA * offsetR;
 				const float by = SampleHeight(chunkOriginX + bx, chunkOriginZ + bz) - 0.03f;
 
-				const float bladeHeight = rng.Range(0.42f, 0.78f) * tuftScale;
-				const float halfWidthBase = rng.Range(0.032f, 0.052f) * tuftScale;
-				const float halfWidthMid = halfWidthBase * 0.62f;
-				const float archDroop = rng.Range(0.10f, 0.26f) * bladeHeight;
+				const float bladeHeight = rng.Range(0.52f, 0.98f) * tuftScale;
+				const float halfWidthBase = rng.Range(0.048f, 0.082f) * tuftScale;
+				const float halfWidthMid = halfWidthBase * 0.64f;
+				const float archDroop = rng.Range(0.12f, 0.28f) * bladeHeight;
 				const float stiffness = rng.Range(0.25f, 0.85f);
 
 				// Blade width tangent (cosA, 0, sinA); blade lean direction (-sinA, 0, cosA)

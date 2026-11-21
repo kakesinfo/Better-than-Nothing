@@ -52,6 +52,21 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     float aoRadius;
     float aoPower;
     float irradianceIntensity;
+
+    float time;
+    float waterLevel;
+    float waterWaveScale;
+    float waterFoamIntensity;
+
+    float grassWindStrength;
+    float grassWindSpeed;
+    float grassFadeDistance;
+    float _padGrass;
+
+    float cloudCoverage;
+    float cloudDensity;
+    float cloudSpeed;
+    float cloudShadowStrength;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D gbufferAlbedoTex;
@@ -78,6 +93,52 @@ const float ATMOSPHERE_RADIUS_KM = 6460.0;
 const uint FLAG_RT_SHADOWS_ENABLED = 1u << 0;
 const uint FLAG_AO_ENABLED = 1u << 4;
 const uint FLAG_BEND_SSS_ENABLED = 1u << 5;
+const uint FLAG_VOLUMETRIC_CLOUDS_ENABLED = 1u << 6;
+const float CLOUD_BOTTOM_M = 1350.0;
+
+float Hash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float ValueNoise3D(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float n000 = Hash31(i + vec3(0, 0, 0));
+    float n100 = Hash31(i + vec3(1, 0, 0));
+    float n010 = Hash31(i + vec3(0, 1, 0));
+    float n110 = Hash31(i + vec3(1, 1, 0));
+    float n001 = Hash31(i + vec3(0, 0, 1));
+    float n101 = Hash31(i + vec3(1, 0, 1));
+    float n011 = Hash31(i + vec3(0, 1, 1));
+    float n111 = Hash31(i + vec3(1, 1, 1));
+
+    return mix(
+        mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+        mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
+        f.z
+    );
+}
+
+float SampleCloudShadowTransmittance(vec3 worldPos, vec3 sunDir) {
+    if ((globalUniforms.flags & FLAG_VOLUMETRIC_CLOUDS_ENABLED) == 0u || sunDir.y <= 0.02 || globalUniforms.cloudShadowStrength <= 0.001)
+        return 1.0;
+
+    float tCloud = (CLOUD_BOTTOM_M - worldPos.y) / max(sunDir.y, 0.05);
+    vec3 cloudPos = worldPos + sunDir * tCloud;
+    vec3 wind = vec3(0.82, 0.0, 0.57) * (globalUniforms.time * globalUniforms.cloudSpeed * 28.0);
+    vec3 p = (cloudPos + wind) * 0.00034;
+
+    float n0 = ValueNoise3D(p);
+    float n1 = ValueNoise3D(p * 2.07 + vec3(13.7, 5.1, 9.3));
+    float baseShape = n0 * 0.65 + n1 * 0.35;
+    float coverageThreshold = 1.0 - clamp(globalUniforms.cloudCoverage, 0.0, 0.95);
+    float cloudMask = smoothstep(coverageThreshold, min(coverageThreshold + 0.32, 0.99), baseShape);
+    return 1.0 - cloudMask * clamp(globalUniforms.cloudShadowStrength * globalUniforms.cloudDensity, 0.0, 0.92);
+}
 
 vec3 DecodeOctahedral(vec2 f) {
     vec3 n = vec3(f.x, f.y, 1.0 - abs(f.x) - abs(f.y));
@@ -292,11 +353,12 @@ void main() {
 
     vec3 LoNits = vec3(0.0);
 
-    // 1. Direct Directional Light (Sun): lux x Hillaire Transmittance x Combined (FFX RT + Bend SSS) Shadows
+    // 1. Direct Directional Light (Sun): lux x Hillaire Transmittance x Combined (FFX RT + Bend SSS + Cloud) Shadows
     vec3 sunDir = normalize(-globalUniforms.lightDirection);
     float sunHorizonFade = smoothstep(-0.04, 0.02, sunDir.y);
     vec3 sunTransmittance = textureLod(transmittanceLUT, TransmittanceUV(camR, sunDir.y), 0.0).rgb * sunHorizonFade;
-    vec3 sunIlluminance = globalUniforms.lightColor * globalUniforms.sunIlluminanceLux * sunTransmittance * combinedShadow;
+    float cloudShadow = SampleCloudShadowTransmittance(worldPos, sunDir);
+    vec3 sunIlluminance = globalUniforms.lightColor * globalUniforms.sunIlluminanceLux * sunTransmittance * (combinedShadow * cloudShadow);
     LoNits += EvaluatePBR(N, V, sunDir, sunIlluminance, albedo, metallic, roughness, F0, energyCompensation);
 
     // 2. Direct Point Lights: lumens -> candela -> Lagarde smooth inverse-square lux

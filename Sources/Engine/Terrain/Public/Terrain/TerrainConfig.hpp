@@ -66,8 +66,8 @@ namespace BetterThanNothing
 		float	 waterLevel = -1.6f;
 		float	 uvScale = 0.65f;
 		uint32_t textureMaxDimension = 1024;
-		uint32_t grassTuftsPerChunk = 320; // 3 curved 3D blades per tuft (~960 blades per grassy chunk)
-		float	 grassMaxRadiusFromCenter = 96.0f;
+		uint32_t grassTuftsPerChunk = 2600; // 4 curved 3D blades per tuft (~10,400 blades per chunk)
+		float	 grassMaxRadiusFromCenter = 220.0f;
 
 		std::vector<TerrainFlattenZone> flattenZones;
 		std::vector<TerrainWaterBasin>	waterBasins;
@@ -141,19 +141,19 @@ namespace BetterThanNothing
 	struct TreeScatterConfig
 	{
 		std::string modelPath = ".assets/tree_elm/scene.gltf";
-		uint32_t	targetCount = 36;
-		float		minSpacing = 14.0f;
-		float		minScale = 0.48f;
-		float		maxScale = 0.85f;
-		float		maxSlope = 0.28f;
-		float		minHeightAboveWater = 0.85f;
-		float		worldMargin = 14.0f;
+		uint32_t	targetCount = 95;
+		float		minSpacing = 8.5f;
+		float		minScale = 0.45f;
+		float		maxScale = 0.95f;
+		float		maxSlope = 0.36f;
+		float		minHeightAboveWater = 0.45f;
+		float		worldMargin = 10.0f;
 		uint32_t	seed = 9001u;
 
 		// Axis-aligned exclusion box around Sponza
-		float excludeMinX = -26.0f;
-		float excludeMaxX = 25.0f;
-		float excludeMinZ = -19.0f;
-		float excludeMaxZ = 18.0f;
+		float excludeMinX = -23.5f;
+		float excludeMaxX = 22.5f;
+		float excludeMinZ = -16.5f;
+		float excludeMaxZ = 15.5f;
 	};
 }

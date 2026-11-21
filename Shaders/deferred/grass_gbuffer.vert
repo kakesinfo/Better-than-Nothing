@@ -101,7 +101,7 @@ void main() {
 
     // Smoothly sink/shrink distant blades into the terrain beyond fadeStart..fadeEnd
     float fadeEnd = max(globalUniforms.grassFadeDistance, 15.0);
-    float fadeStart = fadeEnd * 0.62;
+    float fadeStart = fadeEnd * 0.72;
     float distToCam = length(globalUniforms.cameraPosition - baseWorld.xyz);
     float distScale = 1.0 - smoothstep(fadeStart, fadeEnd, distToCam);
 

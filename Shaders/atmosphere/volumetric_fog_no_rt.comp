@@ -1,6 +1,6 @@
 #version 450
 
-// Fallback Volumetric Raymarched Fog with Blue Noise (without HW Ray Query), restricted to Sponza AABB
+// Fallback Volumetric Raymarched Fog & Cloud Volumetric Shafts with Blue Noise (without HW Ray Query)
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -45,6 +45,16 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     float waterLevel;
     float waterWaveScale;
     float waterFoamIntensity;
+
+    float grassWindStrength;
+    float grassWindSpeed;
+    float grassFadeDistance;
+    float _padGrass;
+
+    float cloudCoverage;
+    float cloudDensity;
+    float cloudSpeed;
+    float cloudShadowStrength;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D depthTex;
@@ -72,8 +82,11 @@ const float PI = 3.14159265359;
 const float GOLDEN_RATIO = 0.61803398875;
 const float GROUND_RADIUS_KM = 6360.0;
 const float ATMOSPHERE_RADIUS_KM = 6460.0;
-const uint FOG_FLAG_BLUE_NOISE = 1u << 0;
-const uint FOG_FLAG_RESTRICT_BOX = 1u << 2;
+const uint FOG_FLAG_BLUE_NOISE         = 1u << 0;
+const uint FOG_FLAG_RESTRICT_BOX       = 1u << 2;
+const uint FOG_FLAG_VOLUMETRIC_SHADOWS = 1u << 3;
+const uint FLAG_VOLUMETRIC_CLOUDS_ENABLED = 1u << 6;
+const float CLOUD_BOTTOM_M = 1350.0;
 
 float SafeSqrt(float x) {
     return sqrt(max(x, 0.0));
@@ -146,30 +159,55 @@ float ValueNoise3D(vec3 p) {
     );
 }
 
-float SampleFogDensity(vec3 pos, float t, bool restrictBox) {
-    float boxFade = 1.0;
-    if (restrictBox) {
-        vec3 distFromEdge = min(pos - fogParams.boxMin.xyz, fogParams.boxMax.xyz - pos);
-        float minEdge = min(min(distFromEdge.x, distFromEdge.z), distFromEdge.y);
-        if (minEdge <= 0.0)
-            return 0.0;
-        boxFade = smoothstep(0.0, max(fogParams.boxMin.w, 0.1), minEdge);
-    }
+float SampleCloudShadowTransmittance(vec3 worldPos, vec3 sunDir) {
+    if ((globalUniforms.flags & FLAG_VOLUMETRIC_CLOUDS_ENABLED) == 0u || sunDir.y <= 0.02 || globalUniforms.cloudShadowStrength <= 0.001)
+        return 1.0;
 
-    float heightAboveBase = max(pos.y - fogParams.baseHeight, 0.0);
-    float heightDensity = exp(-heightAboveBase * fogParams.heightFalloff);
-    if (heightDensity * boxFade < 0.002)
-        return 0.0;
+    float tCloud = (CLOUD_BOTTOM_M - worldPos.y) / max(sunDir.y, 0.05);
+    vec3 cloudPos = worldPos + sunDir * tCloud;
+    vec3 wind = vec3(0.82, 0.0, 0.57) * (globalUniforms.time * globalUniforms.cloudSpeed * 28.0);
+    vec3 p = (cloudPos + wind) * 0.00034;
 
+    float n0 = ValueNoise3D(p);
+    float n1 = ValueNoise3D(p * 2.07 + vec3(13.7, 5.1, 9.3));
+    float baseShape = n0 * 0.65 + n1 * 0.35;
+    float coverageThreshold = 1.0 - clamp(globalUniforms.cloudCoverage, 0.0, 0.95);
+    float cloudMask = smoothstep(coverageThreshold, min(coverageThreshold + 0.32, 0.99), baseShape);
+    return 1.0 - cloudMask * clamp(globalUniforms.cloudShadowStrength * globalUniforms.cloudDensity, 0.0, 0.92);
+}
+
+vec2 SampleMediaDensities(vec3 pos, float t, bool enableFog, bool restrictBox, bool enableVolShadows) {
     float noiseMod = 1.0;
     if (fogParams.noiseStrength > 0.001) {
         vec3 wind = vec3(t * 0.25, t * 0.03, t * 0.15);
-        vec3 p = pos * 0.12 + wind;
+        vec3 p = pos * 0.10 + wind;
         float n = ValueNoise3D(p) * 0.65 + ValueNoise3D(p * 2.1 - wind * 0.4) * 0.35;
         noiseMod = mix(1.0, smoothstep(0.18, 0.88, n) * 1.45, fogParams.noiseStrength);
     }
 
-    return fogParams.density * heightDensity * boxFade * noiseMod;
+    float fogSigma = 0.0;
+    if (enableFog) {
+        float boxFade = 1.0;
+        if (restrictBox) {
+            vec3 distFromEdge = min(pos - fogParams.boxMin.xyz, fogParams.boxMax.xyz - pos);
+            float minEdge = min(min(distFromEdge.x, distFromEdge.z), distFromEdge.y);
+            boxFade = (minEdge > 0.0) ? smoothstep(0.0, max(fogParams.boxMin.w, 0.1), minEdge) : 0.0;
+        }
+        if (boxFade > 0.001) {
+            float heightAboveBase = max(pos.y - fogParams.baseHeight, 0.0);
+            float heightDensity = exp(-heightAboveBase * fogParams.heightFalloff);
+            fogSigma = fogParams.density * heightDensity * boxFade * noiseMod;
+        }
+    }
+
+    float shaftSigma = 0.0;
+    if (enableVolShadows && pos.y < 36.0) {
+        float h = max(pos.y - (-2.0), 0.0);
+        float canopyProfile = exp(-h * 0.055) * smoothstep(36.0, 22.0, pos.y);
+        shaftSigma = 0.0048 * fogParams.boxMax.w * canopyProfile * mix(1.0, noiseMod, 0.35);
+    }
+
+    return vec2(fogSigma, shaftSigma);
 }
 
 void main() {
@@ -186,18 +224,19 @@ void main() {
     vec3 rayDir = normalize(farWorld.xyz / farWorld.w - globalUniforms.cameraPosition);
 
     bool restrictBox = (fogParams.flags & FOG_FLAG_RESTRICT_BOX) != 0u;
-    float tStart = 0.0;
-    float tEnd = fogParams.maxDistance;
+    bool enableVolShadows = (fogParams.flags & FOG_FLAG_VOLUMETRIC_SHADOWS) != 0u && (fogParams.boxMax.w > 0.001);
+    bool enableFog = (fogParams.density > 1e-5);
 
-    if (restrictBox) {
-        vec2 boxHit = IntersectAABB(globalUniforms.cameraPosition, rayDir, fogParams.boxMin.xyz, fogParams.boxMax.xyz);
-        tStart = max(boxHit.x, 0.0);
-        tEnd = min(boxHit.y, tStart + fogParams.maxDistance);
-        if (tEnd <= tStart + 0.02) {
-            if (globalUniforms.debugView == 11u)
-                imageStore(hdrColorImg, pixel, vec4(0.0, 0.0, 0.0, 1.0));
-            return;
-        }
+    vec3 activeMin = enableVolShadows ? vec3(-140.0, -4.0, -140.0) : (restrictBox ? fogParams.boxMin.xyz : vec3(-300.0, -10.0, -300.0));
+    vec3 activeMax = enableVolShadows ? vec3( 140.0, 36.0,  140.0) : (restrictBox ? fogParams.boxMax.xyz : vec3( 300.0,  60.0,  300.0));
+
+    vec2 volHit = IntersectAABB(globalUniforms.cameraPosition, rayDir, activeMin, activeMax);
+    float tStart = max(volHit.x, 0.0);
+    float tEnd = min(volHit.y, tStart + fogParams.maxDistance);
+    if (tEnd <= tStart + 0.02) {
+        if (globalUniforms.debugView == 11u)
+            imageStore(hdrColorImg, pixel, vec4(0.0, 0.0, 0.0, 1.0));
+        return;
     }
 
     float depth = textureLod(depthTex, uv, 0.0).r;
@@ -228,6 +267,7 @@ void main() {
     vec3 sunDir = normalize(-globalUniforms.lightDirection);
     float cosTheta = dot(rayDir, sunDir);
     float phase = mix(HenyeyGreenstein(cosTheta, -0.2), HenyeyGreenstein(cosTheta, clamp(fogParams.anisotropy, 0.0, 0.92)), 0.78);
+    float shaftPhase = mix(HenyeyGreenstein(cosTheta, -0.15), HenyeyGreenstein(cosTheta, 0.58), 0.75);
 
     float camAltKm = max(globalUniforms.atmosphereAltitudeKm + max(globalUniforms.cameraPosition.y * 0.001, 0.0), 0.005);
     float camR = min(GROUND_RADIUS_KM + camAltKm, ATMOSPHERE_RADIUS_KM - 0.05);
@@ -245,12 +285,16 @@ void main() {
     float t = tStart + jitter * stepSize;
     for (uint i = 0u; i < steps; ++i) {
         vec3 samplePos = globalUniforms.cameraPosition + rayDir * t;
-        float sigmaT = SampleFogDensity(samplePos, globalUniforms.time, restrictBox);
+        vec2 sigmas = SampleMediaDensities(samplePos, globalUniforms.time, enableFog, restrictBox, enableVolShadows);
+        float fogSigma = sigmas.x;
+        float shaftSigma = sigmas.y;
 
-        if (sigmaT > 1e-5) {
-            vec3 S = fogAlbedo * (sunIlluminanceLux * phase + ambientScatterBase) * sigmaT;
-            float stepTrans = exp(-sigmaT * stepSize);
-            inScatterNits += transmittance * (S - S * stepTrans) / max(sigmaT, 1e-5);
+        if (fogSigma + shaftSigma > 1e-5) {
+            float sunVis = SampleCloudShadowTransmittance(samplePos, sunDir);
+            vec3 S = fogAlbedo * ((sunIlluminanceLux * phase * sunVis + ambientScatterBase) * fogSigma + (sunIlluminanceLux * shaftPhase * sunVis) * shaftSigma);
+            float sigmaExt = max(fogSigma + shaftSigma * 0.25, 1e-5);
+            float stepTrans = exp(-sigmaExt * stepSize);
+            inScatterNits += transmittance * (S - S * stepTrans) / sigmaExt;
             transmittance *= stepTrans;
             if (transmittance < 0.01)
                 break;

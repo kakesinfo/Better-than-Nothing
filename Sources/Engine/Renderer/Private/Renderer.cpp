@@ -1422,7 +1422,7 @@ namespace BetterThanNothing
 	bool Renderer::BuildAccelerationStructures(Scene* scene, const uint32_t frameIndex)
 	{
 		const auto& settings = RenderSettings::Get();
-		const bool	needTlas = m_rtSupported && (settings.enableRTShadows || settings.aoMode == EAOMode::RTAO || (settings.enableVolumetricFog && settings.fogUseRTShadows));
+		const bool	needTlas = m_rtSupported && (settings.enableRTShadows || settings.aoMode == EAOMode::RTAO || ((settings.enableVolumetricFog || settings.enableVolumetricShadows) && settings.fogUseRTShadows));
 		if (!needTlas)
 			return false;
 
@@ -1566,6 +1566,8 @@ namespace BetterThanNothing
 			renderFlags |= GlobalRenderFlags::AOEnabled;
 		if (settings.enableBendSSS)
 			renderFlags |= GlobalRenderFlags::BendSSSEnabled;
+		if (settings.enableVolumetricClouds)
+			renderFlags |= GlobalRenderFlags::VolumetricCloudsEnabled;
 
 		m_currentSunDirection = (dirLightDirection * -1.0f).Normalized();
 		if (m_currentSunDirection.SquaredMagnitude() < 1e-6f)
@@ -1610,6 +1612,10 @@ namespace BetterThanNothing
 		globalUniform->grassWindSpeed = settings.grassWindSpeed;
 		globalUniform->grassFadeDistance = settings.grassFadeDistance;
 		globalUniform->_padGrass = 0.0f;
+		globalUniform->cloudCoverage = settings.cloudCoverage;
+		globalUniform->cloudDensity = settings.cloudDensity;
+		globalUniform->cloudSpeed = settings.cloudSpeed;
+		globalUniform->cloudShadowStrength = settings.cloudShadowStrength;
 
 		m_prevUnjitteredViewProj = unjitteredViewProj;
 

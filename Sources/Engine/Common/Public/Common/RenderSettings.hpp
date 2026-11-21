@@ -110,7 +110,7 @@ namespace BetterThanNothing
 		bool  enableProceduralGrass = true;
 		float grassWindStrength = 1.0f;
 		float grassWindSpeed = 1.0f;
-		float grassFadeDistance = 85.0f;
+		float grassFadeDistance = 145.0f;
 
 		// Volumetric Raymarched Fog (WsfBDf) & Canopy/Relief Volumetric Shadows
 		bool	 enableVolumetricFog = true;

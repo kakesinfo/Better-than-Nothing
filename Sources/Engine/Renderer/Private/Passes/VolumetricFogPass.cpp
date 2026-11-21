@@ -32,12 +32,13 @@ namespace BetterThanNothing
 		constexpr uint32_t kFogFlagBlueNoise = 1u << 0;
 		constexpr uint32_t kFogFlagRTShadows = 1u << 1;
 		constexpr uint32_t kFogFlagRestrictToBox = 1u << 2;
+		constexpr uint32_t kFogFlagVolumetricShadows = 1u << 3;
 	}
 
 	void VolumetricFogPass::Execute(RenderPassContext& ctx)
 	{
 		const auto& settings = RenderSettings::Get();
-		if (!settings.enableVolumetricFog && settings.debugView != EDebugViewMode::VolumetricFog)
+		if (!settings.enableVolumetricFog && !settings.enableVolumetricShadows && settings.debugView != EDebugViewMode::VolumetricFog)
 			return;
 		if (ctx.viewportWidth == 0 || ctx.viewportHeight == 0)
 			return;
@@ -67,9 +68,11 @@ namespace BetterThanNothing
 			flags |= kFogFlagRTShadows;
 		if (settings.fogRestrictToSponza)
 			flags |= kFogFlagRestrictToBox;
+		if (settings.enableVolumetricShadows)
+			flags |= kFogFlagVolumetricShadows;
 
 		VolumetricFogPushConstants push{};
-		push.density = settings.fogDensity;
+		push.density = settings.enableVolumetricFog ? settings.fogDensity : 0.0f;
 		push.heightFalloff = settings.fogHeightFalloff;
 		push.baseHeight = settings.fogBaseHeight;
 		push.maxDistance = settings.fogMaxDistance;
@@ -85,7 +88,7 @@ namespace BetterThanNothing
 		push.boxMax[0] = 18.0f;
 		push.boxMax[1] = 14.3f;
 		push.boxMax[2] = 11.1f;
-		push.boxMax[3] = 0.0f;
+		push.boxMax[3] = settings.enableVolumetricShadows ? settings.volumetricShadowIntensity : 0.0f;
 
 		const uint32_t groupsX = (ctx.viewportWidth + 7u) / 8u;
 		const uint32_t groupsY = (ctx.viewportHeight + 7u) / 8u;

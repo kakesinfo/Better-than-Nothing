@@ -1,7 +1,10 @@
 #version 450
 
-// Hillaire (EGSR 2020) - Skybox Render Pass
-// Samples Sky-View LUT with non-linear elevation UV + renders physical solar disk attenuated by Transmittance LUT.
+// Hillaire (EGSR 2020) Skybox + Nubis-Style Raymarched Volumetric Cumulus Clouds
+// - Samples Hillaire Sky-View LUT + physical limb-darkened solar disk
+// - Raymarches a spherical cloud shell (1400m - 3600m) with 3D FBM + billow noise
+// - 2-tap directional sun self-shadowing + Beer-Powder silver linings + Dual-Lobe Henyey-Greenstein phase
+// - Aerial perspective blend with Hillaire sky near the horizon
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -38,9 +41,24 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     float atmosphereMultiScatteringFactor;
 
     float atmosphereDensityScale;
-    float _pad0;
-    float _pad1;
-    float _pad2;
+    float aoRadius;
+    float aoPower;
+    float irradianceIntensity;
+
+    float time;
+    float waterLevel;
+    float waterWaveScale;
+    float waterFoamIntensity;
+
+    float grassWindStrength;
+    float grassWindSpeed;
+    float grassFadeDistance;
+    float _padGrass;
+
+    float cloudCoverage;
+    float cloudDensity;
+    float cloudSpeed;
+    float cloudShadowStrength;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D depthTex;
@@ -51,6 +69,11 @@ layout(set = 1, binding = 3, rgba16f) uniform writeonly image2D outHdrColor;
 const float PI = 3.14159265359;
 const float GROUND_RADIUS_KM = 6360.0;
 const float ATMOSPHERE_RADIUS_KM = 6460.0;
+const uint FLAG_VOLUMETRIC_CLOUDS_ENABLED = 1u << 6;
+
+const float CLOUD_BOTTOM_M = 1350.0;
+const float CLOUD_TOP_M = 3450.0;
+const float CLOUD_THICKNESS_M = CLOUD_TOP_M - CLOUD_BOTTOM_M;
 
 float SafeSqrt(float x) {
     return sqrt(max(x, 0.0));
@@ -67,9 +90,7 @@ vec2 TransmittanceUV(float r, float mu) {
     float d = DistanceToTopAtmosphereBoundary(r, mu);
     float d_min = ATMOSPHERE_RADIUS_KM - r;
     float d_max = rho + H;
-    float x_mu = (d - d_min) / max(d_max - d_min, 1e-6);
-    float x_r = rho / H;
-    return clamp(vec2(x_mu, x_r), vec2(0.0), vec2(1.0));
+    return clamp(vec2((d - d_min) / max(d_max - d_min, 1e-6), rho / H), vec2(0.0), vec2(1.0));
 }
 
 float RayIntersectSphere(vec3 ro, vec3 rd, float radius) {
@@ -93,12 +114,84 @@ vec2 DirectionToSkyViewUV(vec3 dir) {
     return vec2(u, clamp(v, 0.001, 0.999));
 }
 
+// Interleaved Gradient Noise + Golden Ratio temporal animation (converges smoothly with TAA)
+float InterleavedGradientNoise(ivec2 pixel, uint frameIdx) {
+    vec2 p = vec2(pixel) + float(frameIdx & 63u) * vec2(5.588238, 3.852941);
+    return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+float Hash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float ValueNoise3D(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float n000 = Hash31(i + vec3(0, 0, 0));
+    float n100 = Hash31(i + vec3(1, 0, 0));
+    float n010 = Hash31(i + vec3(0, 1, 0));
+    float n110 = Hash31(i + vec3(1, 1, 0));
+    float n001 = Hash31(i + vec3(0, 0, 1));
+    float n101 = Hash31(i + vec3(1, 0, 1));
+    float n011 = Hash31(i + vec3(0, 1, 1));
+    float n111 = Hash31(i + vec3(1, 1, 1));
+
+    return mix(
+        mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+        mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
+        f.z
+    );
+}
+
+float HenyeyGreenstein(float cosTheta, float g) {
+    float g2 = g * g;
+    float denom = max(1.0 + g2 - 2.0 * g * cosTheta, 1e-4);
+    return (1.0 - g2) / (4.0 * PI * denom * sqrt(denom));
+}
+
+// Evaluates 3D volumetric cumulus cloud density at world position (in meters)
+float SampleCloudDensity(vec3 worldPosM, out float outHeightFrac) {
+    float hFrac = (worldPosM.y - CLOUD_BOTTOM_M) / CLOUD_THICKNESS_M;
+    outHeightFrac = clamp(hFrac, 0.0, 1.0);
+    if (hFrac <= 0.0 || hFrac >= 1.0)
+        return 0.0;
+
+    // Cumulus anvil/rounded height profile: flat bottom, billowy top
+    float heightProfile = smoothstep(0.0, 0.18, hFrac) * smoothstep(1.0, 0.58, hFrac);
+    if (heightProfile <= 0.001)
+        return 0.0;
+
+    vec3 wind = vec3(0.82, 0.0, 0.57) * (globalUniforms.time * globalUniforms.cloudSpeed * 28.0);
+    vec3 p = (worldPosM + wind) * 0.00034;
+
+    // Base low-frequency FBM coverage
+    float n0 = ValueNoise3D(p);
+    float n1 = ValueNoise3D(p * 2.07 + vec3(13.7, 5.1, 9.3));
+    float baseShape = n0 * 0.65 + n1 * 0.35;
+
+    float coverageThreshold = 1.0 - clamp(globalUniforms.cloudCoverage, 0.0, 0.95);
+    float baseCloud = smoothstep(coverageThreshold, min(coverageThreshold + 0.36, 0.99), baseShape) * heightProfile;
+    if (baseCloud <= 0.002)
+        return 0.0;
+
+    // Erode edges with higher-frequency billowy detail (1 - |2n - 1| billow transform)
+    float n2 = ValueNoise3D(p * 4.35 - wind * 0.00018);
+    float n3 = ValueNoise3D(p * 9.10 + vec3(3.1, 17.4, 11.8));
+    float billow = (1.0 - abs(n2 * 2.0 - 1.0)) * 0.65 + n3 * 0.35;
+
+    float eroded = clamp(baseCloud - (1.0 - billow) * 0.28 * (1.0 - baseCloud * 0.6), 0.0, 1.0);
+    return eroded * max(globalUniforms.cloudDensity, 0.0) * 0.0028;
+}
+
 void main() {
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
     if (pixel.x >= int(globalUniforms.screenWidth) || pixel.y >= int(globalUniforms.screenHeight))
         return;
 
-    // Only shade background (sky) pixels; DeferredLightingPass handles geometry & debug views
     if (globalUniforms.debugView != 0u)
         return;
 
@@ -111,17 +204,19 @@ void main() {
     vec4 worldPos = globalUniforms.invViewProj * clipPos;
     vec3 rayDir = normalize(worldPos.xyz / worldPos.w - globalUniforms.cameraPosition);
 
-    // Sample physical sky luminance [cd/m^2 = nits] from Hillaire Sky-View LUT
+    // 1. Base Hillaire Sky luminance [nits]
     vec3 skyNits = textureLod(skyViewLUT, DirectionToSkyViewUV(rayDir), 0.0).rgb;
 
-    // Analytic limb-darkened physical solar disk attenuated by atmospheric transmittance
     float camAltKm = max(globalUniforms.atmosphereAltitudeKm + max(globalUniforms.cameraPosition.y * 0.001, 0.0), 0.005);
     float camR = min(GROUND_RADIUS_KM + camAltKm, ATMOSPHERE_RADIUS_KM - 0.05);
     vec3 camPosPlanet = vec3(0.0, camR, 0.0);
+    vec3 sunDir = normalize(-globalUniforms.lightDirection);
+    float sunHorizonFade = smoothstep(-0.04, 0.02, sunDir.y);
+    vec3 sunTrans = textureLod(transmittanceLUT, TransmittanceUV(camR, sunDir.y), 0.0).rgb * sunHorizonFade;
 
+    // 2. Physical limb-darkened solar disk
     if (RayIntersectSphere(camPosPlanet, rayDir, GROUND_RADIUS_KM) < 0.0) {
-        vec3 sunDir = normalize(-globalUniforms.lightDirection);
-        float sunRadius = max(globalUniforms.sunAngularRadius, 0.00465); // Real sun half-angle = 0.267 deg
+        float sunRadius = max(globalUniforms.sunAngularRadius, 0.00465);
         float cosAngle = dot(rayDir, sunDir);
         float cosSunRadius = cos(sunRadius);
 
@@ -131,9 +226,74 @@ void main() {
             float limbDarkening = mix(0.45, 1.0, pow(centerFactor, 0.4));
 
             float solidAngle = 2.0 * PI * (1.0 - cosSunRadius);
-            vec3 sunTrans = textureLod(transmittanceLUT, TransmittanceUV(camR, sunDir.y), 0.0).rgb;
             vec3 sunDiskNits = (globalUniforms.lightColor * globalUniforms.sunIlluminanceLux / max(solidAngle, 1e-5)) * sunTrans * diskEdge * limbDarkening;
             skyNits += sunDiskNits;
+        }
+    }
+
+    // 3. Raymarched Volumetric Cumulus Clouds (when enabled and looking above horizon)
+    if ((globalUniforms.flags & FLAG_VOLUMETRIC_CLOUDS_ENABLED) != 0u && rayDir.y > 0.015 && globalUniforms.cloudCoverage > 0.01) {
+        float ry = max(rayDir.y, 0.035);
+        float tEnter = max((CLOUD_BOTTOM_M - globalUniforms.cameraPosition.y) / ry, 0.0);
+        float tExit = (CLOUD_TOP_M - globalUniforms.cameraPosition.y) / ry;
+        float marchLen = min(tExit - tEnter, 16000.0);
+
+        if (marchLen > 10.0 && tEnter < 38000.0) {
+            const int CLOUD_STEPS = 14;
+            float stepSize = marchLen / float(CLOUD_STEPS);
+            float jitter = InterleavedGradientNoise(pixel, globalUniforms.frameIndex);
+
+            float cosTheta = dot(rayDir, sunDir);
+            // Dual-lobe HG phase for bright silver linings + soft back-scattering
+            float phase = mix(HenyeyGreenstein(cosTheta, -0.25), HenyeyGreenstein(cosTheta, 0.72), 0.72);
+
+            vec3 sunIrradiance = globalUniforms.lightColor * globalUniforms.sunIlluminanceLux * sunTrans;
+            vec3 zenithSkyNits = textureLod(skyViewLUT, DirectionToSkyViewUV(vec3(0.0, 1.0, 0.0)), 0.0).rgb;
+            vec3 horizonSkyNits = textureLod(skyViewLUT, DirectionToSkyViewUV(normalize(vec3(rayDir.x, 0.05, rayDir.z))), 0.0).rgb;
+
+            vec3 cloudInScatterNits = vec3(0.0);
+            float cloudTransmittance = 1.0;
+            float t = tEnter + jitter * stepSize;
+
+            for (int i = 0; i < CLOUD_STEPS; ++i) {
+                vec3 pos = globalUniforms.cameraPosition + rayDir * t;
+                float hFrac;
+                float sigmaT = SampleCloudDensity(pos, hFrac);
+
+                if (sigmaT > 1e-6) {
+                    // 2-tap directional sun shadow march inside the cloud volume
+                    float hDummy;
+                    float shadowOpticalDepth = (
+                        SampleCloudDensity(pos + sunDir * 140.0, hDummy) * 140.0 +
+                        SampleCloudDensity(pos + sunDir * 420.0, hDummy) * 280.0
+                    );
+
+                    // Schneider / Nubis Beer-Powder equation + 2-octave multi-scattering approximation
+                    float beer = exp(-shadowOpticalDepth) + 0.32 * exp(-shadowOpticalDepth * 0.25);
+                    float powder = 1.0 - 0.65 * exp(-sigmaT * 900.0 * 2.0);
+                    float lightEnergy = clamp(beer * mix(1.0, powder, clamp(-cosTheta * 0.5 + 0.5, 0.0, 1.0)), 0.0, 1.35);
+
+                    vec3 ambientCloudNits = mix(horizonSkyNits * 0.55, zenithSkyNits * 1.15, hFrac);
+                    vec3 directCloudNits = sunIrradiance * phase * lightEnergy;
+                    vec3 S = (directCloudNits + ambientCloudNits) * sigmaT;
+
+                    float stepTrans = exp(-sigmaT * stepSize);
+                    cloudInScatterNits += cloudTransmittance * (S - S * stepTrans) / max(sigmaT, 1e-6);
+                    cloudTransmittance *= stepTrans;
+
+                    if (cloudTransmittance < 0.02)
+                        break;
+                }
+
+                t += stepSize;
+            }
+
+            // Aerial perspective fade near the horizon so distant clouds blend seamlessly into Hillaire atmosphere
+            float horizonFade = smoothstep(0.015, 0.16, rayDir.y) * exp(-tEnter * 0.000032);
+            cloudTransmittance = mix(1.0, cloudTransmittance, horizonFade);
+            cloudInScatterNits *= horizonFade;
+
+            skyNits = skyNits * cloudTransmittance + cloudInScatterNits;
         }
     }
 

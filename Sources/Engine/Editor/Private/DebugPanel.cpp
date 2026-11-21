@@ -192,6 +192,16 @@ namespace BetterThanNothing
 				ImGui::SliderFloat("Multi-Scatter", &settings.atmosphereMultiScatteringFactor, 0.0f, 2.0f, "%.2f");
 				ImGui::SliderFloat("Atmo Density", &settings.atmosphereDensityScale, 0.1f, 3.0f, "%.2f");
 
+				ImGui::SeparatorText("Volumetric Clouds");
+				ImGui::Checkbox("Volumetric Clouds", &settings.enableVolumetricClouds);
+				if (settings.enableVolumetricClouds)
+				{
+					ImGui::SliderFloat("Coverage", &settings.cloudCoverage, 0.0f, 0.92f, "%.2f");
+					ImGui::SliderFloat("Cloud Density", &settings.cloudDensity, 0.1f, 2.5f, "%.2f");
+					ImGui::SliderFloat("Cloud Speed", &settings.cloudSpeed, 0.0f, 4.0f, "%.2f");
+					ImGui::SliderFloat("Ground Shadow", &settings.cloudShadowStrength, 0.0f, 1.0f, "%.2f");
+				}
+
 				ImGui::EndTabItem();
 			}
 
@@ -252,12 +262,19 @@ namespace BetterThanNothing
 				{
 					ImGui::SliderFloat("Wind Strength", &settings.grassWindStrength, 0.0f, 3.0f, "%.2f");
 					ImGui::SliderFloat("Wind Speed", &settings.grassWindSpeed, 0.0f, 3.0f, "%.2f");
-					ImGui::SliderFloat("Fade Distance", &settings.grassFadeDistance, 25.0f, 140.0f, "%.0f m");
+					ImGui::SliderFloat("Fade Distance", &settings.grassFadeDistance, 25.0f, 220.0f, "%.0f m");
 				}
 
 				ImGui::SeparatorText("Water Surface");
 				ImGui::SliderFloat("Wave Scale", &settings.waterWaveScale, 0.0f, 2.5f, "%.2f");
 				ImGui::SliderFloat("Foam", &settings.waterFoamIntensity, 0.0f, 2.0f, "%.2f");
+
+				ImGui::SeparatorText("Volumetric Shadows (Canopies & Reliefs)");
+				ImGui::Checkbox("Canopy & Relief Shafts", &settings.enableVolumetricShadows);
+				if (settings.enableVolumetricShadows)
+				{
+					ImGui::SliderFloat("Shaft Intensity", &settings.volumetricShadowIntensity, 0.1f, 3.0f, "%.2f");
+				}
 
 				ImGui::SeparatorText("Volumetric Fog (WsfBDf)");
 				ImGui::Checkbox("Volumetric Fog", &settings.enableVolumetricFog);

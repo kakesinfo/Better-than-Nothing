@@ -125,5 +125,9 @@ namespace BetterThanNothing
 	static_assert(offsetof(GlobalUniformData, grassWindStrength) == 512);
 	static_assert(offsetof(GlobalUniformData, grassWindSpeed) == 516);
 	static_assert(offsetof(GlobalUniformData, grassFadeDistance) == 520);
-	static_assert(sizeof(GlobalUniformData) == 528);
+	static_assert(offsetof(GlobalUniformData, cloudCoverage) == 528);
+	static_assert(offsetof(GlobalUniformData, cloudDensity) == 532);
+	static_assert(offsetof(GlobalUniformData, cloudSpeed) == 536);
+	static_assert(offsetof(GlobalUniformData, cloudShadowStrength) == 540);
+	static_assert(sizeof(GlobalUniformData) == 544);
 }
