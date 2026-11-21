@@ -18,6 +18,7 @@
 
 #include "RenderingApi.hpp"
 #include <Common/Logger.hpp>
+#include <bit>
 #include <set>
 
 namespace BetterThanNothing::RenderingApi
