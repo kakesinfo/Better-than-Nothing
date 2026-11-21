@@ -67,16 +67,26 @@ namespace BetterThanNothing
 		}
 		const ResourceId terrainMaterialId = resMgr->CreateTerrainMaterial(terrainMatInfo);
 
+		MaterialCreateInfo grassMatInfo{};
+		grassMatInfo.name = "ProceduralGrassMaterial";
+		grassMatInfo.roughnessFactor = 0.90f;
+		grassMatInfo.metallicFactor = 0.0f;
+		grassMatInfo.pipelineName = "GBuffer::Grass";
+		const ResourceId grassMaterialId = resMgr->CreateMaterial(grassMatInfo);
+
 		RenderSettings::Get().waterLevel = cfg.waterLevel;
 
 		SceneObject landscapeRoot = scene->CreateObject("Landscape");
 		SceneObject terrainRoot = scene->CreateObject("TerrainChunks");
 		SceneObject waterRoot = scene->CreateObject("WaterChunks");
+		SceneObject grassRoot = scene->CreateObject("GrassChunks");
 		terrainRoot.SetParent(landscapeRoot);
 		waterRoot.SetParent(landscapeRoot);
+		grassRoot.SetParent(landscapeRoot);
 
 		m_terrainChunkCount = 0;
 		m_waterChunkCount = 0;
+		m_grassChunkCount = 0;
 
 		const float originX = m_generator.GetWorldOriginX();
 		const float originZ = m_generator.GetWorldOriginZ();
@@ -125,16 +135,36 @@ namespace BetterThanNothing
 					waterComp.waterLevel = cfg.waterLevel;
 					++m_waterChunkCount;
 				}
+
+				// Procedural 3D Grass chunk (only spawned on grassy meadows outside Sponza courtyard)
+				const MeshData grassMesh = m_generator.GenerateGrassChunkMesh(cx, cz);
+				if (!grassMesh.vertices.empty() && !grassMesh.indices.empty())
+				{
+					const ResourceId grassMeshId = resMgr->CreateMesh(grassMesh);
+					SceneObject		 grassObj = scene->CreateObject("Grass_" + std::to_string(cx) + "_" + std::to_string(cz));
+					grassObj.SetParent(grassRoot);
+					grassObj.GetTransform().SetPosition(chunkWorldX, 0.0f, chunkWorldZ);
+
+					auto& meshComp = grassObj.AddComponent<MeshComponent>();
+					meshComp.meshId = grassMeshId;
+					meshComp.materialId = grassMaterialId;
+
+					auto& grassComp = grassObj.AddComponent<GrassChunkComponent>();
+					grassComp.chunkX = cx;
+					grassComp.chunkZ = cz;
+					++m_grassChunkCount;
+				}
 			}
 		}
 
 		Logger::Log<SUCCESS>(
-			"TerrainSystem: built {} terrain chunks ({}x{} m) and {} water chunks (water Y={:.2f}m)",
+			"TerrainSystem: built {} terrain chunks ({}x{} m), {} water chunks (Y={:.2f}m), and {} procedural 3D grass chunks",
 			m_terrainChunkCount,
 			static_cast<int>(m_generator.GetWorldWidth()),
 			static_cast<int>(m_generator.GetWorldDepth()),
 			m_waterChunkCount,
-			cfg.waterLevel
+			cfg.waterLevel,
+			m_grassChunkCount
 		);
 
 		return landscapeRoot;

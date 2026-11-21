@@ -42,6 +42,7 @@ namespace BetterThanNothing
 
 		[[nodiscard]] uint32_t GetTerrainChunkCount() const { return m_terrainChunkCount; }
 		[[nodiscard]] uint32_t GetWaterChunkCount() const { return m_waterChunkCount; }
+		[[nodiscard]] uint32_t GetGrassChunkCount() const { return m_grassChunkCount; }
 		[[nodiscard]] uint32_t GetTreeCount() const { return m_treeCount; }
 
 		[[nodiscard]] const TerrainGenerator& GetGenerator() const { return m_generator; }
@@ -50,6 +51,7 @@ namespace BetterThanNothing
 		TerrainGenerator m_generator;
 		uint32_t		 m_terrainChunkCount = 0;
 		uint32_t		 m_waterChunkCount = 0;
+		uint32_t		 m_grassChunkCount = 0;
 		uint32_t		 m_treeCount = 0;
 	};
 }

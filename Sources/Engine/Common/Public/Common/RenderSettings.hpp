@@ -87,6 +87,13 @@ namespace BetterThanNothing
 		float atmosphereMultiScatteringFactor = 1.0f;
 		float atmosphereDensityScale = 1.0f;
 
+		// Volumetric Clouds & Cloud Shadows
+		bool  enableVolumetricClouds = true;
+		float cloudCoverage = 0.52f;
+		float cloudDensity = 1.0f;
+		float cloudSpeed = 1.0f;
+		float cloudShadowStrength = 0.65f;
+
 		// Temporal Anti-Aliasing
 		bool  enableTAA = true;
 		float taaBlendFactor = 0.1f;
@@ -99,15 +106,23 @@ namespace BetterThanNothing
 		float waterWaveScale = 1.0f;
 		float waterFoamIntensity = 1.0f;
 
-		// Volumetric Raymarched Fog with Blue Noise (Shadertoy WsfBDf / Demofox)
+		// Procedural 3D Grass
+		bool  enableProceduralGrass = true;
+		float grassWindStrength = 1.0f;
+		float grassWindSpeed = 1.0f;
+		float grassFadeDistance = 85.0f;
+
+		// Volumetric Raymarched Fog (WsfBDf) & Canopy/Relief Volumetric Shadows
 		bool	 enableVolumetricFog = true;
 		bool	 fogRestrictToSponza = true;
+		bool	 enableVolumetricShadows = true; // Volumetric sun/shadow shafts from tree canopies & hill reliefs
+		float	 volumetricShadowIntensity = 1.0f;
 		bool	 fogUseBlueNoise = true;
 		bool	 fogUseRTShadows = true;
 		float	 fogDensity = 0.022f;
 		float	 fogHeightFalloff = 0.14f;
 		float	 fogBaseHeight = 0.0f;
-		float	 fogMaxDistance = 80.0f;
+		float	 fogMaxDistance = 135.0f;
 		float	 fogAnisotropy = 0.68f;
 		float	 fogNoiseStrength = 0.55f;
 		uint32_t fogStepCount = 16;

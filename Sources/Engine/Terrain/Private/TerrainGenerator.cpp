@@ -311,4 +311,161 @@ namespace BetterThanNothing
 
 		return mesh;
 	}
+
+	MeshData TerrainGenerator::GenerateGrassChunkMesh(const int32_t chunkX, const int32_t chunkZ) const
+	{
+		MeshData mesh{};
+		if (m_config.grassTuftsPerChunk == 0)
+			return mesh;
+
+		const float chunkOriginX = GetWorldOriginX() + static_cast<float>(chunkX) * m_config.chunkSize;
+		const float chunkOriginZ = GetWorldOriginZ() + static_cast<float>(chunkZ) * m_config.chunkSize;
+		const float chunkCenterX = chunkOriginX + m_config.chunkSize * 0.5f;
+		const float chunkCenterZ = chunkOriginZ + m_config.chunkSize * 0.5f;
+
+		// Skip outer mountain chunks beyond grass fade radius
+		const float maxR = m_config.grassMaxRadiusFromCenter + m_config.chunkSize * 0.75f;
+		if (chunkCenterX * chunkCenterX + chunkCenterZ * chunkCenterZ > maxR * maxR)
+			return mesh;
+
+		const uint32_t chunkSeed = m_config.seed ^ (static_cast<uint32_t>(chunkX + 127) * 73856093u) ^ (static_cast<uint32_t>(chunkZ + 127) * 19349663u);
+		TerrainNoise::SeededRng rng(chunkSeed);
+
+		constexpr uint32_t kBladesPerTuft = 3u;
+		mesh.vertices.reserve(static_cast<size_t>(m_config.grassTuftsPerChunk) * kBladesPerTuft * 5u);
+		mesh.indices.reserve(static_cast<size_t>(m_config.grassTuftsPerChunk) * kBladesPerTuft * 9u);
+
+		for (uint32_t tuftIdx = 0; tuftIdx < m_config.grassTuftsPerChunk; ++tuftIdx)
+		{
+			const float localX = rng.Range(0.25f, m_config.chunkSize - 0.25f);
+			const float localZ = rng.Range(0.25f, m_config.chunkSize - 0.25f);
+			const float worldX = chunkOriginX + localX;
+			const float worldZ = chunkOriginZ + localZ;
+
+			// Keep Sponza courtyard interior & immediate walls clear of grass tufts
+			bool insideCourtyard = false;
+			for (const auto& zone : m_config.flattenZones)
+			{
+				if (std::abs(worldX - zone.centerX) < (zone.halfExtentX + 2.5f) &&
+					std::abs(worldZ - zone.centerZ) < (zone.halfExtentZ + 2.5f))
+				{
+					insideCourtyard = true;
+					break;
+				}
+			}
+			if (insideCourtyard)
+				continue;
+
+			const float	  terrainY = SampleHeight(worldX, worldZ);
+			if (terrainY < m_config.waterLevel + 0.55f)
+				continue;
+
+			const Vector3 terrainN = SampleNormal(worldX, worldZ);
+			const float	  slope = std::clamp(1.0f - terrainN.GetY(), 0.0f, 1.0f);
+			if (slope > 0.24f)
+				continue;
+
+			const Vector3 splat = ComputeSplatWeights(worldX, worldZ, terrainY, slope);
+			const float	  wGrass = splat.GetY();
+			if (wGrass < 0.35f)
+				continue;
+
+			// Clump modulation: natural patches of taller and shorter meadow grass
+			const float patchNoise = TerrainNoise::FBM2D(worldX * 0.09f, worldZ * 0.09f, m_config.seed + 8819u, 2) * 0.5f + 0.5f;
+			if (rng.NextFloat() > wGrass * (0.55f + 0.45f * patchNoise))
+				continue;
+
+			const float tuftHue = rng.Range(0.0f, 1.0f);
+			const float tuftPhase = rng.Range(0.0f, 1.0f);
+			const float tuftScale = (0.75f + 0.55f * patchNoise) * std::clamp((wGrass - 0.25f) * 1.4f, 0.45f, 1.15f);
+
+			for (uint32_t b = 0; b < kBladesPerTuft; ++b)
+			{
+				const float angle = rng.Range(0.0f, 6.2831853f);
+				const float cosA = std::cos(angle);
+				const float sinA = std::sin(angle);
+
+				const float offsetR = rng.Range(0.0f, 0.22f);
+				const float bx = localX + cosA * offsetR;
+				const float bz = localZ + sinA * offsetR;
+				const float by = SampleHeight(chunkOriginX + bx, chunkOriginZ + bz) - 0.03f;
+
+				const float bladeHeight = rng.Range(0.42f, 0.78f) * tuftScale;
+				const float halfWidthBase = rng.Range(0.032f, 0.052f) * tuftScale;
+				const float halfWidthMid = halfWidthBase * 0.62f;
+				const float archDroop = rng.Range(0.10f, 0.26f) * bladeHeight;
+				const float stiffness = rng.Range(0.25f, 0.85f);
+
+				// Blade width tangent (cosA, 0, sinA); blade lean direction (-sinA, 0, cosA)
+				const float tx = cosA;
+				const float tz = sinA;
+				const float lx = -sinA;
+				const float lz = cosA;
+
+				const Vector3 bladeNormal = Vector3(-lx * 0.45f, 0.89f, -lz * 0.45f).Normalized();
+				const Vector3 bladeColor(tuftHue, stiffness, tuftPhase);
+
+				const uint32_t baseIdx = static_cast<uint32_t>(mesh.vertices.size());
+
+				// 5-vertex curved 2-segment tapered blade:
+				// 0, 1: root left/right (h = 0.0)
+				// 2, 3: mid left/right  (h = 0.52)
+				// 4:    pointed tip     (h = 1.0)
+				VertexData v0{};
+				v0.position = Vector3(bx - tx * halfWidthBase, by, bz - tz * halfWidthBase);
+				v0.color = bladeColor;
+				v0.uv = Vector2(0.0f, 0.0f);
+				v0.normal = bladeNormal;
+
+				VertexData v1{};
+				v1.position = Vector3(bx + tx * halfWidthBase, by, bz + tz * halfWidthBase);
+				v1.color = bladeColor;
+				v1.uv = Vector2(1.0f, 0.0f);
+				v1.normal = bladeNormal;
+
+				const float midY = by + bladeHeight * 0.54f;
+				const float midLean = archDroop * 0.38f;
+
+				VertexData v2{};
+				v2.position = Vector3(bx + lx * midLean - tx * halfWidthMid, midY, bz + lz * midLean - tz * halfWidthMid);
+				v2.color = bladeColor;
+				v2.uv = Vector2(0.15f, 0.52f);
+				v2.normal = bladeNormal;
+
+				VertexData v3{};
+				v3.position = Vector3(bx + lx * midLean + tx * halfWidthMid, midY, bz + lz * midLean + tz * halfWidthMid);
+				v3.color = bladeColor;
+				v3.uv = Vector2(0.85f, 0.52f);
+				v3.normal = bladeNormal;
+
+				VertexData v4{};
+				v4.position = Vector3(bx + lx * archDroop, by + bladeHeight, bz + lz * archDroop);
+				v4.color = bladeColor;
+				v4.uv = Vector2(0.5f, 1.0f);
+				v4.normal = bladeNormal;
+
+				mesh.vertices.push_back(v0);
+				mesh.vertices.push_back(v1);
+				mesh.vertices.push_back(v2);
+				mesh.vertices.push_back(v3);
+				mesh.vertices.push_back(v4);
+
+				// Segment 0 quad (v0, v1, v2, v3)
+				mesh.indices.push_back(baseIdx + 0u);
+				mesh.indices.push_back(baseIdx + 1u);
+				mesh.indices.push_back(baseIdx + 2u);
+
+				mesh.indices.push_back(baseIdx + 1u);
+				mesh.indices.push_back(baseIdx + 3u);
+				mesh.indices.push_back(baseIdx + 2u);
+
+				// Segment 1 tip triangle (v2, v3, v4)
+				mesh.indices.push_back(baseIdx + 2u);
+				mesh.indices.push_back(baseIdx + 3u);
+				mesh.indices.push_back(baseIdx + 4u);
+			}
+		}
+
+		return mesh;
+	}
 }

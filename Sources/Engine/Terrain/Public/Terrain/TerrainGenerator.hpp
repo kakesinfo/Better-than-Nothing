@@ -45,6 +45,9 @@ namespace BetterThanNothing
 		// Generates water mesh for chunk (chunkX, chunkZ) only if terrain dips below waterLevel; empty otherwise
 		[[nodiscard]] MeshData GenerateWaterChunkMesh(int32_t chunkX, int32_t chunkZ) const;
 
+		// Generates procedural 3D grass blades for chunk (chunkX, chunkZ) on grassy meadows outside Sponza
+		[[nodiscard]] MeshData GenerateGrassChunkMesh(int32_t chunkX, int32_t chunkZ) const;
+
 		[[nodiscard]] float GetWorldOriginX() const;
 		[[nodiscard]] float GetWorldOriginZ() const;
 		[[nodiscard]] float GetWorldWidth() const;

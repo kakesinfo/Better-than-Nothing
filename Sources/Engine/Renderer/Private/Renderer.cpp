@@ -709,6 +709,29 @@ namespace BetterThanNothing
 				->SetAlphaToCoverage(false);
 		});
 
+		// G-Buffer Procedural 3D Grass pipeline (animated wind + double-sided curved blades)
+		const auto grassVert = m_resourceManager->LoadShader("Shaders/deferred/grass_gbuffer.vert");
+		const auto grassFrag = m_resourceManager->LoadShader("Shaders/deferred/grass_gbuffer.frag");
+		m_resourceManager->CreatePipeline("GBuffer::Grass", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(grassVert)
+				->AddShader(grassFrag)
+				->SetPipelineLayout("GBuffer")
+				->SetColorFormats({
+					TextureFormat::R8G8B8A8_UNORM,
+					TextureFormat::R16G16_SFLOAT,
+					TextureFormat::R8G8B8A8_UNORM,
+					TextureFormat::R16G16_SFLOAT,
+				})
+				->SetHasDepthAttachment(true)
+				->SetUseMsaa(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false)
+				->SetCullMode(CullMode::None);
+		});
+
 		// Animated Gerstner Water Surface pipeline
 		const auto waterVert = m_resourceManager->LoadShader("Shaders/water/water.vert");
 		const auto waterFrag = m_resourceManager->LoadShader("Shaders/water/water.frag");
@@ -1409,7 +1432,9 @@ namespace BetterThanNothing
 		const auto	meshView = scene->GetView<TransformComponent, MeshComponent>();
 		for (auto [entity, transform, meshComp] : meshView.each())
 		{
-			if (meshComp.meshId == InvalidResourceId || registry.all_of<WaterChunkComponent>(entity))
+			if (meshComp.meshId == InvalidResourceId ||
+				registry.all_of<WaterChunkComponent>(entity) ||
+				registry.all_of<GrassChunkComponent>(entity))
 				continue;
 
 			const MeshResourceCache* meshData = m_resourceManager->GetMeshData(meshComp.meshId);
@@ -1581,6 +1606,10 @@ namespace BetterThanNothing
 		globalUniform->waterLevel = settings.waterLevel;
 		globalUniform->waterWaveScale = settings.waterWaveScale;
 		globalUniform->waterFoamIntensity = settings.waterFoamIntensity;
+		globalUniform->grassWindStrength = settings.grassWindStrength;
+		globalUniform->grassWindSpeed = settings.grassWindSpeed;
+		globalUniform->grassFadeDistance = settings.grassFadeDistance;
+		globalUniform->_padGrass = 0.0f;
 
 		m_prevUnjitteredViewProj = unjitteredViewProj;
 
@@ -1602,6 +1631,9 @@ namespace BetterThanNothing
 		for (auto [entity, transform, meshComp] : meshView.each())
 		{
 			if (meshComp.meshId == InvalidResourceId)
+				continue;
+
+			if (!settings.enableProceduralGrass && registry.all_of<GrassChunkComponent>(entity))
 				continue;
 
 			const MeshResourceCache* meshData = m_resourceManager->GetMeshData(meshComp.meshId);

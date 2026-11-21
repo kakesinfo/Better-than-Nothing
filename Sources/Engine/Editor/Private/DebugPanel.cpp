@@ -243,9 +243,18 @@ namespace BetterThanNothing
 				ImGui::EndTabItem();
 			}
 
-			// --- Tab 5: Water & Volumetric Fog ---
-			if (ImGui::BeginTabItem("Water & Fog"))
+			// --- Tab 5: Nature, Water & Volumetric Fog ---
+			if (ImGui::BeginTabItem("Nature & Fog"))
 			{
+				ImGui::SeparatorText("Procedural 3D Grass");
+				ImGui::Checkbox("Procedural Grass", &settings.enableProceduralGrass);
+				if (settings.enableProceduralGrass)
+				{
+					ImGui::SliderFloat("Wind Strength", &settings.grassWindStrength, 0.0f, 3.0f, "%.2f");
+					ImGui::SliderFloat("Wind Speed", &settings.grassWindSpeed, 0.0f, 3.0f, "%.2f");
+					ImGui::SliderFloat("Fade Distance", &settings.grassFadeDistance, 25.0f, 140.0f, "%.0f m");
+				}
+
 				ImGui::SeparatorText("Water Surface");
 				ImGui::SliderFloat("Wave Scale", &settings.waterWaveScale, 0.0f, 2.5f, "%.2f");
 				ImGui::SliderFloat("Foam", &settings.waterFoamIntensity, 0.0f, 2.0f, "%.2f");

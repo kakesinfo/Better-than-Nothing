@@ -63,9 +63,11 @@ namespace BetterThanNothing
 		float hillAmplitude = 11.5f;
 		float mountainAmplitude = 20.0f;
 		float baseFrequency = 0.014f;
-		float waterLevel = -1.6f;
-		float uvScale = 0.25f;
+		float	 waterLevel = -1.6f;
+		float	 uvScale = 0.65f;
 		uint32_t textureMaxDimension = 1024;
+		uint32_t grassTuftsPerChunk = 320; // 3 curved 3D blades per tuft (~960 blades per grassy chunk)
+		float	 grassMaxRadiusFromCenter = 96.0f;
 
 		std::vector<TerrainFlattenZone> flattenZones;
 		std::vector<TerrainWaterBasin>	waterBasins;

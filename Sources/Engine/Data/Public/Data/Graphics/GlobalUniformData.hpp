@@ -33,6 +33,7 @@ namespace BetterThanNothing
 		inline constexpr uint32_t HistoryValid = 1u << 3;
 		inline constexpr uint32_t AOEnabled = 1u << 4;
 		inline constexpr uint32_t BendSSSEnabled = 1u << 5;
+		inline constexpr uint32_t VolumetricCloudsEnabled = 1u << 6;
 	}
 
 	struct GlobalUniformData
@@ -77,6 +78,16 @@ namespace BetterThanNothing
 		float waterLevel = -1.6f;
 		float waterWaveScale = 1.0f;
 		float waterFoamIntensity = 1.0f;
+
+		float grassWindStrength = 1.0f;
+		float grassWindSpeed = 1.0f;
+		float grassFadeDistance = 85.0f;
+		float _padGrass = 0.0f;
+
+		float cloudCoverage = 0.52f;
+		float cloudDensity = 1.0f;
+		float cloudSpeed = 1.0f;
+		float cloudShadowStrength = 0.65f;
 	};
 
 	static_assert(offsetof(GlobalUniformData, projection) == 0);
@@ -111,5 +122,8 @@ namespace BetterThanNothing
 	static_assert(offsetof(GlobalUniformData, waterLevel) == 500);
 	static_assert(offsetof(GlobalUniformData, waterWaveScale) == 504);
 	static_assert(offsetof(GlobalUniformData, waterFoamIntensity) == 508);
-	static_assert(sizeof(GlobalUniformData) == 512);
+	static_assert(offsetof(GlobalUniformData, grassWindStrength) == 512);
+	static_assert(offsetof(GlobalUniformData, grassWindSpeed) == 516);
+	static_assert(offsetof(GlobalUniformData, grassFadeDistance) == 520);
+	static_assert(sizeof(GlobalUniformData) == 528);
 }
