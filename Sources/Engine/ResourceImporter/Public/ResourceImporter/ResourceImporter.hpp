@@ -35,7 +35,7 @@ namespace BetterThanNothing
 		ResourceImporter();
 		~ResourceImporter();
 
-		[[nodiscard]] ImportedTexture ImportTexture(const std::string& input) const;
+		[[nodiscard]] ImportedTexture ImportTexture(const std::string& input, uint32_t maxDimension = 2048) const;
 		[[nodiscard]] ImportedModel ImportModel(const std::string& path, bool preTransform = true) const;
 		[[nodiscard]] ImportedShader ImportShader(const std::string& path) const;
 

@@ -29,7 +29,9 @@
 #include <cctype>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <limits>
+#include <map>
 #include <meshoptimizer.h>
 #include <tiny_gltf.h>
 
@@ -44,6 +46,54 @@ namespace BetterThanNothing
 		if (value == "BLEND")
 			return EImportedAlphaMode::Blend;
 		throw std::runtime_error("Unknown Alpha Mode value: " + value);
+	}
+
+	static bool IsLikelyFoliageName(std::string s)
+	{
+		std::ranges::transform(s, s.begin(), [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
+		return s.find("leaf") != std::string::npos || s.find("leaves") != std::string::npos || s.find("foliage") != std::string::npos;
+	}
+
+	static void OptimizeAndBoundMesh(ImportedMesh& mesh)
+	{
+		const bool	 isIndexed = !mesh.indices.empty();
+		const size_t vertexCountIn = mesh.vertices.size();
+		const size_t indexCountIn = isIndexed ? mesh.indices.size() : vertexCountIn;
+		if (vertexCountIn == 0 || indexCountIn == 0)
+			return;
+
+		std::vector<unsigned int> remap(vertexCountIn);
+		const size_t			  uniqueVertexCount = meshopt_generateVertexRemap(
+			remap.data(),
+			isIndexed ? mesh.indices.data() : nullptr,
+			indexCountIn,
+			mesh.vertices.data(),
+			vertexCountIn,
+			sizeof(VertexData)
+		);
+
+		std::vector<VertexData> newVertices(uniqueVertexCount);
+		std::vector<uint32_t>	newIndices(indexCountIn);
+
+		meshopt_remapVertexBuffer(newVertices.data(), mesh.vertices.data(), vertexCountIn, sizeof(VertexData), remap.data());
+		meshopt_remapIndexBuffer(newIndices.data(), isIndexed ? mesh.indices.data() : nullptr, indexCountIn, remap.data());
+
+		meshopt_optimizeVertexCache(newIndices.data(), newIndices.data(), indexCountIn, uniqueVertexCount);
+		meshopt_optimizeOverdraw(newIndices.data(), newIndices.data(), indexCountIn, &newVertices[0].position.x(), uniqueVertexCount, sizeof(VertexData), 1.05f);
+		meshopt_optimizeVertexFetch(newVertices.data(), newIndices.data(), indexCountIn, newVertices.data(), uniqueVertexCount, sizeof(VertexData));
+
+		Vector3 meshMin(std::numeric_limits<float>::max());
+		Vector3 meshMax(std::numeric_limits<float>::lowest());
+		for (const auto& vert : newVertices)
+		{
+			meshMin = Vector3::Min(meshMin, vert.position);
+			meshMax = Vector3::Max(meshMax, vert.position);
+		}
+
+		mesh.min = meshMin;
+		mesh.max = meshMax;
+		mesh.vertices = std::move(newVertices);
+		mesh.indices = std::move(newIndices);
 	}
 
 	ImportedModel GltfImporter::Import(const ModelImportInfo& input)
@@ -118,10 +168,19 @@ namespace BetterThanNothing
 					mat.metallicRoughnessTexturePath = (filePath.parent_path() / gltfModel.images[sourceIndex].uri).string();
 			}
 
+			// Foliage exported as BLEND (e.g. Sketchfab trees) renders far cleaner as alpha-tested cutout in deferred + RT shadows
+			if (mat.alphaMode == EImportedAlphaMode::Blend &&
+				(IsLikelyFoliageName(gltfMat.name) || (mat.diffuseTexturePath.has_value() && IsLikelyFoliageName(mat.diffuseTexturePath.value()))))
+			{
+				mat.alphaMode = EImportedAlphaMode::Mask;
+				mat.alphaCutoff = 0.45f;
+			}
+
 			importedModel.materials.push_back(std::move(mat));
 		}
 
-		// Map each glTF mesh index to the list of imported primitive mesh indices
+		// Extract raw primitives per glTF mesh
+		std::vector<ImportedMesh>			 rawPrimitives;
 		std::vector<std::vector<ImportedId>> meshPrimitiveMap(gltfModel.meshes.size());
 
 		for (size_t gltfMeshIdx = 0; gltfMeshIdx < gltfModel.meshes.size(); ++gltfMeshIdx)
@@ -133,7 +192,7 @@ namespace BetterThanNothing
 					continue;
 
 				ImportedMesh currentMesh{};
-				currentMesh.id = static_cast<uint32_t>(importedModel.meshes.size());
+				currentMesh.id = static_cast<uint32_t>(rawPrimitives.size());
 
 				if (primitive.material >= 0)
 					currentMesh.materialId = static_cast<ImportedId>(primitive.material);
@@ -225,50 +284,21 @@ namespace BetterThanNothing
 					}
 				}
 
-				const bool	 isIndexed = !currentMesh.indices.empty();
-				const size_t vertexCountIn = currentMesh.vertices.size();
-				const size_t indexCountIn = isIndexed ? currentMesh.indices.size() : vertexCountIn;
-
-				std::vector<unsigned int> remap(vertexCountIn);
-
-				const size_t uniqueVertexCount = meshopt_generateVertexRemap(
-					remap.data(),
-					isIndexed ? currentMesh.indices.data() : nullptr,
-					indexCountIn,
-					currentMesh.vertices.data(),
-					vertexCountIn,
-					sizeof(VertexData)
-				);
-
-				std::vector<VertexData> newVertices(uniqueVertexCount);
-				std::vector<uint32_t>	newIndices(indexCountIn);
-
-				meshopt_remapVertexBuffer(newVertices.data(), currentMesh.vertices.data(), vertexCountIn, sizeof(VertexData), remap.data());
-				meshopt_remapIndexBuffer(newIndices.data(), isIndexed ? currentMesh.indices.data() : nullptr, indexCountIn, remap.data());
-
-				meshopt_optimizeVertexCache(newIndices.data(), newIndices.data(), indexCountIn, uniqueVertexCount);
-				meshopt_optimizeOverdraw(newIndices.data(), newIndices.data(), indexCountIn, &newVertices[0].position.x(), uniqueVertexCount, sizeof(VertexData), 1.05f);
-				meshopt_optimizeVertexFetch(newVertices.data(), newIndices.data(), indexCountIn, newVertices.data(), uniqueVertexCount, sizeof(VertexData));
-
-				Vector3 meshMin(std::numeric_limits<float>::max());
-				Vector3 meshMax(std::numeric_limits<float>::lowest());
-				for (const auto& vert : newVertices)
+				if (currentMesh.indices.empty())
 				{
-					meshMin = Vector3::Min(meshMin, vert.position);
-					meshMax = Vector3::Max(meshMax, vert.position);
+					currentMesh.indices.resize(currentMesh.vertices.size());
+					for (uint32_t i = 0; i < static_cast<uint32_t>(currentMesh.vertices.size()); ++i)
+						currentMesh.indices[i] = i;
 				}
 
-				currentMesh.min = meshMin;
-				currentMesh.max = meshMax;
-				currentMesh.vertices = std::move(newVertices);
-				currentMesh.indices = std::move(newIndices);
-
 				meshPrimitiveMap[gltfMeshIdx].push_back(currentMesh.id);
-				importedModel.meshes.push_back(std::move(currentMesh));
+				rawPrimitives.push_back(std::move(currentMesh));
 			}
 		}
 
-		importedModel.nodes.reserve(gltfModel.nodes.size());
+		// Parse node hierarchy
+		std::vector<ImportedNode> parsedNodes;
+		parsedNodes.reserve(gltfModel.nodes.size());
 		for (const auto& gltfNode : gltfModel.nodes)
 		{
 			ImportedNode node{};
@@ -308,7 +338,6 @@ namespace BetterThanNothing
 				Quaternion rotation = Quaternion::Identity;
 				if (gltfNode.rotation.size() == 4)
 				{
-					// glTF stores quaternions as [x, y, z, w]; Quaternion constructor takes (w, x, y, z)
 					rotation = Quaternion{
 						static_cast<float>(gltfNode.rotation[3]),
 						static_cast<float>(gltfNode.rotation[0]),
@@ -330,24 +359,111 @@ namespace BetterThanNothing
 					node.children.push_back(static_cast<ImportedId>(childIdx));
 			}
 
-			importedModel.nodes.push_back(std::move(node));
+			parsedNodes.push_back(std::move(node));
 		}
 
+		std::vector<ImportedId> rootNodeIndices;
 		if (!gltfModel.scenes.empty())
 		{
 			const int sceneIdx = gltfModel.defaultScene >= 0 ? gltfModel.defaultScene : 0;
 			for (const int rootNodeIdx : gltfModel.scenes[sceneIdx].nodes)
 			{
 				if (rootNodeIdx >= 0)
-					importedModel.rootNodes.push_back(static_cast<ImportedId>(rootNodeIdx));
+					rootNodeIndices.push_back(static_cast<ImportedId>(rootNodeIdx));
 			}
 		}
 		else
 		{
-			for (size_t i = 0; i < importedModel.nodes.size(); ++i)
-				importedModel.rootNodes.push_back(static_cast<ImportedId>(i));
+			for (size_t i = 0; i < parsedNodes.size(); ++i)
+				rootNodeIndices.push_back(static_cast<ImportedId>(i));
 		}
 
+		if (input.preTransform && !parsedNodes.empty())
+		{
+			// Bake world transforms and merge meshes by material ID (collapses 500+ foliage nodes into 1 mesh per material)
+			std::map<int64_t, ImportedMesh> mergedByMaterial;
+
+			std::function<void(ImportedId, const Matrix4&)> bakeNode = [&](const ImportedId nodeIdx, const Matrix4& parentMat) {
+				if (nodeIdx >= parsedNodes.size())
+					return;
+
+				const auto&		node = parsedNodes[nodeIdx];
+				const Matrix4	worldMat = parentMat * node.transform;
+				const glm::mat4 worldGlm = worldMat.Value();
+				const glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(worldGlm)));
+				const bool		flipWinding = glm::determinant(glm::mat3(worldGlm)) < 0.0f;
+
+				for (const ImportedId primId : node.meshes)
+				{
+					const auto&	  src = rawPrimitives[primId];
+					const int64_t matKey = src.materialId.has_value() ? static_cast<int64_t>(src.materialId.value()) : -1;
+					auto&		  dst = mergedByMaterial[matKey];
+					if (src.materialId.has_value())
+						dst.materialId = src.materialId;
+
+					const uint32_t baseVertex = static_cast<uint32_t>(dst.vertices.size());
+					dst.vertices.reserve(dst.vertices.size() + src.vertices.size());
+					for (const auto& v : src.vertices)
+					{
+						VertexData tv = v;
+						const glm::vec4 p = worldGlm * glm::vec4(v.position.Value(), 1.0f);
+						glm::vec3		n = normalMat * v.normal.Value();
+						const float		nLen = glm::length(n);
+						n = (nLen > 1e-6f) ? (n / nLen) : glm::vec3(0.0f, 1.0f, 0.0f);
+						tv.position = Vector3(p.x, p.y, p.z);
+						tv.normal = Vector3(n);
+						dst.vertices.push_back(tv);
+					}
+
+					dst.indices.reserve(dst.indices.size() + src.indices.size());
+					if (flipWinding)
+					{
+						for (size_t i = 0; i + 2 < src.indices.size(); i += 3)
+						{
+							dst.indices.push_back(baseVertex + src.indices[i]);
+							dst.indices.push_back(baseVertex + src.indices[i + 2]);
+							dst.indices.push_back(baseVertex + src.indices[i + 1]);
+						}
+					}
+					else
+					{
+						for (const uint32_t idx : src.indices)
+							dst.indices.push_back(baseVertex + idx);
+					}
+				}
+
+				for (const ImportedId childIdx : node.children)
+					bakeNode(childIdx, worldMat);
+			};
+
+			for (const ImportedId rootIdx : rootNodeIndices)
+				bakeNode(rootIdx, Matrix4::Identity);
+
+			ImportedNode bakedRoot{};
+			bakedRoot.name = filePath.stem().string();
+			bakedRoot.transform = Matrix4::Identity;
+
+			for (auto& [matKey, merged] : mergedByMaterial)
+			{
+				if (merged.vertices.empty() || merged.indices.empty())
+					continue;
+				merged.id = static_cast<ImportedId>(importedModel.meshes.size());
+				OptimizeAndBoundMesh(merged);
+				bakedRoot.meshes.push_back(merged.id);
+				importedModel.meshes.push_back(std::move(merged));
+			}
+
+			importedModel.nodes.push_back(std::move(bakedRoot));
+			importedModel.rootNodes.push_back(0);
+			return importedModel;
+		}
+
+		// Non-preTransform path: preserve node hierarchy
+		for (auto& prim : rawPrimitives)
+			OptimizeAndBoundMesh(prim);
+		importedModel.meshes = std::move(rawPrimitives);
+		importedModel.nodes = std::move(parsedNodes);
+		importedModel.rootNodes = std::move(rootNodeIndices);
 		return importedModel;
 	}
 }

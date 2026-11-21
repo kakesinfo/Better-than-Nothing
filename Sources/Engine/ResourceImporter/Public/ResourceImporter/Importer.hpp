@@ -45,8 +45,14 @@ namespace BetterThanNothing
 		bool		preTransform = true;
 	};
 
+	struct TextureImportInfo
+	{
+		std::string path;
+		uint32_t	maxDimension = 2048;
+	};
+
 	DECLARE_IMPORTER(ObjImporter, ModelImportInfo, ImportedModel);
 	DECLARE_IMPORTER(GltfImporter, ModelImportInfo, ImportedModel);
-	DECLARE_IMPORTER(TextureImporter, std::string, ImportedTexture);
+	DECLARE_IMPORTER(TextureImporter, TextureImportInfo, ImportedTexture);
 	DECLARE_IMPORTER(ShaderImporter, std::string, ImportedShader);
 }

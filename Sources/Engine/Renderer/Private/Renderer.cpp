@@ -27,6 +27,8 @@
 #include "Passes/RTShadowPass.hpp"
 #include "Passes/ScreenSpaceShadowPass.hpp"
 #include "Passes/SkyAtmospherePass.hpp"
+#include "Passes/VolumetricFogPass.hpp"
+#include "Passes/WaterPass.hpp"
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
@@ -95,6 +97,12 @@ namespace BetterThanNothing
 		nearestSamplerDesc.mipmapMode = SamplerMipmapMode::Nearest;
 		m_nearestClampSampler = m_renderingDevice->GetOrCreateTextureSampler(nearestSamplerDesc);
 
+		SamplerDescription nearestRepeatDesc = nearestSamplerDesc;
+		nearestRepeatDesc.addressModeU = SamplerAddressMode::Repeat;
+		nearestRepeatDesc.addressModeV = SamplerAddressMode::Repeat;
+		nearestRepeatDesc.addressModeW = SamplerAddressMode::Repeat;
+		m_nearestRepeatSampler = m_renderingDevice->GetOrCreateTextureSampler(nearestRepeatDesc);
+
 		SamplerDescription pointBorderWhiteDesc{};
 		pointBorderWhiteDesc.magFilter = SamplerFilter::Nearest;
 		pointBorderWhiteDesc.minFilter = SamplerFilter::Nearest;
@@ -129,6 +137,7 @@ namespace BetterThanNothing
 		CreateLayoutsAndPipelines();
 
 		m_opaqueDrawStream = std::make_unique<DrawStream>();
+		m_waterDrawStream = std::make_unique<DrawStream>();
 		m_transparentDrawStream = std::make_unique<DrawStream>();
 
 		const uint32_t frameCount = m_renderingDevice->GetMaxFramesInFlight();
@@ -147,10 +156,12 @@ namespace BetterThanNothing
 		{
 			m_rtShadowDescriptorSets.resize(frameCount);
 			m_rtaoDescriptorSets.resize(frameCount);
+			m_volumetricFogRtDescriptorSets.resize(frameCount);
 			for (uint32_t i = 0; i < frameCount; ++i)
 			{
 				m_rtShadowDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("RTShadow");
 				m_rtaoDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("RTAO");
+				m_volumetricFogRtDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("VolumetricFogRT");
 			}
 		}
 		for (uint32_t i = 0; i < 2; ++i)
@@ -171,6 +182,8 @@ namespace BetterThanNothing
 		m_skyRenderDescriptorSet = m_renderingDevice->CreateDescriptorSet("SkyRender");
 
 		m_deferredLightingDescriptorSet = m_renderingDevice->CreateDescriptorSet("DeferredLighting");
+		m_waterDescriptorSet = m_renderingDevice->CreateDescriptorSet("Water");
+		m_volumetricFogNoRtDescriptorSet = m_renderingDevice->CreateDescriptorSet("VolumetricFogNoRT");
 		m_forwardIblDescriptorSet = m_renderingDevice->CreateDescriptorSet("ForwardIBL");
 		for (uint32_t i = 0; i < 2; ++i)
 		{
@@ -178,6 +191,7 @@ namespace BetterThanNothing
 			m_toneMapDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("ToneMap");
 		}
 
+		CreateBlueNoiseTexture();
 		CreateAtmosphereLuts();
 		EnsureRenderTargets();
 
@@ -187,14 +201,16 @@ namespace BetterThanNothing
 		AddPass(std::make_unique<AmbientOcclusionPass>());
 		AddPass(std::make_unique<SkyAtmospherePass>());
 		AddPass(std::make_unique<DeferredLightingPass>());
+		AddPass(std::make_unique<WaterPass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
+		AddPass(std::make_unique<VolumetricFogPass>());
 		AddPass(std::make_unique<PostProcessPass>());
 #ifndef NDEBUG
 		if (m_editor)
 			AddPass(std::make_unique<EditorPass>());
 #endif
 
-		Logger::Log<SUCCESS>("Renderer: deferred + FFX RT shadows + Bend SSS + AO + Hillaire sky + Irradiance IBL initialized ({} passes, HW Ray Query: {})", m_passes.size(), m_rtSupported ? "enabled" : "unavailable");
+		Logger::Log<SUCCESS>("Renderer: deferred + FFX RT shadows + Bend SSS + AO + Hillaire sky + Water + Volumetric Fog initialized ({} passes, HW Ray Query: {})", m_passes.size(), m_rtSupported ? "enabled" : "unavailable");
 	}
 
 	Renderer::~Renderer()
@@ -219,6 +235,7 @@ namespace BetterThanNothing
 		destroyTex(m_irradianceLUT);
 		destroyTex(m_prefilteredEnvLUT);
 		destroyTex(m_brdfLUT);
+		destroyTex(m_blueNoiseTexture);
 
 		for (const auto& [meshId, blasHandle] : m_blasCache)
 		{
@@ -255,6 +272,8 @@ namespace BetterThanNothing
 			destroySet(h);
 		for (Handle& h : m_rtaoDescriptorSets)
 			destroySet(h);
+		for (Handle& h : m_volumetricFogRtDescriptorSets)
+			destroySet(h);
 		for (Handle& h : m_ffxTileClassDescriptorSets)
 			destroySet(h);
 		for (Handle& h : m_ffxFilterDescriptorSets)
@@ -270,6 +289,8 @@ namespace BetterThanNothing
 		destroySet(m_skyBrdfDescriptorSet);
 		destroySet(m_skyRenderDescriptorSet);
 		destroySet(m_deferredLightingDescriptorSet);
+		destroySet(m_waterDescriptorSet);
+		destroySet(m_volumetricFogNoRtDescriptorSet);
 		destroySet(m_forwardIblDescriptorSet);
 		for (Handle& h : m_taaDescriptorSets)
 			destroySet(h);
@@ -316,6 +337,23 @@ namespace BetterThanNothing
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("Material", materialBindings);
 
+		// Set 1 (Terrain): 5 Ground PBR layers x (Color, NormalGL, Roughness) = 15 samplers
+		std::array<DescriptorBindingDesc, 15> terrainMaterialBindings{};
+		for (uint32_t i = 0; i < 15u; ++i)
+			terrainMaterialBindings[i] = {.binding = i, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment};
+		m_renderingDevice->CreateDescriptorSetLayout("TerrainMaterial", terrainMaterialBindings);
+
+		// Set 1 (Water): depth, refracted scene HDR, transmittance, irradiance, prefilteredEnv, brdfLUT
+		const std::array<DescriptorBindingDesc, 6> waterBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 5, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("Water", waterBindings);
+
 		// Set 2: Point lights SSBO
 		m_renderingDevice->CreateDescriptorSetLayout("PointLights", DescriptorType::StorageBuffer, ShaderStageFlags::Fragment | ShaderStageFlags::Compute);
 
@@ -347,7 +385,26 @@ namespace BetterThanNothing
 				{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
 			}};
 			m_renderingDevice->CreateDescriptorSetLayout("RTAO", rtaoBindings);
+
+			const std::array<DescriptorBindingDesc, 6> volumetricFogRtBindings = {{
+				{.binding = 0, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 5, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			}};
+			m_renderingDevice->CreateDescriptorSetLayout("VolumetricFogRT", volumetricFogRtBindings);
 		}
+
+		const std::array<DescriptorBindingDesc, 5> volumetricFogNoRtBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("VolumetricFogNoRT", volumetricFogNoRtBindings);
 
 		// AMD FidelityFX Shadow Denoiser - Stage 1: Tile Classification + Temporal Moments
 		const std::array<DescriptorBindingDesc, 11> ffxTileClassBindings = {{
@@ -467,6 +524,18 @@ namespace BetterThanNothing
 			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
 		});
 
+		m_renderingDevice->CreatePipelineLayout("GBufferTerrain", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("TerrainMaterial");
+			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
+		});
+
+		m_renderingDevice->CreatePipelineLayout("Water", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("Water");
+			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
+		});
+
 		m_renderingDevice->CreatePipelineLayout("Forward", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("Material");
@@ -485,7 +554,18 @@ namespace BetterThanNothing
 				blueprint->AddDescriptorSetLayout("GlobalUniforms");
 				blueprint->AddDescriptorSetLayout("RTAO");
 			});
+			m_renderingDevice->CreatePipelineLayout("VolumetricFogRT", [&](PipelineLayoutBlueprint* blueprint) {
+				blueprint->AddDescriptorSetLayout("GlobalUniforms");
+				blueprint->AddDescriptorSetLayout("VolumetricFogRT");
+				blueprint->AddPushConstant<VolumetricFogPushConstants>(EShaderType::Compute);
+			});
 		}
+
+		m_renderingDevice->CreatePipelineLayout("VolumetricFogNoRT", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("VolumetricFogNoRT");
+			blueprint->AddPushConstant<VolumetricFogPushConstants>(EShaderType::Compute);
+		});
 
 		m_renderingDevice->CreatePipelineLayout("FFXShadowTileClass", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
@@ -587,6 +667,66 @@ namespace BetterThanNothing
 				->SetAlphaToCoverage(false);
 		});
 
+		// G-Buffer Masked double-sided pipeline (foliage, elm tree leaves, curtains)
+		m_resourceManager->CreatePipeline("GBuffer::Masked", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(gbufferVert)
+				->AddShader(gbufferFrag)
+				->SetPipelineLayout("GBuffer")
+				->SetColorFormats({
+					TextureFormat::R8G8B8A8_UNORM,
+					TextureFormat::R16G16_SFLOAT,
+					TextureFormat::R8G8B8A8_UNORM,
+					TextureFormat::R16G16_SFLOAT,
+				})
+				->SetHasDepthAttachment(true)
+				->SetUseMsaa(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false)
+				->SetCullMode(CullMode::None);
+		});
+
+		// G-Buffer Multi-Layer PBR Terrain pipeline
+		const auto terrainFrag = m_resourceManager->LoadShader("Shaders/deferred/terrain_gbuffer.frag");
+		m_resourceManager->CreatePipeline("GBuffer::Terrain", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(gbufferVert)
+				->AddShader(terrainFrag)
+				->SetPipelineLayout("GBufferTerrain")
+				->SetColorFormats({
+					TextureFormat::R8G8B8A8_UNORM,
+					TextureFormat::R16G16_SFLOAT,
+					TextureFormat::R8G8B8A8_UNORM,
+					TextureFormat::R16G16_SFLOAT,
+				})
+				->SetHasDepthAttachment(true)
+				->SetUseMsaa(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false);
+		});
+
+		// Animated Gerstner Water Surface pipeline
+		const auto waterVert = m_resourceManager->LoadShader("Shaders/water/water.vert");
+		const auto waterFrag = m_resourceManager->LoadShader("Shaders/water/water.frag");
+		m_resourceManager->CreatePipeline("Water::Surface", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(waterVert)
+				->AddShader(waterFrag)
+				->SetPipelineLayout("Water")
+				->SetColorFormat(TextureFormat::R16G16B16A16_SFLOAT)
+				->SetHasDepthAttachment(true)
+				->SetUseMsaa(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetBlendEnable(true)
+				->SetAlphaToCoverage(false)
+				->SetCullMode(CullMode::None);
+		});
+
 		// Forward Transparent pipeline
 		const auto forwardVert = m_resourceManager->LoadShader("Shaders/main/main.vert");
 		const auto forwardFrag = m_resourceManager->LoadShader("Shaders/main/main.frag");
@@ -681,6 +821,19 @@ namespace BetterThanNothing
 			blueprint->AddShader(skyRenderComp)->SetPipelineLayout("SkyRender");
 		});
 
+		// Volumetric Raymarched Fog with Blue Noise (Shadertoy WsfBDf / Demofox)
+		if (m_rtSupported)
+		{
+			const auto volFogRtComp = m_resourceManager->LoadShader("Shaders/atmosphere/volumetric_fog.comp");
+			m_resourceManager->CreatePipeline("Atmosphere::VolumetricFogRT", [&](PipelineBlueprint* blueprint) {
+				blueprint->AddShader(volFogRtComp)->SetPipelineLayout("VolumetricFogRT");
+			});
+		}
+		const auto volFogNoRtComp = m_resourceManager->LoadShader("Shaders/atmosphere/volumetric_fog_no_rt.comp");
+		m_resourceManager->CreatePipeline("Atmosphere::VolumetricFogNoRT", [&](PipelineBlueprint* blueprint) {
+			blueprint->AddShader(volFogNoRtComp)->SetPipelineLayout("VolumetricFogNoRT");
+		});
+
 		// Deferred Lighting compute pipeline
 		const auto deferredLightingComp = m_resourceManager->LoadShader("Shaders/deferred/deferred_lighting.comp");
 		m_resourceManager->CreatePipeline("Deferred::Lighting", [&](PipelineBlueprint* blueprint) {
@@ -708,6 +861,97 @@ namespace BetterThanNothing
 				->SetAlphaToCoverage(false)
 				->SetCullMode(CullMode::None);
 		});
+	}
+
+	void Renderer::CreateBlueNoiseTexture()
+	{
+		// Generate a 64x64 toroidal Blue Noise texture via Ulichney's Void-and-Cluster algorithm
+		constexpr uint32_t N = 64u;
+		constexpr uint32_t Total = N * N;
+		constexpr int32_t  KernelRadius = 4;
+		constexpr float	   SigmaSq2 = 2.0f * 1.5f * 1.5f;
+
+		std::array<float, (2 * KernelRadius + 1) * (2 * KernelRadius + 1)> kernel{};
+		for (int32_t dy = -KernelRadius; dy <= KernelRadius; ++dy)
+		{
+			for (int32_t dx = -KernelRadius; dx <= KernelRadius; ++dx)
+			{
+				const float d2 = static_cast<float>(dx * dx + dy * dy);
+				kernel[static_cast<size_t>((dy + KernelRadius) * (2 * KernelRadius + 1) + (dx + KernelRadius))] = std::exp(-d2 / SigmaSq2);
+			}
+		}
+
+		std::vector<float>	 energy(Total, 0.0f);
+		std::vector<uint8_t> occupied(Total, 0u);
+		std::vector<uint32_t> rank(Total, 0u);
+
+		auto splatEnergy = [&](const uint32_t px, const uint32_t py, const float sign) {
+			for (int32_t dy = -KernelRadius; dy <= KernelRadius; ++dy)
+			{
+				const uint32_t ny = static_cast<uint32_t>((static_cast<int32_t>(py) + dy + static_cast<int32_t>(N)) & static_cast<int32_t>(N - 1u));
+				const uint32_t rowOff = ny * N;
+				const int32_t  kRow = (dy + KernelRadius) * (2 * KernelRadius + 1);
+				for (int32_t dx = -KernelRadius; dx <= KernelRadius; ++dx)
+				{
+					const uint32_t nx = static_cast<uint32_t>((static_cast<int32_t>(px) + dx + static_cast<int32_t>(N)) & static_cast<int32_t>(N - 1u));
+					energy[rowOff + nx] += sign * kernel[static_cast<size_t>(kRow + dx + KernelRadius)];
+				}
+			}
+		};
+
+		// Deterministic seed point
+		uint32_t rng = 0x243F6A88u;
+		auto nextRng = [&]() -> uint32_t {
+			rng ^= rng << 13u;
+			rng ^= rng >> 17u;
+			rng ^= rng << 5u;
+			return rng;
+		};
+
+		// Place first ~64 well-separated seed points using greedy void finding, then fill remaining 4032 ranks
+		const uint32_t firstIdx = nextRng() % Total;
+		occupied[firstIdx] = 1u;
+		rank[firstIdx] = 0u;
+		splatEnergy(firstIdx % N, firstIdx / N, 1.0f);
+
+		for (uint32_t r = 1u; r < Total; ++r)
+		{
+			uint32_t bestIdx = 0u;
+			float	 bestEnergy = 1e30f;
+			for (uint32_t i = 0u; i < Total; ++i)
+			{
+				if (occupied[i])
+					continue;
+				if (energy[i] < bestEnergy)
+				{
+					bestEnergy = energy[i];
+					bestIdx = i;
+				}
+			}
+			occupied[bestIdx] = 1u;
+			rank[bestIdx] = r;
+			splatEnergy(bestIdx % N, bestIdx / N, 1.0f);
+		}
+
+		std::vector<uint8_t> pixels(Total * 4u);
+		for (uint32_t i = 0u; i < Total; ++i)
+		{
+			const uint8_t v = static_cast<uint8_t>((rank[i] * 255u) / (Total - 1u));
+			pixels[i * 4u + 0u] = v;
+			pixels[i * 4u + 1u] = v;
+			pixels[i * 4u + 2u] = v;
+			pixels[i * 4u + 3u] = 255u;
+		}
+
+		TextureFromDataDescription desc{};
+		desc.data = pixels.data();
+		desc.dataSize = pixels.size();
+		desc.width = N;
+		desc.height = N;
+		desc.channels = 4;
+		desc.generateMipmaps = false;
+
+		m_blueNoiseTexture = m_renderingDevice->CreateTextureFromData(desc);
 	}
 
 	void Renderer::CreateAtmosphereLuts()
@@ -818,8 +1062,10 @@ namespace BetterThanNothing
 		m_aoDenoised = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
 		m_aoHistory = makeTarget(TextureFormat::R16G16_SFLOAT, storageSampled);
 
-		// HDR lighting buffer & TAA ping-pong history buffers
-		m_hdrColor = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		// HDR lighting buffer, Water refraction snapshots & TAA ping-pong history buffers
+		m_hdrColor = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_waterSceneColorCopy = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+		m_waterDepthCopy = makeTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_taaHistory[0] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 		m_taaHistory[1] = makeTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 
@@ -846,10 +1092,18 @@ namespace BetterThanNothing
 				m_renderingDevice->UpdateDescriptorImage(rtaoSet, 2, m_gbufferNormal, m_nearestClampSampler);
 				m_renderingDevice->UpdateDescriptorStorageImage(rtaoSet, 3, m_aoRaw);
 
+				const Handle fogRtSet = m_volumetricFogRtDescriptorSets[i];
+				m_renderingDevice->UpdateDescriptorImage(fogRtSet, 1, m_depthTarget, m_nearestClampSampler);
+				m_renderingDevice->UpdateDescriptorImage(fogRtSet, 2, m_blueNoiseTexture, m_nearestRepeatSampler);
+				m_renderingDevice->UpdateDescriptorImage(fogRtSet, 3, m_transmittanceLUT, m_linearClampSampler);
+				m_renderingDevice->UpdateDescriptorImage(fogRtSet, 4, m_irradianceLUT, m_skyViewSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(fogRtSet, 5, m_hdrColor);
+
 				if (m_tlasHandles[i].IsValid())
 				{
 					m_renderingDevice->UpdateDescriptorAccelerationStructure(shadowSet, 0, m_tlasHandles[i]);
 					m_renderingDevice->UpdateDescriptorAccelerationStructure(rtaoSet, 0, m_tlasHandles[i]);
+					m_renderingDevice->UpdateDescriptorAccelerationStructure(fogRtSet, 0, m_tlasHandles[i]);
 					m_tlasBoundToSets[i] = true;
 				}
 				else
@@ -929,6 +1183,21 @@ namespace BetterThanNothing
 		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 11, m_aoDenoised, m_nearestClampSampler);
 		m_renderingDevice->UpdateDescriptorImage(m_deferredLightingDescriptorSet, 12, m_screenSpaceShadow, m_nearestClampSampler);
 
+		// Water Surface set (underwater depth & refracted HDR snapshots + Hillaire IBL)
+		m_renderingDevice->UpdateDescriptorImage(m_waterDescriptorSet, 0, m_waterDepthCopy, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_waterDescriptorSet, 1, m_waterSceneColorCopy, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_waterDescriptorSet, 2, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_waterDescriptorSet, 3, m_irradianceLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_waterDescriptorSet, 4, m_prefilteredEnvLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_waterDescriptorSet, 5, m_brdfLUT, m_linearClampSampler);
+
+		// Volumetric Fog fallback set (without HW RT)
+		m_renderingDevice->UpdateDescriptorImage(m_volumetricFogNoRtDescriptorSet, 0, m_depthTarget, m_nearestClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_volumetricFogNoRtDescriptorSet, 1, m_blueNoiseTexture, m_nearestRepeatSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_volumetricFogNoRtDescriptorSet, 2, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorImage(m_volumetricFogNoRtDescriptorSet, 3, m_irradianceLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_volumetricFogNoRtDescriptorSet, 4, m_hdrColor);
+
 		// TAA ping-pong & ToneMap sets
 		for (uint32_t writeIdx = 0; writeIdx < 2; ++writeIdx)
 		{
@@ -984,6 +1253,8 @@ namespace BetterThanNothing
 		destroyTex(m_aoHistory);
 
 		destroyTex(m_hdrColor);
+		destroyTex(m_waterSceneColorCopy);
+		destroyTex(m_waterDepthCopy);
 		destroyTex(m_taaHistory[0]);
 		destroyTex(m_taaHistory[1]);
 	}
@@ -1064,6 +1335,8 @@ namespace BetterThanNothing
 		ctx.brdfLUT = m_brdfLUT;
 
 		ctx.hdrColor = m_hdrColor;
+		ctx.waterSceneColorCopy = m_waterSceneColorCopy;
+		ctx.waterDepthCopy = m_waterDepthCopy;
 		ctx.taaHistory = m_taaHistory;
 
 		ctx.globalDescriptorSet = m_globalDescriptorSets[frameIndex];
@@ -1083,10 +1356,14 @@ namespace BetterThanNothing
 		ctx.skyBrdfDescriptorSet = m_skyBrdfDescriptorSet;
 		ctx.skyRenderDescriptorSet = m_skyRenderDescriptorSet;
 		ctx.deferredLightingDescriptorSet = m_deferredLightingDescriptorSet;
+		ctx.waterDescriptorSet = m_waterDescriptorSet;
+		ctx.volumetricFogRtDescriptorSet = m_rtSupported ? m_volumetricFogRtDescriptorSets[frameIndex] : Handle{};
+		ctx.volumetricFogNoRtDescriptorSet = m_volumetricFogNoRtDescriptorSet;
 		ctx.taaDescriptorSets = m_taaDescriptorSets;
 		ctx.toneMapDescriptorSets = m_toneMapDescriptorSets;
 
 		ctx.opaqueStream = m_opaqueDrawStream.get();
+		ctx.waterStream = m_waterDrawStream.get();
 		ctx.transparentStream = m_transparentDrawStream.get();
 
 		for (const auto& pass : m_passes)
@@ -1108,16 +1385,17 @@ namespace BetterThanNothing
 	bool Renderer::BuildAccelerationStructures(Scene* scene, const uint32_t frameIndex)
 	{
 		const auto& settings = RenderSettings::Get();
-		const bool	needTlas = m_rtSupported && (settings.enableRTShadows || settings.aoMode == EAOMode::RTAO);
+		const bool	needTlas = m_rtSupported && (settings.enableRTShadows || settings.aoMode == EAOMode::RTAO || (settings.enableVolumetricFog && settings.fogUseRTShadows));
 		if (!needTlas)
 			return false;
 
 		m_tlasInstancesScratch.clear();
 
-		const auto meshView = scene->GetView<TransformComponent, MeshComponent>();
+		const auto& registry = scene->GetRegistry();
+		const auto	meshView = scene->GetView<TransformComponent, MeshComponent>();
 		for (auto [entity, transform, meshComp] : meshView.each())
 		{
-			if (meshComp.meshId == InvalidResourceId)
+			if (meshComp.meshId == InvalidResourceId || registry.all_of<WaterChunkComponent>(entity))
 				continue;
 
 			const MeshResourceCache* meshData = m_resourceManager->GetMeshData(meshComp.meshId);
@@ -1186,6 +1464,7 @@ namespace BetterThanNothing
 		{
 			m_renderingDevice->UpdateDescriptorAccelerationStructure(m_rtShadowDescriptorSets[frameIndex], 0, m_tlasHandles[frameIndex]);
 			m_renderingDevice->UpdateDescriptorAccelerationStructure(m_rtaoDescriptorSets[frameIndex], 0, m_tlasHandles[frameIndex]);
+			m_renderingDevice->UpdateDescriptorAccelerationStructure(m_volumetricFogRtDescriptorSets[frameIndex], 0, m_tlasHandles[frameIndex]);
 			m_tlasBoundToSets[frameIndex] = true;
 		}
 
@@ -1279,18 +1558,28 @@ namespace BetterThanNothing
 		globalUniform->atmosphereMieAnisotropy = settings.atmosphereMieAnisotropy;
 		globalUniform->atmosphereMultiScatteringFactor = settings.atmosphereMultiScatteringFactor;
 		globalUniform->atmosphereDensityScale = settings.atmosphereDensityScale;
+		const float elapsedTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - m_startTime).count();
+
 		globalUniform->aoRadius = settings.aoRadius;
 		globalUniform->aoPower = settings.aoPower;
 		globalUniform->irradianceIntensity = settings.irradianceIntensity;
+		globalUniform->time = elapsedTime;
+		globalUniform->waterLevel = settings.waterLevel;
+		globalUniform->waterWaveScale = settings.waterWaveScale;
+		globalUniform->waterFoamIntensity = settings.waterFoamIntensity;
 
 		m_prevUnjitteredViewProj = unjitteredViewProj;
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
-		const auto meshView = scene->GetView<TransformComponent, MeshComponent>();
-		const auto estimatedCount = static_cast<uint32_t>(meshView.size_hint());
+		const auto& registry = scene->GetRegistry();
+		const auto	meshView = scene->GetView<TransformComponent, MeshComponent>();
+		const auto	estimatedCount = static_cast<uint32_t>(meshView.size_hint());
 		m_opaqueDrawStream->Reset(estimatedCount);
+		m_waterDrawStream->Reset(64);
 		m_transparentDrawStream->Reset(estimatedCount / 4);
+
+		const PipelineResourceCache* waterPipeline = m_resourceManager->GetPipelineData("Water::Surface");
 
 		const Handle  globalSetHandle = m_globalDescriptorSets[frameIndex];
 		const Handle  pointLightSetHandle = m_pointLightDescriptorSets[frameIndex];
@@ -1308,6 +1597,25 @@ namespace BetterThanNothing
 			if (!frustum.IntersectsLocalAABB(meshData->boundsMin, meshData->boundsMax, transform.worldMatrix))
 			{
 				Metrics::AddCulledDrawCall();
+				continue;
+			}
+
+			if (registry.all_of<WaterChunkComponent>(entity))
+			{
+				DrawPacket waterPacket{};
+				waterPacket.pipeline = waterPipeline->pipeline;
+				waterPacket.pipelineLayoutName = waterPipeline->layoutName;
+				waterPacket.vertexBuffer = meshData->vertexBuffer;
+				waterPacket.indexBuffer = meshData->indexBuffer;
+				waterPacket.indexCount = meshData->indexCount;
+				waterPacket.descriptorSets[0] = globalSetHandle;
+				waterPacket.descriptorSets[1] = m_waterDescriptorSet;
+				waterPacket.descriptorSetCount = 2;
+				waterPacket.SetPushConstant(DynamicUniformData{transform.worldMatrix, transform.prevWorldMatrix}, ShaderStageFlags::Vertex);
+				waterPacket.distanceToCamera = Vector3::Distance2(cameraPos, transform.GetWorldPosition());
+				waterPacket.sortBackToFront = false;
+				m_waterDrawStream->Draw(waterPacket);
+				Metrics::AddDrawCall(meshData->vertexCount);
 				continue;
 			}
 

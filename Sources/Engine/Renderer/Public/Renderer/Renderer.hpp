@@ -25,6 +25,7 @@
 #include <Data/Graphics/PointLightData.hpp>
 #include <Math/Matrix4.hpp>
 #include <array>
+#include <chrono>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -57,6 +58,7 @@ namespace BetterThanNothing
 	private:
 		void CreateLayoutsAndPipelines();
 		void CreateAtmosphereLuts();
+		void CreateBlueNoiseTexture();
 		void CreateGlobalUniformBuffers();
 		void CreateGlobalUniformDescriptorSets();
 		auto GetGlobalUniformBuffer(uint32_t frameIndex) const -> GlobalUniformData*;
@@ -76,12 +78,14 @@ namespace BetterThanNothing
 		ResourceManager*			m_resourceManager = nullptr;
 		Editor*						m_editor = nullptr;
 		std::unique_ptr<DrawStream> m_opaqueDrawStream;
+		std::unique_ptr<DrawStream> m_waterDrawStream;
 		std::unique_ptr<DrawStream> m_transparentDrawStream;
 
 		std::vector<std::unique_ptr<IRenderPass>> m_passes;
 
 		// Samplers
 		Handle m_nearestClampSampler{};
+		Handle m_nearestRepeatSampler{};
 		Handle m_pointBorderWhiteSampler{};
 		Handle m_linearClampSampler{};
 		Handle m_skyViewSampler{};
@@ -120,18 +124,22 @@ namespace BetterThanNothing
 		Handle m_irradianceLUT{};
 		Handle m_prefilteredEnvLUT{};
 		Handle m_brdfLUT{};
+		Handle m_blueNoiseTexture{};
 		bool   m_atmosphereStaticLutsDirty = true;
 		bool   m_brdfLutDirty = true;
 		float  m_lastAtmosphereDensityScale = 1.0f;
 
-		// HDR & TAA targets
+		// HDR, Water snapshots & TAA targets
 		Handle				  m_hdrColor{};
+		Handle				  m_waterSceneColorCopy{};
+		Handle				  m_waterDepthCopy{};
 		std::array<Handle, 2> m_taaHistory{};
 		uint64_t			  m_lastSwapChainGeneration = 0;
 
 		// Pass descriptor sets
 		std::vector<Handle>	  m_rtShadowDescriptorSets;
 		std::vector<Handle>	  m_rtaoDescriptorSets;
+		std::vector<Handle>	  m_volumetricFogRtDescriptorSets;
 		std::vector<bool>	  m_tlasBoundToSets;
 		std::array<Handle, 2> m_ffxTileClassDescriptorSets{};
 		std::array<Handle, 3> m_ffxFilterDescriptorSets{};
@@ -146,6 +154,8 @@ namespace BetterThanNothing
 		Handle				  m_skyBrdfDescriptorSet{};
 		Handle				  m_skyRenderDescriptorSet{};
 		Handle				  m_deferredLightingDescriptorSet{};
+		Handle				  m_waterDescriptorSet{};
+		Handle				  m_volumetricFogNoRtDescriptorSet{};
 		Handle				  m_forwardIblDescriptorSet{};
 		std::array<Handle, 2> m_taaDescriptorSets{};
 		std::array<Handle, 2> m_toneMapDescriptorSets{};
@@ -167,9 +177,10 @@ namespace BetterThanNothing
 		mutable bool						m_warnedLightLimit = false;
 
 		// Temporal state
-		Matrix4	 m_prevUnjitteredViewProj = Matrix4::Identity;
-		Vector3	 m_currentSunDirection = Vector3(0.0f, 1.0f, 0.0f);
-		uint64_t m_frameCounter = 0;
+		std::chrono::steady_clock::time_point m_startTime = std::chrono::steady_clock::now();
+		Matrix4								  m_prevUnjitteredViewProj = Matrix4::Identity;
+		Vector3								  m_currentSunDirection = Vector3(0.0f, 1.0f, 0.0f);
+		uint64_t							  m_frameCounter = 0;
 		bool	 m_historyValid = false;
 		bool	 m_prevTaaEnabled = true;
 		uint32_t m_temporalReadIndex = 0;

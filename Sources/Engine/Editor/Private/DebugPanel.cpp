@@ -152,6 +152,7 @@ namespace BetterThanNothing
 			"Diffuse Irradiance",
 			"Depth",
 			"Screen Space Shadows (Bend)",
+			"Volumetric Fog (WsfBDf)",
 		};
 		int debugViewIdx = static_cast<int>(settings.debugView);
 		if (ImGui::Combo("View", &debugViewIdx, kDebugViewNames, IM_ARRAYSIZE(kDebugViewNames)))
@@ -194,6 +195,28 @@ namespace BetterThanNothing
 			int							 sssDebugIdx = static_cast<int>(settings.sssDebugMode);
 			if (ImGui::Combo("SSS Debug", &sssDebugIdx, kSssDebugNames, IM_ARRAYSIZE(kSssDebugNames)))
 				settings.sssDebugMode = static_cast<uint32_t>(sssDebugIdx);
+		}
+
+		ImGui::SeparatorText("Water");
+		ImGui::SliderFloat("Wave Scale", &settings.waterWaveScale, 0.0f, 2.5f, "%.2f");
+		ImGui::SliderFloat("Foam", &settings.waterFoamIntensity, 0.0f, 2.0f, "%.2f");
+
+		ImGui::SeparatorText("Volumetric Fog (WsfBDf Blue Noise)");
+		ImGui::Checkbox("Volumetric Fog", &settings.enableVolumetricFog);
+		if (settings.enableVolumetricFog)
+		{
+			ImGui::Checkbox("Blue Noise Jitter", &settings.fogUseBlueNoise);
+			if (settings.rtSupported)
+				ImGui::Checkbox("RT Volumetric God Rays", &settings.fogUseRTShadows);
+			ImGui::SliderFloat("Fog Density", &settings.fogDensity, 0.001f, 0.05f, "%.4f");
+			ImGui::SliderFloat("Height Falloff", &settings.fogHeightFalloff, 0.01f, 0.5f, "%.3f");
+			ImGui::SliderFloat("Base Height", &settings.fogBaseHeight, -10.0f, 15.0f, "%.1f m");
+			ImGui::SliderFloat("Max Distance", &settings.fogMaxDistance, 30.0f, 350.0f, "%.0f m");
+			ImGui::SliderFloat("Anisotropy (g)", &settings.fogAnisotropy, 0.0f, 0.90f, "%.2f");
+			ImGui::SliderFloat("Mist Noise", &settings.fogNoiseStrength, 0.0f, 1.0f, "%.2f");
+			int steps = static_cast<int>(settings.fogStepCount);
+			if (ImGui::SliderInt("Raymarch Steps", &steps, 8, 64))
+				settings.fogStepCount = static_cast<uint32_t>(steps);
 		}
 	}
 }

@@ -69,6 +69,7 @@ namespace BetterThanNothing
 
 		[[nodiscard]] entt::registry&		GetRegistry() { return m_registry; }
 		[[nodiscard]] const entt::registry& GetRegistry() const { return m_registry; }
+		[[nodiscard]] ResourceManager*		GetResourceManager() const { return m_resourceManager; }
 
 		template <typename... Components>
 		[[nodiscard]] auto GetView()

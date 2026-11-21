@@ -135,6 +135,19 @@ namespace BetterThanNothing
 		ResourceId textureId = InvalidResourceId;
 	};
 
+	struct TerrainChunkComponent : Component
+	{
+		int32_t chunkX = 0;
+		int32_t chunkZ = 0;
+	};
+
+	struct WaterChunkComponent : Component
+	{
+		int32_t chunkX = 0;
+		int32_t chunkZ = 0;
+		float	waterLevel = 0.0f;
+	};
+
 	struct DirectionalLightComponent : Component
 	{
 		Vector3 direction = Vector3(0.0f, -1.0f, 0.0f);

@@ -32,8 +32,10 @@
 #include <RenderingDevice/TextureDescription.hpp>
 #include <ResourceImporter/ResourceImporter.hpp>
 #include <ResourceManager/ResourceManager_Types.hpp>
+#include <algorithm>
 #include <array>
 #include <filesystem>
+#include <future>
 #include <limits>
 
 namespace BetterThanNothing
@@ -194,7 +196,9 @@ namespace BetterThanNothing
 		const ResourceId  mrId = info.metallicRoughnessTextureId != InvalidResourceId ? info.metallicRoughnessTextureId : GetDefaultMetallicRoughnessTexture();
 		const std::string pipelineName = !info.pipelineName.empty()
 											 ? info.pipelineName
-											 : (info.alphaMode == EAlphaMode::Blend ? "Forward::Transparent" : "GBuffer::Opaque");
+											 : (info.alphaMode == EAlphaMode::Blend
+													? "Forward::Transparent"
+													: (info.alphaMode == EAlphaMode::Mask ? "GBuffer::Masked" : "GBuffer::Opaque"));
 
 		const std::string cacheKey = std::to_string(diffuseId) + "|" + std::to_string(normalId) + "|" + std::to_string(mrId) + "|" +
 									 std::to_string(static_cast<int>(info.metallicFactor * 100.0f)) + "|" +
@@ -240,6 +244,39 @@ namespace BetterThanNothing
 		m_materials[materialId] = std::move(material);
 		m_materialsLUT[cacheKey] = materialId;
 
+		return materialId;
+	}
+
+	ResourceId ResourceManager::CreateTerrainMaterial(const TerrainMaterialCreateInfo& info)
+	{
+		const ResourceId defaultAlbedoId = GetDefaultTexture();
+		const ResourceId defaultNormalId = GetDefaultNormalTexture();
+		const ResourceId defaultRoughId = GetDefaultMetallicRoughnessTexture();
+
+		const Handle setHandle = m_renderingDevice->CreateDescriptorSet("TerrainMaterial");
+		for (uint32_t i = 0; i < 5u; ++i)
+		{
+			const ResourceId albedoId = info.layers[i].albedoId != InvalidResourceId ? info.layers[i].albedoId : defaultAlbedoId;
+			const ResourceId normalId = info.layers[i].normalId != InvalidResourceId ? info.layers[i].normalId : defaultNormalId;
+			const ResourceId roughId = info.layers[i].roughnessId != InvalidResourceId ? info.layers[i].roughnessId : defaultRoughId;
+
+			const TextureResourceCache* albedoTex = GetTextureData(albedoId);
+			const TextureResourceCache* normalTex = GetTextureData(normalId);
+			const TextureResourceCache* roughTex = GetTextureData(roughId);
+
+			m_renderingDevice->UpdateDescriptorImage(setHandle, i * 3u + 0u, albedoTex->textureHandle, albedoTex->samplerHandle);
+			m_renderingDevice->UpdateDescriptorImage(setHandle, i * 3u + 1u, normalTex->textureHandle, normalTex->samplerHandle);
+			m_renderingDevice->UpdateDescriptorImage(setHandle, i * 3u + 2u, roughTex->textureHandle, roughTex->samplerHandle);
+		}
+
+		auto material = std::make_unique<MaterialResourceCache>();
+		material->name = info.name.empty() ? "TerrainMaterial" : info.name;
+		material->alphaMode = EAlphaMode::Opaque;
+		material->pipelineName = "GBuffer::Terrain";
+		material->descriptorSetHandle = setHandle;
+
+		const ResourceId materialId = GenerateUniqueResourceId();
+		m_materials[materialId] = std::move(material);
 		return materialId;
 	}
 
@@ -377,7 +414,7 @@ namespace BetterThanNothing
 		return modelId;
 	}
 
-	ResourceId ResourceManager::LoadTexture(const std::string& path)
+	ResourceId ResourceManager::LoadTexture(const std::string& path, const uint32_t maxDimension)
 	{
 		if (path.empty())
 			return GetDefaultTexture();
@@ -387,7 +424,7 @@ namespace BetterThanNothing
 		if (const auto it = m_texturesLUT.find(texturePath); it != m_texturesLUT.end())
 			return it->second;
 
-		ImportedTexture importedTexture = m_importer->ImportTexture(texturePath);
+		ImportedTexture importedTexture = m_importer->ImportTexture(texturePath, maxDimension);
 
 		auto gpuData = std::make_unique<TextureResourceCache>();
 		gpuData->channels = static_cast<int32_t>(importedTexture.channels);
@@ -412,6 +449,68 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("TextureResourceCache created and cached for Texture: {}", texturePath);
 
 		return textureId;
+	}
+
+	void ResourceManager::PreloadTexturesParallel(const std::vector<std::string>& paths, const uint32_t maxDimension)
+	{
+		std::vector<std::string> pendingPaths;
+		pendingPaths.reserve(paths.size());
+		for (const auto& p : paths)
+		{
+			if (p.empty())
+				continue;
+			const std::string resolved = AssetPath::Resolve(p);
+			if (m_texturesLUT.contains(resolved))
+				continue;
+			if (std::ranges::find(pendingPaths, resolved) == pendingPaths.end())
+				pendingPaths.push_back(resolved);
+		}
+
+		if (pendingPaths.empty())
+			return;
+
+		std::vector<std::future<ImportedTexture>> futures;
+		futures.reserve(pendingPaths.size());
+		for (const auto& resolved : pendingPaths)
+		{
+			futures.push_back(std::async(std::launch::async, [this, resolved, maxDimension]() {
+				return m_importer->ImportTexture(resolved, maxDimension);
+			}));
+		}
+
+		std::vector<ImportedTexture> decoded;
+		decoded.reserve(pendingPaths.size());
+		for (auto& f : futures)
+			decoded.push_back(f.get());
+
+		RenderingDevice::UploadBatchScope uploadBatch(m_renderingDevice);
+		for (size_t i = 0; i < pendingPaths.size(); ++i)
+		{
+			const auto& texturePath = pendingPaths[i];
+			const auto& importedTexture = decoded[i];
+
+			auto gpuData = std::make_unique<TextureResourceCache>();
+			gpuData->channels = static_cast<int32_t>(importedTexture.channels);
+			gpuData->size = static_cast<int32_t>(importedTexture.size);
+			gpuData->width = static_cast<int32_t>(importedTexture.width);
+			gpuData->height = static_cast<int32_t>(importedTexture.height);
+
+			TextureFromDataDescription desc{};
+			desc.data = importedTexture.data.data();
+			desc.dataSize = importedTexture.size;
+			desc.width = importedTexture.width;
+			desc.height = importedTexture.height;
+			desc.channels = importedTexture.channels;
+
+			gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
+			gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{});
+
+			const auto textureId = GenerateUniqueResourceId();
+			m_textures[textureId] = std::move(gpuData);
+			m_texturesLUT[texturePath] = textureId;
+
+			Logger::Log<INFO>("TextureResourceCache created (parallel) for Texture: {} ({}x{})", texturePath, importedTexture.width, importedTexture.height);
+		}
 	}
 
 	ResourceId ResourceManager::LoadShader(const std::string& path)

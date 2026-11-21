@@ -34,7 +34,8 @@ namespace BetterThanNothing
 		AmbientOcclusion = 7,
 		DiffuseIrradiance = 8,
 		Depth = 9,
-		ScreenSpaceShadows = 10
+		ScreenSpaceShadows = 10,
+		VolumetricFog = 11
 	};
 
 	enum class EToneMapMode : uint32_t
@@ -89,6 +90,23 @@ namespace BetterThanNothing
 		// Temporal Anti-Aliasing
 		bool  enableTAA = true;
 		float taaBlendFactor = 0.1f;
+
+		// Water rendering
+		float waterLevel = -1.6f;
+		float waterWaveScale = 1.0f;
+		float waterFoamIntensity = 1.0f;
+
+		// Volumetric Raymarched Fog with Blue Noise (Shadertoy WsfBDf / Demofox)
+		bool	 enableVolumetricFog = true;
+		bool	 fogUseBlueNoise = true;
+		bool	 fogUseRTShadows = true;
+		float	 fogDensity = 0.011f;
+		float	 fogHeightFalloff = 0.12f;
+		float	 fogBaseHeight = -1.5f;
+		float	 fogMaxDistance = 160.0f;
+		float	 fogAnisotropy = 0.65f;
+		float	 fogNoiseStrength = 0.55f;
+		uint32_t fogStepCount = 32;
 
 		bool rtSupported = false;
 	};

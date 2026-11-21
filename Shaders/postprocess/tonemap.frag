@@ -122,8 +122,8 @@ void main() {
     vec3 hdr = texture(resolvedHdrTex, inUV).rgb;
 
     if (globalUniforms.debugView != 0u) {
-        // Bypass exposure & tonemapping for raw G-Buffer/RT/AO/Irradiance debug inspection
-        bool needsGamma = (globalUniforms.debugView == 1u || globalUniforms.debugView == 8u);
+        // Bypass exposure & tonemapping for raw G-Buffer/RT/AO/Irradiance/Fog debug inspection
+        bool needsGamma = (globalUniforms.debugView == 1u || globalUniforms.debugView == 8u || globalUniforms.debugView == 11u);
         vec3 outRgb = needsGamma ? LinearToSRGB(hdr) : clamp(hdr, 0.0, 1.0);
         outColor = vec4(outRgb, 1.0);
         return;

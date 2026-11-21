@@ -37,6 +37,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Math
         Engine::Platform
         Engine::Scene
+        Engine::Terrain
         Engine::ResourceManager
 )
 

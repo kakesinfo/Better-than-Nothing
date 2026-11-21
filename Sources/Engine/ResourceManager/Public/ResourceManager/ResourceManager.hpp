@@ -58,6 +58,19 @@ namespace BetterThanNothing
 		std::string pipelineName;
 	};
 
+	struct TerrainLayerTextures
+	{
+		ResourceId albedoId = InvalidResourceId;
+		ResourceId normalId = InvalidResourceId;
+		ResourceId roughnessId = InvalidResourceId;
+	};
+
+	struct TerrainMaterialCreateInfo
+	{
+		std::string			 name = "TerrainMaterial";
+		TerrainLayerTextures layers[5]{}; // 0: Sand/Shore, 1: Mossy Grass, 2: Forest Dirt, 3: Mossy Rock, 4: Rocky Gravel
+	};
+
 	struct ModelNodeResource
 	{
 		std::string			  name;
@@ -97,11 +110,13 @@ namespace BetterThanNothing
 
 	public:
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
-		ResourceId LoadTexture(const std::string& path);
+		ResourceId LoadTexture(const std::string& path, uint32_t maxDimension = 2048);
+		void	   PreloadTexturesParallel(const std::vector<std::string>& paths, uint32_t maxDimension = 1024);
 		ResourceId GetDefaultTexture();
 		ResourceId GetDefaultNormalTexture();
 		ResourceId GetDefaultMetallicRoughnessTexture();
 		ResourceId CreateMaterial(const MaterialCreateInfo& info);
+		ResourceId CreateTerrainMaterial(const TerrainMaterialCreateInfo& info);
 		ResourceId LoadShader(const std::string& path);
 		ResourceId CreateMesh(const MeshData& meshData);
 		ResourceId CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback);

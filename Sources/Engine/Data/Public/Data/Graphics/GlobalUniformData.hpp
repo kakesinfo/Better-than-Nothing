@@ -72,6 +72,11 @@ namespace BetterThanNothing
 		float aoRadius = 1.5f;
 		float aoPower = 1.4f;
 		float irradianceIntensity = 1.0f;
+
+		float time = 0.0f;
+		float waterLevel = -1.6f;
+		float waterWaveScale = 1.0f;
+		float waterFoamIntensity = 1.0f;
 	};
 
 	static_assert(offsetof(GlobalUniformData, projection) == 0);
@@ -102,5 +107,9 @@ namespace BetterThanNothing
 	static_assert(offsetof(GlobalUniformData, aoRadius) == 484);
 	static_assert(offsetof(GlobalUniformData, aoPower) == 488);
 	static_assert(offsetof(GlobalUniformData, irradianceIntensity) == 492);
-	static_assert(sizeof(GlobalUniformData) == 496);
+	static_assert(offsetof(GlobalUniformData, time) == 496);
+	static_assert(offsetof(GlobalUniformData, waterLevel) == 500);
+	static_assert(offsetof(GlobalUniformData, waterWaveScale) == 504);
+	static_assert(offsetof(GlobalUniformData, waterFoamIntensity) == 508);
+	static_assert(sizeof(GlobalUniformData) == 512);
 }

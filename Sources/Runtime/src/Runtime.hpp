@@ -19,6 +19,8 @@
 #pragma once
 
 #include "Core/IEngineApplication.hpp"
+#include <Terrain/TerrainSystem.hpp>
+#include <memory>
 
 namespace BetterThanNothing
 {
@@ -33,5 +35,8 @@ namespace BetterThanNothing
 		void OnEnable(Scene* scene) override;
 		void OnUpdate(Scene* scene, float deltaTime) override;
 		void OnDisable() override;
+
+	private:
+		std::unique_ptr<TerrainSystem> m_terrainSystem;
 	};
 };

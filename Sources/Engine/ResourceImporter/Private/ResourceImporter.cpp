@@ -40,9 +40,9 @@ namespace BetterThanNothing
 		glslang_finalize_process();
 	}
 
-	ImportedTexture ResourceImporter::ImportTexture(const std::string& input) const
+	ImportedTexture ResourceImporter::ImportTexture(const std::string& input, const uint32_t maxDimension) const
 	{
-		return m_textureImporter->Import(input);
+		return m_textureImporter->Import({input, maxDimension});
 	}
 
 	ImportedModel ResourceImporter::ImportModel(const std::string& path, bool preTransform) const

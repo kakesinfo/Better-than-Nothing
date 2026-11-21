@@ -1,0 +1,278 @@
+#version 460
+#extension GL_EXT_ray_query : require
+
+// Volumetric Raymarched Fog with Blue Noise (inspired by Demofox's Shadertoy WsfBDf)
+// - Blue Noise dithering animated per-frame with the Golden Ratio (converges smoothly with TAA)
+// - Exponential height fog + animated 3D FBM wispy mist density
+// - Per-step HW Ray Query (VK_KHR_ray_query) shadow test for true 3D Volumetric God Rays
+// - Henyey-Greenstein phase function + Hillaire Transmittance & Sky Irradiance + Beer-Lambert extinction
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 proj;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float sunAngularRadius;
+
+    vec3 lightColor;
+    float sunIlluminanceLux;
+
+    vec3 cameraPosition;
+    float cameraExposure;
+
+    uint pointLightsCount;
+    uint frameIndex;
+    uint screenWidth;
+    uint screenHeight;
+
+    uint debugView;
+    uint toneMapMode;
+    uint flags;
+    float taaBlendFactor;
+
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float aoRadius;
+    float aoPower;
+    float irradianceIntensity;
+
+    float time;
+    float waterLevel;
+    float waterWaveScale;
+    float waterFoamIntensity;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform accelerationStructureEXT topLevelAS;
+layout(set = 1, binding = 1) uniform sampler2D depthTex;
+layout(set = 1, binding = 2) uniform sampler2D blueNoiseTex;
+layout(set = 1, binding = 3) uniform sampler2D transmittanceLUT;
+layout(set = 1, binding = 4) uniform sampler2D irradianceLUT;
+layout(set = 1, binding = 5, rgba16f) uniform image2D hdrColorImg;
+
+layout(push_constant) uniform VolumetricFogPushConstants {
+    float density;
+    float heightFalloff;
+    float baseHeight;
+    float maxDistance;
+
+    float anisotropy;
+    float noiseStrength;
+    uint  stepCount;
+    uint  flags; // bit 0: useBlueNoise, bit 1: useRTShadows
+} fogParams;
+
+const float PI = 3.14159265359;
+const float GOLDEN_RATIO = 0.61803398875;
+const float GROUND_RADIUS_KM = 6360.0;
+const float ATMOSPHERE_RADIUS_KM = 6460.0;
+
+const uint FOG_FLAG_BLUE_NOISE = 1u << 0;
+const uint FOG_FLAG_RT_SHADOWS = 1u << 1;
+
+float SafeSqrt(float x) {
+    return sqrt(max(x, 0.0));
+}
+
+float DistanceToTopAtmosphereBoundary(float r, float mu) {
+    float discriminant = r * r * (mu * mu - 1.0) + ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM;
+    return max(0.0, -r * mu + SafeSqrt(discriminant));
+}
+
+vec2 TransmittanceUV(float r, float mu) {
+    float H = SafeSqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float rho = SafeSqrt(r * r - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float d = DistanceToTopAtmosphereBoundary(r, mu);
+    float d_min = ATMOSPHERE_RADIUS_KM - r;
+    float d_max = rho + H;
+    return clamp(vec2((d - d_min) / max(d_max - d_min, 1e-6), rho / H), vec2(0.0), vec2(1.0));
+}
+
+vec2 DirectionToEquirectUV(vec3 dir) {
+    float azimuth = atan(dir.z, dir.x);
+    float u = azimuth / (2.0 * PI) + 0.5;
+    float elevation = asin(clamp(dir.y, -1.0, 1.0));
+    float v = elevation / PI + 0.5;
+    return vec2(u, clamp(v, 0.015, 0.985));
+}
+
+// Henyey-Greenstein scattering phase function
+float HenyeyGreenstein(float cosTheta, float g) {
+    float g2 = g * g;
+    float denom = max(1.0 + g2 - 2.0 * g * cosTheta, 1e-4);
+    return (1.0 - g2) / (4.0 * PI * denom * sqrt(denom));
+}
+
+// Fast 3D hash value noise for organic drifting mist
+float Hash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float ValueNoise3D(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float n000 = Hash31(i + vec3(0, 0, 0));
+    float n100 = Hash31(i + vec3(1, 0, 0));
+    float n010 = Hash31(i + vec3(0, 1, 0));
+    float n110 = Hash31(i + vec3(1, 1, 0));
+    float n001 = Hash31(i + vec3(0, 0, 1));
+    float n101 = Hash31(i + vec3(1, 0, 1));
+    float n011 = Hash31(i + vec3(0, 1, 1));
+    float n111 = Hash31(i + vec3(1, 1, 1));
+
+    float nx00 = mix(n000, n100, f.x);
+    float nx10 = mix(n010, n110, f.x);
+    float nx01 = mix(n001, n101, f.x);
+    float nx11 = mix(n011, n111, f.x);
+
+    float nxy0 = mix(nx00, nx10, f.y);
+    float nxy1 = mix(nx01, nx11, f.y);
+    return mix(nxy0, nxy1, f.z);
+}
+
+float SampleFogDensity(vec3 pos, float t) {
+    float heightAboveBase = max(pos.y - fogParams.baseHeight, 0.0);
+    float heightDensity = exp(-heightAboveBase * fogParams.heightFalloff);
+    if (heightDensity < 0.002)
+        return 0.0;
+
+    float noiseMod = 1.0;
+    if (fogParams.noiseStrength > 0.001) {
+        vec3 wind = vec3(t * 0.35, t * 0.04, t * 0.22);
+        vec3 p = pos * 0.055 + wind;
+        float n = ValueNoise3D(p) * 0.65 + ValueNoise3D(p * 2.15 - wind * 0.5) * 0.35;
+        noiseMod = mix(1.0, smoothstep(0.18, 0.88, n) * 1.45, fogParams.noiseStrength);
+    }
+
+    return fogParams.density * heightDensity * noiseMod;
+}
+
+float TraceSunVisibility(vec3 origin, vec3 sunDir) {
+    rayQueryEXT rq;
+    rayQueryInitializeEXT(
+        rq,
+        topLevelAS,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
+        0xFF,
+        origin,
+        0.05,
+        sunDir,
+        300.0
+    );
+    while (rayQueryProceedEXT(rq)) {}
+    return (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT) ? 1.0 : 0.0;
+}
+
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    if (pixel.x >= int(globalUniforms.screenWidth) || pixel.y >= int(globalUniforms.screenHeight))
+        return;
+
+    // Only apply on Final view (0) or VolumetricFog debug view (11)
+    if (globalUniforms.debugView != 0u && globalUniforms.debugView != 11u)
+        return;
+
+    vec2 uv = (vec2(pixel) + 0.5) / vec2(globalUniforms.screenWidth, globalUniforms.screenHeight);
+    float depth = textureLod(depthTex, uv, 0.0).r;
+
+    // Reconstruct world-space ray from camera through pixel
+    vec4 farClip = vec4(uv * 2.0 - 1.0, 0.9999, 1.0);
+    vec4 farWorld = globalUniforms.invViewProj * farClip;
+    vec3 rayDir = normalize(farWorld.xyz / farWorld.w - globalUniforms.cameraPosition);
+
+    float sceneDist = fogParams.maxDistance;
+    if (depth < 0.99999) {
+        vec4 hitClip = vec4(uv * 2.0 - 1.0, depth, 1.0);
+        vec4 hitWorld = globalUniforms.invViewProj * hitClip;
+        sceneDist = length(hitWorld.xyz / hitWorld.w - globalUniforms.cameraPosition);
+    }
+
+    float marchDist = min(sceneDist, fogParams.maxDistance);
+    if (marchDist <= 0.05) {
+        if (globalUniforms.debugView == 11u)
+            imageStore(hdrColorImg, pixel, vec4(0.0, 0.0, 0.0, 1.0));
+        return;
+    }
+
+    uint steps = clamp(fogParams.stepCount, 8u, 64u);
+    float stepSize = marchDist / float(steps);
+
+    // Demofox WsfBDf: Blue Noise texture offset + Golden Ratio temporal animation
+    float jitter = 0.5;
+    if ((fogParams.flags & FOG_FLAG_BLUE_NOISE) != 0u) {
+        float bn = texelFetch(blueNoiseTex, pixel & 63, 0).r;
+        jitter = fract(bn + float(globalUniforms.frameIndex & 63u) * GOLDEN_RATIO);
+    }
+
+    bool useRT = (fogParams.flags & FOG_FLAG_RT_SHADOWS) != 0u;
+
+    vec3 sunDir = normalize(-globalUniforms.lightDirection);
+    float cosTheta = dot(rayDir, sunDir);
+    // Dual-lobe HG phase: sharp forward sun glow + gentle isotropic fill
+    float phaseForward = HenyeyGreenstein(cosTheta, clamp(fogParams.anisotropy, 0.0, 0.92));
+    float phaseBack = HenyeyGreenstein(cosTheta, -0.2);
+    float phase = mix(phaseBack, phaseForward, 0.78);
+
+    float camAltKm = max(globalUniforms.atmosphereAltitudeKm + max(globalUniforms.cameraPosition.y * 0.001, 0.0), 0.005);
+    float camR = min(GROUND_RADIUS_KM + camAltKm, ATMOSPHERE_RADIUS_KM - 0.05);
+    float sunHorizonFade = smoothstep(-0.04, 0.02, sunDir.y);
+    vec3 sunTrans = textureLod(transmittanceLUT, TransmittanceUV(camR, sunDir.y), 0.0).rgb * sunHorizonFade;
+    vec3 sunIlluminanceLux = globalUniforms.lightColor * globalUniforms.sunIlluminanceLux * sunTrans;
+
+    // Ambient sky in-scattering inside shadowed fog
+    vec3 ambientSkyLux = textureLod(irradianceLUT, DirectionToEquirectUV(vec3(0.0, 1.0, 0.0)), 0.0).rgb * globalUniforms.irradianceIntensity;
+    vec3 ambientScatterBase = (ambientSkyLux / (4.0 * PI)) * 0.55;
+    vec3 fogAlbedo = vec3(0.86, 0.90, 0.96);
+
+    vec3 inScatterNits = vec3(0.0);
+    float transmittance = 1.0;
+
+    float t = jitter * stepSize;
+    for (uint i = 0u; i < steps; ++i) {
+        vec3 samplePos = globalUniforms.cameraPosition + rayDir * t;
+        float sigmaT = SampleFogDensity(samplePos, globalUniforms.time);
+
+        if (sigmaT > 1e-5) {
+            float sunVis = useRT ? TraceSunVisibility(samplePos, sunDir) : 1.0;
+            vec3 directScatter = sunIlluminanceLux * phase * sunVis;
+            vec3 S = fogAlbedo * (directScatter + ambientScatterBase) * sigmaT;
+
+            // Energy-conserving analytical step integration (Hillaire Frostbite 2015)
+            float stepTrans = exp(-sigmaT * stepSize);
+            vec3 stepScatter = (S - S * stepTrans) / max(sigmaT, 1e-5);
+            inScatterNits += transmittance * stepScatter;
+            transmittance *= stepTrans;
+
+            if (transmittance < 0.01)
+                break;
+        }
+
+        t += stepSize;
+    }
+
+    vec3 inScatterPreExposed = clamp(inScatterNits * globalUniforms.cameraExposure, vec3(0.0), vec3(65000.0));
+
+    if (globalUniforms.debugView == 11u) {
+        // Show isolated volumetric in-scattering (tone-compressed for clear inspection)
+        vec3 dbg = inScatterPreExposed / (inScatterPreExposed + vec3(1.0));
+        imageStore(hdrColorImg, pixel, vec4(dbg, 1.0));
+        return;
+    }
+
+    vec4 sceneHdr = imageLoad(hdrColorImg, pixel);
+    vec3 finalHdr = clamp(sceneHdr.rgb * transmittance + inScatterPreExposed, vec3(0.0), vec3(65000.0));
+    imageStore(hdrColorImg, pixel, vec4(finalHdr, sceneHdr.a));
+}

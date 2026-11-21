@@ -91,8 +91,10 @@ namespace BetterThanNothing
 		Handle prefilteredEnvLUT{};
 		Handle brdfLUT{};
 
-		// HDR & TAA targets
+		// HDR, Water snapshots & TAA targets
 		Handle				  hdrColor{};
+		Handle				  waterSceneColorCopy{};
+		Handle				  waterDepthCopy{};
 		std::array<Handle, 2> taaHistory{};
 
 		// Descriptor sets
@@ -113,10 +115,14 @@ namespace BetterThanNothing
 		Handle				  skyBrdfDescriptorSet{};
 		Handle				  skyRenderDescriptorSet{};
 		Handle				  deferredLightingDescriptorSet{};
+		Handle				  waterDescriptorSet{};
+		Handle				  volumetricFogRtDescriptorSet{};
+		Handle				  volumetricFogNoRtDescriptorSet{};
 		std::array<Handle, 2> taaDescriptorSets{};
 		std::array<Handle, 2> toneMapDescriptorSets{};
 
 		DrawStream* opaqueStream = nullptr;
+		DrawStream* waterStream = nullptr;
 		DrawStream* transparentStream = nullptr;
 	};
 
