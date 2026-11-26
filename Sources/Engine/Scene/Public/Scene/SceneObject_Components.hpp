@@ -155,9 +155,13 @@ namespace BetterThanNothing
 
 	struct GrassChunkComponent : Component
 	{
+		int32_t chunkX = 0;
+		int32_t chunkZ = 0;
 	};
 
 	struct WaterChunkComponent : Component
 	{
+		int32_t chunkX = 0;
+		int32_t chunkZ = 0;
 	};
 }

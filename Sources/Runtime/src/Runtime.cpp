@@ -30,6 +30,7 @@
 #include <Math/Matrix4.hpp>
 #include <Math/Vector2.hpp>
 #include <Math/Vector3.hpp>
+#include <Terrain/TerrainSystem.hpp>
 
 #include <memory>
 
@@ -70,6 +71,10 @@ namespace BetterThanNothing
 
 		auto sponza = scene->LoadModel(".assets/sponza/sponza.obj", true);
 		sponza.GetTransform().SetScale(0.01f);
+
+		TerrainSystem terrainSystem;
+		terrainSystem.BuildTerrainAndWater(scene);
+		terrainSystem.ScatterTrees(scene);
 
 		auto robot = scene->LoadModel(".assets/robot/robot.obj", true);
 		robot.GetTransform().SetPosition(0.0f, 1.0f, 0.0f);
