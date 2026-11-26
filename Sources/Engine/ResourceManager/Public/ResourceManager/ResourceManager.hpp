@@ -20,6 +20,7 @@
 
 #include <Common/ResourceId.hpp>
 #include <Math/Matrix4.hpp>
+#include <Math/Vector4.hpp>
 #include <functional>
 #include <memory>
 #include <string>
@@ -48,6 +49,10 @@ namespace BetterThanNothing
 		std::string name;
 		ResourceId	diffuseTextureId = InvalidResourceId;
 		ResourceId	normalTextureId = InvalidResourceId;
+		ResourceId	metallicRoughnessTextureId = InvalidResourceId;
+		Vector4		baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		float		metallicFactor = 0.0f;
+		float		roughnessFactor = 1.0f;
 		EAlphaMode	alphaMode{};
 		float		alphaCutoff = 0.5f;
 		std::string pipelineName;
@@ -95,6 +100,7 @@ namespace BetterThanNothing
 		ResourceId LoadTexture(const std::string& path);
 		ResourceId GetDefaultTexture();
 		ResourceId GetDefaultNormalTexture();
+		ResourceId GetDefaultMetallicRoughnessTexture();
 		ResourceId CreateMaterial(const MaterialCreateInfo& info);
 		ResourceId LoadShader(const std::string& path);
 		ResourceId CreateMesh(const MeshData& meshData);

@@ -85,6 +85,53 @@ namespace BetterThanNothing
 		return handle;
 	}
 
+	Handle RenderingDevice::CreateMaterialDescriptorSet(const std::span<const TextureBindingUpdate> textureBindings, const uint32_t uboBinding, const Handle& uboHandle, const size_t uboSize, const std::string_view layoutType)
+	{
+		const Handle					   handle = CreateDescriptorSet(layoutType);
+		const RenderingApi::DescriptorSet* descriptor = GetDescriptorSet(handle);
+
+		for (const auto& b : textureBindings)
+		{
+			const RenderingApi::Texture* texture = GetTexture(b.textureHandle);
+			const RenderingApi::Sampler* sampler = GetSampler(b.samplerHandle);
+
+			DescriptorSetUpdateRequest request{};
+			request.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			request.imageInfo.imageView = texture->defaultView;
+			request.imageInfo.sampler = sampler->value;
+
+			request.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			request.write.dstSet = descriptor->value;
+			request.write.dstBinding = b.binding;
+			request.write.dstArrayElement = 0;
+			request.write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			request.write.descriptorCount = 1;
+			request.write.pImageInfo = &request.imageInfo;
+
+			RequestDescriptorSetUpdate(request);
+		}
+
+		const RenderingApi::Buffer* buffer = GetBuffer(uboHandle);
+		DescriptorSetUpdateRequest	uboRequest{};
+		uboRequest.bufferInfo = {};
+		uboRequest.bufferInfo.buffer = buffer->value;
+		uboRequest.bufferInfo.offset = 0;
+		uboRequest.bufferInfo.range = uboSize;
+
+		uboRequest.write = {};
+		uboRequest.write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		uboRequest.write.dstSet = descriptor->value;
+		uboRequest.write.dstBinding = uboBinding;
+		uboRequest.write.dstArrayElement = 0;
+		uboRequest.write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboRequest.write.descriptorCount = 1;
+		uboRequest.write.pBufferInfo = &uboRequest.bufferInfo;
+
+		RequestDescriptorSetUpdate(uboRequest);
+
+		return handle;
+	}
+
 	Handle RenderingDevice::CreateUniformBufferDescriptorSet(const Handle& uniformBufferHandle, const size_t size, const std::string_view layoutType)
 	{
 		const Handle handle = CreateDescriptorSet(layoutType);

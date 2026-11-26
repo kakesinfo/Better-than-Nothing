@@ -62,8 +62,10 @@ namespace BetterThanNothing
 		float		alphaCutoff = 0.5f;
 		ResourceId	diffuseTextureId = InvalidResourceId;
 		ResourceId	normalTextureId = InvalidResourceId;
+		ResourceId	metallicRoughnessTextureId = InvalidResourceId;
 		std::string pipelineName = "Forward::Opaque";
 		Handle		descriptorSetHandle;
+		Handle		uniformBufferHandle;
 	};
 
 	struct ShaderResourceCache

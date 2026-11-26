@@ -52,10 +52,12 @@ namespace BetterThanNothing
 		// Set 0: Global per-frame uniforms (camera + directional light + counts)
 		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", DescriptorType::UniformBuffer, ShaderStageFlags::Vertex | ShaderStageFlags::Fragment);
 
-		// Set 1: Material textures (binding 0 = diffuse/albedo, binding 1 = normal map)
-		const std::array<DescriptorBindingDesc, 2> materialBindings = {{
+		// Set 1: Material textures + UBO (0 = albedo, 1 = normal, 2 = metallicRoughness, 3 = MaterialUniformData)
+		const std::array<DescriptorBindingDesc, 4> materialBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 3, .type = DescriptorType::UniformBuffer, .count = 1, .stages = ShaderStageFlags::Fragment},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("Material", materialBindings);
 

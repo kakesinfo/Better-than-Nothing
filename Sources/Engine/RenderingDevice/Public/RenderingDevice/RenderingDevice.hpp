@@ -186,6 +186,7 @@ namespace BetterThanNothing
 		[[nodiscard]] Handle		 CreateStorageBufferDescriptorSet(const Handle& storageBufferHandle, size_t size, std::string_view layoutType);
 		[[nodiscard]] Handle		 CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, std::string_view layoutType);
 		[[nodiscard]] Handle		 CreateCombinedImageDescriptorSet(std::span<const TextureBindingUpdate> bindings, std::string_view layoutType);
+		[[nodiscard]] Handle		 CreateMaterialDescriptorSet(std::span<const TextureBindingUpdate> textureBindings, uint32_t uboBinding, const Handle& uboHandle, size_t uboSize, std::string_view layoutType);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
 		void						 UpdateDescriptorAccelerationStructure(const Handle& setHandle, uint32_t binding, const Handle& tlasHandle);
 		void						 FlushDescriptorSetUpdateRequests();
