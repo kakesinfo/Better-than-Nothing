@@ -1,0 +1,148 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 4, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D shadowRawTex;
+layout(set = 1, binding = 1) uniform sampler2D depthTex;
+layout(set = 1, binding = 2) uniform sampler2D prevDepthTex;
+layout(set = 1, binding = 3) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 4) uniform sampler2D prevNormalTex;
+layout(set = 1, binding = 5) uniform sampler2D gbufferMotionTex;
+layout(set = 1, binding = 6) uniform sampler2D prevMomentsTex;
+
+layout(set = 1, binding = 7, rgba16f) writeonly uniform image2D outMoments;
+layout(set = 1, binding = 8, rg16f) writeonly uniform image2D outShadowPing;
+
+layout(std430, set = 1, binding = 9) readonly buffer TileMaskBuffer {
+    uint tileMasks[];
+};
+
+layout(std430, set = 1, binding = 10) writeonly buffer TileMetaBuffer {
+    uint tileMeta[];
+};
+
+vec3 DecodeOctahedral(vec2 e)
+{
+    vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+    if (v.z < 0.0)
+    {
+        vec2 s = vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);
+        v.xy = (1.0 - abs(v.yx)) * s;
+    }
+    return normalize(v);
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+
+    if (gl_LocalInvocationIndex == 0u)
+    {
+        uint tilesX = (uint(screenSize.x) + 7u) / 8u;
+        uint tileIdx = gl_WorkGroupID.y * tilesX + gl_WorkGroupID.x;
+        uint mask = tileMasks[tileIdx];
+
+        if (mask == 0u)
+            tileMeta[tileIdx] = 0u;
+        else if (mask == 0xFFFFFFFFu)
+            tileMeta[tileIdx] = 1u;
+        else
+            tileMeta[tileIdx] = 2u;
+    }
+
+    if (pixelCoord.x >= screenSize.x || pixelCoord.y >= screenSize.y)
+        return;
+
+    vec2 rawSample = texelFetch(shadowRawTex, pixelCoord, 0).rg;
+    float currentShadow = rawSample.r;
+    float currentHitDist = rawSample.g;
+
+    float depth = texelFetch(depthTex, pixelCoord, 0).r;
+    if (depth >= 1.0)
+    {
+        imageStore(outMoments, pixelCoord, vec4(1.0, 1.0, 1.0, 0.0));
+        imageStore(outShadowPing, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(screenSize);
+    vec2 motion = texelFetch(gbufferMotionTex, pixelCoord, 0).rg;
+    vec2 prevUv = uv - motion;
+
+    vec3 normal = DecodeOctahedral(texelFetch(gbufferNormalTex, pixelCoord, 0).rg);
+
+    // 3x3 spatial mean and variance of raw shadow
+    float localSum = 0.0;
+    float localSumSq = 0.0;
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            ivec2 p = clamp(pixelCoord + ivec2(dx, dy), ivec2(0), screenSize - 1);
+            float s = texelFetch(shadowRawTex, p, 0).r;
+            localSum += s;
+            localSumSq += s * s;
+        }
+    }
+    float localMean = localSum / 9.0;
+    float localVar = max(0.0, (localSumSq / 9.0) - localMean * localMean);
+
+    bool validHistory = (prevUv.x >= 0.0 && prevUv.x <= 1.0 && prevUv.y >= 0.0 && prevUv.y <= 1.0 && globalUniforms.frameIndex > 0u);
+    vec4 prevMoments = vec4(0.0);
+
+    if (validHistory)
+    {
+        float prevDepth = texture(prevDepthTex, prevUv).r;
+        vec3 prevNormal = DecodeOctahedral(texture(prevNormalTex, prevUv).rg);
+
+        float depthDiff = abs(depth - prevDepth) / max(depth, 1e-4);
+        float normalDot = dot(normal, prevNormal);
+
+        if (depthDiff > 0.02 || normalDot < 0.9)
+            validHistory = false;
+        else
+            prevMoments = texture(prevMomentsTex, prevUv);
+    }
+
+    float historyLen = validHistory ? min(prevMoments.b + 1.0, 16.0) : 1.0;
+    float alpha = 1.0 / historyLen;
+
+    float mean = mix(prevMoments.r, currentShadow, alpha);
+    float moment2 = mix(prevMoments.g, currentShadow * currentShadow, alpha);
+    float temporalVar = max(0.0, moment2 - mean * mean);
+    float variance = (historyLen < 4.0) ? max(localVar, temporalVar) : temporalVar;
+
+    float hitDist = validHistory ? mix(prevMoments.a, currentHitDist, alpha) : currentHitDist;
+
+    imageStore(outMoments, pixelCoord, vec4(mean, moment2, historyLen, hitDist));
+    imageStore(outShadowPing, pixelCoord, vec4(mean, variance, 0.0, 0.0));
+}

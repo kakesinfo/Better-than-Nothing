@@ -11,3 +11,11 @@ TEST(RTShadowShadersTest, CompileRTShadowsComputeShader)
 	EXPECT_EQ(comp.type, EShaderType::Compute);
 	EXPECT_FALSE(comp.spirv.empty());
 }
+
+TEST(RTShadowShadersTest, CompileFFXTileClassificationComputeShader)
+{
+	ResourceImporter	 importer;
+	const ImportedShader comp = importer.ImportShader(AssetPath::Resolve("Shaders/rtshadows/ffx_shadows_tile_classification.comp"));
+	EXPECT_EQ(comp.type, EShaderType::Compute);
+	EXPECT_FALSE(comp.spirv.empty());
+}
