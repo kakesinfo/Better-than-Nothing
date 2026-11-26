@@ -141,6 +141,13 @@ namespace BetterThanNothing
 		std::vector<Handle>					m_rtaoDescriptorSets;
 		std::vector<Handle>					m_gtaoDescriptorSets;
 		std::vector<Handle>					m_aoDenoiseDescriptorSets;
+		Handle								m_skyBrdfDescriptorSet{};
+		Handle								m_skyTransmittanceDescriptorSet{};
+		Handle								m_skyMultiScatteringDescriptorSet{};
+		Handle								m_skyViewDescriptorSet{};
+		Handle								m_skyIrradianceDescriptorSet{};
+		Handle								m_skyPrefilterDescriptorSet{};
+		std::vector<Handle>					m_skyRenderDescriptorSets;
 		Vector3								m_lightDirection{0.0f, -1.0f, 0.0f};
 		Handle								m_computeNearestSampler{};
 		Handle								m_linearClampSampler{};

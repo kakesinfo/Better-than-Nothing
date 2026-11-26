@@ -86,6 +86,13 @@ namespace BetterThanNothing
 		Handle rtaoDescriptorSet{};
 		Handle gtaoDescriptorSet{};
 		Handle aoDenoiseDescriptorSet{};
+		Handle skyBrdfDescriptorSet{};
+		Handle skyTransmittanceDescriptorSet{};
+		Handle skyMultiScatteringDescriptorSet{};
+		Handle skyViewDescriptorSet{};
+		Handle skyIrradianceDescriptorSet{};
+		Handle skyPrefilterDescriptorSet{};
+		Handle skyRenderDescriptorSet{};
 
 		Matrix4 unjitteredViewProj = Matrix4::Identity;
 		Vector3 lightDirection{0.0f, -1.0f, 0.0f};

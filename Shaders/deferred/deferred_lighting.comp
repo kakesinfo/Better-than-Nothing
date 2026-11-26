@@ -189,10 +189,7 @@ void main()
     }
 
     if (depth >= 1.0)
-    {
-        imageStore(outHdrColor, pixelCoord, vec4(0.0, 0.0, 0.0, 1.0));
         return;
-    }
 
     vec3 worldPos = ReconstructWorldPos(uv, depth, globalUniforms.invViewProj);
     vec3 V = normalize(globalUniforms.cameraPosition - worldPos);

@@ -28,6 +28,7 @@
 #include "Passes/PostProcessPass.hpp"
 #include "Passes/RTShadowPass.hpp"
 #include "Passes/ScreenSpaceShadowPass.hpp"
+#include "Passes/SkyAtmospherePass.hpp"
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
@@ -320,6 +321,72 @@ namespace BetterThanNothing
 		const auto aoDenoiseComp = m_resourceManager->LoadShader("Shaders/ao/ao_denoise.comp");
 		m_resourceManager->CreateComputePipeline("AO::Denoise", aoDenoiseComp, "AO::Denoise");
 
+		// Hillaire Sky & IBL LUTs + Sky Render
+		m_renderingDevice->CreateDescriptorSetLayout("Sky::BrdfLUT", DescriptorType::StorageImage, ShaderStageFlags::Compute);
+		m_renderingDevice->CreatePipelineLayout("Sky::BrdfLUT", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("Sky::BrdfLUT");
+		});
+		m_resourceManager->CreateComputePipeline("Sky::BrdfLUT", m_resourceManager->LoadShader("Shaders/sky/brdf_lut.comp"), "Sky::BrdfLUT");
+
+		m_renderingDevice->CreateDescriptorSetLayout("Sky::TransmittanceLUT", DescriptorType::StorageImage, ShaderStageFlags::Compute);
+		m_renderingDevice->CreatePipelineLayout("Sky::TransmittanceLUT", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("Sky::TransmittanceLUT");
+		});
+		m_resourceManager->CreateComputePipeline("Sky::TransmittanceLUT", m_resourceManager->LoadShader("Shaders/sky/transmittance_lut.comp"), "Sky::TransmittanceLUT");
+
+		const std::array<DescriptorBindingDesc, 2> multiScatBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("Sky::MultiScatteringLUT", multiScatBindings);
+		m_renderingDevice->CreatePipelineLayout("Sky::MultiScatteringLUT", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("Sky::MultiScatteringLUT");
+		});
+		m_resourceManager->CreateComputePipeline("Sky::MultiScatteringLUT", m_resourceManager->LoadShader("Shaders/sky/multiscattering_lut.comp"), "Sky::MultiScatteringLUT");
+
+		const std::array<DescriptorBindingDesc, 3> skyViewBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("Sky::SkyViewLUT", skyViewBindings);
+		m_renderingDevice->CreatePipelineLayout("Sky::SkyViewLUT", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("Sky::SkyViewLUT");
+			blueprint->AddPushConstant<SkyViewPushConstants>(EShaderType::Compute);
+		});
+		m_resourceManager->CreateComputePipeline("Sky::SkyViewLUT", m_resourceManager->LoadShader("Shaders/sky/skyview_lut.comp"), "Sky::SkyViewLUT");
+
+		const std::array<DescriptorBindingDesc, 2> iblConvolveBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("Sky::IrradianceConvolve", iblConvolveBindings);
+		m_renderingDevice->CreatePipelineLayout("Sky::IrradianceConvolve", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("Sky::IrradianceConvolve");
+		});
+		m_resourceManager->CreateComputePipeline("Sky::IrradianceConvolve", m_resourceManager->LoadShader("Shaders/sky/irradiance_convolve.comp"), "Sky::IrradianceConvolve");
+
+		m_renderingDevice->CreateDescriptorSetLayout("Sky::PrefilterEnv", iblConvolveBindings);
+		m_renderingDevice->CreatePipelineLayout("Sky::PrefilterEnv", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("Sky::PrefilterEnv");
+		});
+		m_resourceManager->CreateComputePipeline("Sky::PrefilterEnv", m_resourceManager->LoadShader("Shaders/sky/prefilter_env.comp"), "Sky::PrefilterEnv");
+
+		const std::array<DescriptorBindingDesc, 4> skyRenderBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("Sky::Render", skyRenderBindings);
+		m_renderingDevice->CreatePipelineLayout("Sky::Render", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("Sky::Render");
+			blueprint->AddPushConstant<SkyRenderPushConstants>(EShaderType::Compute);
+		});
+		m_resourceManager->CreateComputePipeline("Sky::Render", m_resourceManager->LoadShader("Shaders/sky/sky_render.comp"), "Sky::Render");
+
 		m_renderingDevice->CreateDescriptorSetLayout("PostProcess::ToneMap", DescriptorType::CombinedImageSampler, ShaderStageFlags::Fragment);
 		m_renderingDevice->CreatePipelineLayout("PostProcess::ToneMap", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
@@ -356,6 +423,7 @@ namespace BetterThanNothing
 		AddPass(std::make_unique<RTShadowPass>());
 		AddPass(std::make_unique<ScreenSpaceShadowPass>());
 		AddPass(std::make_unique<AOPass>());
+		AddPass(std::make_unique<SkyAtmospherePass>());
 		AddPass(std::make_unique<DeferredLightingPass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
 		AddPass(std::make_unique<PostProcessPass>());
@@ -461,6 +529,11 @@ namespace BetterThanNothing
 			if (handle.IsValid())
 				m_renderingDevice->DestroyDescriptorSet(handle);
 		}
+		for (const Handle& handle : m_skyRenderDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
 	}
 
 	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
@@ -544,10 +617,46 @@ namespace BetterThanNothing
 		m_irradianceLUT = createLut(GetIrradianceLutSpec());
 		m_prefilteredEnvLUT = createLut(GetPrefilteredEnvLutSpec());
 		m_brdfLUT = createLut(GetBrdfLutSpec());
+
+		m_skyBrdfDescriptorSet = m_renderingDevice->CreateDescriptorSet("Sky::BrdfLUT");
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyBrdfDescriptorSet, 0, m_brdfLUT);
+
+		m_skyTransmittanceDescriptorSet = m_renderingDevice->CreateDescriptorSet("Sky::TransmittanceLUT");
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyTransmittanceDescriptorSet, 0, m_transmittanceLUT);
+
+		m_skyMultiScatteringDescriptorSet = m_renderingDevice->CreateDescriptorSet("Sky::MultiScatteringLUT");
+		m_renderingDevice->UpdateDescriptorCombinedImage(m_skyMultiScatteringDescriptorSet, 0, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyMultiScatteringDescriptorSet, 1, m_multiScatteringLUT);
+
+		m_skyViewDescriptorSet = m_renderingDevice->CreateDescriptorSet("Sky::SkyViewLUT");
+		m_renderingDevice->UpdateDescriptorCombinedImage(m_skyViewDescriptorSet, 0, m_transmittanceLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorCombinedImage(m_skyViewDescriptorSet, 1, m_multiScatteringLUT, m_linearClampSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyViewDescriptorSet, 2, m_skyViewLUT);
+
+		m_skyIrradianceDescriptorSet = m_renderingDevice->CreateDescriptorSet("Sky::IrradianceConvolve");
+		m_renderingDevice->UpdateDescriptorCombinedImage(m_skyIrradianceDescriptorSet, 0, m_skyViewLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyIrradianceDescriptorSet, 1, m_irradianceLUT);
+
+		m_skyPrefilterDescriptorSet = m_renderingDevice->CreateDescriptorSet("Sky::PrefilterEnv");
+		m_renderingDevice->UpdateDescriptorCombinedImage(m_skyPrefilterDescriptorSet, 0, m_skyViewLUT, m_skyViewSampler);
+		m_renderingDevice->UpdateDescriptorStorageImage(m_skyPrefilterDescriptorSet, 1, m_prefilteredEnvLUT);
 	}
 
 	void Renderer::DestroyAtmosphereLuts()
 	{
+		auto destroySetIfValid = [&](Handle& handle) {
+			if (handle.IsValid())
+			{
+				m_renderingDevice->DestroyDescriptorSet(handle);
+				handle = {};
+			}
+		};
+		destroySetIfValid(m_skyBrdfDescriptorSet);
+		destroySetIfValid(m_skyTransmittanceDescriptorSet);
+		destroySetIfValid(m_skyMultiScatteringDescriptorSet);
+		destroySetIfValid(m_skyViewDescriptorSet);
+		destroySetIfValid(m_skyIrradianceDescriptorSet);
+		destroySetIfValid(m_skyPrefilterDescriptorSet);
 		auto destroyIfValid = [&](Handle& handle) {
 			if (handle.IsValid())
 			{
@@ -786,6 +895,21 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorStorageImage(denoiseSet, 7, m_aoDenoised);
 		}
 
+		if (m_skyRenderDescriptorSets.size() != frameCount)
+		{
+			m_skyRenderDescriptorSets.resize(frameCount);
+			for (uint32_t i = 0; i < frameCount; ++i)
+				m_skyRenderDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("Sky::Render");
+		}
+		for (uint32_t i = 0; i < frameCount; ++i)
+		{
+			const Handle set = m_skyRenderDescriptorSets[i];
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_depthTarget, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_skyViewLUT, m_skyViewSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 2, m_transmittanceLUT, m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 3, m_hdrColor);
+		}
+
 		m_lastSwapChainGeneration = currentGen;
 	}
 
@@ -903,6 +1027,13 @@ namespace BetterThanNothing
 		ctx.rtaoDescriptorSet = m_rtaoDescriptorSets[frameIndex];
 		ctx.gtaoDescriptorSet = m_gtaoDescriptorSets[frameIndex];
 		ctx.aoDenoiseDescriptorSet = m_aoDenoiseDescriptorSets[frameIndex];
+		ctx.skyBrdfDescriptorSet = m_skyBrdfDescriptorSet;
+		ctx.skyTransmittanceDescriptorSet = m_skyTransmittanceDescriptorSet;
+		ctx.skyMultiScatteringDescriptorSet = m_skyMultiScatteringDescriptorSet;
+		ctx.skyViewDescriptorSet = m_skyViewDescriptorSet;
+		ctx.skyIrradianceDescriptorSet = m_skyIrradianceDescriptorSet;
+		ctx.skyPrefilterDescriptorSet = m_skyPrefilterDescriptorSet;
+		ctx.skyRenderDescriptorSet = m_skyRenderDescriptorSets[frameIndex];
 		ctx.unjitteredViewProj = m_prevUnjitteredViewProj;
 		ctx.lightDirection = m_lightDirection;
 		ctx.opaqueStream = m_opaqueDrawStream.get();
