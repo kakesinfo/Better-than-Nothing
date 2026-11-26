@@ -25,6 +25,7 @@
 #include "Passes/ForwardTransparentPass.hpp"
 #include "Passes/GBufferPass.hpp"
 #include "Passes/PostProcessPass.hpp"
+#include "Passes/RTShadowPass.hpp"
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
@@ -194,6 +195,62 @@ namespace BetterThanNothing
 		const auto taaComp = m_resourceManager->LoadShader("Shaders/postprocess/taa.comp");
 		m_resourceManager->CreateComputePipeline("PostProcess::TAA", taaComp, "PostProcess::TAA");
 
+		// RT Shadow Trace
+		const std::array<DescriptorBindingDesc, 5> rtShadowTraceBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("RTShadow::Trace", rtShadowTraceBindings);
+		m_renderingDevice->CreatePipelineLayout("RTShadow::Trace", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("RTShadow::Trace");
+			blueprint->AddPushConstant<RTShadowPushConstants>(EShaderType::Compute);
+		});
+		const auto rtShadowTraceComp = m_resourceManager->LoadShader("Shaders/rtshadows/rt_shadows.comp");
+		m_resourceManager->CreateComputePipeline("RTShadow::Trace", rtShadowTraceComp, "RTShadow::Trace");
+
+		// FFX Shadows Tile Classification
+		const std::array<DescriptorBindingDesc, 11> rtShadowClassifyBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 5, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 6, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 7, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 8, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 9, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 10, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("RTShadow::FFXTileClassification", rtShadowClassifyBindings);
+		m_renderingDevice->CreatePipelineLayout("RTShadow::FFXTileClassification", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("RTShadow::FFXTileClassification");
+		});
+		const auto ffxClassifyComp = m_resourceManager->LoadShader("Shaders/rtshadows/ffx_shadows_tile_classification.comp");
+		m_resourceManager->CreateComputePipeline("RTShadow::FFXTileClassification", ffxClassifyComp, "RTShadow::FFXTileClassification");
+
+		// FFX Shadows Spatial Filter
+		const std::array<DescriptorBindingDesc, 5> rtShadowFilterBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("RTShadow::FFXFilterSoftShadows", rtShadowFilterBindings);
+		m_renderingDevice->CreatePipelineLayout("RTShadow::FFXFilterSoftShadows", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("RTShadow::FFXFilterSoftShadows");
+			blueprint->AddPushConstant<int32_t>(EShaderType::Compute);
+		});
+		const auto ffxFilterComp = m_resourceManager->LoadShader("Shaders/rtshadows/ffx_shadows_filter.comp");
+		m_resourceManager->CreateComputePipeline("RTShadow::FFXFilterSoftShadows", ffxFilterComp, "RTShadow::FFXFilterSoftShadows");
+
 		m_renderingDevice->CreateDescriptorSetLayout("PostProcess::ToneMap", DescriptorType::CombinedImageSampler, ShaderStageFlags::Fragment);
 		m_renderingDevice->CreatePipelineLayout("PostProcess::ToneMap", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
@@ -226,6 +283,7 @@ namespace BetterThanNothing
 		EnsureRenderTargets();
 
 		AddPass(std::make_unique<GBufferPass>());
+		AddPass(std::make_unique<RTShadowPass>());
 		AddPass(std::make_unique<DeferredLightingPass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
 		AddPass(std::make_unique<PostProcessPass>());
@@ -283,6 +341,24 @@ namespace BetterThanNothing
 					m_renderingDevice->DestroyDescriptorSet(handle);
 			}
 			for (const Handle& handle : m_tonemapDescriptorSets[p])
+			{
+				if (handle.IsValid())
+					m_renderingDevice->DestroyDescriptorSet(handle);
+			}
+			for (const Handle& handle : m_rtShadowClassifyDescriptorSets[p])
+			{
+				if (handle.IsValid())
+					m_renderingDevice->DestroyDescriptorSet(handle);
+			}
+		}
+		for (const Handle& handle : m_rtShadowTraceDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (uint32_t f = 0; f < 3; ++f)
+		{
+			for (const Handle& handle : m_rtShadowFilterDescriptorSets[f])
 			{
 				if (handle.IsValid())
 					m_renderingDevice->DestroyDescriptorSet(handle);
@@ -420,6 +496,69 @@ namespace BetterThanNothing
 			}
 		}
 
+		if (m_rtShadowTraceDescriptorSets.size() != frameCount)
+		{
+			m_rtShadowTraceDescriptorSets.resize(frameCount);
+			for (uint32_t i = 0; i < frameCount; ++i)
+				m_rtShadowTraceDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("RTShadow::Trace");
+		}
+		for (uint32_t i = 0; i < frameCount; ++i)
+		{
+			const Handle set = m_rtShadowTraceDescriptorSets[i];
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_depthTarget, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_gbufferNormal, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 3, m_rtShadowRaw);
+			m_renderingDevice->UpdateDescriptorStorageBuffer(set, 4, m_rtShadowTileMaskBuffer, tileBufferSize);
+		}
+
+		for (uint32_t p = 0; p < 2; ++p)
+		{
+			if (m_rtShadowClassifyDescriptorSets[p].size() != frameCount)
+			{
+				m_rtShadowClassifyDescriptorSets[p].resize(frameCount);
+				for (uint32_t i = 0; i < frameCount; ++i)
+					m_rtShadowClassifyDescriptorSets[p][i] = m_renderingDevice->CreateDescriptorSet("RTShadow::FFXTileClassification");
+			}
+			const uint32_t readIdx = p;
+			const uint32_t writeIdx = 1u - p;
+			for (uint32_t i = 0; i < frameCount; ++i)
+			{
+				const Handle set = m_rtShadowClassifyDescriptorSets[p][i];
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_rtShadowRaw, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_depthTarget, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 2, m_prevDepthTarget, m_linearClampSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 3, m_gbufferNormal, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 4, m_prevNormalTarget, m_linearClampSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 5, m_gbufferMotion, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 6, m_rtShadowMoments[readIdx], m_linearClampSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(set, 7, m_rtShadowMoments[writeIdx]);
+				m_renderingDevice->UpdateDescriptorStorageImage(set, 8, m_rtShadowPing);
+				m_renderingDevice->UpdateDescriptorStorageBuffer(set, 9, m_rtShadowTileMaskBuffer, tileBufferSize);
+				m_renderingDevice->UpdateDescriptorStorageBuffer(set, 10, m_rtShadowTileMetaBuffer, tileBufferSize);
+			}
+		}
+
+		const std::array<Handle, 3> filterInputs = {m_rtShadowPing, m_rtShadowPong, m_rtShadowPing};
+		const std::array<Handle, 3> filterOutputs = {m_rtShadowPong, m_rtShadowPing, m_rtShadowDenoised};
+		for (uint32_t f = 0; f < 3; ++f)
+		{
+			if (m_rtShadowFilterDescriptorSets[f].size() != frameCount)
+			{
+				m_rtShadowFilterDescriptorSets[f].resize(frameCount);
+				for (uint32_t i = 0; i < frameCount; ++i)
+					m_rtShadowFilterDescriptorSets[f][i] = m_renderingDevice->CreateDescriptorSet("RTShadow::FFXFilterSoftShadows");
+			}
+			for (uint32_t i = 0; i < frameCount; ++i)
+			{
+				const Handle set = m_rtShadowFilterDescriptorSets[f][i];
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, filterInputs[f], m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_depthTarget, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 2, m_gbufferNormal, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(set, 3, filterOutputs[f]);
+				m_renderingDevice->UpdateDescriptorStorageBuffer(set, 4, m_rtShadowTileMetaBuffer, tileBufferSize);
+			}
+		}
+
 		m_lastSwapChainGeneration = currentGen;
 	}
 
@@ -517,6 +656,10 @@ namespace BetterThanNothing
 		ctx.deferredLightingDescriptorSet = m_deferredDescriptorSets[frameIndex];
 		ctx.taaDescriptorSet = m_taaDescriptorSets[readIdx][frameIndex];
 		ctx.tonemapDescriptorSet = m_tonemapDescriptorSets[readIdx][frameIndex];
+		ctx.rtShadowTraceDescriptorSet = m_rtShadowTraceDescriptorSets[frameIndex];
+		ctx.rtShadowClassifyDescriptorSet = m_rtShadowClassifyDescriptorSets[readIdx][frameIndex];
+		for (uint32_t f = 0; f < 3; ++f)
+			ctx.rtShadowFilterDescriptorSets[f] = m_rtShadowFilterDescriptorSets[f][frameIndex];
 		ctx.opaqueStream = m_opaqueDrawStream.get();
 		ctx.transparentStream = m_transparentDrawStream.get();
 

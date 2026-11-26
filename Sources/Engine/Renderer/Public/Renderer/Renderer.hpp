@@ -105,6 +105,9 @@ namespace BetterThanNothing
 		std::vector<Handle>					m_deferredDescriptorSets;
 		std::vector<Handle>					m_taaDescriptorSets[2];
 		std::vector<Handle>					m_tonemapDescriptorSets[2];
+		std::vector<Handle>					m_rtShadowTraceDescriptorSets;
+		std::vector<Handle>					m_rtShadowClassifyDescriptorSets[2];
+		std::vector<Handle>					m_rtShadowFilterDescriptorSets[3];
 		Handle								m_computeNearestSampler{};
 		Handle								m_linearClampSampler{};
 		mutable std::vector<PointLightData> m_pointLightsScratch;

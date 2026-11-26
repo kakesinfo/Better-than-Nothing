@@ -63,10 +63,14 @@ namespace BetterThanNothing
 		Handle sssTarget{};
 		Handle rtShadowTileMaskBuffer{};
 		Handle rtShadowTileMetaBuffer{};
+		Handle topLevelAS{};
 		Handle globalDescriptorSet{};
 		Handle deferredLightingDescriptorSet{};
 		Handle taaDescriptorSet{};
 		Handle tonemapDescriptorSet{};
+		Handle rtShadowTraceDescriptorSet{};
+		Handle rtShadowClassifyDescriptorSet{};
+		Handle rtShadowFilterDescriptorSets[3]{};
 
 		DrawStream* opaqueStream = nullptr;
 		DrawStream* transparentStream = nullptr;
