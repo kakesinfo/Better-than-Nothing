@@ -16,12 +16,15 @@
  * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "RenderingDevice/BufferDescription.hpp"
 #include "RenderingDevice/Handle.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
 #include "RenderingDevice_FormatUtils.hpp"
 #include "RenderingDevice_Internals.hpp"
 
 #include <RenderingApi.hpp>
+#include <cstring>
+#include <vector>
 
 namespace BetterThanNothing
 {
@@ -182,5 +185,157 @@ namespace BetterThanNothing
 		if (!m_self->accelerationStructures.Has(handle))
 			throw std::runtime_error("Invalid acceleration structure handle!");
 		return m_self->accelerationStructures.Get(handle);
+	}
+
+	void RenderingDevice::BuildOrUpdateTlas(Handle& outTlasHandle, Handle& ioScratchBuffer, Handle& ioInstanceBuffer, const std::span<const TlasInstanceDesc> instances)
+	{
+		if (!m_self->device->IsRayQuerySupported() || instances.empty())
+			return;
+
+		std::vector<VkAccelerationStructureInstanceKHR> vkInstances;
+		vkInstances.reserve(instances.size());
+		for (const auto& inst : instances)
+		{
+			const RenderingApi::AccelerationStructure* blas = GetAccelerationStructure(inst.blasHandle);
+
+			VkAccelerationStructureInstanceKHR vkInst{};
+			std::memcpy(vkInst.transform.matrix, inst.transform, sizeof(vkInst.transform.matrix));
+			vkInst.instanceCustomIndex = inst.instanceCustomIndex;
+			vkInst.mask = inst.mask;
+			vkInst.instanceShaderBindingTableRecordOffset = 0;
+			vkInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+			vkInst.accelerationStructureReference = blas->deviceAddress;
+			vkInstances.push_back(vkInst);
+		}
+
+		const VkDeviceSize requiredInstanceBytes = sizeof(VkAccelerationStructureInstanceKHR) * vkInstances.size();
+		if (!ioInstanceBuffer.IsValid() || GetBuffer(ioInstanceBuffer)->size < requiredInstanceBytes)
+		{
+			if (ioInstanceBuffer.IsValid())
+				DestroyBuffer(ioInstanceBuffer);
+
+			BufferDescription instDesc{};
+			instDesc.size = requiredInstanceBytes;
+			instDesc.bufferUsage = BufferUsageFlags::AccelerationStructureBuildInputReadOnly | BufferUsageFlags::ShaderDeviceAddress;
+			instDesc.memoryUsage = BufferMemoryUsage::CpuToGpu;
+			instDesc.allocationFlags = BufferAllocationFlags::Mapped | BufferAllocationFlags::HostAccessSequentialWrite;
+			ioInstanceBuffer = CreateBuffer(instDesc);
+		}
+
+		std::memcpy(GetBufferData(ioInstanceBuffer), vkInstances.data(), requiredInstanceBytes);
+		const VkDeviceAddress instanceBufferAddress = m_self->device->GetBufferDeviceAddress(GetBuffer(ioInstanceBuffer)->value);
+
+		VkAccelerationStructureGeometryInstancesDataKHR instancesData{};
+		instancesData.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+		instancesData.arrayOfPointers = VK_FALSE;
+		instancesData.data.deviceAddress = instanceBufferAddress;
+
+		VkAccelerationStructureGeometryKHR geometry{};
+		geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+		geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+		geometry.geometry.instances = instancesData;
+
+		VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
+		buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+		buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+		buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+		buildInfo.geometryCount = 1;
+		buildInfo.pGeometries = &geometry;
+
+		const auto primitiveCount = static_cast<uint32_t>(vkInstances.size());
+
+		VkAccelerationStructureBuildSizesInfoKHR buildSizes{};
+		buildSizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+		m_self->device->GetAccelerationStructureBuildSizes(
+			VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+			buildInfo,
+			&primitiveCount,
+			&buildSizes
+		);
+
+		const VkDeviceSize scratchAlignment = m_self->device->GetMinAccelerationStructureScratchOffsetAlignment();
+		const VkDeviceSize requiredScratchBytes = buildSizes.buildScratchSize + scratchAlignment;
+		if (!ioScratchBuffer.IsValid() || GetBuffer(ioScratchBuffer)->size < requiredScratchBytes)
+		{
+			if (ioScratchBuffer.IsValid())
+				DestroyBuffer(ioScratchBuffer);
+
+			BufferDescription scratchDesc{};
+			scratchDesc.size = requiredScratchBytes;
+			scratchDesc.bufferUsage = BufferUsageFlags::Storage | BufferUsageFlags::ShaderDeviceAddress;
+			scratchDesc.memoryUsage = BufferMemoryUsage::GpuOnly;
+			ioScratchBuffer = CreateBuffer(scratchDesc);
+		}
+
+		if (!outTlasHandle.IsValid() || GetAccelerationStructure(outTlasHandle)->size < buildSizes.accelerationStructureSize)
+		{
+			if (outTlasHandle.IsValid())
+				DestroyAccelerationStructure(outTlasHandle);
+
+			const Handle						 handle = m_self->accelerationStructures.Allocate();
+			RenderingApi::AccelerationStructure* tlas = m_self->accelerationStructures.Get(handle);
+			tlas->size = buildSizes.accelerationStructureSize;
+
+			VkBufferCreateInfo tlasBufferInfo{};
+			tlasBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			tlasBufferInfo.size = buildSizes.accelerationStructureSize;
+			tlasBufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+			VmaAllocationCreateInfo tlasAllocInfo{};
+			tlasAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+			if (m_self->allocator->CreateBuffer(&tlasBufferInfo, &tlasAllocInfo, &tlas->buffer, &tlas->allocation, nullptr) != VK_SUCCESS)
+			{
+				m_self->accelerationStructures.Destroy(handle);
+				throw std::runtime_error("Failed to create TLAS backing buffer");
+			}
+
+			VkAccelerationStructureCreateInfoKHR tlasCreateInfo{};
+			tlasCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+			tlasCreateInfo.buffer = tlas->buffer;
+			tlasCreateInfo.size = buildSizes.accelerationStructureSize;
+			tlasCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+
+			if (m_self->device->CreateAccelerationStructure(tlasCreateInfo, &tlas->handle) != VK_SUCCESS)
+			{
+				m_self->allocator->DestroyBuffer(tlas->buffer, tlas->allocation);
+				m_self->accelerationStructures.Destroy(handle);
+				throw std::runtime_error("Failed to create TLAS acceleration structure");
+			}
+
+			tlas->deviceAddress = m_self->device->GetAccelerationStructureDeviceAddress(tlas->handle);
+			outTlasHandle = handle;
+		}
+
+		const RenderingApi::AccelerationStructure* tlas = GetAccelerationStructure(outTlasHandle);
+		const VkDeviceAddress					   alignedScratchAddr = AlignUpDeviceSize(m_self->device->GetBufferDeviceAddress(GetBuffer(ioScratchBuffer)->value), scratchAlignment);
+
+		buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+		buildInfo.dstAccelerationStructure = tlas->handle;
+		buildInfo.scratchData.deviceAddress = alignedScratchAddr;
+
+		VkAccelerationStructureBuildRangeInfoKHR rangeInfo{};
+		rangeInfo.primitiveCount = primitiveCount;
+		rangeInfo.primitiveOffset = 0;
+		rangeInfo.firstVertex = 0;
+		rangeInfo.transformOffset = 0;
+		const VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &rangeInfo;
+
+		const auto cmd = m_self->commandBuffers[m_currentFrameIndex].get();
+		m_self->device->CmdBuildAccelerationStructures(cmd->Handle(), 1, &buildInfo, &pRangeInfo);
+
+		VkMemoryBarrier2 barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+		barrier.srcStageMask = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+		barrier.srcAccessMask = VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+		barrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+		barrier.dstAccessMask = VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+
+		VkDependencyInfo depInfo{};
+		depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		depInfo.memoryBarrierCount = 1;
+		depInfo.pMemoryBarriers = &barrier;
+
+		cmd->PipelineBarrier2(depInfo);
 	}
 }

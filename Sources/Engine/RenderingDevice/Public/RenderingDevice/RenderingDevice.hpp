@@ -85,6 +85,18 @@ namespace BetterThanNothing
 		Handle	 samplerHandle{};
 	};
 
+	struct TlasInstanceDesc
+	{
+		float	 transform[12] = {
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f
+		};
+		Handle	 blasHandle{};
+		uint32_t instanceCustomIndex = 0;
+		uint8_t	 mask = 0xFF;
+	};
+
 	class RenderingDevice
 	{
 	public:
@@ -217,6 +229,7 @@ namespace BetterThanNothing
 
 		// Acceleration Structures (Hardware Ray Query)
 		[[nodiscard]] Handle							   CreateBlas(const Handle& vertexBuffer, uint32_t vertexCount, uint32_t vertexStride, const Handle& indexBuffer, uint32_t indexCount);
+		void											   BuildOrUpdateTlas(Handle& outTlasHandle, Handle& ioScratchBuffer, Handle& ioInstanceBuffer, std::span<const TlasInstanceDesc> instances);
 		void											   DestroyAccelerationStructure(const Handle& handle);
 		[[nodiscard]] RenderingApi::AccelerationStructure* GetAccelerationStructure(const Handle& handle);
 
