@@ -107,8 +107,6 @@ namespace BetterThanNothing
 					settings.toneMapMode = static_cast<EToneMapMode>(toneMapIdx);
 
 				ImGui::Checkbox("Enable TAA", &settings.enableTAA);
-				if (settings.enableTAA)
-					ImGui::SliderFloat("TAA Blend", &settings.taaBlendFactor, 0.02f, 0.5f, "%.2f");
 
 				ImGui::EndTabItem();
 			}
@@ -246,8 +244,8 @@ namespace BetterThanNothing
 				ImGui::EndTabItem();
 			}
 
-			// --- Tab 5: Nature & Fog ---
-			if (ImGui::BeginTabItem("Nature & Fog"))
+			// --- Tab 5: Nature ---
+			if (ImGui::BeginTabItem("Nature"))
 			{
 				ImGui::SeparatorText("Procedural 3D Grass");
 				ImGui::Checkbox("Procedural Grass", &settings.enableProceduralGrass);
@@ -261,9 +259,6 @@ namespace BetterThanNothing
 				ImGui::SeparatorText("Water Surface");
 				ImGui::SliderFloat("Wave Scale", &settings.waterWaveScale, 0.0f, 2.5f, "%.2f");
 				ImGui::SliderFloat("Foam", &settings.waterFoamIntensity, 0.0f, 2.0f, "%.2f");
-
-				ImGui::SeparatorText("Fog");
-				ImGui::Checkbox("Enable Fog", &settings.enableFog);
 
 				ImGui::EndTabItem();
 			}
