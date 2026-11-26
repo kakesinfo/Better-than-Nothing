@@ -262,6 +262,32 @@ namespace BetterThanNothing
 		return handle;
 	}
 
+	Handle RenderingDevice::CreateComputePipeline(const Handle& computeShader, const std::string_view layoutName)
+	{
+		const std::string layoutKey(layoutName);
+		if (!m_self->pipelineLayouts.contains(layoutKey))
+			throw std::runtime_error("Pipeline layout does not exist: " + layoutKey);
+
+		const auto* shader = m_self->shaders.Get(computeShader);
+
+		VkComputePipelineCreateInfo pipelineInfo{};
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+		pipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+		pipelineInfo.stage.module = shader->module;
+		pipelineInfo.stage.pName = "main";
+		pipelineInfo.layout = m_self->pipelineLayouts.at(layoutKey)->Handle();
+
+		const Handle handle = m_self->pipelines.Allocate();
+		if (vkCreateComputePipelines(m_self->device->Handle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_self->pipelines.Get(handle)->pipeline) != VK_SUCCESS)
+		{
+			m_self->pipelines.Destroy(handle);
+			throw std::runtime_error("Failed to create compute pipeline");
+		}
+
+		return handle;
+	}
+
 	RenderingApi::Pipeline* RenderingDevice::GetPipeline(const Handle& handle)
 	{
 		if (!m_self->pipelines.Has(handle))

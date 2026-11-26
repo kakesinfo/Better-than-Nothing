@@ -109,6 +109,8 @@ namespace BetterThanNothing
 				return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			case ImageLayout::TransferDst:
 				return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			case ImageLayout::General:
+				return VK_IMAGE_LAYOUT_GENERAL;
 			case ImageLayout::Present:
 				return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
@@ -457,7 +459,8 @@ namespace BetterThanNothing
 		const VkImageLayout	   vkOldLayout = texture->currentLayout;
 
 		const bool isAttachmentSync = (vkNewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
-									   vkNewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+									   vkNewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+									   vkNewLayout == VK_IMAGE_LAYOUT_GENERAL);
 		if (vkOldLayout == vkNewLayout && !isAttachmentSync)
 			return;
 
@@ -661,6 +664,30 @@ namespace BetterThanNothing
 
 			cmd->DrawIndexed(packet.indexCount, packet.instanceCount, 0, 0, 0);
 		}
+	}
+
+	void RenderingDevice::BindComputePipeline(const Handle& pipeline)
+	{
+		const auto* p = GetPipeline(pipeline);
+		m_self->commandBuffers[m_currentFrameIndex]->BindPipeline(p->pipeline, VK_PIPELINE_BIND_POINT_COMPUTE);
+	}
+
+	void RenderingDevice::BindComputeDescriptorSets(const std::string_view layoutName, const uint32_t firstSet, const std::span<const Handle> sets)
+	{
+		const VkPipelineLayout layout = GetPipelineLayout(std::string(layoutName))->Handle();
+		auto*				   cmd = m_self->commandBuffers[m_currentFrameIndex].get();
+		for (uint32_t i = 0; i < static_cast<uint32_t>(sets.size()); ++i)
+		{
+			if (!sets[i].IsValid())
+				continue;
+			const auto* descSet = GetDescriptorSet(sets[i]);
+			cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_COMPUTE, layout, firstSet + i, 1, &descSet->value, 0, nullptr);
+		}
+	}
+
+	void RenderingDevice::Dispatch(const uint32_t groupX, const uint32_t groupY, const uint32_t groupZ)
+	{
+		m_self->commandBuffers[m_currentFrameIndex]->Dispatch(groupX, groupY, groupZ);
 	}
 
 	void RenderingDevice::ComputeBarrier()

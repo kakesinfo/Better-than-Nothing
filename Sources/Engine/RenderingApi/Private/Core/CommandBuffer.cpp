@@ -144,6 +144,11 @@ namespace BetterThanNothing::RenderingApi
 		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
+	void CommandBuffer::Dispatch(const uint32_t groupX, const uint32_t groupY, const uint32_t groupZ) const
+	{
+		vkCmdDispatch(m_commandBuffer, groupX, groupY, groupZ);
+	}
+
 	void CommandBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, const uint64_t bufferSize, const uint64_t offset)
 	{
 		VkBufferCopy copyRegion{};
@@ -180,6 +185,10 @@ namespace BetterThanNothing::RenderingApi
 			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 				stageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
 				accessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_GENERAL:
+				stageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+				accessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 				break;
 			case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
 				stageMask = VK_PIPELINE_STAGE_2_NONE;

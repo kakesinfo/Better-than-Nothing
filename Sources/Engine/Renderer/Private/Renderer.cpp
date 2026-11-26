@@ -50,7 +50,7 @@ namespace BetterThanNothing
 		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager), m_editor(editor)
 	{
 		// Set 0: Global per-frame uniforms (camera + directional light + counts)
-		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", DescriptorType::UniformBuffer, ShaderStageFlags::Vertex | ShaderStageFlags::Fragment);
+		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", DescriptorType::UniformBuffer, ShaderStageFlags::Vertex | ShaderStageFlags::Fragment | ShaderStageFlags::Compute);
 
 		// Set 1: Material textures + UBO (0 = albedo, 1 = normal, 2 = metallicRoughness, 3 = MaterialUniformData)
 		const std::array<DescriptorBindingDesc, 4> materialBindings = {{
@@ -137,6 +137,33 @@ namespace BetterThanNothing
 				->SetCullMode(CullMode::None);
 		});
 
+		const std::array<DescriptorBindingDesc, 7> deferredBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 5, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 6, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("DeferredLighting", deferredBindings);
+
+		m_renderingDevice->CreatePipelineLayout("DeferredLighting", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("DeferredLighting");
+		});
+
+		const auto deferredComp = m_resourceManager->LoadShader("Shaders/deferred/deferred_lighting.comp");
+		m_resourceManager->CreateComputePipeline("Deferred::Lighting", deferredComp, "DeferredLighting");
+
+		SamplerDescription computeSamplerDesc{};
+		computeSamplerDesc.magFilter = SamplerFilter::Nearest;
+		computeSamplerDesc.minFilter = SamplerFilter::Nearest;
+		computeSamplerDesc.addressModeU = SamplerAddressMode::ClampToEdge;
+		computeSamplerDesc.addressModeV = SamplerAddressMode::ClampToEdge;
+		computeSamplerDesc.addressModeW = SamplerAddressMode::ClampToEdge;
+		m_computeNearestSampler = m_renderingDevice->GetOrCreateTextureSampler(computeSamplerDesc);
+
 		m_opaqueDrawStream = std::make_unique<DrawStream>();
 		m_transparentDrawStream = std::make_unique<DrawStream>();
 
@@ -185,6 +212,13 @@ namespace BetterThanNothing
 			if (handle.IsValid())
 				m_renderingDevice->DestroyBuffer(handle);
 		}
+		for (const Handle& handle : m_deferredDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		if (m_computeNearestSampler.IsValid())
+			m_renderingDevice->DestroyTextureSampler(m_computeNearestSampler);
 	}
 
 	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
@@ -233,6 +267,25 @@ namespace BetterThanNothing
 		m_prevDepthTarget = createTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_prevNormalTarget = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_hdrColor = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+
+		const uint32_t frameCount = m_renderingDevice->GetMaxFramesInFlight();
+		if (m_deferredDescriptorSets.size() != frameCount)
+		{
+			m_deferredDescriptorSets.resize(frameCount);
+			for (uint32_t i = 0; i < frameCount; ++i)
+				m_deferredDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("DeferredLighting");
+		}
+		for (uint32_t i = 0; i < frameCount; ++i)
+		{
+			const Handle set = m_deferredDescriptorSets[i];
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_gbufferAlbedo, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_gbufferNormal, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 2, m_gbufferMaterial, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 3, m_gbufferMotion, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 4, m_depthTarget, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorStorageBuffer(set, 5, m_pointLightBuffer[i], MAX_LIGHT_COUNT * sizeof(PointLightData));
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 6, m_hdrColor);
+		}
 
 		m_lastSwapChainGeneration = currentGen;
 	}
@@ -294,6 +347,8 @@ namespace BetterThanNothing
 		ctx.prevDepthTarget = m_prevDepthTarget;
 		ctx.prevNormalTarget = m_prevNormalTarget;
 		ctx.hdrColor = m_hdrColor;
+		ctx.globalDescriptorSet = m_globalDescriptorSets[frameIndex];
+		ctx.deferredLightingDescriptorSet = m_deferredDescriptorSets[frameIndex];
 		ctx.opaqueStream = m_opaqueDrawStream.get();
 		ctx.transparentStream = m_transparentDrawStream.get();
 

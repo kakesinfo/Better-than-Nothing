@@ -106,6 +106,7 @@ namespace BetterThanNothing
 		ResourceId LoadShader(const std::string& path);
 		ResourceId CreateMesh(const MeshData& meshData);
 		ResourceId CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback);
+		ResourceId CreateComputePipeline(const std::string& name, ResourceId shaderId, const std::string& layoutName);
 
 		void Clear();
 

@@ -71,6 +71,7 @@ namespace BetterThanNothing::RenderingApi
 
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
+		void Dispatch(uint32_t groupX, uint32_t groupY, uint32_t groupZ) const;
 
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint64_t bufferSize, uint64_t offset);
 		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);

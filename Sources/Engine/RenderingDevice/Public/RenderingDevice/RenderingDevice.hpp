@@ -188,6 +188,10 @@ namespace BetterThanNothing
 		[[nodiscard]] Handle		 CreateCombinedImageDescriptorSet(std::span<const TextureBindingUpdate> bindings, std::string_view layoutType);
 		[[nodiscard]] Handle		 CreateMaterialDescriptorSet(std::span<const TextureBindingUpdate> textureBindings, uint32_t uboBinding, const Handle& uboHandle, size_t uboSize, std::string_view layoutType);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
+		void						 UpdateDescriptorCombinedImage(const Handle& setHandle, uint32_t binding, const Handle& textureHandle, const Handle& samplerHandle);
+		void						 UpdateDescriptorStorageImage(const Handle& setHandle, uint32_t binding, const Handle& textureHandle);
+		void						 UpdateDescriptorUniformBuffer(const Handle& setHandle, uint32_t binding, const Handle& bufferHandle, size_t size);
+		void						 UpdateDescriptorStorageBuffer(const Handle& setHandle, uint32_t binding, const Handle& bufferHandle, size_t size);
 		void						 UpdateDescriptorAccelerationStructure(const Handle& setHandle, uint32_t binding, const Handle& tlasHandle);
 		void						 FlushDescriptorSetUpdateRequests();
 		void						 DestroyDescriptorSet(const Handle& handle);
@@ -197,6 +201,7 @@ namespace BetterThanNothing
 		[[nodiscard]] Handle				  CreateShader(const ShaderDescription& desc);
 		void								  DestroyShader(const Handle& handle);
 		[[nodiscard]] Handle				  CreatePipeline(const PipelineDescription& desc);
+		[[nodiscard]] Handle				  CreateComputePipeline(const Handle& computeShader, std::string_view layoutName);
 		[[nodiscard]] RenderingApi::Pipeline* GetPipeline(const Handle& handle);
 		void								  DestroyPipeline(const Handle& handle);
 
@@ -215,6 +220,9 @@ namespace BetterThanNothing
 		void BeginRenderPass(const RenderPassDescriptor& desc);
 		void EndRenderPass();
 		void ExecuteDrawStream(const DrawStreamView& drawStream);
+		void BindComputePipeline(const Handle& pipeline);
+		void BindComputeDescriptorSets(std::string_view layoutName, uint32_t firstSet, std::span<const Handle> sets);
+		void Dispatch(uint32_t groupX, uint32_t groupY, uint32_t groupZ);
 		void ComputeBarrier();
 		void PushComputeConstants(std::string_view layoutName, const void* data, uint32_t size);
 

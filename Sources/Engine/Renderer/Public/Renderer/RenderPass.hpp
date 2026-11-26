@@ -52,6 +52,8 @@ namespace BetterThanNothing
 		Handle prevDepthTarget{};
 		Handle prevNormalTarget{};
 		Handle hdrColor{};
+		Handle globalDescriptorSet{};
+		Handle deferredLightingDescriptorSet{};
 
 		DrawStream* opaqueStream = nullptr;
 		DrawStream* transparentStream = nullptr;

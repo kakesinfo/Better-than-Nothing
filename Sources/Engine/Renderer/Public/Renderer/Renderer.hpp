@@ -89,6 +89,8 @@ namespace BetterThanNothing
 		std::vector<Handle>					m_globalDescriptorSets;
 		std::vector<Handle>					m_pointLightBuffer;
 		std::vector<Handle>					m_pointLightDescriptorSets;
+		std::vector<Handle>					m_deferredDescriptorSets;
+		Handle								m_computeNearestSampler{};
 		mutable std::vector<PointLightData> m_pointLightsScratch;
 		mutable bool						m_warnedLightLimit = false;
 	};

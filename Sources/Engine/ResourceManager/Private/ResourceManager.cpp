@@ -563,6 +563,24 @@ namespace BetterThanNothing
 		return pipelineId;
 	}
 
+	ResourceId ResourceManager::CreateComputePipeline(const std::string& name, const ResourceId shaderId, const std::string& layoutName)
+	{
+		if (const auto it = m_pipelinesLUT.find(name); it != m_pipelinesLUT.end())
+			return it->second;
+
+		auto cache = std::make_unique<PipelineResourceCache>();
+		cache->name = name;
+		cache->layoutName = layoutName;
+		cache->pipeline = m_renderingDevice->CreateComputePipeline(GetShaderData(shaderId)->module, layoutName);
+
+		const auto pipelineId = GenerateUniqueResourceId();
+		m_pipelines[pipelineId] = std::move(cache);
+		m_pipelinesLUT[name] = pipelineId;
+
+		Logger::Log<INFO>("Compute PipelineResourceCache created and cached for Pipeline: {}", name);
+		return pipelineId;
+	}
+
 	MeshResourceCache* ResourceManager::GetMeshData(const ResourceId id) const
 	{
 		const auto it = m_meshes.find(id);

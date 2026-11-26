@@ -87,6 +87,7 @@ namespace BetterThanNothing
 		ShaderReadOnly,
 		TransferSrc,
 		TransferDst,
+		General,
 		Present
 	};
 
