@@ -22,6 +22,7 @@
 
 #include <Data/Graphics/VertexData.hpp>
 #include <Math/Matrix4.hpp>
+#include <Math/Vector4.hpp>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -64,6 +65,10 @@ namespace BetterThanNothing
 		float					   alphaCutoff = 0.0f;
 		std::optional<std::string> diffuseTexturePath;
 		std::optional<std::string> normalTexturePath;
+		std::optional<std::string> metallicRoughnessTexturePath;
+		Vector4					   baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		float					   metallicFactor = 0.0f;
+		float					   roughnessFactor = 1.0f;
 	};
 
 	struct ImportedMesh

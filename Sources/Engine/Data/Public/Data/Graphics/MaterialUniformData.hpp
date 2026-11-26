@@ -1,0 +1,40 @@
+/*
+ *	Better than Nothing
+ *	Copyright (C) 2026 kakesinfo
+ *
+ *	This program is free software: you can redistribute it and/or modify
+ *	it under the terms of the GNU General Public License as published by
+ * 	the Free Software Foundation, either version 3 of the License, or
+ *	(at your option) any later version.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *	GNU General Public License for more details.
+ *
+ *	You should have received a copy of the GNU General Public License
+ * 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+#include <Math/Vector4.hpp>
+#include <cstddef>
+
+namespace BetterThanNothing
+{
+	struct MaterialUniformData
+	{
+		alignas(16) Vector4 baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		float metallicFactor = 0.0f;
+		float roughnessFactor = 1.0f;
+		float alphaCutoff = 0.5f;
+		float _pad = 0.0f;
+	};
+
+	static_assert(offsetof(MaterialUniformData, baseColorFactor) == 0);
+	static_assert(offsetof(MaterialUniformData, metallicFactor) == 16);
+	static_assert(offsetof(MaterialUniformData, roughnessFactor) == 20);
+	static_assert(offsetof(MaterialUniformData, alphaCutoff) == 24);
+	static_assert(sizeof(MaterialUniformData) == 32);
+}
