@@ -110,6 +110,8 @@ namespace BetterThanNothing
 		std::vector<Handle>					m_rtShadowTraceDescriptorSets;
 		std::vector<Handle>					m_rtShadowClassifyDescriptorSets[2];
 		std::vector<Handle>					m_rtShadowFilterDescriptorSets[3];
+		std::vector<Handle>					m_sssDescriptorSets;
+		Vector3								m_lightDirection{0.0f, -1.0f, 0.0f};
 		Handle								m_computeNearestSampler{};
 		Handle								m_linearClampSampler{};
 		Handle								m_pointBorderWhiteSampler{};

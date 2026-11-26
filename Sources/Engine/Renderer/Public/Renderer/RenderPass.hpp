@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <Math/Matrix4.hpp>
+#include <Math/Vector3.hpp>
 #include <RenderingDevice/DrawStream.hpp>
 #include <RenderingDevice/Handle.hpp>
 #include <cstdint>
@@ -71,6 +73,10 @@ namespace BetterThanNothing
 		Handle rtShadowTraceDescriptorSet{};
 		Handle rtShadowClassifyDescriptorSet{};
 		Handle rtShadowFilterDescriptorSets[3]{};
+		Handle sssDescriptorSet{};
+
+		Matrix4 unjitteredViewProj = Matrix4::Identity;
+		Vector3 lightDirection{0.0f, -1.0f, 0.0f};
 
 		DrawStream* opaqueStream = nullptr;
 		DrawStream* transparentStream = nullptr;

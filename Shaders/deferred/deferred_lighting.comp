@@ -48,6 +48,8 @@ layout(std430, set = 1, binding = 5) readonly buffer PointLightBuffer {
 } pointLights;
 
 layout(set = 1, binding = 6, rgba16f) writeonly uniform image2D outHdrColor;
+layout(set = 1, binding = 7) uniform sampler2D rtShadowDenoisedTex;
+layout(set = 1, binding = 8) uniform sampler2D sssTex;
 
 const float PI = 3.14159265359;
 
@@ -137,6 +139,10 @@ void main()
     float ao = matData.b;
     vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
 
+    float shadowVisibility = ((globalUniforms.flags & 2u) != 0u) ? textureLod(rtShadowDenoisedTex, uv, 0.0).r : 1.0;
+    float sssVisibility = ((globalUniforms.flags & 4u) != 0u) ? textureLod(sssTex, uv, 0.0).r : 1.0;
+    float combinedShadow = min(shadowVisibility, sssVisibility);
+
     uint dbg = globalUniforms.debugView;
     if (dbg >= 1u && dbg <= 10u)
     {
@@ -155,6 +161,10 @@ void main()
             debugOut = vec3(abs(motion) * 32.0, 0.0);
         else if (dbg == 7u)
             debugOut = vec3(ao);
+        else if (dbg == 8u)
+            debugOut = vec3(shadowVisibility);
+        else if (dbg == 10u)
+            debugOut = vec3(sssVisibility);
         else
             debugOut = vec3(0.0);
 
@@ -173,7 +183,7 @@ void main()
 
     // Directional Sun
     vec3 sunL = normalize(-globalUniforms.lightDirection);
-    vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.lightIntensity;
+    vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.lightIntensity * combinedShadow;
     vec3 Lo = EvaluatePBR(albedo, N, V, sunL, metallic, roughness) * sunRadiance;
 
     // Point Lights with Lagarde smooth distance attenuation

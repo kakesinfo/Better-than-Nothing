@@ -26,6 +26,7 @@
 #include "Passes/GBufferPass.hpp"
 #include "Passes/PostProcessPass.hpp"
 #include "Passes/RTShadowPass.hpp"
+#include "Passes/ScreenSpaceShadowPass.hpp"
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
@@ -146,7 +147,7 @@ namespace BetterThanNothing
 				->SetCullMode(CullMode::None);
 		});
 
-		const std::array<DescriptorBindingDesc, 7> deferredBindings = {{
+		const std::array<DescriptorBindingDesc, 9> deferredBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
@@ -154,6 +155,8 @@ namespace BetterThanNothing
 			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 5, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 6, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 7, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 8, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("DeferredLighting", deferredBindings);
 
@@ -253,6 +256,20 @@ namespace BetterThanNothing
 		const auto ffxFilterComp = m_resourceManager->LoadShader("Shaders/rtshadows/ffx_shadows_filter.comp");
 		m_resourceManager->CreateComputePipeline("RTShadow::FFXFilterSoftShadows", ffxFilterComp, "RTShadow::FFXFilterSoftShadows");
 
+		// Bend Studio Screen-Space Shadows
+		const std::array<DescriptorBindingDesc, 2> sssBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("SSS::Bend", sssBindings);
+		m_renderingDevice->CreatePipelineLayout("SSS::Bend", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("SSS::Bend");
+			blueprint->AddPushConstant<BendSSSPushConstants>(EShaderType::Compute);
+		});
+		const auto bendSssComp = m_resourceManager->LoadShader("Shaders/rtshadows/bend_sss.comp");
+		m_resourceManager->CreateComputePipeline("SSS::Bend", bendSssComp, "SSS::Bend");
+
 		m_renderingDevice->CreateDescriptorSetLayout("PostProcess::ToneMap", DescriptorType::CombinedImageSampler, ShaderStageFlags::Fragment);
 		m_renderingDevice->CreatePipelineLayout("PostProcess::ToneMap", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
@@ -286,6 +303,7 @@ namespace BetterThanNothing
 
 		AddPass(std::make_unique<GBufferPass>());
 		AddPass(std::make_unique<RTShadowPass>());
+		AddPass(std::make_unique<ScreenSpaceShadowPass>());
 		AddPass(std::make_unique<DeferredLightingPass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
 		AddPass(std::make_unique<PostProcessPass>());
@@ -367,6 +385,11 @@ namespace BetterThanNothing
 				if (handle.IsValid())
 					m_renderingDevice->DestroyDescriptorSet(handle);
 			}
+		}
+		for (const Handle& handle : m_sssDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
 		}
 	}
 
@@ -486,6 +509,8 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 4, m_depthTarget, m_computeNearestSampler);
 			m_renderingDevice->UpdateDescriptorStorageBuffer(set, 5, m_pointLightBuffer[i], MAX_LIGHT_COUNT * sizeof(PointLightData));
 			m_renderingDevice->UpdateDescriptorStorageImage(set, 6, m_hdrColor);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 7, m_rtShadowDenoised, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 8, m_sssTarget, m_computeNearestSampler);
 		}
 
 		for (uint32_t p = 0; p < 2; ++p)
@@ -575,6 +600,19 @@ namespace BetterThanNothing
 				m_renderingDevice->UpdateDescriptorStorageImage(set, 3, filterOutputs[f]);
 				m_renderingDevice->UpdateDescriptorStorageBuffer(set, 4, m_rtShadowTileMetaBuffer, tileBufferSize);
 			}
+		}
+
+		if (m_sssDescriptorSets.size() != frameCount)
+		{
+			m_sssDescriptorSets.resize(frameCount);
+			for (uint32_t i = 0; i < frameCount; ++i)
+				m_sssDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("SSS::Bend");
+		}
+		for (uint32_t i = 0; i < frameCount; ++i)
+		{
+			const Handle set = m_sssDescriptorSets[i];
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_depthTarget, m_pointBorderWhiteSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 1, m_sssTarget);
 		}
 
 		m_lastSwapChainGeneration = currentGen;
@@ -678,6 +716,9 @@ namespace BetterThanNothing
 		ctx.rtShadowClassifyDescriptorSet = m_rtShadowClassifyDescriptorSets[readIdx][frameIndex];
 		for (uint32_t f = 0; f < 3; ++f)
 			ctx.rtShadowFilterDescriptorSets[f] = m_rtShadowFilterDescriptorSets[f][frameIndex];
+		ctx.sssDescriptorSet = m_sssDescriptorSets[frameIndex];
+		ctx.unjitteredViewProj = m_prevUnjitteredViewProj;
+		ctx.lightDirection = m_lightDirection;
 		ctx.opaqueStream = m_opaqueDrawStream.get();
 		ctx.transparentStream = m_transparentDrawStream.get();
 
@@ -751,8 +792,12 @@ namespace BetterThanNothing
 		globalUniform->frameIndex = m_frameIndex;
 		globalUniform->debugView = static_cast<uint32_t>(settings.debugView);
 		globalUniform->toneMapMode = static_cast<uint32_t>(settings.toneMapMode);
-		globalUniform->flags = settings.enableTAA ? 1u : 0u;
+		uint32_t flags = settings.enableTAA ? 1u : 0u;
+		if (settings.enableScreenSpaceShadows)
+			flags |= (1u << 2);
+		globalUniform->flags = flags;
 
+		m_lightDirection = dirLightDirection;
 		m_prevUnjitteredViewProj = unjitteredViewProj;
 		++m_frameIndex;
 
