@@ -27,3 +27,11 @@ TEST(SkyShadersTest, CompileSkyViewLutShader)
 	EXPECT_EQ(comp.type, EShaderType::Compute);
 	EXPECT_FALSE(comp.spirv.empty());
 }
+
+TEST(SkyShadersTest, CompileBrdfLutShader)
+{
+	ResourceImporter	 importer;
+	const ImportedShader comp = importer.ImportShader(AssetPath::Resolve("Shaders/sky/brdf_lut.comp"));
+	EXPECT_EQ(comp.type, EShaderType::Compute);
+	EXPECT_FALSE(comp.spirv.empty());
+}
