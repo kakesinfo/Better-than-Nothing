@@ -69,6 +69,12 @@ namespace BetterThanNothing
 		Handle rtShadowTileMaskBuffer{};
 		Handle rtShadowTileMetaBuffer{};
 		Handle topLevelAS{};
+		Handle transmittanceLUT{};
+		Handle multiScatteringLUT{};
+		Handle skyViewLUT{};
+		Handle irradianceLUT{};
+		Handle prefilteredEnvLUT{};
+		Handle brdfLUT{};
 		Handle globalDescriptorSet{};
 		Handle deferredLightingDescriptorSet{};
 		Handle taaDescriptorSet{};

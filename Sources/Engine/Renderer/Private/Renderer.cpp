@@ -349,6 +349,7 @@ namespace BetterThanNothing
 		CreateGlobalUniformDescriptorSets();
 		CreatePointLightBuffers();
 		CreatePointLightDescriptorSets();
+		CreateAtmosphereLuts();
 		EnsureRenderTargets();
 
 		AddPass(std::make_unique<GBufferPass>());
@@ -373,6 +374,7 @@ namespace BetterThanNothing
 
 		m_renderingDevice->WaitIdle();
 
+		DestroyAtmosphereLuts();
 		DestroyRenderTargets();
 
 		for (const Handle& handle : m_globalDescriptorSets)
@@ -406,6 +408,8 @@ namespace BetterThanNothing
 			m_renderingDevice->DestroyTextureSampler(m_linearClampSampler);
 		if (m_pointBorderWhiteSampler.IsValid())
 			m_renderingDevice->DestroyTextureSampler(m_pointBorderWhiteSampler);
+		if (m_skyViewSampler.IsValid())
+			m_renderingDevice->DestroyTextureSampler(m_skyViewSampler);
 		for (uint32_t p = 0; p < 2; ++p)
 		{
 			for (const Handle& handle : m_taaDescriptorSets[p])
@@ -496,6 +500,68 @@ namespace BetterThanNothing
 		desc.anisotropyEnable = false;
 		desc.borderColor = BorderColor::FloatOpaqueWhite;
 		return desc;
+	}
+
+	SamplerDescription Renderer::MakeSkyViewSamplerDesc()
+	{
+		SamplerDescription desc{};
+		desc.magFilter = SamplerFilter::Linear;
+		desc.minFilter = SamplerFilter::Linear;
+		desc.mipmapMode = SamplerMipmapMode::Linear;
+		desc.addressModeU = SamplerAddressMode::Repeat;
+		desc.addressModeV = SamplerAddressMode::ClampToEdge;
+		desc.addressModeW = SamplerAddressMode::ClampToEdge;
+		desc.anisotropyEnable = false;
+		return desc;
+	}
+
+	AtmosphereLutSpec Renderer::GetTransmittanceLutSpec() { return {256, 64, TextureFormat::R16G16B16A16_SFLOAT}; }
+	AtmosphereLutSpec Renderer::GetMultiScatteringLutSpec() { return {32, 32, TextureFormat::R16G16B16A16_SFLOAT}; }
+	AtmosphereLutSpec Renderer::GetSkyViewLutSpec() { return {192, 108, TextureFormat::R16G16B16A16_SFLOAT}; }
+	AtmosphereLutSpec Renderer::GetIrradianceLutSpec() { return {64, 32, TextureFormat::R16G16B16A16_SFLOAT}; }
+	AtmosphereLutSpec Renderer::GetPrefilteredEnvLutSpec() { return {128, 320, TextureFormat::R16G16B16A16_SFLOAT}; }
+	AtmosphereLutSpec Renderer::GetBrdfLutSpec() { return {256, 256, TextureFormat::R16G16_SFLOAT}; }
+
+	void Renderer::CreateAtmosphereLuts()
+	{
+		m_skyViewSampler = m_renderingDevice->GetOrCreateTextureSampler(MakeSkyViewSamplerDesc());
+
+		auto createLut = [&](const AtmosphereLutSpec& spec) -> Handle {
+			TextureCreateInfo desc{};
+			desc.width = spec.width;
+			desc.height = spec.height;
+			desc.format = spec.format;
+			desc.usage = TextureUsageFlags::Storage | TextureUsageFlags::Sampled;
+			desc.useMsaa = false;
+			desc.dedicated = true;
+			desc.mipLevels = 1;
+			return m_renderingDevice->CreateTexture(desc);
+		};
+
+		m_transmittanceLUT = createLut(GetTransmittanceLutSpec());
+		m_multiScatteringLUT = createLut(GetMultiScatteringLutSpec());
+		m_skyViewLUT = createLut(GetSkyViewLutSpec());
+		m_irradianceLUT = createLut(GetIrradianceLutSpec());
+		m_prefilteredEnvLUT = createLut(GetPrefilteredEnvLutSpec());
+		m_brdfLUT = createLut(GetBrdfLutSpec());
+	}
+
+	void Renderer::DestroyAtmosphereLuts()
+	{
+		auto destroyIfValid = [&](Handle& handle) {
+			if (handle.IsValid())
+			{
+				m_renderingDevice->DestroyTexture(handle);
+				handle = {};
+			}
+		};
+
+		destroyIfValid(m_transmittanceLUT);
+		destroyIfValid(m_multiScatteringLUT);
+		destroyIfValid(m_skyViewLUT);
+		destroyIfValid(m_irradianceLUT);
+		destroyIfValid(m_prefilteredEnvLUT);
+		destroyIfValid(m_brdfLUT);
 	}
 
 	void Renderer::AddPass(std::unique_ptr<IRenderPass> pass)
@@ -819,6 +885,12 @@ namespace BetterThanNothing
 		ctx.aoHistory = m_aoHistory;
 		ctx.rtShadowTileMaskBuffer = m_rtShadowTileMaskBuffer;
 		ctx.rtShadowTileMetaBuffer = m_rtShadowTileMetaBuffer;
+		ctx.transmittanceLUT = m_transmittanceLUT;
+		ctx.multiScatteringLUT = m_multiScatteringLUT;
+		ctx.skyViewLUT = m_skyViewLUT;
+		ctx.irradianceLUT = m_irradianceLUT;
+		ctx.prefilteredEnvLUT = m_prefilteredEnvLUT;
+		ctx.brdfLUT = m_brdfLUT;
 		ctx.globalDescriptorSet = m_globalDescriptorSets[frameIndex];
 		ctx.deferredLightingDescriptorSet = m_deferredDescriptorSets[frameIndex];
 		ctx.taaDescriptorSet = m_taaDescriptorSets[readIdx][frameIndex];

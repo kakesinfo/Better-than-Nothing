@@ -23,6 +23,7 @@
 #include <Data/Graphics/PointLightData.hpp>
 #include <Math/Matrix4.hpp>
 #include <RenderingDevice/SamplerDescription.hpp>
+#include <RenderingDevice/Types.hpp>
 #include <memory>
 #include <vector>
 
@@ -34,6 +35,13 @@ namespace BetterThanNothing
 	class Editor;
 	class DrawStream;
 	struct GlobalUniformData;
+
+	struct AtmosphereLutSpec
+	{
+		uint32_t	  width = 0;
+		uint32_t	  height = 0;
+		TextureFormat format = TextureFormat::Undefined;
+	};
 
 	class Renderer final
 	{
@@ -51,6 +59,14 @@ namespace BetterThanNothing
 		[[nodiscard]] static float				Halton(uint32_t index, uint32_t base);
 		[[nodiscard]] static uint32_t			ComputeRTShadowTileCount(uint32_t width, uint32_t height);
 		[[nodiscard]] static SamplerDescription MakePointBorderWhiteSamplerDesc();
+		[[nodiscard]] static SamplerDescription MakeSkyViewSamplerDesc();
+
+		[[nodiscard]] static AtmosphereLutSpec GetTransmittanceLutSpec();
+		[[nodiscard]] static AtmosphereLutSpec GetMultiScatteringLutSpec();
+		[[nodiscard]] static AtmosphereLutSpec GetSkyViewLutSpec();
+		[[nodiscard]] static AtmosphereLutSpec GetIrradianceLutSpec();
+		[[nodiscard]] static AtmosphereLutSpec GetPrefilteredEnvLutSpec();
+		[[nodiscard]] static AtmosphereLutSpec GetBrdfLutSpec();
 
 		void AddPass(std::unique_ptr<IRenderPass> pass);
 		void RenderFrame(Scene* scene);
@@ -65,6 +81,8 @@ namespace BetterThanNothing
 
 		void EnsureRenderTargets();
 		void DestroyRenderTargets();
+		void CreateAtmosphereLuts();
+		void DestroyAtmosphereLuts();
 
 		void	 BuildDrawStreams(Scene* scene, uint32_t frameIndex);
 		uint32_t UploadPointLights(const Scene* scene, uint32_t frameIndex) const;
@@ -98,6 +116,12 @@ namespace BetterThanNothing
 		Handle	 m_aoHistory{};
 		Handle	 m_rtShadowTileMaskBuffer{};
 		Handle	 m_rtShadowTileMetaBuffer{};
+		Handle	 m_transmittanceLUT{};
+		Handle	 m_multiScatteringLUT{};
+		Handle	 m_skyViewLUT{};
+		Handle	 m_irradianceLUT{};
+		Handle	 m_prefilteredEnvLUT{};
+		Handle	 m_brdfLUT{};
 		uint32_t m_temporalReadIndex = 0;
 		uint64_t m_lastSwapChainGeneration = 0;
 		Matrix4	 m_prevUnjitteredViewProj = Matrix4::Identity;
@@ -121,6 +145,7 @@ namespace BetterThanNothing
 		Handle								m_computeNearestSampler{};
 		Handle								m_linearClampSampler{};
 		Handle								m_pointBorderWhiteSampler{};
+		Handle								m_skyViewSampler{};
 		mutable std::vector<PointLightData> m_pointLightsScratch;
 		mutable bool						m_warnedLightLimit = false;
 	};
