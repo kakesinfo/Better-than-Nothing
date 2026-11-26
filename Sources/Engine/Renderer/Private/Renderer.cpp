@@ -149,7 +149,7 @@ namespace BetterThanNothing
 				->SetCullMode(CullMode::None);
 		});
 
-		const std::array<DescriptorBindingDesc, 10> deferredBindings = {{
+		const std::array<DescriptorBindingDesc, 14> deferredBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
@@ -160,6 +160,10 @@ namespace BetterThanNothing
 			{.binding = 7, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 8, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 9, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 10, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 11, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 12, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 13, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("DeferredLighting", deferredBindings);
 
@@ -756,6 +760,10 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 7, m_rtShadowDenoised, m_computeNearestSampler);
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 8, m_sssTarget, m_computeNearestSampler);
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 9, m_aoDenoised, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 10, m_transmittanceLUT, m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 11, m_irradianceLUT, m_skyViewSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 12, m_prefilteredEnvLUT, m_skyViewSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 13, m_brdfLUT, m_linearClampSampler);
 		}
 
 		for (uint32_t p = 0; p < 2; ++p)
@@ -1114,6 +1122,8 @@ namespace BetterThanNothing
 			flags |= (1u << 2);
 		if (settings.aoMode != EAOMode::Off)
 			flags |= (1u << 3);
+		if (settings.enableClouds)
+			flags |= (1u << 4);
 		globalUniform->flags = flags;
 
 		m_lightDirection = dirLightDirection;
