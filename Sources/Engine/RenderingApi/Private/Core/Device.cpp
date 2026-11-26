@@ -19,6 +19,7 @@
 #include "RenderingApi.hpp"
 #include <Common/Logger.hpp>
 #include <bit>
+#include <cstring>
 #include <set>
 
 namespace BetterThanNothing::RenderingApi
@@ -74,6 +75,46 @@ namespace BetterThanNothing::RenderingApi
 		const VkSampleCountFlags counts = deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
 
 		m_maxMsaaSamples = (counts > 0) ? static_cast<VkSampleCountFlagBits>(std::bit_floor(counts)) : VK_SAMPLE_COUNT_1_BIT;
+
+		uint32_t extensionCount = 0;
+		vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &extensionCount, nullptr);
+		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+		vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &extensionCount, availableExtensions.data());
+
+		if (HasRequiredRayQueryExtensions(availableExtensions))
+		{
+			VkPhysicalDeviceRayQueryFeaturesKHR rqFeatures{};
+			rqFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+
+			VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{};
+			asFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+			asFeatures.pNext = &rqFeatures;
+
+			VkPhysicalDeviceBufferDeviceAddressFeatures bdaFeatures{};
+			bdaFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+			bdaFeatures.pNext = &asFeatures;
+
+			VkPhysicalDeviceFeatures2 features2{};
+			features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			features2.pNext = &bdaFeatures;
+			vkGetPhysicalDeviceFeatures2(m_physicalDevice, &features2);
+
+			if (bdaFeatures.bufferDeviceAddress && asFeatures.accelerationStructure && rqFeatures.rayQuery)
+			{
+				m_rayQuerySupported = true;
+
+				VkPhysicalDeviceAccelerationStructurePropertiesKHR asProps{};
+				asProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+
+				VkPhysicalDeviceProperties2 props2{};
+				props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+				props2.pNext = &asProps;
+				vkGetPhysicalDeviceProperties2(m_physicalDevice, &props2);
+
+				if (asProps.minAccelerationStructureScratchOffsetAlignment > 0)
+					m_minAccelerationStructureScratchOffsetAlignment = asProps.minAccelerationStructureScratchOffsetAlignment;
+			}
+		}
 	}
 
 	void Device::CreateLogicalDevice()
@@ -107,6 +148,30 @@ namespace BetterThanNothing::RenderingApi
 		sync2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
 		sync2Features.synchronization2 = VK_TRUE;
 
+		VkPhysicalDeviceBufferDeviceAddressFeatures bdaFeatures{};
+		bdaFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+		bdaFeatures.bufferDeviceAddress = VK_TRUE;
+
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{};
+		asFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+		asFeatures.accelerationStructure = VK_TRUE;
+
+		VkPhysicalDeviceRayQueryFeaturesKHR rqFeatures{};
+		rqFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+		rqFeatures.rayQuery = VK_TRUE;
+
+		std::vector<const char*> enabledExtensions = m_createInfo.deviceExtensions;
+		if (m_rayQuerySupported)
+		{
+			enabledExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+			enabledExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+			enabledExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+
+			sync2Features.pNext = &bdaFeatures;
+			bdaFeatures.pNext = &asFeatures;
+			asFeatures.pNext = &rqFeatures;
+		}
+
 		VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures{};
 		dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
 		dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
@@ -121,14 +186,17 @@ namespace BetterThanNothing::RenderingApi
 		createInfo.enabledLayerCount = 0;
 		createInfo.ppEnabledLayerNames = nullptr;
 
-		const auto& deviceExtensions = m_createInfo.deviceExtensions;
-		createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+		createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+		createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
 		if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create logical device");
 
 		Logger::Log<SUCCESS>("Vulkan logical device: ok");
+		if (m_rayQuerySupported)
+			Logger::Log<SUCCESS>("Vulkan hardware ray query (VK_KHR_ray_query + AS): ok");
+		else
+			Logger::Log<INFO>("Vulkan hardware ray query: not supported");
 	}
 
 	std::unique_ptr<Queue> Device::CreateGraphicsQueue() const
@@ -222,6 +290,25 @@ namespace BetterThanNothing::RenderingApi
 	{
 		if (shaderModule != VK_NULL_HANDLE)
 			vkDestroyShaderModule(m_device, shaderModule, nullptr);
+	}
+
+	bool Device::HasRequiredRayQueryExtensions(const std::vector<VkExtensionProperties>& availableExtensions)
+	{
+		bool hasAS = false;
+		bool hasRQ = false;
+		bool hasDeferredHostOps = false;
+
+		for (const auto& ext : availableExtensions)
+		{
+			if (std::strcmp(ext.extensionName, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) == 0)
+				hasAS = true;
+			else if (std::strcmp(ext.extensionName, VK_KHR_RAY_QUERY_EXTENSION_NAME) == 0)
+				hasRQ = true;
+			else if (std::strcmp(ext.extensionName, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) == 0)
+				hasDeferredHostOps = true;
+		}
+
+		return hasAS && hasRQ && hasDeferredHostOps;
 	}
 
 	bool Device::CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept
@@ -435,6 +522,16 @@ namespace BetterThanNothing::RenderingApi
 	uint32_t Device::GetMaxTextureCubeSize() const
 	{
 		return m_maxTextureCubeSize;
+	}
+
+	bool Device::IsRayQuerySupported() const
+	{
+		return m_rayQuerySupported;
+	}
+
+	uint32_t Device::GetMinAccelerationStructureScratchOffsetAlignment() const
+	{
+		return m_minAccelerationStructureScratchOffsetAlignment;
 	}
 
 	VkDevice Device::Handle() const

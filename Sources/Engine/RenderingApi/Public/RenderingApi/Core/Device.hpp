@@ -92,6 +92,7 @@ namespace BetterThanNothing::RenderingApi
 		[[nodiscard]] VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 		[[nodiscard]] VkFormat FindDepthFormat() const;
 		[[nodiscard]] bool	   IsSupportedFormatFeature(VkFormat format, VkFormatFeatureFlags features) const;
+		[[nodiscard]] static bool HasRequiredRayQueryExtensions(const std::vector<VkExtensionProperties>& availableExtensions);
 
 	private:
 		bool								  CheckDeviceExtensionSupport(VkPhysicalDevice device) const noexcept;
@@ -113,6 +114,8 @@ namespace BetterThanNothing::RenderingApi
 		[[nodiscard]] uint32_t				  GetMaxTexture2DSize() const;
 		[[nodiscard]] uint32_t				  GetMaxTexture3DSize() const;
 		[[nodiscard]] uint32_t				  GetMaxTextureCubeSize() const;
+		[[nodiscard]] bool					  IsRayQuerySupported() const;
+		[[nodiscard]] uint32_t				  GetMinAccelerationStructureScratchOffsetAlignment() const;
 		[[nodiscard]] VkDevice				  Handle() const;
 		[[nodiscard]] VkPhysicalDevice		  PhysicalHandle() const;
 
@@ -130,5 +133,7 @@ namespace BetterThanNothing::RenderingApi
 		uint32_t			  m_maxTexture2DSize = 0;
 		uint32_t			  m_maxTexture3DSize = 0;
 		uint32_t			  m_maxTextureCubeSize = 0;
+		bool				  m_rayQuerySupported = false;
+		uint32_t			  m_minAccelerationStructureScratchOffsetAlignment = 256;
 	};
 };
