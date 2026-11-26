@@ -98,6 +98,45 @@ namespace BetterThanNothing
 				->SetAlphaToCoverage(false);
 		});
 
+		const auto gbufferVert = m_resourceManager->LoadShader("Shaders/gbuffer/gbuffer.vert");
+		const auto gbufferFrag = m_resourceManager->LoadShader("Shaders/gbuffer/gbuffer.frag");
+		const std::vector<TextureFormat> gbufferFormats = {
+			TextureFormat::R8G8B8A8_UNORM,
+			TextureFormat::R16G16_SFLOAT,
+			TextureFormat::R8G8B8A8_UNORM,
+			TextureFormat::R16G16_SFLOAT,
+		};
+
+		m_resourceManager->CreatePipeline("GBuffer::Opaque", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(gbufferVert)
+				->AddShader(gbufferFrag)
+				->SetPipelineLayout("Forward")
+				->SetColorFormats(gbufferFormats)
+				->SetDepthFormat(TextureFormat::D32_SFLOAT)
+				->SetUseMsaa(false)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetCullMode(CullMode::Back);
+		});
+
+		m_resourceManager->CreatePipeline("GBuffer::Masked", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(gbufferVert)
+				->AddShader(gbufferFrag)
+				->SetPipelineLayout("Forward")
+				->SetColorFormats(gbufferFormats)
+				->SetDepthFormat(TextureFormat::D32_SFLOAT)
+				->SetUseMsaa(false)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetCullMode(CullMode::None);
+		});
+
 		m_opaqueDrawStream = std::make_unique<DrawStream>();
 		m_transparentDrawStream = std::make_unique<DrawStream>();
 

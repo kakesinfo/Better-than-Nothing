@@ -74,6 +74,24 @@ namespace BetterThanNothing
 		return this;
 	}
 
+	PipelineBlueprint* PipelineBlueprint::SetUseMsaa(const bool enable)
+	{
+		m_useMsaa = enable;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetColorFormat(const TextureFormat format)
+	{
+		m_colorFormat = format;
+		return this;
+	}
+
+	PipelineBlueprint* PipelineBlueprint::SetDepthFormat(const TextureFormat format)
+	{
+		m_depthFormat = format;
+		return this;
+	}
+
 	PipelineBlueprint* PipelineBlueprint::SetColorFormats(std::vector<TextureFormat> formats)
 	{
 		m_colorFormats = std::move(formats);

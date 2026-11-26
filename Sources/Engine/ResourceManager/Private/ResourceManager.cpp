@@ -540,6 +540,9 @@ namespace BetterThanNothing
 		desc.alphaToCoverage = blueprint.GetAlphaToCoverage();
 		desc.wireframe = blueprint.GetWireframe();
 		desc.cullMode = blueprint.GetCullMode();
+		desc.useMsaa = blueprint.GetUseMsaa();
+		desc.colorFormat = blueprint.GetColorFormat();
+		desc.depthFormat = blueprint.GetDepthFormat();
 		desc.colorFormats = blueprint.GetColorFormats();
 		desc.shaders.reserve(blueprint.GetShaders().size());
 		for (const auto& shaderId : blueprint.GetShaders())

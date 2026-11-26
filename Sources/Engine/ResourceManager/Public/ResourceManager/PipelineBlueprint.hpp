@@ -41,6 +41,9 @@ namespace BetterThanNothing
 		PipelineBlueprint* SetAlphaToCoverage(bool enable);
 		PipelineBlueprint* SetWireframe(bool enable);
 		PipelineBlueprint* SetCullMode(CullMode mode);
+		PipelineBlueprint* SetUseMsaa(bool enable);
+		PipelineBlueprint* SetColorFormat(TextureFormat format);
+		PipelineBlueprint* SetDepthFormat(TextureFormat format);
 		PipelineBlueprint* SetColorFormats(std::vector<TextureFormat> formats);
 
 		[[nodiscard]] std::vector<ResourceId>		  GetShaders() const;
@@ -52,6 +55,9 @@ namespace BetterThanNothing
 		[[nodiscard]] bool							  GetAlphaToCoverage() const { return m_alphaToCoverage; }
 		[[nodiscard]] bool							  GetWireframe() const { return m_wireframe; }
 		[[nodiscard]] CullMode						  GetCullMode() const { return m_cullMode; }
+		[[nodiscard]] bool							  GetUseMsaa() const { return m_useMsaa; }
+		[[nodiscard]] TextureFormat					  GetColorFormat() const { return m_colorFormat; }
+		[[nodiscard]] TextureFormat					  GetDepthFormat() const { return m_depthFormat; }
 		[[nodiscard]] const std::vector<TextureFormat>& GetColorFormats() const { return m_colorFormats; }
 
 	private:
@@ -64,6 +70,9 @@ namespace BetterThanNothing
 		bool					   m_alphaToCoverage = true;
 		bool					   m_wireframe = false;
 		CullMode				   m_cullMode = CullMode::Back;
+		bool					   m_useMsaa = true;
+		TextureFormat			   m_colorFormat = TextureFormat::Undefined;
+		TextureFormat			   m_depthFormat = TextureFormat::Undefined;
 		std::vector<TextureFormat> m_colorFormats;
 	};
 }
