@@ -47,6 +47,8 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor);
 
+		[[nodiscard]] static float Halton(uint32_t index, uint32_t base);
+
 		void AddPass(std::unique_ptr<IRenderPass> pass);
 		void RenderFrame(Scene* scene);
 

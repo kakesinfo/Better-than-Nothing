@@ -17,6 +17,7 @@
  */
 
 #include "Renderer/Renderer.hpp"
+#include "Renderer/RenderSettings.hpp"
 
 #include "Passes/EditorPass.hpp"
 #include "Passes/ForwardOpaquePass.hpp"
@@ -229,6 +230,19 @@ namespace BetterThanNothing
 		return std::make_unique<Renderer>(renderingDevice, resourceManager, editor);
 	}
 
+	float Renderer::Halton(uint32_t index, const uint32_t base)
+	{
+		float f = 1.0f;
+		float r = 0.0f;
+		while (index > 0)
+		{
+			f /= static_cast<float>(base);
+			r += f * static_cast<float>(index % base);
+			index /= base;
+		}
+		return r;
+	}
+
 	void Renderer::AddPass(std::unique_ptr<IRenderPass> pass)
 	{
 		m_passes.push_back(std::move(pass));
@@ -379,17 +393,26 @@ namespace BetterThanNothing
 
 		const uint32_t pointLightCount = UploadPointLights(scene, frameIndex);
 
+		const auto&	   settings = RenderSettings::Get();
+		const auto [swapW, swapH] = m_renderingDevice->GetSwapChainExtent();
+
 		const Matrix4& viewMatrix = camera->GetViewMatrix();
 		const Matrix4  projMatrix = camera->GetProjectionMatrix(aspectRatio);
 		const Matrix4  unjitteredViewProj = projMatrix * viewMatrix;
-		const Matrix4  viewProj = unjitteredViewProj;
-		const Frustum  frustum = Frustum::FromViewProjection(viewProj);
-
-		const auto [swapW, swapH] = m_renderingDevice->GetSwapChainExtent();
+		Matrix4		   jitteredProj = projMatrix;
+		if (settings.enableTAA && settings.debugView == EDebugViewMode::Final && swapW > 0 && swapH > 0)
+		{
+			const uint32_t sampleIdx = (m_frameIndex % 16u) + 1u;
+			const float	   jitterX = (Halton(sampleIdx, 2u) - 0.5f) * (2.0f / static_cast<float>(swapW));
+			const float	   jitterY = (Halton(sampleIdx, 3u) - 0.5f) * (2.0f / static_cast<float>(swapH));
+			jitteredProj = Matrix4::Identity.Translate(jitterX, jitterY, 0.0f) * projMatrix;
+		}
+		const Matrix4 viewProj = jitteredProj * viewMatrix;
+		const Frustum frustum = Frustum::FromViewProjection(viewProj);
 
 		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
 		globalUniform->view = viewMatrix;
-		globalUniform->projection = projMatrix;
+		globalUniform->projection = jitteredProj;
 		globalUniform->viewProj = viewProj;
 		globalUniform->invViewProj = viewProj.Inverted();
 		globalUniform->unjitteredViewProj = unjitteredViewProj;
@@ -403,6 +426,9 @@ namespace BetterThanNothing
 		globalUniform->screenWidth = static_cast<float>(swapW);
 		globalUniform->screenHeight = static_cast<float>(swapH);
 		globalUniform->frameIndex = m_frameIndex;
+		globalUniform->debugView = static_cast<uint32_t>(settings.debugView);
+		globalUniform->toneMapMode = static_cast<uint32_t>(settings.toneMapMode);
+		globalUniform->flags = settings.enableTAA ? 1u : 0u;
 
 		m_prevUnjitteredViewProj = unjitteredViewProj;
 		++m_frameIndex;
