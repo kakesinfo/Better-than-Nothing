@@ -1,0 +1,13 @@
+#include <Common/AssetPath.hpp>
+#include <ResourceImporter/ResourceImporter.hpp>
+#include <gtest/gtest.h>
+
+using namespace BetterThanNothing;
+
+TEST(RTShadowShadersTest, CompileRTShadowsComputeShader)
+{
+	ResourceImporter	 importer;
+	const ImportedShader comp = importer.ImportShader(AssetPath::Resolve("Shaders/rtshadows/rt_shadows.comp"));
+	EXPECT_EQ(comp.type, EShaderType::Compute);
+	EXPECT_FALSE(comp.spirv.empty());
+}

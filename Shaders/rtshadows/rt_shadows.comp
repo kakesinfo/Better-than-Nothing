@@ -1,0 +1,188 @@
+#version 460
+#extension GL_EXT_ray_query : require
+
+layout(local_size_x = 8, local_size_y = 4, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D depthTex;
+layout(set = 1, binding = 1) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 2) uniform accelerationStructureEXT topLevelAS;
+layout(set = 1, binding = 3, rg16f) writeonly uniform image2D outShadowRaw;
+layout(std430, set = 1, binding = 4) writeonly buffer TileMaskBuffer {
+    uint tileMasks[];
+};
+
+layout(push_constant) uniform RTShadowPushConstants {
+    float sunAngularRadius;
+    uint frameIndex;
+    uint enableRTShadows;
+    uint pad;
+} pc;
+
+shared uint s_tileMask;
+
+const float PI = 3.14159265359;
+
+vec3 DecodeOctahedral(vec2 e)
+{
+    vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+    if (v.z < 0.0)
+    {
+        vec2 s = vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);
+        v.xy = (1.0 - abs(v.yx)) * s;
+    }
+    return normalize(v);
+}
+
+vec3 ReconstructWorldPos(vec2 uv, float depth, mat4 invViewProj)
+{
+    vec4 clipPos = vec4(uv * 2.0 - 1.0, depth, 1.0);
+    vec4 worldPos = invViewProj * clipPos;
+    return worldPos.xyz / worldPos.w;
+}
+
+float InterleavedGradientNoise(vec2 pixelCoord, uint frame)
+{
+    vec2 p = pixelCoord + float(frame & 63u) * 5.588238;
+    return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+vec2 SampleConcentricDisk(vec2 u)
+{
+    vec2 uOffset = 2.0 * u - 1.0;
+    if (uOffset.x == 0.0 && uOffset.y == 0.0)
+        return vec2(0.0);
+
+    float theta = 0.0;
+    float r = 0.0;
+    if (abs(uOffset.x) > abs(uOffset.y))
+    {
+        r = uOffset.x;
+        theta = (PI / 4.0) * (uOffset.y / uOffset.x);
+    }
+    else
+    {
+        r = uOffset.y;
+        theta = (PI / 2.0) - (PI / 4.0) * (uOffset.x / uOffset.y);
+    }
+    return r * vec2(cos(theta), sin(theta));
+}
+
+void BuildOrthonormalBasis(vec3 n, out vec3 tangent, out vec3 bitangent)
+{
+    vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    tangent = normalize(cross(up, n));
+    bitangent = cross(n, tangent);
+}
+
+void main()
+{
+    if (gl_LocalInvocationIndex == 0u)
+        s_tileMask = 0u;
+    barrier();
+
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+    bool inBounds = pixelCoord.x < screenSize.x && pixelCoord.y < screenSize.y;
+
+    float visibility = 1.0;
+    float hitDist = 0.0;
+
+    if (inBounds)
+    {
+        vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(screenSize);
+        float depth = texelFetch(depthTex, pixelCoord, 0).r;
+
+        if (depth < 1.0 && pc.enableRTShadows != 0u)
+        {
+            vec3 normal = DecodeOctahedral(texelFetch(gbufferNormalTex, pixelCoord, 0).rg);
+            vec3 worldPos = ReconstructWorldPos(uv, depth, globalUniforms.invViewProj);
+
+            vec3 L = normalize(-globalUniforms.lightDirection);
+            float nDotL = dot(normal, L);
+
+            if (nDotL <= 0.0)
+            {
+                visibility = 0.0;
+            }
+            else
+            {
+                vec3 tangent, bitangent;
+                BuildOrthonormalBasis(L, tangent, bitangent);
+
+                float u1 = InterleavedGradientNoise(vec2(pixelCoord), pc.frameIndex);
+                float u2 = InterleavedGradientNoise(vec2(pixelCoord) + vec2(17.0, 31.0), pc.frameIndex + 1u);
+                vec2 disk = SampleConcentricDisk(vec2(u1, u2)) * pc.sunAngularRadius;
+                vec3 rayDir = normalize(L + tangent * disk.x + bitangent * disk.y);
+
+                float camDist = length(worldPos - globalUniforms.cameraPosition);
+                float bias = max(0.005, camDist * 0.0008) * (1.0 + (1.0 - nDotL) * 2.0);
+                vec3 rayOrigin = worldPos + normal * bias;
+
+                rayQueryEXT rayQuery;
+                rayQueryInitializeEXT(
+                    rayQuery,
+                    topLevelAS,
+                    gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
+                    0xFFu,
+                    rayOrigin,
+                    0.001,
+                    rayDir,
+                    1000.0
+                );
+
+                while (rayQueryProceedEXT(rayQuery)) {}
+
+                if (rayQueryGetIntersectionTypeEXT(rayQuery, true) != gl_RayQueryCommittedIntersectionNoneEXT)
+                {
+                    visibility = 0.0;
+                    hitDist = rayQueryGetIntersectionTEXT(rayQuery, true);
+                }
+            }
+        }
+
+        imageStore(outShadowRaw, pixelCoord, vec4(visibility, hitDist, 0.0, 0.0));
+
+        if (visibility > 0.5)
+        {
+            uint localBit = gl_LocalInvocationID.y * 8u + gl_LocalInvocationID.x;
+            atomicOr(s_tileMask, 1u << localBit);
+        }
+    }
+
+    barrier();
+
+    if (gl_LocalInvocationIndex == 0u)
+    {
+        uint tilesX = (uint(screenSize.x) + 7u) / 8u;
+        uint tileIdx = gl_WorkGroupID.y * tilesX + gl_WorkGroupID.x;
+        tileMasks[tileIdx] = s_tileMask;
+    }
+}
