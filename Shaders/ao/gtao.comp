@@ -1,0 +1,170 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D depthTex;
+layout(set = 1, binding = 1) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 2, r16f) writeonly uniform image2D outAORaw;
+
+layout(push_constant) uniform AOPushConstants {
+    float aoRadius;
+    float aoStrength;
+    uint frameIndex;
+    uint pad;
+} pc;
+
+const float PI = 3.14159265359;
+const float HALF_PI = 1.57079632679;
+
+vec3 DecodeOctahedral(vec2 e)
+{
+    vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+    if (v.z < 0.0)
+    {
+        vec2 s = vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);
+        v.xy = (1.0 - abs(v.yx)) * s;
+    }
+    return normalize(v);
+}
+
+vec3 ReconstructViewPos(vec2 uv, float depth, mat4 invProj)
+{
+    vec4 clipPos = vec4(uv * 2.0 - 1.0, depth, 1.0);
+    vec4 viewPos = invProj * clipPos;
+    return viewPos.xyz / viewPos.w;
+}
+
+float InterleavedGradientNoise(vec2 pixelCoord, uint frame)
+{
+    vec2 p = pixelCoord + float(frame & 63u) * 5.588238;
+    return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+float IntegrateArc(float h1, float h2, float n)
+{
+    float cosN = cos(n);
+    float sinN = sin(n);
+    return 0.25 * ((-cos(2.0 * h1 - n) + cosN + 2.0 * h1 * sinN) +
+                   (-cos(2.0 * h2 - n) + cosN + 2.0 * h2 * sinN));
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+    if (pixelCoord.x >= screenSize.x || pixelCoord.y >= screenSize.y)
+        return;
+
+    float depth = texelFetch(depthTex, pixelCoord, 0).r;
+    if (depth >= 1.0)
+    {
+        imageStore(outAORaw, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    mat4 invProj = inverse(globalUniforms.projection);
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(screenSize);
+    vec3 viewPos = ReconstructViewPos(uv, depth, invProj);
+    vec3 worldNormal = DecodeOctahedral(texelFetch(gbufferNormalTex, pixelCoord, 0).rg);
+    vec3 viewNormal = normalize((globalUniforms.view * vec4(worldNormal, 0.0)).xyz);
+    vec3 viewDir = normalize(-viewPos);
+
+    float projScale = abs(globalUniforms.projection[1][1]) * 0.5 * float(screenSize.y);
+    float screenRadius = clamp((pc.aoRadius * projScale) / max(-viewPos.z, 0.1), 4.0, 64.0);
+
+    float noiseAngle = InterleavedGradientNoise(vec2(pixelCoord), pc.frameIndex) * PI;
+    float noiseStep = InterleavedGradientNoise(vec2(pixelCoord) + vec2(19.0, 37.0), pc.frameIndex + 1u);
+
+    const int NUM_SLICES = 3;
+    const int NUM_STEPS = 4;
+
+    float visibilitySum = 0.0;
+    vec2 invScreenSize = 1.0 / vec2(screenSize);
+
+    for (int s = 0; s < NUM_SLICES; ++s)
+    {
+        float phi = noiseAngle + (float(s) / float(NUM_SLICES)) * PI;
+        vec2 omega = vec2(cos(phi), sin(phi));
+
+        vec3 orthoDir = vec3(omega, 0.0);
+        vec3 axis = normalize(cross(orthoDir, viewDir));
+        vec3 projNormal = viewNormal - axis * dot(viewNormal, axis);
+        float projNormalLen = length(projNormal);
+        float cosN = clamp(dot(projNormal, viewDir) / max(projNormalLen, 1e-5), -1.0, 1.0);
+        vec3 tangent = cross(viewDir, axis);
+        float signN = (dot(projNormal, tangent) >= 0.0) ? 1.0 : -1.0;
+        float n = signN * acos(cosN);
+
+        float maxH1 = cos(n + HALF_PI);
+        float maxH2 = cos(n - HALF_PI);
+
+        for (int j = 0; j < NUM_STEPS; ++j)
+        {
+            float stepFrac = (float(j) + noiseStep) / float(NUM_STEPS);
+            vec2 sampleOffset = omega * (stepFrac * screenRadius) * invScreenSize;
+
+            for (int dir = 0; dir < 2; ++dir)
+            {
+                vec2 sampleUv = uv + (dir == 0 ? sampleOffset : -sampleOffset);
+                if (sampleUv.x < 0.0 || sampleUv.x > 1.0 || sampleUv.y < 0.0 || sampleUv.y > 1.0)
+                    continue;
+
+                float sampleDepth = textureLod(depthTex, sampleUv, 0.0).r;
+                if (sampleDepth >= 1.0)
+                    continue;
+
+                vec3 samplePos = ReconstructViewPos(sampleUv, sampleDepth, invProj);
+                vec3 delta = samplePos - viewPos;
+                float dist = length(delta);
+                if (dist < 1e-4)
+                    continue;
+
+                float falloff = clamp(1.0 - (dist / max(pc.aoRadius, 1e-4)), 0.0, 1.0);
+                float cosHorizon = dot(delta / dist, viewDir);
+                float biasedHorizon = mix(-1.0, cosHorizon, falloff);
+
+                if (dir == 0)
+                    maxH1 = max(maxH1, biasedHorizon);
+                else
+                    maxH2 = max(maxH2, biasedHorizon);
+            }
+        }
+
+        float h1 = n + min(acos(clamp(maxH1, -1.0, 1.0)) - n, HALF_PI);
+        float h2 = n + max(-acos(clamp(maxH2, -1.0, 1.0)) - n, -HALF_PI);
+        visibilitySum += projNormalLen * IntegrateArc(h1, h2, n);
+    }
+
+    float rawAO = clamp(visibilitySum / float(NUM_SLICES), 0.0, 1.0);
+    float ao = clamp(pow(rawAO, pc.aoStrength), 0.0, 1.0);
+
+    imageStore(outAORaw, pixelCoord, vec4(ao, 0.0, 0.0, 0.0));
+}
