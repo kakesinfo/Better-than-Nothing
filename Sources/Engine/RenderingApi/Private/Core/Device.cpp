@@ -194,9 +194,27 @@ namespace BetterThanNothing::RenderingApi
 
 		Logger::Log<SUCCESS>("Vulkan logical device: ok");
 		if (m_rayQuerySupported)
-			Logger::Log<SUCCESS>("Vulkan hardware ray query (VK_KHR_ray_query + AS): ok");
+		{
+			m_vkCreateAccelerationStructureKHR = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(m_device, "vkCreateAccelerationStructureKHR"));
+			m_vkDestroyAccelerationStructureKHR = reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(m_device, "vkDestroyAccelerationStructureKHR"));
+			m_vkGetAccelerationStructureBuildSizesKHR = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(m_device, "vkGetAccelerationStructureBuildSizesKHR"));
+			m_vkGetAccelerationStructureDeviceAddressKHR = reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(m_device, "vkGetAccelerationStructureDeviceAddressKHR"));
+			m_vkCmdBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(m_device, "vkCmdBuildAccelerationStructuresKHR"));
+
+			if (!HasAccelerationStructureFunctions())
+			{
+				Logger::Log<WARNING>("Failed to load all VK_KHR_acceleration_structure function pointers; disabling ray query");
+				m_rayQuerySupported = false;
+			}
+			else
+			{
+				Logger::Log<SUCCESS>("Vulkan hardware ray query (VK_KHR_ray_query + AS): ok");
+			}
+		}
 		else
+		{
 			Logger::Log<INFO>("Vulkan hardware ray query: not supported");
+		}
 	}
 
 	std::unique_ptr<Queue> Device::CreateGraphicsQueue() const
@@ -532,6 +550,52 @@ namespace BetterThanNothing::RenderingApi
 	uint32_t Device::GetMinAccelerationStructureScratchOffsetAlignment() const
 	{
 		return m_minAccelerationStructureScratchOffsetAlignment;
+	}
+
+	bool Device::HasAccelerationStructureFunctions() const
+	{
+		return m_vkCreateAccelerationStructureKHR != nullptr &&
+			   m_vkDestroyAccelerationStructureKHR != nullptr &&
+			   m_vkGetAccelerationStructureBuildSizesKHR != nullptr &&
+			   m_vkGetAccelerationStructureDeviceAddressKHR != nullptr &&
+			   m_vkCmdBuildAccelerationStructuresKHR != nullptr;
+	}
+
+	VkDeviceAddress Device::GetBufferDeviceAddress(const VkBuffer buffer) const
+	{
+		VkBufferDeviceAddressInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+		info.buffer = buffer;
+		return vkGetBufferDeviceAddress(m_device, &info);
+	}
+
+	VkResult Device::CreateAccelerationStructure(const VkAccelerationStructureCreateInfoKHR& createInfo, VkAccelerationStructureKHR* outAs) const
+	{
+		return m_vkCreateAccelerationStructureKHR(m_device, &createInfo, nullptr, outAs);
+	}
+
+	void Device::DestroyAccelerationStructure(const VkAccelerationStructureKHR as) const
+	{
+		if (as != VK_NULL_HANDLE && m_vkDestroyAccelerationStructureKHR != nullptr)
+			m_vkDestroyAccelerationStructureKHR(m_device, as, nullptr);
+	}
+
+	void Device::GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildTypeKHR buildType, const VkAccelerationStructureBuildGeometryInfoKHR& buildInfo, const uint32_t* maxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR* outSizes) const
+	{
+		m_vkGetAccelerationStructureBuildSizesKHR(m_device, buildType, &buildInfo, maxPrimitiveCounts, outSizes);
+	}
+
+	VkDeviceAddress Device::GetAccelerationStructureDeviceAddress(const VkAccelerationStructureKHR as) const
+	{
+		VkAccelerationStructureDeviceAddressInfoKHR info{};
+		info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+		info.accelerationStructure = as;
+		return m_vkGetAccelerationStructureDeviceAddressKHR(m_device, &info);
+	}
+
+	void Device::CmdBuildAccelerationStructures(const VkCommandBuffer cmd, const uint32_t infoCount, const VkAccelerationStructureBuildGeometryInfoKHR* pInfos, const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) const
+	{
+		m_vkCmdBuildAccelerationStructuresKHR(cmd, infoCount, pInfos, ppBuildRangeInfos);
 	}
 
 	VkDevice Device::Handle() const

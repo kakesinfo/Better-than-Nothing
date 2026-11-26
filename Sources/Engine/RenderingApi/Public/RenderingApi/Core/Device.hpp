@@ -116,6 +116,13 @@ namespace BetterThanNothing::RenderingApi
 		[[nodiscard]] uint32_t				  GetMaxTextureCubeSize() const;
 		[[nodiscard]] bool					  IsRayQuerySupported() const;
 		[[nodiscard]] uint32_t				  GetMinAccelerationStructureScratchOffsetAlignment() const;
+		[[nodiscard]] bool					  HasAccelerationStructureFunctions() const;
+		[[nodiscard]] VkDeviceAddress		  GetBufferDeviceAddress(VkBuffer buffer) const;
+		VkResult							  CreateAccelerationStructure(const VkAccelerationStructureCreateInfoKHR& createInfo, VkAccelerationStructureKHR* outAs) const;
+		void								  DestroyAccelerationStructure(VkAccelerationStructureKHR as) const;
+		void								  GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildTypeKHR buildType, const VkAccelerationStructureBuildGeometryInfoKHR& buildInfo, const uint32_t* maxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR* outSizes) const;
+		[[nodiscard]] VkDeviceAddress		  GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR as) const;
+		void								  CmdBuildAccelerationStructures(VkCommandBuffer cmd, uint32_t infoCount, const VkAccelerationStructureBuildGeometryInfoKHR* pInfos, const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) const;
 		[[nodiscard]] VkDevice				  Handle() const;
 		[[nodiscard]] VkPhysicalDevice		  PhysicalHandle() const;
 
@@ -135,5 +142,11 @@ namespace BetterThanNothing::RenderingApi
 		uint32_t			  m_maxTextureCubeSize = 0;
 		bool				  m_rayQuerySupported = false;
 		uint32_t			  m_minAccelerationStructureScratchOffsetAlignment = 256;
+
+		PFN_vkCreateAccelerationStructureKHR		   m_vkCreateAccelerationStructureKHR = nullptr;
+		PFN_vkDestroyAccelerationStructureKHR		   m_vkDestroyAccelerationStructureKHR = nullptr;
+		PFN_vkGetAccelerationStructureBuildSizesKHR	   m_vkGetAccelerationStructureBuildSizesKHR = nullptr;
+		PFN_vkGetAccelerationStructureDeviceAddressKHR m_vkGetAccelerationStructureDeviceAddressKHR = nullptr;
+		PFN_vkCmdBuildAccelerationStructuresKHR		   m_vkCmdBuildAccelerationStructuresKHR = nullptr;
 	};
 };
