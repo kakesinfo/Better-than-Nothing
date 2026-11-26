@@ -40,6 +40,7 @@ namespace BetterThanNothing
 
 		[[nodiscard]] MeshData GenerateChunkMesh(int32_t chunkX, int32_t chunkZ) const;
 		[[nodiscard]] MeshData GenerateWaterChunkMesh(int32_t chunkX, int32_t chunkZ) const;
+		[[nodiscard]] MeshData GenerateGrassChunkMesh(int32_t chunkX, int32_t chunkZ) const;
 
 	private:
 		TerrainConfig m_config;

@@ -210,4 +210,96 @@ namespace BetterThanNothing
 
 		return mesh;
 	}
+
+	MeshData TerrainGenerator::GenerateGrassChunkMesh(const int32_t chunkX, const int32_t chunkZ) const
+	{
+		MeshData				  mesh{};
+		constexpr uint32_t		  TUFTS_PER_CHUNK = 2600u;
+		constexpr uint32_t		  BLADES_PER_TUFT = 4u;
+		const float				  originX = static_cast<float>(chunkX) * m_config.chunkSize;
+		const float				  originZ = static_cast<float>(chunkZ) * m_config.chunkSize;
+		const TerrainFlattenZone& sponza = m_config.sponzaPlateau;
+
+		const uint32_t chunkSeed = Hash2D(chunkX, chunkZ, m_config.seed + 9001u);
+		SeededRng	   rng(chunkSeed);
+
+		mesh.vertices.reserve(TUFTS_PER_CHUNK * BLADES_PER_TUFT * 5u);
+		mesh.indices.reserve(TUFTS_PER_CHUNK * BLADES_PER_TUFT * 9u);
+
+		for (uint32_t t = 0; t < TUFTS_PER_CHUNK; ++t)
+		{
+			const float tuftX = originX + rng.NextRange(0.0f, m_config.chunkSize);
+			const float tuftZ = originZ + rng.NextRange(0.0f, m_config.chunkSize);
+
+			// Exclude Sponza interior
+			if (tuftX >= sponza.minX && tuftX <= sponza.maxX && tuftZ >= sponza.minZ && tuftZ <= sponza.maxZ)
+				continue;
+
+			const float terrainY = SampleHeight(tuftX, tuftZ);
+			if (terrainY < m_config.waterLevel + 0.22f)
+				continue;
+
+			const Vector3 normal = SampleNormal(tuftX, tuftZ);
+			const float	  slope = std::clamp(1.0f - normal.GetY(), 0.0f, 1.0f);
+			if (slope > 0.28f)
+				continue;
+
+			for (uint32_t b = 0; b < BLADES_PER_TUFT; ++b)
+			{
+				const float bx = tuftX + rng.NextRange(-0.18f, 0.18f);
+				const float bz = tuftZ + rng.NextRange(-0.18f, 0.18f);
+				if (bx >= sponza.minX - 0.05f && bx <= sponza.maxX + 0.05f && bz >= sponza.minZ - 0.05f && bz <= sponza.maxZ + 0.05f)
+					continue;
+				const float by = SampleHeight(bx, bz);
+				if (by < m_config.waterLevel + 0.22f)
+					continue;
+				const float angle = rng.NextRange(0.0f, 6.2831853f);
+				const float height = rng.NextRange(0.32f, 0.68f);
+				const float width = rng.NextRange(0.025f, 0.045f);
+				const float bend = rng.NextRange(0.06f, 0.18f);
+				const float phase = rng.NextFloat();
+				const float tint = rng.NextRange(0.75f, 1.15f);
+
+				const float cosA = std::cos(angle);
+				const float sinA = std::sin(angle);
+				const float rx = cosA * width;
+				const float rz = sinA * width;
+				const float fx = -sinA * bend;
+				const float fz = cosA * bend;
+
+				const uint32_t baseIdx = static_cast<uint32_t>(mesh.vertices.size());
+
+				auto pushVert = [&](const float px, const float py, const float pz, const float u, const float v) {
+					VertexData vert{};
+					vert.position = Vector3(px, py, pz);
+					vert.normal = normal;
+					vert.uv = Vector2(u, v);
+					vert.color = Vector3(phase, tint, height);
+					mesh.vertices.push_back(vert);
+				};
+
+				// 5 vertices: base L/R, mid L/R, tip
+				pushVert(bx - rx, by, bz - rz, 0.0f, 0.0f);
+				pushVert(bx + rx, by, bz + rz, 1.0f, 0.0f);
+				pushVert(bx - rx * 0.55f + fx * 0.35f, by + height * 0.52f, bz - rz * 0.55f + fz * 0.35f, 0.0f, 0.5f);
+				pushVert(bx + rx * 0.55f + fx * 0.35f, by + height * 0.52f, bz + rz * 0.55f + fz * 0.35f, 1.0f, 0.5f);
+				pushVert(bx + fx, by + height, bz + fz, 0.5f, 1.0f);
+
+				// 9 indices (3 triangles)
+				mesh.indices.push_back(baseIdx + 0u);
+				mesh.indices.push_back(baseIdx + 2u);
+				mesh.indices.push_back(baseIdx + 1u);
+
+				mesh.indices.push_back(baseIdx + 1u);
+				mesh.indices.push_back(baseIdx + 2u);
+				mesh.indices.push_back(baseIdx + 3u);
+
+				mesh.indices.push_back(baseIdx + 2u);
+				mesh.indices.push_back(baseIdx + 4u);
+				mesh.indices.push_back(baseIdx + 3u);
+			}
+		}
+
+		return mesh;
+	}
 }

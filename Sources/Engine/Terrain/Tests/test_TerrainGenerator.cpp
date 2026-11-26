@@ -52,3 +52,21 @@ TEST(TerrainGeneratorTest, WaterChunkOnlyEmitsNearBasins)
 	for (const auto& v : lakeWater.vertices)
 		EXPECT_FLOAT_EQ(v.position.GetY(), gen.GetConfig().waterLevel);
 }
+
+TEST(TerrainGeneratorTest, GrassChunkExcludesSponzaAndUnderwater)
+{
+	const TerrainGenerator gen;
+	const MeshData		   grass = gen.GenerateGrassChunkMesh(0, 0);
+	EXPECT_FALSE(grass.vertices.empty());
+	EXPECT_EQ(grass.vertices.size() % 5u, 0u);
+	EXPECT_EQ(grass.indices.size() % 9u, 0u);
+
+	const auto& sponza = gen.GetConfig().sponzaPlateau;
+	for (size_t i = 0; i < grass.vertices.size(); i += 5u)
+	{
+		const Vector3& basePos = grass.vertices[i].position;
+		const bool	   insideSponza = basePos.GetX() >= sponza.minX && basePos.GetX() <= sponza.maxX && basePos.GetZ() >= sponza.minZ && basePos.GetZ() <= sponza.maxZ;
+		EXPECT_FALSE(insideSponza);
+		EXPECT_GE(basePos.GetY(), gen.GetConfig().waterLevel + 0.10f);
+	}
+}
