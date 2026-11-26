@@ -67,6 +67,7 @@ namespace BetterThanNothing
 		[[nodiscard]] static AtmosphereLutSpec GetIrradianceLutSpec();
 		[[nodiscard]] static AtmosphereLutSpec GetPrefilteredEnvLutSpec();
 		[[nodiscard]] static AtmosphereLutSpec GetBrdfLutSpec();
+		[[nodiscard]] static bool			   ShouldIncludeInAccelerationStructure(bool isGrassChunk) noexcept { return !isGrassChunk; }
 
 		void AddPass(std::unique_ptr<IRenderPass> pass);
 		void RenderFrame(Scene* scene);

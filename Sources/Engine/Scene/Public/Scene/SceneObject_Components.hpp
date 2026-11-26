@@ -152,4 +152,8 @@ namespace BetterThanNothing
 	{
 		std::function<void(SceneObject&, float)> onUpdate;
 	};
+
+	struct GrassChunkComponent : Component
+	{
+	};
 }

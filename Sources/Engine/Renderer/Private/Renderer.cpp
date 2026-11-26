@@ -174,6 +174,27 @@ namespace BetterThanNothing
 				->SetCullMode(CullMode::Back);
 		});
 
+		m_renderingDevice->CreatePipelineLayout("GBuffer::Grass", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
+		});
+		const auto grassVert = m_resourceManager->LoadShader("Shaders/gbuffer/grass_gbuffer.vert");
+		const auto grassFrag = m_resourceManager->LoadShader("Shaders/gbuffer/grass_gbuffer.frag");
+		m_resourceManager->CreatePipeline("GBuffer::Grass", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(grassVert)
+				->AddShader(grassFrag)
+				->SetPipelineLayout("GBuffer::Grass")
+				->SetColorFormats(gbufferFormats)
+				->SetDepthFormat(TextureFormat::D32_SFLOAT)
+				->SetUseMsaa(false)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetCullMode(CullMode::None);
+		});
+
 		const std::array<DescriptorBindingDesc, 14> deferredBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
