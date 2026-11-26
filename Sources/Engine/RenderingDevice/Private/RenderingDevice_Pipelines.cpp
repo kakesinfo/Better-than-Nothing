@@ -19,6 +19,7 @@
 #include "RenderingDevice/Handle.hpp"
 #include "RenderingDevice/PipelineDescription.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_FormatUtils.hpp"
 #include "RenderingDevice_Internals.hpp"
 
 namespace BetterThanNothing
@@ -98,28 +99,20 @@ namespace BetterThanNothing
 		return VK_CULL_MODE_BACK_BIT;
 	}
 
-	static VkFormat Internal_PipelineFormatToVk(const TextureFormat format, const VkFormat fallback)
+	std::vector<VkFormat> ResolvePipelineColorFormats(const PipelineDescription& desc, const VkFormat fallbackFormat)
 	{
-		switch (format)
+		std::vector<VkFormat> colorAttachmentFormats;
+		if (!desc.colorFormats.empty())
 		{
-			case TextureFormat::R8G8B8A8_UNORM:
-				return VK_FORMAT_R8G8B8A8_UNORM;
-			case TextureFormat::R8G8B8A8_SRGB:
-				return VK_FORMAT_R8G8B8A8_SRGB;
-			case TextureFormat::B8G8R8A8_UNORM:
-				return VK_FORMAT_B8G8R8A8_UNORM;
-			case TextureFormat::R16G16B16A16_SFLOAT:
-				return VK_FORMAT_R16G16B16A16_SFLOAT;
-			case TextureFormat::D32_SFLOAT:
-				return VK_FORMAT_D32_SFLOAT;
-			case TextureFormat::D24_UNORM_S8_UINT:
-				return VK_FORMAT_D24_UNORM_S8_UINT;
-			case TextureFormat::D32_SFLOAT_S8_UINT:
-				return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			case TextureFormat::Undefined:
-			default:
-				return fallback;
+			colorAttachmentFormats.reserve(desc.colorFormats.size());
+			for (const TextureFormat fmt : desc.colorFormats)
+				colorAttachmentFormats.push_back(ToVkFormat(fmt, fallbackFormat));
 		}
+		else
+		{
+			colorAttachmentFormats.push_back(ToVkFormat(desc.colorFormat, fallbackFormat));
+		}
+		return colorAttachmentFormats;
 	}
 
 	static bool Internal_CreatePipeline(RenderingApi::Pipeline* dstPipeline, const PipelineDescription& desc, RenderingDeviceInternals* self)
@@ -187,8 +180,8 @@ namespace BetterThanNothing
 		multisampling.alphaToCoverageEnable = (desc.alphaToCoverage && multisampling.rasterizationSamples > VK_SAMPLE_COUNT_1_BIT) ? VK_TRUE : VK_FALSE;
 		multisampling.minSampleShading = 1.0f;
 
-		const std::vector colorAttachmentFormats = {Internal_PipelineFormatToVk(desc.colorFormat, self->swapChain->GetImageFormat())};
-		const VkFormat	  depthAttachmentFormat = Internal_PipelineFormatToVk(desc.depthFormat, self->device->FindDepthFormat());
+		const std::vector<VkFormat> colorAttachmentFormats = ResolvePipelineColorFormats(desc, self->swapChain->GetImageFormat());
+		const VkFormat				depthAttachmentFormat = ToVkFormat(desc.depthFormat, self->device->FindDepthFormat());
 		const VkFormat	  stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 		VkPipelineRenderingCreateInfo pipelineRenderingInfo{};

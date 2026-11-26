@@ -19,9 +19,13 @@
 #pragma once
 
 #include "RenderingDevice/Types.hpp"
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace BetterThanNothing
 {
-	[[nodiscard]] VkFormat ToVkFormat(TextureFormat format, VkFormat fallback = VK_FORMAT_UNDEFINED);
+	struct PipelineDescription;
+
+	[[nodiscard]] VkFormat				ToVkFormat(TextureFormat format, VkFormat fallback = VK_FORMAT_UNDEFINED);
+	[[nodiscard]] std::vector<VkFormat> ResolvePipelineColorFormats(const PipelineDescription& desc, VkFormat fallbackFormat);
 }
