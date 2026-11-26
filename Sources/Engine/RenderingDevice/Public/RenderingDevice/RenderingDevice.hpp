@@ -61,6 +61,7 @@ namespace BetterThanNothing
 		struct Texture;
 		struct DescriptorSet;
 		struct Pipeline;
+		struct AccelerationStructure;
 		class PipelineLayout;
 	}
 
@@ -212,6 +213,12 @@ namespace BetterThanNothing
 		[[nodiscard]] std::pair<uint32_t, uint32_t> GetSwapChainExtent() const;
 		[[nodiscard]] uint64_t					  GetSwapChainGeneration() const;
 		[[nodiscard]] bool						  IsMsaaEnabled() const;
+		[[nodiscard]] bool						  IsRayQuerySupported() const;
+
+		// Acceleration Structures (Hardware Ray Query)
+		[[nodiscard]] Handle							   CreateBlas(const Handle& vertexBuffer, uint32_t vertexCount, uint32_t vertexStride, const Handle& indexBuffer, uint32_t indexCount);
+		void											   DestroyAccelerationStructure(const Handle& handle);
+		[[nodiscard]] RenderingApi::AccelerationStructure* GetAccelerationStructure(const Handle& handle);
 
 		// Backend interop (used by Editor ImGui Vulkan backend)
 		[[nodiscard]] RenderingApi::CommandBuffer* GetCurrentCommandBuffer() const;

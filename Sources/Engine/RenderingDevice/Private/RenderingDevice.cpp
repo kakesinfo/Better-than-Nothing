@@ -202,6 +202,12 @@ namespace BetterThanNothing
 			m_self->allocator->DestroyImage(texture.value, texture.allocation);
 			m_self->textures.Destroy(idx);
 		});
+
+		m_self->accelerationStructures.ForEachActive([&](const uint32_t idx, RenderingApi::AccelerationStructure& as) {
+			m_self->device->DestroyAccelerationStructure(as.handle);
+			m_self->allocator->DestroyBuffer(as.buffer, as.allocation);
+			m_self->accelerationStructures.Destroy(idx);
+		});
 	}
 
 	std::unique_ptr<RenderingDevice> RenderingDevice::Create(const RenderingDeviceCreateInfo& createInfo)
@@ -702,6 +708,11 @@ namespace BetterThanNothing
 	bool RenderingDevice::IsMsaaEnabled() const
 	{
 		return m_self->device->GetMaxMsaaSamples() > VK_SAMPLE_COUNT_1_BIT;
+	}
+
+	bool RenderingDevice::IsRayQuerySupported() const
+	{
+		return m_self->device->IsRayQuerySupported();
 	}
 
 	RenderingApi::CommandBuffer* RenderingDevice::GetCurrentCommandBuffer() const

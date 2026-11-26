@@ -28,4 +28,5 @@ namespace BetterThanNothing
 
 	[[nodiscard]] VkFormat				ToVkFormat(TextureFormat format, VkFormat fallback = VK_FORMAT_UNDEFINED);
 	[[nodiscard]] std::vector<VkFormat> ResolvePipelineColorFormats(const PipelineDescription& desc, VkFormat fallbackFormat);
+	[[nodiscard]] VkDeviceSize			AlignUpDeviceSize(VkDeviceSize value, VkDeviceSize alignment);
 }
