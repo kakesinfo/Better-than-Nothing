@@ -93,6 +93,7 @@ namespace BetterThanNothing
 		Editor*						m_editor = nullptr;
 		std::unique_ptr<DrawStream> m_opaqueDrawStream;
 		std::unique_ptr<DrawStream> m_transparentDrawStream;
+		std::unique_ptr<DrawStream> m_waterDrawStream;
 
 		std::vector<std::unique_ptr<IRenderPass>> m_passes;
 
@@ -105,6 +106,8 @@ namespace BetterThanNothing
 		Handle	 m_prevDepthTarget{};
 		Handle	 m_prevNormalTarget{};
 		Handle	 m_hdrColor{};
+		Handle	 m_waterSceneColorCopy{};
+		Handle	 m_waterDepthCopy{};
 		Handle	 m_taaHistory[2]{};
 		Handle	 m_rtShadowRaw{};
 		Handle	 m_rtShadowPing{};
@@ -149,6 +152,7 @@ namespace BetterThanNothing
 		Handle								m_skyIrradianceDescriptorSet{};
 		Handle								m_skyPrefilterDescriptorSet{};
 		std::vector<Handle>					m_skyRenderDescriptorSets;
+		std::vector<Handle>					m_waterDescriptorSets;
 		Vector3								m_lightDirection{0.0f, -1.0f, 0.0f};
 		Handle								m_computeNearestSampler{};
 		Handle								m_linearClampSampler{};

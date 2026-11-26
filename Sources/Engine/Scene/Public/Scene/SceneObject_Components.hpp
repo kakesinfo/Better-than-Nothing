@@ -156,4 +156,8 @@ namespace BetterThanNothing
 	struct GrassChunkComponent : Component
 	{
 	};
+
+	struct WaterChunkComponent : Component
+	{
+	};
 }

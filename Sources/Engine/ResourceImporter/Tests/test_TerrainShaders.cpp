@@ -23,3 +23,15 @@ TEST(TerrainShadersTest, CompileGrassGBufferShaders)
 	EXPECT_EQ(frag.type, EShaderType::Fragment);
 	EXPECT_FALSE(frag.spirv.empty());
 }
+
+TEST(TerrainShadersTest, CompileWaterShaders)
+{
+	ResourceImporter	 importer;
+	const ImportedShader vert = importer.ImportShader(AssetPath::Resolve("Shaders/water/water.vert"));
+	EXPECT_EQ(vert.type, EShaderType::Vertex);
+	EXPECT_FALSE(vert.spirv.empty());
+
+	const ImportedShader frag = importer.ImportShader(AssetPath::Resolve("Shaders/water/water.frag"));
+	EXPECT_EQ(frag.type, EShaderType::Fragment);
+	EXPECT_FALSE(frag.spirv.empty());
+}

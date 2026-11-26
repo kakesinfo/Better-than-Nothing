@@ -29,6 +29,7 @@
 #include "Passes/RTShadowPass.hpp"
 #include "Passes/ScreenSpaceShadowPass.hpp"
 #include "Passes/SkyAtmospherePass.hpp"
+#include "Passes/WaterPass.hpp"
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
@@ -437,6 +438,37 @@ namespace BetterThanNothing
 		});
 		m_resourceManager->CreateComputePipeline("Sky::Render", m_resourceManager->LoadShader("Shaders/sky/sky_render.comp"), "Sky::Render");
 
+		// Animated Water Surface
+		const std::array<DescriptorBindingDesc, 5> waterBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("Water::Surface", waterBindings);
+		m_renderingDevice->CreatePipelineLayout("Water::Surface", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("Water::Surface");
+			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
+		});
+		const auto waterVert = m_resourceManager->LoadShader("Shaders/water/water.vert");
+		const auto waterFrag = m_resourceManager->LoadShader("Shaders/water/water.frag");
+		m_resourceManager->CreatePipeline("Water::Surface", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(waterVert)
+				->AddShader(waterFrag)
+				->SetPipelineLayout("Water::Surface")
+				->SetColorFormat(TextureFormat::R16G16B16A16_SFLOAT)
+				->SetDepthFormat(TextureFormat::D32_SFLOAT)
+				->SetUseMsaa(false)
+				->SetBlendEnable(true)
+				->SetAlphaToCoverage(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(false)
+				->SetCullMode(CullMode::None);
+		});
+
 		m_renderingDevice->CreateDescriptorSetLayout("PostProcess::ToneMap", DescriptorType::CombinedImageSampler, ShaderStageFlags::Fragment);
 		m_renderingDevice->CreatePipelineLayout("PostProcess::ToneMap", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
@@ -461,6 +493,7 @@ namespace BetterThanNothing
 
 		m_opaqueDrawStream = std::make_unique<DrawStream>();
 		m_transparentDrawStream = std::make_unique<DrawStream>();
+		m_waterDrawStream = std::make_unique<DrawStream>();
 
 		CreateGlobalUniformBuffers();
 		CreateGlobalUniformDescriptorSets();
@@ -475,6 +508,7 @@ namespace BetterThanNothing
 		AddPass(std::make_unique<AOPass>());
 		AddPass(std::make_unique<SkyAtmospherePass>());
 		AddPass(std::make_unique<DeferredLightingPass>());
+		AddPass(std::make_unique<WaterPass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
 		AddPass(std::make_unique<PostProcessPass>());
 #ifndef NDEBUG
@@ -580,6 +614,11 @@ namespace BetterThanNothing
 				m_renderingDevice->DestroyDescriptorSet(handle);
 		}
 		for (const Handle& handle : m_skyRenderDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (const Handle& handle : m_waterDescriptorSets)
 		{
 			if (handle.IsValid())
 				m_renderingDevice->DestroyDescriptorSet(handle);
@@ -764,6 +803,8 @@ namespace BetterThanNothing
 		m_prevDepthTarget = createTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_prevNormalTarget = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_hdrColor = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_waterSceneColorCopy = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+		m_waterDepthCopy = createTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_taaHistory[0] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferDst);
 		m_taaHistory[1] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferDst);
 		m_rtShadowRaw = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
@@ -964,6 +1005,22 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorStorageImage(set, 3, m_hdrColor);
 		}
 
+		if (m_waterDescriptorSets.size() != frameCount)
+		{
+			m_waterDescriptorSets.resize(frameCount);
+			for (uint32_t i = 0; i < frameCount; ++i)
+				m_waterDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("Water::Surface");
+		}
+		for (uint32_t i = 0; i < frameCount; ++i)
+		{
+			const Handle set = m_waterDescriptorSets[i];
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_waterSceneColorCopy, m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_waterDepthCopy, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 2, m_skyViewLUT, m_skyViewSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 3, m_irradianceLUT, m_skyViewSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 4, m_prefilteredEnvLUT, m_skyViewSampler);
+		}
+
 		m_lastSwapChainGeneration = currentGen;
 	}
 
@@ -986,6 +1043,8 @@ namespace BetterThanNothing
 		destroyIfValid(m_prevDepthTarget);
 		destroyIfValid(m_prevNormalTarget);
 		destroyIfValid(m_hdrColor);
+		destroyIfValid(m_waterSceneColorCopy);
+		destroyIfValid(m_waterDepthCopy);
 		destroyIfValid(m_taaHistory[0]);
 		destroyIfValid(m_taaHistory[1]);
 		destroyIfValid(m_rtShadowRaw);
@@ -1049,6 +1108,8 @@ namespace BetterThanNothing
 
 		ctx.prevNormalTarget = m_prevNormalTarget;
 		ctx.hdrColor = m_hdrColor;
+		ctx.waterSceneColorCopy = m_waterSceneColorCopy;
+		ctx.waterDepthCopy = m_waterDepthCopy;
 		ctx.taaHistoryRead = m_taaHistory[readIdx];
 		ctx.taaResolved = m_taaHistory[writeIdx];
 		ctx.rtShadowRaw = m_rtShadowRaw;
@@ -1092,6 +1153,7 @@ namespace BetterThanNothing
 		ctx.lightDirection = m_lightDirection;
 		ctx.opaqueStream = m_opaqueDrawStream.get();
 		ctx.transparentStream = m_transparentDrawStream.get();
+		ctx.waterStream = m_waterDrawStream.get();
 
 		for (const auto& pass : m_passes)
 			pass->Execute(ctx);
@@ -1182,6 +1244,7 @@ namespace BetterThanNothing
 		const auto estimatedCount = static_cast<uint32_t>(meshView.size_hint());
 		m_opaqueDrawStream->Reset(estimatedCount);
 		m_transparentDrawStream->Reset(estimatedCount / 4);
+		m_waterDrawStream->Reset(estimatedCount / 8);
 
 		const Handle  globalSetHandle = m_globalDescriptorSets[frameIndex];
 		const Handle  pointLightSetHandle = m_pointLightDescriptorSets[frameIndex];
@@ -1200,6 +1263,41 @@ namespace BetterThanNothing
 			if (!frustum.IntersectsLocalAABB(meshData->boundsMin, meshData->boundsMax, transform.worldMatrix))
 			{
 				Metrics::AddCulledDrawCall();
+				continue;
+			}
+
+			if (scene->GetRegistry().all_of<WaterChunkComponent>(entity))
+			{
+				const PipelineResourceCache* waterPipe = m_resourceManager->GetPipelineData("Water::Surface");
+				DrawPacket					 packet{};
+				packet.pipeline = waterPipe->pipeline;
+				packet.pipelineLayoutName = waterPipe->layoutName;
+				packet.vertexBuffer = meshData->vertexBuffer;
+				packet.indexBuffer = meshData->indexBuffer;
+				packet.indexCount = meshData->indexCount;
+				packet.descriptorSets[0] = globalSetHandle;
+				packet.descriptorSets[1] = m_waterDescriptorSets[frameIndex];
+				packet.descriptorSetCount = 2;
+				packet.SetPushConstant(DynamicUniformData{transform.worldMatrix, transform.prevWorldMatrix}, ShaderStageFlags::Vertex);
+				packet.distanceToCamera = Vector3::Distance2(cameraPos, transform.GetWorldPosition());
+				m_waterDrawStream->Draw(packet);
+				continue;
+			}
+
+			if (scene->GetRegistry().all_of<GrassChunkComponent>(entity))
+			{
+				const PipelineResourceCache* grassPipe = m_resourceManager->GetPipelineData("GBuffer::Grass");
+				DrawPacket					 packet{};
+				packet.pipeline = grassPipe->pipeline;
+				packet.pipelineLayoutName = grassPipe->layoutName;
+				packet.vertexBuffer = meshData->vertexBuffer;
+				packet.indexBuffer = meshData->indexBuffer;
+				packet.indexCount = meshData->indexCount;
+				packet.descriptorSets[0] = globalSetHandle;
+				packet.descriptorSetCount = 1;
+				packet.SetPushConstant(DynamicUniformData{transform.worldMatrix, transform.prevWorldMatrix}, ShaderStageFlags::Vertex);
+				packet.distanceToCamera = Vector3::Distance2(cameraPos, transform.GetWorldPosition());
+				m_opaqueDrawStream->Draw(packet);
 				continue;
 			}
 

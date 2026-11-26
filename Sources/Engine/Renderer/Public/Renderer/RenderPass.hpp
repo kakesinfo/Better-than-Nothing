@@ -54,6 +54,8 @@ namespace BetterThanNothing
 		Handle prevDepthTarget{};
 		Handle prevNormalTarget{};
 		Handle hdrColor{};
+		Handle waterSceneColorCopy{};
+		Handle waterDepthCopy{};
 		Handle taaHistoryRead{};
 		Handle taaResolved{};
 		Handle rtShadowRaw{};
@@ -99,6 +101,7 @@ namespace BetterThanNothing
 
 		DrawStream* opaqueStream = nullptr;
 		DrawStream* transparentStream = nullptr;
+		DrawStream* waterStream = nullptr;
 	};
 
 	class IRenderPass
