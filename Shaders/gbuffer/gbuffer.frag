@@ -80,14 +80,13 @@ void main()
     vec4 mrSample = texture(metallicRoughnessSampler, inTexCoord);
     float metallic = clamp(mrSample.b * material.metallicFactor, 0.0, 1.0);
     float roughness = clamp(mrSample.g * material.roughnessFactor, 0.04, 1.0);
-    float ao = mrSample.r;
 
     vec2 currNDC = inCurrClipPos.xy / max(abs(inCurrClipPos.w), 1e-6);
     vec2 prevNDC = inPrevClipPos.xy / max(abs(inPrevClipPos.w), 1e-6);
     vec2 motion = (currNDC - prevNDC) * 0.5;
 
-    outAlbedo = vec4(linearAlbedo, 1.0);
+    outAlbedo = vec4(clamp(linearAlbedo, 0.0, 1.0), 1.0);
     outNormal = EncodeOctahedral(N);
-    outMaterial = vec4(metallic, roughness, ao, 1.0);
+    outMaterial = vec4(metallic, roughness, 1.0, 1.0);
     outMotion = motion;
 }

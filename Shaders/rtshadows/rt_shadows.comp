@@ -137,8 +137,8 @@ void main()
                 vec3 tangent, bitangent;
                 BuildOrthonormalBasis(L, tangent, bitangent);
 
-                float u1 = InterleavedGradientNoise(vec2(pixelCoord), pc.frameIndex);
-                float u2 = InterleavedGradientNoise(vec2(pixelCoord) + vec2(17.0, 31.0), pc.frameIndex + 1u);
+                float u1 = InterleavedGradientNoise(vec2(pixelCoord), globalUniforms.frameIndex);
+                float u2 = InterleavedGradientNoise(vec2(pixelCoord) + vec2(17.0, 31.0), globalUniforms.frameIndex + 1u);
                 vec2 disk = SampleConcentricDisk(vec2(u1, u2)) * pc.sunAngularRadius;
                 vec3 rayDir = normalize(L + tangent * disk.x + bitangent * disk.y);
 

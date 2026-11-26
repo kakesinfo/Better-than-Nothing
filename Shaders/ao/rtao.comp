@@ -114,8 +114,8 @@ void main()
     vec3 tangent, bitangent;
     BuildOrthonormalBasis(N, tangent, bitangent);
 
-    float u1 = InterleavedGradientNoise(vec2(pixelCoord), pc.frameIndex);
-    float u2 = InterleavedGradientNoise(vec2(pixelCoord) + vec2(17.0, 31.0), pc.frameIndex + 1u);
+    float u1 = InterleavedGradientNoise(vec2(pixelCoord), globalUniforms.frameIndex);
+    float u2 = InterleavedGradientNoise(vec2(pixelCoord) + vec2(17.0, 31.0), globalUniforms.frameIndex + 1u);
     vec3 localDir = SampleCosineHemisphere(vec2(u1, u2));
     vec3 rayDir = normalize(tangent * localDir.x + bitangent * localDir.y + N * localDir.z);
 

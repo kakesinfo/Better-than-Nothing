@@ -1246,6 +1246,13 @@ namespace BetterThanNothing
 			if (!ShouldIncludeInAccelerationStructure(isGrass) || registry.all_of<WaterChunkComponent>(entity))
 				continue;
 
+			if (meshComp.materialId != InvalidResourceId)
+			{
+				const MaterialResourceCache* material = m_resourceManager->GetMaterialData(meshComp.materialId);
+				if (material && material->alphaMode == EAlphaMode::Blend)
+					continue;
+			}
+
 			const MeshResourceCache* meshData = m_resourceManager->GetMeshData(meshComp.meshId);
 			if (!meshData || !meshData->vertexBuffer.IsValid() || !meshData->indexBuffer.IsValid() || meshData->indexCount == 0)
 				continue;

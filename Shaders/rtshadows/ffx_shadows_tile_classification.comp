@@ -46,8 +46,11 @@ layout(std430, set = 1, binding = 9) readonly buffer TileMaskBuffer {
 };
 
 layout(std430, set = 1, binding = 10) writeonly buffer TileMetaBuffer {
-    uint tileMeta[];
+    uint tileMeta[]; // 0 = all shadowed, 1 = all lit, 2 = mixed penumbra
 };
+
+shared uint s_allLit;
+shared uint s_allShadowed;
 
 vec3 DecodeOctahedral(vec2 e)
 {
@@ -60,89 +63,124 @@ vec3 DecodeOctahedral(vec2 e)
     return normalize(v);
 }
 
+// FFX 3x5 tile bitmask spatial mean & variance
+vec2 ComputeBitmaskSpatialMoments(ivec2 pixel, uint tilesX, uint tilesY)
+{
+    int centerTileX = pixel.x / 8;
+    int centerTileY = pixel.y / 4;
+
+    float litCount = 0.0;
+    float totalCount = 0.0;
+
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        int ty = centerTileY + dy;
+        if (ty < 0 || ty >= int(tilesY))
+            continue;
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            int tx = centerTileX + dx;
+            if (tx < 0 || tx >= int(tilesX))
+                continue;
+            uint mask = tileMasks[uint(ty) * tilesX + uint(tx)];
+            litCount += float(bitCount(mask));
+            totalCount += 32.0;
+        }
+    }
+
+    float mean = litCount / max(totalCount, 1.0);
+    float variance = max(mean * (1.0 - mean), 0.0);
+    return vec2(mean, variance);
+}
+
 void main()
 {
+    if (gl_LocalInvocationIndex == 0u)
+    {
+        s_allLit = 1u;
+        s_allShadowed = 1u;
+    }
+    barrier();
+
     ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
     ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+    uint tilesX = (uint(screenSize.x) + 7u) / 8u;
+    uint tilesY = (uint(screenSize.y) + 3u) / 4u;
+
+    if (pixelCoord.x < screenSize.x && pixelCoord.y < screenSize.y)
+    {
+        float depth = texelFetch(depthTex, pixelCoord, 0).r;
+        if (depth >= 1.0)
+        {
+            imageStore(outMoments, pixelCoord, vec4(1.0, 1.0, 1.0, 0.0));
+            imageStore(outShadowPing, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
+            atomicAnd(s_allShadowed, 0u);
+        }
+        else
+        {
+            vec2 rawSample = texelFetch(shadowRawTex, pixelCoord, 0).rg;
+            float currentShadow = rawSample.r;
+            float currentHitDist = rawSample.g;
+
+            vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(screenSize);
+            vec2 motion = texelFetch(gbufferMotionTex, pixelCoord, 0).rg;
+            vec2 prevUv = uv - motion;
+            vec3 normal = DecodeOctahedral(texelFetch(gbufferNormalTex, pixelCoord, 0).rg);
+
+            vec2 spatialMoments = ComputeBitmaskSpatialMoments(pixelCoord, tilesX, tilesY);
+            float spatialMean = spatialMoments.x;
+            float spatialVar = spatialMoments.y;
+            float spatialStd = sqrt(spatialVar);
+
+            bool validHistory = (prevUv.x >= 0.0 && prevUv.x <= 1.0 && prevUv.y >= 0.0 && prevUv.y <= 1.0 && globalUniforms.frameIndex > 0u);
+            vec4 prevMoments = vec4(0.0);
+
+            if (validHistory)
+            {
+                float prevDepth = textureLod(prevDepthTex, prevUv, 0.0).r;
+                vec3 prevNormal = DecodeOctahedral(textureLod(prevNormalTex, prevUv, 0.0).rg);
+
+                float depthDiff = abs(depth - prevDepth) / max(depth, 1e-4);
+                float normalDot = dot(normal, prevNormal);
+
+                if (depthDiff > 0.02 || normalDot < 0.9)
+                    validHistory = false;
+                else
+                    prevMoments = textureLod(prevMomentsTex, prevUv, 0.0);
+            }
+
+            float historyLen = validHistory ? min(prevMoments.b + 1.0, 16.0) : 1.0;
+            float alpha = max(1.0 / historyLen, 0.08);
+
+            // Clamp temporal history to spatial neighborhood envelope to prevent ghosting while keeping soft penumbra
+            float clampedPrev = clamp(prevMoments.r, spatialMean - 1.5 * spatialStd - 0.05, spatialMean + 1.5 * spatialStd + 0.05);
+            float mean = validHistory ? mix(clampedPrev, currentShadow, alpha) : currentShadow;
+            float moment2 = validHistory ? mix(prevMoments.g, currentShadow * currentShadow, alpha) : (currentShadow * currentShadow);
+            float temporalVar = max(0.0, moment2 - mean * mean);
+            float variance = (historyLen < 4.0) ? max(spatialVar, temporalVar) : max(temporalVar, spatialVar * 0.25);
+
+            float hitDist = validHistory ? mix(prevMoments.a, currentHitDist, alpha) : currentHitDist;
+
+            imageStore(outMoments, pixelCoord, vec4(mean, moment2, historyLen, hitDist));
+            imageStore(outShadowPing, pixelCoord, vec4(mean, variance, 0.0, 0.0));
+
+            if (mean < 0.999 || variance > 1e-4)
+                atomicAnd(s_allLit, 0u);
+            if (mean > 0.001 || variance > 1e-4)
+                atomicAnd(s_allShadowed, 0u);
+        }
+    }
+
+    barrier();
 
     if (gl_LocalInvocationIndex == 0u)
     {
-        uint tilesX = (uint(screenSize.x) + 7u) / 8u;
         uint tileIdx = gl_WorkGroupID.y * tilesX + gl_WorkGroupID.x;
-        uint mask = tileMasks[tileIdx];
-
-        if (mask == 0u)
+        if (s_allShadowed != 0u)
             tileMeta[tileIdx] = 0u;
-        else if (mask == 0xFFFFFFFFu)
+        else if (s_allLit != 0u)
             tileMeta[tileIdx] = 1u;
         else
             tileMeta[tileIdx] = 2u;
     }
-
-    if (pixelCoord.x >= screenSize.x || pixelCoord.y >= screenSize.y)
-        return;
-
-    vec2 rawSample = texelFetch(shadowRawTex, pixelCoord, 0).rg;
-    float currentShadow = rawSample.r;
-    float currentHitDist = rawSample.g;
-
-    float depth = texelFetch(depthTex, pixelCoord, 0).r;
-    if (depth >= 1.0)
-    {
-        imageStore(outMoments, pixelCoord, vec4(1.0, 1.0, 1.0, 0.0));
-        imageStore(outShadowPing, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
-        return;
-    }
-
-    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(screenSize);
-    vec2 motion = texelFetch(gbufferMotionTex, pixelCoord, 0).rg;
-    vec2 prevUv = uv - motion;
-
-    vec3 normal = DecodeOctahedral(texelFetch(gbufferNormalTex, pixelCoord, 0).rg);
-
-    // 3x3 spatial mean and variance of raw shadow
-    float localSum = 0.0;
-    float localSumSq = 0.0;
-    for (int dy = -1; dy <= 1; ++dy)
-    {
-        for (int dx = -1; dx <= 1; ++dx)
-        {
-            ivec2 p = clamp(pixelCoord + ivec2(dx, dy), ivec2(0), screenSize - 1);
-            float s = texelFetch(shadowRawTex, p, 0).r;
-            localSum += s;
-            localSumSq += s * s;
-        }
-    }
-    float localMean = localSum / 9.0;
-    float localVar = max(0.0, (localSumSq / 9.0) - localMean * localMean);
-
-    bool validHistory = (prevUv.x >= 0.0 && prevUv.x <= 1.0 && prevUv.y >= 0.0 && prevUv.y <= 1.0 && globalUniforms.frameIndex > 0u);
-    vec4 prevMoments = vec4(0.0);
-
-    if (validHistory)
-    {
-        float prevDepth = texture(prevDepthTex, prevUv).r;
-        vec3 prevNormal = DecodeOctahedral(texture(prevNormalTex, prevUv).rg);
-
-        float depthDiff = abs(depth - prevDepth) / max(depth, 1e-4);
-        float normalDot = dot(normal, prevNormal);
-
-        if (depthDiff > 0.02 || normalDot < 0.9)
-            validHistory = false;
-        else
-            prevMoments = texture(prevMomentsTex, prevUv);
-    }
-
-    float historyLen = validHistory ? min(prevMoments.b + 1.0, 16.0) : 1.0;
-    float alpha = 1.0 / historyLen;
-
-    float mean = mix(prevMoments.r, currentShadow, alpha);
-    float moment2 = mix(prevMoments.g, currentShadow * currentShadow, alpha);
-    float temporalVar = max(0.0, moment2 - mean * mean);
-    float variance = (historyLen < 4.0) ? max(localVar, temporalVar) : temporalVar;
-
-    float hitDist = validHistory ? mix(prevMoments.a, currentHitDist, alpha) : currentHitDist;
-
-    imageStore(outMoments, pixelCoord, vec4(mean, moment2, historyLen, hitDist));
-    imageStore(outShadowPing, pixelCoord, vec4(mean, variance, 0.0, 0.0));
 }
