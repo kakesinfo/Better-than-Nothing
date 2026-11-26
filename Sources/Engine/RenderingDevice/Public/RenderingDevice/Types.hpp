@@ -189,6 +189,9 @@ namespace BetterThanNothing
 		Storage = 0x00000020,
 		Index = 0x00000040,
 		Vertex = 0x00000080,
+		ShaderDeviceAddress = 0x00020000,
+		AccelerationStructureBuildInputReadOnly = 0x00080000,
+		AccelerationStructureStorage = 0x00100000,
 	};
 
 	enum class BufferAllocationFlags : uint32_t
@@ -202,6 +205,11 @@ namespace BetterThanNothing
 	inline BufferUsageFlags operator|(BufferUsageFlags a, BufferUsageFlags b)
 	{
 		return static_cast<BufferUsageFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline bool operator&(BufferUsageFlags a, BufferUsageFlags b)
+	{
+		return (static_cast<uint32_t>(a) & static_cast<uint32_t>(b)) != 0;
 	}
 
 	inline BufferAllocationFlags operator|(BufferAllocationFlags a, BufferAllocationFlags b)
