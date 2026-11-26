@@ -1,0 +1,203 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct PointLightData {
+    vec3 position;
+    float radius;
+    vec3 color;
+    float luminousPowerLm;
+};
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D gbufferAlbedoTex;
+layout(set = 1, binding = 1) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 2) uniform sampler2D gbufferMaterialTex;
+layout(set = 1, binding = 3) uniform sampler2D gbufferMotionTex;
+layout(set = 1, binding = 4) uniform sampler2D depthTex;
+
+layout(std430, set = 1, binding = 5) readonly buffer PointLightBuffer {
+    PointLightData lights[];
+} pointLights;
+
+layout(set = 1, binding = 6, rgba16f) writeonly uniform image2D outHdrColor;
+
+const float PI = 3.14159265359;
+
+vec3 DecodeOctahedral(vec2 e)
+{
+    vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+    if (v.z < 0.0)
+    {
+        vec2 s = vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);
+        v.xy = (1.0 - abs(v.yx)) * s;
+    }
+    return normalize(v);
+}
+
+vec3 ReconstructWorldPos(vec2 uv, float depth, mat4 invViewProj)
+{
+    vec4 clipPos = vec4(uv * 2.0 - 1.0, depth, 1.0);
+    vec4 worldPos = invViewProj * clipPos;
+    return worldPos.xyz / max(abs(worldPos.w), 1e-6);
+}
+
+float DistributionGGX(vec3 N, vec3 H, float roughness)
+{
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    return a2 / max(PI * denom * denom, 1e-6);
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return NdotV / max(NdotV * (1.0 - k) + k, 1e-6);
+}
+
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
+}
+
+vec3 FresnelSchlick(float cosTheta, vec3 F0)
+{
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+vec3 EvaluatePBR(vec3 albedo, vec3 N, vec3 V, vec3 L, float metallic, float roughness)
+{
+    vec3 H = normalize(V + L);
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
+    float NDF = DistributionGGX(N, H, roughness);
+    float G = GeometrySmith(N, V, L, roughness);
+    vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
+
+    vec3 kS = F;
+    vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
+    float NdotL = max(dot(N, L), 0.0);
+
+    return (kD * albedo / PI + specular) * NdotL;
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = imageSize(outHdrColor);
+    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+        return;
+
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(dims);
+    float depth = textureLod(depthTex, uv, 0.0).r;
+
+    vec3 albedo = textureLod(gbufferAlbedoTex, uv, 0.0).rgb;
+    vec2 encNormal = textureLod(gbufferNormalTex, uv, 0.0).rg;
+    vec3 N = DecodeOctahedral(encNormal);
+    vec4 matData = textureLod(gbufferMaterialTex, uv, 0.0);
+    float metallic = matData.r;
+    float roughness = matData.g;
+    float ao = matData.b;
+    vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
+
+    uint dbg = globalUniforms.debugView;
+    if (dbg >= 1u && dbg <= 10u)
+    {
+        vec3 debugOut = vec3(0.0);
+        if (dbg == 1u)
+            debugOut = pow(max(albedo, vec3(0.0)), vec3(1.0 / 2.2));
+        else if (dbg == 2u)
+            debugOut = N * 0.5 + 0.5;
+        else if (dbg == 3u)
+            debugOut = vec3(roughness);
+        else if (dbg == 4u)
+            debugOut = vec3(metallic);
+        else if (dbg == 5u)
+            debugOut = vec3(pow(clamp(depth, 0.0, 1.0), 8.0));
+        else if (dbg == 6u)
+            debugOut = vec3(abs(motion) * 32.0, 0.0);
+        else if (dbg == 7u)
+            debugOut = vec3(ao);
+        else
+            debugOut = vec3(0.0);
+
+        imageStore(outHdrColor, pixelCoord, vec4(debugOut, 1.0));
+        return;
+    }
+
+    if (depth >= 1.0)
+    {
+        imageStore(outHdrColor, pixelCoord, vec4(0.0, 0.0, 0.0, 1.0));
+        return;
+    }
+
+    vec3 worldPos = ReconstructWorldPos(uv, depth, globalUniforms.invViewProj);
+    vec3 V = normalize(globalUniforms.cameraPosition - worldPos);
+
+    // Directional Sun
+    vec3 sunL = normalize(-globalUniforms.lightDirection);
+    vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.lightIntensity;
+    vec3 Lo = EvaluatePBR(albedo, N, V, sunL, metallic, roughness) * sunRadiance;
+
+    // Point Lights with Lagarde smooth distance attenuation
+    for (uint i = 0u; i < globalUniforms.pointLightCount; ++i)
+    {
+        PointLightData light = pointLights.lights[i];
+        vec3 toLight = light.position - worldPos;
+        float dist = length(toLight);
+        if (dist > light.radius || dist < 1e-5)
+            continue;
+
+        vec3 L = toLight / dist;
+        float distRatio = dist / max(light.radius, 1e-4);
+        float window = pow(clamp(1.0 - pow(distRatio, 4.0), 0.0, 1.0), 2.0);
+        float attenuation = window / (dist * dist + 1.0);
+        vec3 radiance = light.color * (light.luminousPowerLm / (4.0 * PI)) * attenuation;
+
+        Lo += EvaluatePBR(albedo, N, V, L, metallic, roughness) * radiance;
+    }
+
+    // Minimal ambient floor until IBL is wired in Jalon 8
+    vec3 ambient = albedo * (1.0 - metallic) * 0.03 * globalUniforms.lightIntensity * ao;
+    vec3 hdrLuminance = ambient + Lo;
+    vec3 preExposedHdr = hdrLuminance * globalUniforms.cameraExposure;
+
+    imageStore(outHdrColor, pixelCoord, vec4(preExposedHdr, 1.0));
+}
