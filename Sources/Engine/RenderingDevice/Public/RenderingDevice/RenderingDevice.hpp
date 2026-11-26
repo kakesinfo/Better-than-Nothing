@@ -201,6 +201,7 @@ namespace BetterThanNothing
 		void EndRenderPass();
 		void ExecuteDrawStream(const DrawStreamView& drawStream);
 		void ComputeBarrier();
+		void PushComputeConstants(std::string_view layoutName, const void* data, uint32_t size);
 
 		void WaitIdle() const;
 

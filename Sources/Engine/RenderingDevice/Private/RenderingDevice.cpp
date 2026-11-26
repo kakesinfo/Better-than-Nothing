@@ -662,6 +662,12 @@ namespace BetterThanNothing
 		m_self->commandBuffers[m_currentFrameIndex]->ComputeBarrier();
 	}
 
+	void RenderingDevice::PushComputeConstants(const std::string_view layoutName, const void* data, const uint32_t size)
+	{
+		const VkPipelineLayout layout = GetPipelineLayout(std::string(layoutName))->Handle();
+		m_self->commandBuffers[m_currentFrameIndex]->PushConstants(layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, size, data);
+	}
+
 	void RenderingDevice::WaitIdle() const
 	{
 		m_self->device->WaitIdle();
