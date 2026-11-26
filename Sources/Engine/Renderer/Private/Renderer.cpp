@@ -33,6 +33,7 @@
 #include <Data/Graphics/VertexData.hpp>
 #include <Math/Frustum.hpp>
 #include <RenderingDevice/Blueprint/PipelineLayoutBlueprint.hpp>
+#include <RenderingDevice/BufferDescription.hpp>
 #include <RenderingDevice/DrawStream.hpp>
 #include <RenderingDevice/RenderingDevice.hpp>
 #include <RenderingDevice/Types.hpp>
@@ -307,6 +308,13 @@ namespace BetterThanNothing
 		return r;
 	}
 
+	uint32_t Renderer::ComputeRTShadowTileCount(const uint32_t width, const uint32_t height)
+	{
+		const uint32_t tilesX = (width + 7u) / 8u;
+		const uint32_t tilesY = (height + 3u) / 4u;
+		return tilesX * tilesY;
+	}
+
 	void Renderer::AddPass(std::unique_ptr<IRenderPass> pass)
 	{
 		m_passes.push_back(std::move(pass));
@@ -350,6 +358,22 @@ namespace BetterThanNothing
 		m_hdrColor = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
 		m_taaHistory[0] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferDst);
 		m_taaHistory[1] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferDst);
+		m_rtShadowRaw = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_rtShadowPing = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_rtShadowPong = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_rtShadowDenoised = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_rtShadowMoments[0] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_rtShadowMoments[1] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_sssTarget = createTarget(TextureFormat::R16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+
+		const uint32_t tileCount = ComputeRTShadowTileCount(width, height);
+		const size_t   tileBufferSize = static_cast<size_t>(tileCount) * sizeof(uint32_t);
+		BufferDescription tileBufDesc{};
+		tileBufDesc.size = tileBufferSize;
+		tileBufDesc.bufferUsage = BufferUsageFlags::Storage;
+		tileBufDesc.memoryUsage = BufferMemoryUsage::GpuOnly;
+		m_rtShadowTileMaskBuffer = m_renderingDevice->CreateBuffer(tileBufDesc);
+		m_rtShadowTileMetaBuffer = m_renderingDevice->CreateBuffer(tileBufDesc);
 
 		const uint32_t frameCount = m_renderingDevice->GetMaxFramesInFlight();
 		if (m_deferredDescriptorSets.size() != frameCount)
@@ -420,6 +444,23 @@ namespace BetterThanNothing
 		destroyIfValid(m_hdrColor);
 		destroyIfValid(m_taaHistory[0]);
 		destroyIfValid(m_taaHistory[1]);
+		destroyIfValid(m_rtShadowRaw);
+		destroyIfValid(m_rtShadowPing);
+		destroyIfValid(m_rtShadowPong);
+		destroyIfValid(m_rtShadowDenoised);
+		destroyIfValid(m_rtShadowMoments[0]);
+		destroyIfValid(m_rtShadowMoments[1]);
+		destroyIfValid(m_sssTarget);
+
+		auto destroyBufferIfValid = [&](Handle& handle) {
+			if (handle.IsValid())
+			{
+				m_renderingDevice->DestroyBuffer(handle);
+				handle = {};
+			}
+		};
+		destroyBufferIfValid(m_rtShadowTileMaskBuffer);
+		destroyBufferIfValid(m_rtShadowTileMetaBuffer);
 	}
 
 	void Renderer::RenderFrame(Scene* scene)
@@ -463,6 +504,15 @@ namespace BetterThanNothing
 		ctx.hdrColor = m_hdrColor;
 		ctx.taaHistoryRead = m_taaHistory[readIdx];
 		ctx.taaResolved = m_taaHistory[writeIdx];
+		ctx.rtShadowRaw = m_rtShadowRaw;
+		ctx.rtShadowPing = m_rtShadowPing;
+		ctx.rtShadowPong = m_rtShadowPong;
+		ctx.rtShadowDenoised = m_rtShadowDenoised;
+		ctx.rtShadowMomentsRead = m_rtShadowMoments[readIdx];
+		ctx.rtShadowMomentsWrite = m_rtShadowMoments[writeIdx];
+		ctx.sssTarget = m_sssTarget;
+		ctx.rtShadowTileMaskBuffer = m_rtShadowTileMaskBuffer;
+		ctx.rtShadowTileMetaBuffer = m_rtShadowTileMetaBuffer;
 		ctx.globalDescriptorSet = m_globalDescriptorSets[frameIndex];
 		ctx.deferredLightingDescriptorSet = m_deferredDescriptorSets[frameIndex];
 		ctx.taaDescriptorSet = m_taaDescriptorSets[readIdx][frameIndex];

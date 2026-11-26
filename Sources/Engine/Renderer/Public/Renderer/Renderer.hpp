@@ -47,7 +47,8 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor);
 
-		[[nodiscard]] static float Halton(uint32_t index, uint32_t base);
+		[[nodiscard]] static float	  Halton(uint32_t index, uint32_t base);
+		[[nodiscard]] static uint32_t ComputeRTShadowTileCount(uint32_t width, uint32_t height);
 
 		void AddPass(std::unique_ptr<IRenderPass> pass);
 		void RenderFrame(Scene* scene);
@@ -84,6 +85,14 @@ namespace BetterThanNothing
 		Handle	 m_prevNormalTarget{};
 		Handle	 m_hdrColor{};
 		Handle	 m_taaHistory[2]{};
+		Handle	 m_rtShadowRaw{};
+		Handle	 m_rtShadowPing{};
+		Handle	 m_rtShadowPong{};
+		Handle	 m_rtShadowDenoised{};
+		Handle	 m_rtShadowMoments[2]{};
+		Handle	 m_sssTarget{};
+		Handle	 m_rtShadowTileMaskBuffer{};
+		Handle	 m_rtShadowTileMetaBuffer{};
 		uint32_t m_temporalReadIndex = 0;
 		uint64_t m_lastSwapChainGeneration = 0;
 		Matrix4	 m_prevUnjitteredViewProj = Matrix4::Identity;

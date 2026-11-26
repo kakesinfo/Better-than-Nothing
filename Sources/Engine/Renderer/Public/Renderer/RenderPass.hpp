@@ -54,6 +54,15 @@ namespace BetterThanNothing
 		Handle hdrColor{};
 		Handle taaHistoryRead{};
 		Handle taaResolved{};
+		Handle rtShadowRaw{};
+		Handle rtShadowPing{};
+		Handle rtShadowPong{};
+		Handle rtShadowDenoised{};
+		Handle rtShadowMomentsRead{};
+		Handle rtShadowMomentsWrite{};
+		Handle sssTarget{};
+		Handle rtShadowTileMaskBuffer{};
+		Handle rtShadowTileMetaBuffer{};
 		Handle globalDescriptorSet{};
 		Handle deferredLightingDescriptorSet{};
 		Handle taaDescriptorSet{};
