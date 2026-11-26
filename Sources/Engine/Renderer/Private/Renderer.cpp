@@ -174,22 +174,49 @@ namespace BetterThanNothing
 		if (useMsaa)
 			m_colorTarget = m_renderingDevice->CreateColorAttachment(width, height, true);
 
-		m_depthTarget = m_renderingDevice->CreateDepthAttachment(width, height, useMsaa);
+		auto createTarget = [&](const TextureFormat format, const TextureUsageFlags usage) -> Handle {
+			TextureCreateInfo desc{};
+			desc.width = width;
+			desc.height = height;
+			desc.format = format;
+			desc.usage = usage;
+			desc.useMsaa = false;
+			desc.dedicated = true;
+			desc.mipLevels = 1;
+			return m_renderingDevice->CreateTexture(desc);
+		};
+
+		m_depthTarget = createTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::DepthStencilAttachment | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_gbufferAlbedo = createTarget(TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_gbufferNormal = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_gbufferMaterial = createTarget(TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_gbufferMotion = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_prevDepthTarget = createTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+		m_prevNormalTarget = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
+		m_hdrColor = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+
 		m_lastSwapChainGeneration = currentGen;
 	}
 
 	void Renderer::DestroyRenderTargets()
 	{
-		if (m_colorTarget.IsValid())
-		{
-			m_renderingDevice->DestroyTexture(m_colorTarget);
-			m_colorTarget = {};
-		}
-		if (m_depthTarget.IsValid())
-		{
-			m_renderingDevice->DestroyTexture(m_depthTarget);
-			m_depthTarget = {};
-		}
+		auto destroyIfValid = [&](Handle& handle) {
+			if (handle.IsValid())
+			{
+				m_renderingDevice->DestroyTexture(handle);
+				handle = {};
+			}
+		};
+
+		destroyIfValid(m_colorTarget);
+		destroyIfValid(m_depthTarget);
+		destroyIfValid(m_gbufferAlbedo);
+		destroyIfValid(m_gbufferNormal);
+		destroyIfValid(m_gbufferMaterial);
+		destroyIfValid(m_gbufferMotion);
+		destroyIfValid(m_prevDepthTarget);
+		destroyIfValid(m_prevNormalTarget);
+		destroyIfValid(m_hdrColor);
 	}
 
 	void Renderer::RenderFrame(Scene* scene)
@@ -221,6 +248,13 @@ namespace BetterThanNothing
 		ctx.useMsaa = m_renderingDevice->IsMsaaEnabled();
 		ctx.colorTarget = m_colorTarget;
 		ctx.depthTarget = m_depthTarget;
+		ctx.gbufferAlbedo = m_gbufferAlbedo;
+		ctx.gbufferNormal = m_gbufferNormal;
+		ctx.gbufferMaterial = m_gbufferMaterial;
+		ctx.gbufferMotion = m_gbufferMotion;
+		ctx.prevDepthTarget = m_prevDepthTarget;
+		ctx.prevNormalTarget = m_prevNormalTarget;
+		ctx.hdrColor = m_hdrColor;
 		ctx.opaqueStream = m_opaqueDrawStream.get();
 		ctx.transparentStream = m_transparentDrawStream.get();
 

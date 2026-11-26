@@ -45,6 +45,13 @@ namespace BetterThanNothing
 
 		Handle colorTarget{};
 		Handle depthTarget{};
+		Handle gbufferAlbedo{};
+		Handle gbufferNormal{};
+		Handle gbufferMaterial{};
+		Handle gbufferMotion{};
+		Handle prevDepthTarget{};
+		Handle prevNormalTarget{};
+		Handle hdrColor{};
 
 		DrawStream* opaqueStream = nullptr;
 		DrawStream* transparentStream = nullptr;

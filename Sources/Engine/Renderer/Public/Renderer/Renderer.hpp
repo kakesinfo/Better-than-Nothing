@@ -74,6 +74,13 @@ namespace BetterThanNothing
 
 		Handle	 m_colorTarget{};
 		Handle	 m_depthTarget{};
+		Handle	 m_gbufferAlbedo{};
+		Handle	 m_gbufferNormal{};
+		Handle	 m_gbufferMaterial{};
+		Handle	 m_gbufferMotion{};
+		Handle	 m_prevDepthTarget{};
+		Handle	 m_prevNormalTarget{};
+		Handle	 m_hdrColor{};
 		uint64_t m_lastSwapChainGeneration = 0;
 		Matrix4	 m_prevUnjitteredViewProj = Matrix4::Identity;
 		uint32_t m_frameIndex = 0;
