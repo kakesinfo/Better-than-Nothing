@@ -22,6 +22,7 @@
 #include "Math/Quaternion.hpp"
 #include "Math/Vector3.hpp"
 #include <algorithm>
+#include <cmath>
 
 namespace BetterThanNothing
 {
@@ -52,7 +53,18 @@ namespace BetterThanNothing
 
 	void Camera::SetExposure(const float exposure)
 	{
-		m_exposure = std::max(0.01f, exposure);
+		const float clamped = std::max(1e-6f, exposure);
+		const float baseEv100 = std::log2((m_aperture * m_aperture) / m_shutterSpeed * (100.0f / m_iso));
+		const float targetEv100 = std::log2(1.0f / (1.2f * clamped));
+		m_evCompensation = baseEv100 - targetEv100;
+	}
+
+	void Camera::SetPhysicalExposure(const float aperture, const float shutterSpeed, const float iso, const float evCompensation)
+	{
+		m_aperture = std::max(0.7f, aperture);
+		m_shutterSpeed = std::max(1e-6f, shutterSpeed);
+		m_iso = std::max(10.0f, iso);
+		m_evCompensation = evCompensation;
 	}
 
 	void Camera::Move(const Vector3& delta)
@@ -138,8 +150,13 @@ namespace BetterThanNothing
 		return m_farPlane;
 	}
 
+	float Camera::GetEV100() const
+	{
+		return std::log2((m_aperture * m_aperture) / m_shutterSpeed * (100.0f / m_iso)) - m_evCompensation;
+	}
+
 	float Camera::GetExposure() const
 	{
-		return m_exposure;
+		return 1.0f / (1.2f * std::exp2(GetEV100()));
 	}
 }
