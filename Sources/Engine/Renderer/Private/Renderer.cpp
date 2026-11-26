@@ -149,6 +149,31 @@ namespace BetterThanNothing
 				->SetCullMode(CullMode::None);
 		});
 
+		std::array<DescriptorBindingDesc, 15> terrainBindings{};
+		for (uint32_t b = 0; b < 15u; ++b)
+			terrainBindings[b] = {.binding = b, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment};
+		m_renderingDevice->CreateDescriptorSetLayout("TerrainMaterial", terrainBindings);
+		m_renderingDevice->CreatePipelineLayout("GBuffer::Terrain", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("TerrainMaterial");
+			blueprint->AddPushConstant<DynamicUniformData>(EShaderType::Vertex);
+		});
+		const auto terrainFrag = m_resourceManager->LoadShader("Shaders/gbuffer/terrain_gbuffer.frag");
+		m_resourceManager->CreatePipeline("GBuffer::Terrain", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(vertexLayout)
+				->AddShader(gbufferVert)
+				->AddShader(terrainFrag)
+				->SetPipelineLayout("GBuffer::Terrain")
+				->SetColorFormats(gbufferFormats)
+				->SetDepthFormat(TextureFormat::D32_SFLOAT)
+				->SetUseMsaa(false)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false)
+				->SetDepthTest(true)
+				->SetDepthWrite(true)
+				->SetCullMode(CullMode::Back);
+		});
+
 		const std::array<DescriptorBindingDesc, 14> deferredBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},

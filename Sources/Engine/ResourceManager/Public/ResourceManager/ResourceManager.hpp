@@ -21,6 +21,7 @@
 #include <Common/ResourceId.hpp>
 #include <Math/Matrix4.hpp>
 #include <Math/Vector4.hpp>
+#include <array>
 #include <functional>
 #include <memory>
 #include <string>
@@ -56,6 +57,14 @@ namespace BetterThanNothing
 		EAlphaMode	alphaMode{};
 		float		alphaCutoff = 0.5f;
 		std::string pipelineName;
+	};
+
+	struct TerrainMaterialCreateInfo
+	{
+		std::string				   name;
+		std::array<ResourceId, 5> albedoTextures{};
+		std::array<ResourceId, 5> normalTextures{};
+		std::array<ResourceId, 5> roughnessTextures{};
 	};
 
 	struct ModelNodeResource
@@ -103,6 +112,7 @@ namespace BetterThanNothing
 		ResourceId GetDefaultNormalTexture();
 		ResourceId GetDefaultMetallicRoughnessTexture();
 		ResourceId CreateMaterial(const MaterialCreateInfo& info);
+		ResourceId CreateTerrainMaterial(const TerrainMaterialCreateInfo& info);
 		ResourceId LoadShader(const std::string& path);
 		ResourceId CreateMesh(const MeshData& meshData);
 		ResourceId CreatePipeline(const std::string& name, const std::function<void(PipelineBlueprint*)>& callback);

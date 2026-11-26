@@ -245,6 +245,39 @@ namespace BetterThanNothing
 		return materialId;
 	}
 
+	ResourceId ResourceManager::CreateTerrainMaterial(const TerrainMaterialCreateInfo& info)
+	{
+		const std::string matName = info.name.empty() ? "TerrainMaterial" : info.name;
+		if (const auto it = m_materialsLUT.find(matName); it != m_materialsLUT.end())
+			return it->second;
+
+		const Handle descriptorSet = m_renderingDevice->CreateDescriptorSet("TerrainMaterial");
+		for (uint32_t layer = 0; layer < 5u; ++layer)
+		{
+			const ResourceId albId = info.albedoTextures[layer] != InvalidResourceId ? info.albedoTextures[layer] : GetDefaultTexture();
+			const ResourceId nrmId = info.normalTextures[layer] != InvalidResourceId ? info.normalTextures[layer] : GetDefaultNormalTexture();
+			const ResourceId rghId = info.roughnessTextures[layer] != InvalidResourceId ? info.roughnessTextures[layer] : GetDefaultMetallicRoughnessTexture();
+
+			const TextureResourceCache* albTex = GetTextureData(albId);
+			const TextureResourceCache* nrmTex = GetTextureData(nrmId);
+			const TextureResourceCache* rghTex = GetTextureData(rghId);
+
+			m_renderingDevice->UpdateDescriptorCombinedImage(descriptorSet, layer * 3u + 0u, albTex->textureHandle, albTex->samplerHandle);
+			m_renderingDevice->UpdateDescriptorCombinedImage(descriptorSet, layer * 3u + 1u, nrmTex->textureHandle, nrmTex->samplerHandle);
+			m_renderingDevice->UpdateDescriptorCombinedImage(descriptorSet, layer * 3u + 2u, rghTex->textureHandle, rghTex->samplerHandle);
+		}
+
+		auto material = std::make_unique<MaterialResourceCache>();
+		material->name = matName;
+		material->pipelineName = "GBuffer::Terrain";
+		material->descriptorSetHandle = descriptorSet;
+
+		const ResourceId materialId = GenerateUniqueResourceId();
+		m_materials[materialId] = std::move(material);
+		m_materialsLUT[matName] = materialId;
+		return materialId;
+	}
+
 	ResourceId ResourceManager::CreateMesh(const MeshData& meshData)
 	{
 		if (meshData.vertices.empty() || meshData.indices.empty())
