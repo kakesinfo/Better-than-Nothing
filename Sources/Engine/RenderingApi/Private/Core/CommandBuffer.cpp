@@ -271,6 +271,29 @@ namespace BetterThanNothing::RenderingApi
 		vkCmdPipelineBarrier2(m_commandBuffer, &dependencyInfo);
 	}
 
+	VkMemoryBarrier2 CommandBuffer::MakeComputeMemoryBarrier()
+	{
+		VkMemoryBarrier2 barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+		barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+		barrier.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT;
+		barrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+		barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+		return barrier;
+	}
+
+	void CommandBuffer::ComputeBarrier() const
+	{
+		const VkMemoryBarrier2 barrier = MakeComputeMemoryBarrier();
+
+		VkDependencyInfo depInfo{};
+		depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		depInfo.memoryBarrierCount = 1;
+		depInfo.pMemoryBarriers = &barrier;
+
+		PipelineBarrier2(depInfo);
+	}
+
 	void CommandBuffer::BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter)
 	{
 		vkCmdBlitImage(m_commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 1, blit, filter);

@@ -636,6 +636,11 @@ namespace BetterThanNothing
 		}
 	}
 
+	void RenderingDevice::ComputeBarrier()
+	{
+		m_self->commandBuffers[m_currentFrameIndex]->ComputeBarrier();
+	}
+
 	void RenderingDevice::WaitIdle() const
 	{
 		m_self->device->WaitIdle();

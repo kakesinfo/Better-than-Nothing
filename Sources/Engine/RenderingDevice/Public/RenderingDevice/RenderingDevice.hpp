@@ -199,6 +199,7 @@ namespace BetterThanNothing
 		void BeginRenderPass(const RenderPassDescriptor& desc);
 		void EndRenderPass();
 		void ExecuteDrawStream(const DrawStreamView& drawStream);
+		void ComputeBarrier();
 
 		void WaitIdle() const;
 
