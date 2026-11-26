@@ -61,6 +61,7 @@ if(TARGET GTest::gtest_main)
         target_link_libraries(${PROJECT_NAME}_test
             PRIVATE
                 ${PROJECT_NAME}
+                Engine::RenderingApi
                 GTest::gtest_main
         )
         add_test(NAME ${PROJECT_NAME}_test COMMAND ${PROJECT_NAME}_test)
