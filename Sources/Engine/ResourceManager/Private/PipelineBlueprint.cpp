@@ -74,6 +74,12 @@ namespace BetterThanNothing
 		return this;
 	}
 
+	PipelineBlueprint* PipelineBlueprint::SetColorFormats(std::vector<TextureFormat> formats)
+	{
+		m_colorFormats = std::move(formats);
+		return this;
+	}
+
 	std::vector<ResourceId> PipelineBlueprint::GetShaders() const
 	{
 		return m_shaders;

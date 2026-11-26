@@ -31,8 +31,9 @@ namespace BetterThanNothing
 		std::vector<Handle> shaders;
 		std::string			layoutName;
 		VertexLayout		vertexLayout;
-		TextureFormat		colorFormat = TextureFormat::Undefined;
-		TextureFormat		depthFormat = TextureFormat::Undefined;
+		TextureFormat			   colorFormat = TextureFormat::Undefined;
+		std::vector<TextureFormat> colorFormats;
+		TextureFormat			   depthFormat = TextureFormat::Undefined;
 		bool				useMsaa = true;
 		bool				wireframe = false;
 		bool				depthTest = true;
