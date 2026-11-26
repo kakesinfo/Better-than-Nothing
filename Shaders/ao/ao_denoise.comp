@@ -1,0 +1,122 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D aoRawTex;
+layout(set = 1, binding = 1) uniform sampler2D aoHistoryTex;
+layout(set = 1, binding = 2) uniform sampler2D depthTex;
+layout(set = 1, binding = 3) uniform sampler2D prevDepthTex;
+layout(set = 1, binding = 4) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 5) uniform sampler2D prevNormalTex;
+layout(set = 1, binding = 6) uniform sampler2D gbufferMotionTex;
+layout(set = 1, binding = 7, r16f) writeonly uniform image2D outAODenoised;
+
+vec3 DecodeOctahedral(vec2 e)
+{
+    vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+    if (v.z < 0.0)
+    {
+        vec2 s = vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);
+        v.xy = (1.0 - abs(v.yx)) * s;
+    }
+    return normalize(v);
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+    if (pixelCoord.x >= screenSize.x || pixelCoord.y >= screenSize.y)
+        return;
+
+    float centerDepth = texelFetch(depthTex, pixelCoord, 0).r;
+    if (centerDepth >= 1.0)
+    {
+        imageStore(outAODenoised, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    vec3 centerNormal = DecodeOctahedral(texelFetch(gbufferNormalTex, pixelCoord, 0).rg);
+    float phiDepth = max(centerDepth * 0.02, 1e-4);
+
+    // 5x5 spatial bilateral filter over raw AO
+    float sumAO = 0.0;
+    float sumWeight = 0.0;
+
+    for (int dy = -2; dy <= 2; ++dy)
+    {
+        for (int dx = -2; dx <= 2; ++dx)
+        {
+            ivec2 q = clamp(pixelCoord + ivec2(dx, dy), ivec2(0), screenSize - 1);
+            float qDepth = texelFetch(depthTex, q, 0).r;
+            if (qDepth >= 1.0)
+                continue;
+
+            float qAO = texelFetch(aoRawTex, q, 0).r;
+            vec3 qNormal = DecodeOctahedral(texelFetch(gbufferNormalTex, q, 0).rg);
+
+            float wSpatial = exp(-float(dx * dx + dy * dy) / 4.5);
+            float wDepth = exp(-abs(centerDepth - qDepth) / phiDepth);
+            float wNormal = pow(max(0.0, dot(centerNormal, qNormal)), 16.0);
+            float w = wSpatial * wDepth * wNormal;
+
+            sumAO += qAO * w;
+            sumWeight += w;
+        }
+    }
+
+    float spatialAO = (sumWeight > 1e-5) ? (sumAO / sumWeight) : texelFetch(aoRawTex, pixelCoord, 0).r;
+
+    // Temporal reprojection with depth + normal rejection
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(screenSize);
+    vec2 motion = texelFetch(gbufferMotionTex, pixelCoord, 0).rg;
+    vec2 prevUv = uv - motion;
+
+    bool validHistory = (prevUv.x >= 0.0 && prevUv.x <= 1.0 && prevUv.y >= 0.0 && prevUv.y <= 1.0 && globalUniforms.frameIndex > 0u);
+    float finalAO = spatialAO;
+
+    if (validHistory)
+    {
+        float prevDepth = textureLod(prevDepthTex, prevUv, 0.0).r;
+        vec3 prevNormal = DecodeOctahedral(textureLod(prevNormalTex, prevUv, 0.0).rg);
+
+        float depthDiff = abs(centerDepth - prevDepth) / max(centerDepth, 1e-4);
+        float normalDot = dot(centerNormal, prevNormal);
+
+        if (depthDiff <= 0.02 && normalDot >= 0.9)
+        {
+            float histAO = textureLod(aoHistoryTex, prevUv, 0.0).r;
+            finalAO = mix(histAO, spatialAO, 0.15);
+        }
+    }
+
+    imageStore(outAODenoised, pixelCoord, vec4(clamp(finalAO, 0.0, 1.0), 0.0, 0.0, 0.0));
+}
