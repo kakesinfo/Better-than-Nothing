@@ -82,12 +82,13 @@ namespace BetterThanNothing
 
 		const float rock = QuinticSmoothstep(std::clamp((slope - 0.18f) / 0.22f, 0.0f, 1.0f));
 		const float sand = QuinticSmoothstep(1.0f - std::clamp((height - (m_config.waterLevel + 0.35f)) / 0.65f, 0.0f, 1.0f));
-		const float mud = QuinticSmoothstep(1.0f - std::clamp(std::abs(height - (m_config.waterLevel + 0.55f)) / 0.85f, 0.0f, 1.0f)) * (0.4f + 0.6f * noiseVal) * (1.0f - rock);
-		const float dirt = QuinticSmoothstep(std::clamp((noiseVal - 0.55f) / 0.35f, 0.0f, 1.0f)) * (1.0f - rock) * 0.65f;
-		const float grass = std::max(0.0f, 1.0f - std::min(1.0f, rock + sand + mud + dirt));
+		const float gravel = rock * QuinticSmoothstep(std::clamp((slope - 0.30f) / 0.20f, 0.0f, 1.0f));
+		const float mossyRock = rock - gravel;
+		const float dirt = QuinticSmoothstep(std::clamp((noiseVal - 0.55f) / 0.35f, 0.0f, 1.0f)) * (1.0f - rock) * 0.55f;
+		const float grass = std::max(0.0f, 1.0f - std::min(1.0f, sand + dirt + mossyRock + gravel));
 
-		// [0: Dirt, 1: Grass, 2: Rock, 3: Mud, 4: Sand]
-		std::array<float, 5> weights = {dirt, grass, rock, mud, sand};
+		// [0: Sand, 1: Grass, 2: Dirt, 3: MossyRock, 4: Gravel]
+		std::array<float, 5> weights = {sand, grass, dirt, mossyRock, gravel};
 		const float			 sum = weights[0] + weights[1] + weights[2] + weights[3] + weights[4];
 		if (sum > 1e-5f)
 		{
@@ -128,7 +129,7 @@ namespace BetterThanNothing
 				v.position = Vector3(wx, wy, wz);
 				v.normal = normal;
 				v.uv = Vector2(wx * 0.25f, wz * 0.25f);
-				v.color = Vector3(splat[1], splat[2], splat[3]);
+				v.color = Vector3(splat[0], splat[1], splat[2]);
 				mesh.vertices.push_back(v);
 			}
 		}

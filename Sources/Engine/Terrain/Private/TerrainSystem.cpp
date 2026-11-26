@@ -104,9 +104,23 @@ namespace BetterThanNothing
 
 		ResourceManager* rm = scene->GetResourceManager();
 
+		std::vector<std::string> pathsToPreload;
+		pathsToPreload.reserve(15);
+		for (size_t i = 0; i < 5u; ++i)
+		{
+			const std::string& albedoPath = !s_textureOverrides[i].empty() ? s_textureOverrides[i] : m_config.layers[i].albedoPath;
+			for (const std::string& p : {albedoPath, m_config.layers[i].normalPath, m_config.layers[i].roughnessPath})
+			{
+				if (!p.empty() && std::filesystem::exists(AssetPath::Resolve(p)))
+					pathsToPreload.push_back(p);
+			}
+		}
+		if (!pathsToPreload.empty())
+			rm->PreloadTexturesParallel(pathsToPreload, 1024);
+
 		auto loadOrDefault = [&](const std::string& path, const ResourceId fallback) -> ResourceId {
 			if (!path.empty() && std::filesystem::exists(AssetPath::Resolve(path)))
-				return rm->LoadTexture(path);
+				return rm->LoadTexture(path, 1024);
 			return fallback;
 		};
 

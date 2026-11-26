@@ -99,12 +99,12 @@ namespace BetterThanNothing
 				{.centerX = -4.0f, .centerZ = -46.0f, .radiusX = 24.0f, .radiusZ = 19.0f, .depth = 2.7f, .blendMargin = 10.0f},
 			};
 
-			// 0: Dirt (Ground049A), 1: Grass (Grass002), 2: Rock (Ground071), 3: Mud (Ground086), 4: Sand (Ground108)
-			cfg.layers[0] = {"Assets/Textures/Terrain/Ground049A/Ground049A_1K-JPG_Color.jpg", "Assets/Textures/Terrain/Ground049A/Ground049A_1K-JPG_NormalGL.jpg", "Assets/Textures/Terrain/Ground049A/Ground049A_1K-JPG_Roughness.jpg"};
-			cfg.layers[1] = {"Assets/Textures/Terrain/Grass002/Grass002_1K-JPG_Color.jpg", "Assets/Textures/Terrain/Grass002/Grass002_1K-JPG_NormalGL.jpg", "Assets/Textures/Terrain/Grass002/Grass002_1K-JPG_Roughness.jpg"};
-			cfg.layers[2] = {"Assets/Textures/Terrain/Ground071/Ground071_1K-JPG_Color.jpg", "Assets/Textures/Terrain/Ground071/Ground071_1K-JPG_NormalGL.jpg", "Assets/Textures/Terrain/Ground071/Ground071_1K-JPG_Roughness.jpg"};
-			cfg.layers[3] = {"Assets/Textures/Terrain/Ground086/Ground086_1K-JPG_Color.jpg", "Assets/Textures/Terrain/Ground086/Ground086_1K-JPG_NormalGL.jpg", "Assets/Textures/Terrain/Ground086/Ground086_1K-JPG_Roughness.jpg"};
-			cfg.layers[4] = {"Assets/Textures/Terrain/Ground108/Ground108_1K-JPG_Color.jpg", "Assets/Textures/Terrain/Ground108/Ground108_1K-JPG_NormalGL.jpg", "Assets/Textures/Terrain/Ground108/Ground108_1K-JPG_Roughness.jpg"};
+			// 0: Sand/Shore (Ground049A), 1: Grass (Grass002), 2: Dirt (Ground071), 3: Mossy Rock (Ground086), 4: Gravel (Ground108)
+			cfg.layers[0] = {".assets/Ground049A_8K-JPG/Ground049A_8K-JPG_Color.jpg", ".assets/Ground049A_8K-JPG/Ground049A_8K-JPG_NormalGL.jpg", ".assets/Ground049A_8K-JPG/Ground049A_8K-JPG_Roughness.jpg"};
+			cfg.layers[1] = {".assets/Grass002_8K-JPG/Grass002_8K-JPG_Color.jpg", ".assets/Grass002_8K-JPG/Grass002_8K-JPG_NormalGL.jpg", ".assets/Grass002_8K-JPG/Grass002_8K-JPG_Roughness.jpg"};
+			cfg.layers[2] = {".assets/Ground071_8K-JPG/Ground071_8K-JPG_Color.jpg", ".assets/Ground071_8K-JPG/Ground071_8K-JPG_NormalGL.jpg", ".assets/Ground071_8K-JPG/Ground071_8K-JPG_Roughness.jpg"};
+			cfg.layers[3] = {".assets/Ground086_8K-JPG/Ground086_8K-JPG_Color.jpg", ".assets/Ground086_8K-JPG/Ground086_8K-JPG_NormalGL.jpg", ".assets/Ground086_8K-JPG/Ground086_8K-JPG_Roughness.jpg"};
+			cfg.layers[4] = {".assets/Ground108_8K-JPG/Ground108_8K-JPG_Color.jpg", ".assets/Ground108_8K-JPG/Ground108_8K-JPG_NormalGL.jpg", ".assets/Ground108_8K-JPG/Ground108_8K-JPG_Roughness.jpg"};
 
 			return cfg;
 		}
@@ -114,14 +114,14 @@ namespace BetterThanNothing
 	{
 		uint32_t	targetCount = 95u;
 		float		minSpacing = 8.5f;
-		float		exclusionMinX = -22.0f;
-		float		exclusionMaxX = 21.0f;
-		float		exclusionMinZ = -15.0f;
-		float		exclusionMaxZ = 14.0f;
-		float		maxSlope = 0.25f;
-		float		minScale = 0.85f;
-		float		maxScale = 1.35f;
-		uint32_t	seed = 4242u;
-		std::string modelPath = "Assets/Models/tree_elm/scene.gltf";
+		float		exclusionMinX = -23.5f;
+		float		exclusionMaxX = 22.5f;
+		float		exclusionMinZ = -16.5f;
+		float		exclusionMaxZ = 15.5f;
+		float		maxSlope = 0.36f;
+		float		minScale = 0.45f;
+		float		maxScale = 0.95f;
+		uint32_t	seed = 9001u;
+		std::string modelPath = ".assets/tree_elm/scene.gltf";
 	};
 }

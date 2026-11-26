@@ -38,12 +38,15 @@ namespace BetterThanNothing
 {
 	void Runtime::OnEnable(Scene* scene)
 	{
-		scene->InitCamera(50.0f, 0.1f, 1000.0f);
+		scene->InitCamera(55.0f, 0.1f, 1000.0f);
+		scene->GetCamera()->SetPhysicalExposure(11.0f, 1.0f / 125.0f, 100.0f);
+		scene->GetCamera()->SetPosition(Vector3(44.0f, 16.0f, 34.0f));
+		scene->GetCamera()->Rotate(42.0f, -15.0f);
 
 		DirectionalLightData directionalLight{};
-		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();
-		directionalLight.color = Vector3(1.0f, 0.95f, 0.8f);
-		directionalLight.illuminanceLux = 100000.0f;
+		directionalLight.revDirection = Vector3(0.55f, -0.40f, 0.72f).Normalized();
+		directionalLight.color = Vector3(1.0f, 0.95f, 0.86f);
+		directionalLight.illuminanceLux = 115000.0f;
 
 		scene->SetDirectionalLight(directionalLight);
 
@@ -95,7 +98,7 @@ namespace BetterThanNothing
 			scene->GetCamera()->Rotate(-delta.GetX() * rotateSpeed, -delta.GetY() * rotateSpeed);
 		}
 
-		const float moveSpeed = 5.0f * deltaTime;
+		const float moveSpeed = 12.0f * deltaTime;
 
 		auto deltaPos = Vector3::Zero;
 
