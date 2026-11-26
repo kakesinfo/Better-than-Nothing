@@ -250,17 +250,31 @@ namespace BetterThanNothing
 
 		const Matrix4& viewMatrix = camera->GetViewMatrix();
 		const Matrix4  projMatrix = camera->GetProjectionMatrix(aspectRatio);
-		const Frustum  frustum = Frustum::FromViewProjection(projMatrix * viewMatrix);
+		const Matrix4  unjitteredViewProj = projMatrix * viewMatrix;
+		const Matrix4  viewProj = unjitteredViewProj;
+		const Frustum  frustum = Frustum::FromViewProjection(viewProj);
+
+		const auto [swapW, swapH] = m_renderingDevice->GetSwapChainExtent();
 
 		const auto globalUniform = GetGlobalUniformBuffer(frameIndex);
 		globalUniform->view = viewMatrix;
 		globalUniform->projection = projMatrix;
+		globalUniform->viewProj = viewProj;
+		globalUniform->invViewProj = viewProj.Inverted();
+		globalUniform->unjitteredViewProj = unjitteredViewProj;
+		globalUniform->prevUnjitteredViewProj = m_frameIndex == 0 ? unjitteredViewProj : m_prevUnjitteredViewProj;
 		globalUniform->cameraPosition = camera->GetPosition();
 		globalUniform->cameraExposure = camera->GetExposure();
 		globalUniform->lightDirection = dirLightDirection;
 		globalUniform->lightColor = dirLightColor;
 		globalUniform->lightIntensity = dirLightIntensity;
 		globalUniform->pointLightCount = pointLightCount;
+		globalUniform->screenWidth = static_cast<float>(swapW);
+		globalUniform->screenHeight = static_cast<float>(swapH);
+		globalUniform->frameIndex = m_frameIndex;
+
+		m_prevUnjitteredViewProj = unjitteredViewProj;
+		++m_frameIndex;
 
 		Metrics::SetCameraCoordinates(camera->GetPosition().GetX(), camera->GetPosition().GetY(), camera->GetPosition().GetZ());
 
@@ -315,7 +329,7 @@ namespace BetterThanNothing
 			packet.descriptorSets[1] = material->descriptorSetHandle;
 			packet.descriptorSets[2] = pointLightSetHandle;
 			packet.descriptorSetCount = 3;
-			packet.SetPushConstant(DynamicUniformData{transform.worldMatrix}, ShaderStageFlags::Vertex);
+			packet.SetPushConstant(DynamicUniformData{transform.worldMatrix, transform.prevWorldMatrix}, ShaderStageFlags::Vertex);
 			packet.distanceToCamera = distance;
 			packet.sortBackToFront = isTransparent;
 

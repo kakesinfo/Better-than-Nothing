@@ -19,11 +19,17 @@
 #pragma once
 
 #include <Math/Matrix4.hpp>
+#include <cstddef>
 
 namespace BetterThanNothing
 {
 	struct DynamicUniformData
 	{
 		alignas(16) Matrix4 model;
+		alignas(16) Matrix4 prevModel;
 	};
+
+	static_assert(offsetof(DynamicUniformData, model) == 0);
+	static_assert(offsetof(DynamicUniformData, prevModel) == 64);
+	static_assert(sizeof(DynamicUniformData) == 128);
 }

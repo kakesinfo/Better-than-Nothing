@@ -21,6 +21,7 @@
 #include "RenderPass.hpp"
 #include "RenderingDevice/Handle.hpp"
 #include <Data/Graphics/PointLightData.hpp>
+#include <Math/Matrix4.hpp>
 #include <memory>
 #include <vector>
 
@@ -74,6 +75,8 @@ namespace BetterThanNothing
 		Handle	 m_colorTarget{};
 		Handle	 m_depthTarget{};
 		uint64_t m_lastSwapChainGeneration = 0;
+		Matrix4	 m_prevUnjitteredViewProj = Matrix4::Identity;
+		uint32_t m_frameIndex = 0;
 
 		std::vector<Handle>					m_globalUniformBuffer;
 		std::vector<Handle>					m_globalDescriptorSets;

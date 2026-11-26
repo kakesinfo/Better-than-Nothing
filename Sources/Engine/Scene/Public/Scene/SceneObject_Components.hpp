@@ -55,6 +55,7 @@ namespace BetterThanNothing
 
 		Matrix4 localMatrix = Matrix4::Identity;
 		Matrix4 worldMatrix = Matrix4::Identity;
+		Matrix4 prevWorldMatrix = Matrix4::Identity;
 		Matrix4 inverseWorldMatrix = Matrix4::Identity;
 
 		bool dirty = true;
