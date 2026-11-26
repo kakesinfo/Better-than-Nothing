@@ -220,6 +220,7 @@ namespace BetterThanNothing
 		void BeginRenderPass(const RenderPassDescriptor& desc);
 		void EndRenderPass();
 		void ExecuteDrawStream(const DrawStreamView& drawStream);
+		void DrawFullscreenTriangle(const Handle& pipeline, std::string_view layoutName, std::span<const Handle> descriptorSets);
 		void BindComputePipeline(const Handle& pipeline);
 		void BindComputeDescriptorSets(std::string_view layoutName, uint32_t firstSet, std::span<const Handle> sets);
 		void Dispatch(uint32_t groupX, uint32_t groupY, uint32_t groupZ);

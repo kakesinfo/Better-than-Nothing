@@ -196,7 +196,9 @@ namespace BetterThanNothing
 		const ResourceId  mrId = info.metallicRoughnessTextureId != InvalidResourceId ? info.metallicRoughnessTextureId : GetDefaultMetallicRoughnessTexture();
 		const std::string pipelineName = !info.pipelineName.empty()
 											 ? info.pipelineName
-											 : (info.alphaMode == EAlphaMode::Blend ? "Forward::Transparent" : "Forward::Opaque");
+											 : (info.alphaMode == EAlphaMode::Blend
+													? "Forward::Transparent"
+													: (info.alphaMode == EAlphaMode::Mask ? "GBuffer::Masked" : "GBuffer::Opaque"));
 
 		const std::string cacheKey = std::to_string(diffuseId) + "|" + std::to_string(normalId) + "|" + std::to_string(mrId) + "|" +
 									 std::to_string(static_cast<uint8_t>(info.alphaMode)) + "|" + pipelineName + "|" +

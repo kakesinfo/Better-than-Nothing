@@ -19,9 +19,12 @@
 #include "Renderer/Renderer.hpp"
 #include "Renderer/RenderSettings.hpp"
 
+#include "Passes/DeferredLightingPass.hpp"
 #include "Passes/EditorPass.hpp"
 #include "Passes/ForwardOpaquePass.hpp"
 #include "Passes/ForwardTransparentPass.hpp"
+#include "Passes/GBufferPass.hpp"
+#include "Passes/PostProcessPass.hpp"
 
 #include <Common/Logger.hpp>
 #include <Common/Metrics.hpp>
@@ -168,6 +171,50 @@ namespace BetterThanNothing
 		computeSamplerDesc.addressModeW = SamplerAddressMode::ClampToEdge;
 		m_computeNearestSampler = m_renderingDevice->GetOrCreateTextureSampler(computeSamplerDesc);
 
+		SamplerDescription linearClampDesc{};
+		linearClampDesc.magFilter = SamplerFilter::Linear;
+		linearClampDesc.minFilter = SamplerFilter::Linear;
+		linearClampDesc.addressModeU = SamplerAddressMode::ClampToEdge;
+		linearClampDesc.addressModeV = SamplerAddressMode::ClampToEdge;
+		linearClampDesc.addressModeW = SamplerAddressMode::ClampToEdge;
+		m_linearClampSampler = m_renderingDevice->GetOrCreateTextureSampler(linearClampDesc);
+
+		const std::array<DescriptorBindingDesc, 4> taaBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("PostProcess::TAA", taaBindings);
+		m_renderingDevice->CreatePipelineLayout("PostProcess::TAA", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("PostProcess::TAA");
+		});
+		const auto taaComp = m_resourceManager->LoadShader("Shaders/postprocess/taa.comp");
+		m_resourceManager->CreateComputePipeline("PostProcess::TAA", taaComp, "PostProcess::TAA");
+
+		m_renderingDevice->CreateDescriptorSetLayout("PostProcess::ToneMap", DescriptorType::CombinedImageSampler, ShaderStageFlags::Fragment);
+		m_renderingDevice->CreatePipelineLayout("PostProcess::ToneMap", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("PostProcess::ToneMap");
+		});
+		const auto tonemapVert = m_resourceManager->LoadShader("Shaders/postprocess/tonemap.vert");
+		const auto tonemapFrag = m_resourceManager->LoadShader("Shaders/postprocess/tonemap.frag");
+		m_resourceManager->CreatePipeline("PostProcess::ToneMap", [&](PipelineBlueprint* blueprint) {
+			blueprint->SetVertexLayout(VertexLayout{})
+				->AddShader(tonemapVert)
+				->AddShader(tonemapFrag)
+				->SetPipelineLayout("PostProcess::ToneMap")
+				->SetColorFormat(TextureFormat::Undefined)
+				->SetDepthFormat(TextureFormat::Undefined)
+				->SetUseMsaa(false)
+				->SetDepthTest(false)
+				->SetDepthWrite(false)
+				->SetBlendEnable(false)
+				->SetAlphaToCoverage(false)
+				->SetCullMode(CullMode::None);
+		});
+
 		m_opaqueDrawStream = std::make_unique<DrawStream>();
 		m_transparentDrawStream = std::make_unique<DrawStream>();
 
@@ -177,8 +224,10 @@ namespace BetterThanNothing
 		CreatePointLightDescriptorSets();
 		EnsureRenderTargets();
 
-		AddPass(std::make_unique<ForwardOpaquePass>());
+		AddPass(std::make_unique<GBufferPass>());
+		AddPass(std::make_unique<DeferredLightingPass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
+		AddPass(std::make_unique<PostProcessPass>());
 #ifndef NDEBUG
 		if (m_editor)
 			AddPass(std::make_unique<EditorPass>());
@@ -223,6 +272,21 @@ namespace BetterThanNothing
 		}
 		if (m_computeNearestSampler.IsValid())
 			m_renderingDevice->DestroyTextureSampler(m_computeNearestSampler);
+		if (m_linearClampSampler.IsValid())
+			m_renderingDevice->DestroyTextureSampler(m_linearClampSampler);
+		for (uint32_t p = 0; p < 2; ++p)
+		{
+			for (const Handle& handle : m_taaDescriptorSets[p])
+			{
+				if (handle.IsValid())
+					m_renderingDevice->DestroyDescriptorSet(handle);
+			}
+			for (const Handle& handle : m_tonemapDescriptorSets[p])
+			{
+				if (handle.IsValid())
+					m_renderingDevice->DestroyDescriptorSet(handle);
+			}
+		}
 	}
 
 	std::unique_ptr<Renderer> Renderer::Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
@@ -284,6 +348,8 @@ namespace BetterThanNothing
 		m_prevDepthTarget = createTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_prevNormalTarget = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_hdrColor = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_taaHistory[0] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferDst);
+		m_taaHistory[1] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferDst);
 
 		const uint32_t frameCount = m_renderingDevice->GetMaxFramesInFlight();
 		if (m_deferredDescriptorSets.size() != frameCount)
@@ -302,6 +368,32 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 4, m_depthTarget, m_computeNearestSampler);
 			m_renderingDevice->UpdateDescriptorStorageBuffer(set, 5, m_pointLightBuffer[i], MAX_LIGHT_COUNT * sizeof(PointLightData));
 			m_renderingDevice->UpdateDescriptorStorageImage(set, 6, m_hdrColor);
+		}
+
+		for (uint32_t p = 0; p < 2; ++p)
+		{
+			if (m_taaDescriptorSets[p].size() != frameCount)
+			{
+				m_taaDescriptorSets[p].resize(frameCount);
+				m_tonemapDescriptorSets[p].resize(frameCount);
+				for (uint32_t i = 0; i < frameCount; ++i)
+				{
+					m_taaDescriptorSets[p][i] = m_renderingDevice->CreateDescriptorSet("PostProcess::TAA");
+					m_tonemapDescriptorSets[p][i] = m_renderingDevice->CreateDescriptorSet("PostProcess::ToneMap");
+				}
+			}
+			const uint32_t readIdx = p;
+			const uint32_t writeIdx = 1u - p;
+			for (uint32_t i = 0; i < frameCount; ++i)
+			{
+				const Handle taaSet = m_taaDescriptorSets[p][i];
+				m_renderingDevice->UpdateDescriptorCombinedImage(taaSet, 0, m_hdrColor, m_linearClampSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(taaSet, 1, m_taaHistory[readIdx], m_linearClampSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(taaSet, 2, m_gbufferMotion, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(taaSet, 3, m_taaHistory[writeIdx]);
+
+				m_renderingDevice->UpdateDescriptorCombinedImage(m_tonemapDescriptorSets[p][i], 0, m_taaHistory[writeIdx], m_linearClampSampler);
+			}
 		}
 
 		m_lastSwapChainGeneration = currentGen;
@@ -326,6 +418,8 @@ namespace BetterThanNothing
 		destroyIfValid(m_prevDepthTarget);
 		destroyIfValid(m_prevNormalTarget);
 		destroyIfValid(m_hdrColor);
+		destroyIfValid(m_taaHistory[0]);
+		destroyIfValid(m_taaHistory[1]);
 	}
 
 	void Renderer::RenderFrame(Scene* scene)
@@ -362,10 +456,17 @@ namespace BetterThanNothing
 		ctx.gbufferMaterial = m_gbufferMaterial;
 		ctx.gbufferMotion = m_gbufferMotion;
 		ctx.prevDepthTarget = m_prevDepthTarget;
+		const uint32_t readIdx = m_temporalReadIndex;
+		const uint32_t writeIdx = 1u - readIdx;
+
 		ctx.prevNormalTarget = m_prevNormalTarget;
 		ctx.hdrColor = m_hdrColor;
+		ctx.taaHistoryRead = m_taaHistory[readIdx];
+		ctx.taaResolved = m_taaHistory[writeIdx];
 		ctx.globalDescriptorSet = m_globalDescriptorSets[frameIndex];
 		ctx.deferredLightingDescriptorSet = m_deferredDescriptorSets[frameIndex];
+		ctx.taaDescriptorSet = m_taaDescriptorSets[readIdx][frameIndex];
+		ctx.tonemapDescriptorSet = m_tonemapDescriptorSets[readIdx][frameIndex];
 		ctx.opaqueStream = m_opaqueDrawStream.get();
 		ctx.transparentStream = m_transparentDrawStream.get();
 

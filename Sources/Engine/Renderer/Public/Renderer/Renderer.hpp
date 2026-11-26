@@ -83,6 +83,8 @@ namespace BetterThanNothing
 		Handle	 m_prevDepthTarget{};
 		Handle	 m_prevNormalTarget{};
 		Handle	 m_hdrColor{};
+		Handle	 m_taaHistory[2]{};
+		uint32_t m_temporalReadIndex = 0;
 		uint64_t m_lastSwapChainGeneration = 0;
 		Matrix4	 m_prevUnjitteredViewProj = Matrix4::Identity;
 		uint32_t m_frameIndex = 0;
@@ -92,7 +94,10 @@ namespace BetterThanNothing
 		std::vector<Handle>					m_pointLightBuffer;
 		std::vector<Handle>					m_pointLightDescriptorSets;
 		std::vector<Handle>					m_deferredDescriptorSets;
+		std::vector<Handle>					m_taaDescriptorSets[2];
+		std::vector<Handle>					m_tonemapDescriptorSets[2];
 		Handle								m_computeNearestSampler{};
+		Handle								m_linearClampSampler{};
 		mutable std::vector<PointLightData> m_pointLightsScratch;
 		mutable bool						m_warnedLightLimit = false;
 	};

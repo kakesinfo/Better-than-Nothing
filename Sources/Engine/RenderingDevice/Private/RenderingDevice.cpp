@@ -666,6 +666,23 @@ namespace BetterThanNothing
 		}
 	}
 
+	void RenderingDevice::DrawFullscreenTriangle(const Handle& pipeline, const std::string_view layoutName, const std::span<const Handle> descriptorSets)
+	{
+		const auto			   cmd = m_self->commandBuffers[m_currentFrameIndex].get();
+		const auto*			   p = GetPipeline(pipeline);
+		const VkPipelineLayout vkLayout = GetPipelineLayout(std::string(layoutName))->Handle();
+
+		cmd->BindPipeline(p->pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+		for (uint32_t i = 0; i < static_cast<uint32_t>(descriptorSets.size()); ++i)
+		{
+			if (!descriptorSets[i].IsValid())
+				continue;
+			const auto* descSet = GetDescriptorSet(descriptorSets[i]);
+			cmd->BindDescriptorSets(vkLayout, i, 1, &descSet->value, 0, nullptr);
+		}
+		cmd->Draw(3, 1, 0, 0);
+	}
+
 	void RenderingDevice::BindComputePipeline(const Handle& pipeline)
 	{
 		const auto* p = GetPipeline(pipeline);

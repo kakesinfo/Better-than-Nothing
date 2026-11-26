@@ -56,6 +56,9 @@ namespace BetterThanNothing
 
 	static std::vector<VkVertexInputBindingDescription> Internal_GetVertexBindingDescription(const VertexLayout& layout)
 	{
+		if (layout.GetAttributes().empty())
+			return {};
+
 		VkVertexInputBindingDescription bindingDescription{};
 		bindingDescription.binding = 0;
 		bindingDescription.stride = layout.GetStride();
