@@ -1,0 +1,137 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 4, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D shadowInTex;
+layout(set = 1, binding = 1) uniform sampler2D depthTex;
+layout(set = 1, binding = 2) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 3, rg16f) writeonly uniform image2D outShadowFiltered;
+layout(std430, set = 1, binding = 4) readonly buffer TileMetaBuffer {
+    uint tileMeta[];
+};
+
+layout(push_constant) uniform FilterPushConstants {
+    int stepSize;
+} pc;
+
+vec3 DecodeOctahedral(vec2 e)
+{
+    vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+    if (v.z < 0.0)
+    {
+        vec2 s = vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);
+        v.xy = (1.0 - abs(v.yx)) * s;
+    }
+    return normalize(v);
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+
+    if (pixelCoord.x >= screenSize.x || pixelCoord.y >= screenSize.y)
+        return;
+
+    uint tilesX = (uint(screenSize.x) + 7u) / 8u;
+    uint tileIdx = gl_WorkGroupID.y * tilesX + gl_WorkGroupID.x;
+    uint meta = tileMeta[tileIdx];
+
+    if (meta == 0u)
+    {
+        imageStore(outShadowFiltered, pixelCoord, vec4(0.0, 0.0, 0.0, 0.0));
+        return;
+    }
+    if (meta == 1u)
+    {
+        imageStore(outShadowFiltered, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    float centerDepth = texelFetch(depthTex, pixelCoord, 0).r;
+    if (centerDepth >= 1.0)
+    {
+        imageStore(outShadowFiltered, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    vec2 centerVal = texelFetch(shadowInTex, pixelCoord, 0).rg;
+    float centerShadow = centerVal.r;
+    float centerVar = max(centerVal.g, 1e-5);
+    vec3 centerNormal = DecodeOctahedral(texelFetch(gbufferNormalTex, pixelCoord, 0).rg);
+
+    const float kernel[5] = float[5](1.0 / 16.0, 4.0 / 16.0, 6.0 / 16.0, 4.0 / 16.0, 1.0 / 16.0);
+
+    float sumShadow = centerShadow * kernel[2] * kernel[2];
+    float sumVar = centerVar * kernel[2] * kernel[2];
+    float sumWeight = kernel[2] * kernel[2];
+    float sumWeightSq = sumWeight * sumWeight;
+
+    float phiShadow = 4.0 * sqrt(centerVar) + 0.01;
+    float phiDepth = max(centerDepth * 0.02, 1e-4);
+
+    for (int dy = -2; dy <= 2; ++dy)
+    {
+        for (int dx = -2; dx <= 2; ++dx)
+        {
+            if (dx == 0 && dy == 0)
+                continue;
+
+            ivec2 q = pixelCoord + ivec2(dx, dy) * pc.stepSize;
+            if (q.x < 0 || q.y < 0 || q.x >= screenSize.x || q.y >= screenSize.y)
+                continue;
+
+            float qDepth = texelFetch(depthTex, q, 0).r;
+            if (qDepth >= 1.0)
+                continue;
+
+            vec2 qVal = texelFetch(shadowInTex, q, 0).rg;
+            vec3 qNormal = DecodeOctahedral(texelFetch(gbufferNormalTex, q, 0).rg);
+
+            float wDepth = exp(-abs(centerDepth - qDepth) / phiDepth);
+            float wNormal = pow(max(0.0, dot(centerNormal, qNormal)), 32.0);
+            float wShadow = exp(-abs(centerShadow - qVal.r) / phiShadow);
+
+            float k = kernel[dx + 2] * kernel[dy + 2];
+            float w = k * wDepth * wNormal * wShadow;
+
+            sumShadow += qVal.r * w;
+            sumVar += qVal.g * w * w;
+            sumWeight += w;
+            sumWeightSq += w * w;
+        }
+    }
+
+    float outShadow = sumShadow / max(sumWeight, 1e-5);
+    float outVar = sumVar / max(sumWeightSq, 1e-5);
+
+    imageStore(outShadowFiltered, pixelCoord, vec4(outShadow, outVar, 0.0, 0.0));
+}
