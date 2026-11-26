@@ -55,6 +55,7 @@ add_subdirectory("Sources/Engine/ResourceManager")
 add_subdirectory("Sources/Engine/Scene")
 add_subdirectory("Sources/Engine/Editor")
 add_subdirectory("Sources/Engine/Renderer")
+add_subdirectory("Sources/Engine/Terrain")
 add_subdirectory("Sources/Engine/Core")
 
 # ==================================================================================================

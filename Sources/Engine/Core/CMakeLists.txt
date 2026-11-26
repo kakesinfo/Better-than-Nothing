@@ -38,6 +38,7 @@ target_link_libraries(${PROJECT_NAME}
         Engine::Platform
         Engine::Scene
         Engine::ResourceManager
+        Engine::Terrain
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
