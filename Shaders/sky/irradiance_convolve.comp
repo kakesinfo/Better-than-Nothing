@@ -2,8 +2,8 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(set = 1, binding = 0) uniform sampler2D skyViewLUT;
-layout(set = 1, binding = 1, rgba16f) writeonly uniform image2D outIrradiance;
+layout(set = 0, binding = 0) uniform sampler2D skyViewLUT;
+layout(set = 0, binding = 1, rgba16f) writeonly uniform image2D outIrradiance;
 
 const float PI = 3.14159265359;
 const float PLANET_RADIUS_KM = 6360.0;

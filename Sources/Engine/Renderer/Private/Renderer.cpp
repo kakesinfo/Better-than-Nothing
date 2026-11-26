@@ -255,21 +255,24 @@ namespace BetterThanNothing
 		m_resourceManager->CreateComputePipeline("PostProcess::TAA", taaComp, "PostProcess::TAA");
 
 		// RT Shadow Trace
-		const std::array<DescriptorBindingDesc, 5> rtShadowTraceBindings = {{
-			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
-			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
-			{.binding = 2, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
-			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
-			{.binding = 4, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
-		}};
-		m_renderingDevice->CreateDescriptorSetLayout("RTShadow::Trace", rtShadowTraceBindings);
-		m_renderingDevice->CreatePipelineLayout("RTShadow::Trace", [&](PipelineLayoutBlueprint* blueprint) {
-			blueprint->AddDescriptorSetLayout("GlobalUniforms");
-			blueprint->AddDescriptorSetLayout("RTShadow::Trace");
-			blueprint->AddPushConstant<RTShadowPushConstants>(EShaderType::Compute);
-		});
-		const auto rtShadowTraceComp = m_resourceManager->LoadShader("Shaders/rtshadows/rt_shadows.comp");
-		m_resourceManager->CreateComputePipeline("RTShadow::Trace", rtShadowTraceComp, "RTShadow::Trace");
+		if (m_renderingDevice->IsRayQuerySupported())
+		{
+			const std::array<DescriptorBindingDesc, 5> rtShadowTraceBindings = {{
+				{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 2, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 4, .type = DescriptorType::StorageBuffer, .count = 1, .stages = ShaderStageFlags::Compute},
+			}};
+			m_renderingDevice->CreateDescriptorSetLayout("RTShadow::Trace", rtShadowTraceBindings);
+			m_renderingDevice->CreatePipelineLayout("RTShadow::Trace", [&](PipelineLayoutBlueprint* blueprint) {
+				blueprint->AddDescriptorSetLayout("GlobalUniforms");
+				blueprint->AddDescriptorSetLayout("RTShadow::Trace");
+				blueprint->AddPushConstant<RTShadowPushConstants>(EShaderType::Compute);
+			});
+			const auto rtShadowTraceComp = m_resourceManager->LoadShader("Shaders/rtshadows/rt_shadows.comp");
+			m_resourceManager->CreateComputePipeline("RTShadow::Trace", rtShadowTraceComp, "RTShadow::Trace");
+		}
 
 		// FFX Shadows Tile Classification
 		const std::array<DescriptorBindingDesc, 11> rtShadowClassifyBindings = {{
@@ -325,20 +328,23 @@ namespace BetterThanNothing
 		m_resourceManager->CreateComputePipeline("SSS::Bend", bendSssComp, "SSS::Bend");
 
 		// Ambient Occlusion (RTAO, GTAO, Denoiser)
-		const std::array<DescriptorBindingDesc, 4> rtaoBindings = {{
-			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
-			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
-			{.binding = 2, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
-			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
-		}};
-		m_renderingDevice->CreateDescriptorSetLayout("AO::RTAO", rtaoBindings);
-		m_renderingDevice->CreatePipelineLayout("AO::RTAO", [&](PipelineLayoutBlueprint* blueprint) {
-			blueprint->AddDescriptorSetLayout("GlobalUniforms");
-			blueprint->AddDescriptorSetLayout("AO::RTAO");
-			blueprint->AddPushConstant<AOPushConstants>(EShaderType::Compute);
-		});
-		const auto rtaoComp = m_resourceManager->LoadShader("Shaders/ao/rtao.comp");
-		m_resourceManager->CreateComputePipeline("AO::RTAO", rtaoComp, "AO::RTAO");
+		if (m_renderingDevice->IsRayQuerySupported())
+		{
+			const std::array<DescriptorBindingDesc, 4> rtaoBindings = {{
+				{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 2, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
+				{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			}};
+			m_renderingDevice->CreateDescriptorSetLayout("AO::RTAO", rtaoBindings);
+			m_renderingDevice->CreatePipelineLayout("AO::RTAO", [&](PipelineLayoutBlueprint* blueprint) {
+				blueprint->AddDescriptorSetLayout("GlobalUniforms");
+				blueprint->AddDescriptorSetLayout("AO::RTAO");
+				blueprint->AddPushConstant<AOPushConstants>(EShaderType::Compute);
+			});
+			const auto rtaoComp = m_resourceManager->LoadShader("Shaders/ao/rtao.comp");
+			m_resourceManager->CreateComputePipeline("AO::RTAO", rtaoComp, "AO::RTAO");
+		}
 
 		const std::array<DescriptorBindingDesc, 3> gtaoBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
@@ -879,19 +885,22 @@ namespace BetterThanNothing
 			}
 		}
 
-		if (m_rtShadowTraceDescriptorSets.size() != frameCount)
+		if (m_renderingDevice->IsRayQuerySupported())
 		{
-			m_rtShadowTraceDescriptorSets.resize(frameCount);
+			if (m_rtShadowTraceDescriptorSets.size() != frameCount)
+			{
+				m_rtShadowTraceDescriptorSets.resize(frameCount);
+				for (uint32_t i = 0; i < frameCount; ++i)
+					m_rtShadowTraceDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("RTShadow::Trace");
+			}
 			for (uint32_t i = 0; i < frameCount; ++i)
-				m_rtShadowTraceDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("RTShadow::Trace");
-		}
-		for (uint32_t i = 0; i < frameCount; ++i)
-		{
-			const Handle set = m_rtShadowTraceDescriptorSets[i];
-			m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_depthTarget, m_computeNearestSampler);
-			m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_gbufferNormal, m_computeNearestSampler);
-			m_renderingDevice->UpdateDescriptorStorageImage(set, 3, m_rtShadowRaw);
-			m_renderingDevice->UpdateDescriptorStorageBuffer(set, 4, m_rtShadowTileMaskBuffer, tileBufferSize);
+			{
+				const Handle set = m_rtShadowTraceDescriptorSets[i];
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_depthTarget, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_gbufferNormal, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(set, 3, m_rtShadowRaw);
+				m_renderingDevice->UpdateDescriptorStorageBuffer(set, 4, m_rtShadowTileMaskBuffer, tileBufferSize);
+			}
 		}
 
 		for (uint32_t p = 0; p < 2; ++p)
@@ -955,25 +964,35 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorStorageImage(set, 1, m_sssTarget);
 		}
 
-		if (m_rtaoDescriptorSets.size() != frameCount)
+		if (m_renderingDevice->IsRayQuerySupported())
 		{
-			m_rtaoDescriptorSets.resize(frameCount);
+			if (m_rtaoDescriptorSets.size() != frameCount)
+			{
+				m_rtaoDescriptorSets.resize(frameCount);
+				for (uint32_t i = 0; i < frameCount; ++i)
+					m_rtaoDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("AO::RTAO");
+			}
+			for (uint32_t i = 0; i < frameCount; ++i)
+			{
+				const Handle rtaoSet = m_rtaoDescriptorSets[i];
+				m_renderingDevice->UpdateDescriptorCombinedImage(rtaoSet, 0, m_depthTarget, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorCombinedImage(rtaoSet, 1, m_gbufferNormal, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(rtaoSet, 3, m_aoRaw);
+			}
+		}
+
+		if (m_gtaoDescriptorSets.size() != frameCount)
+		{
 			m_gtaoDescriptorSets.resize(frameCount);
 			m_aoDenoiseDescriptorSets.resize(frameCount);
 			for (uint32_t i = 0; i < frameCount; ++i)
 			{
-				m_rtaoDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("AO::RTAO");
 				m_gtaoDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("AO::GTAO");
 				m_aoDenoiseDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("AO::Denoise");
 			}
 		}
 		for (uint32_t i = 0; i < frameCount; ++i)
 		{
-			const Handle rtaoSet = m_rtaoDescriptorSets[i];
-			m_renderingDevice->UpdateDescriptorCombinedImage(rtaoSet, 0, m_depthTarget, m_computeNearestSampler);
-			m_renderingDevice->UpdateDescriptorCombinedImage(rtaoSet, 1, m_gbufferNormal, m_computeNearestSampler);
-			m_renderingDevice->UpdateDescriptorStorageImage(rtaoSet, 3, m_aoRaw);
-
 			const Handle gtaoSet = m_gtaoDescriptorSets[i];
 			m_renderingDevice->UpdateDescriptorCombinedImage(gtaoSet, 0, m_depthTarget, m_computeNearestSampler);
 			m_renderingDevice->UpdateDescriptorCombinedImage(gtaoSet, 1, m_gbufferNormal, m_computeNearestSampler);
@@ -1134,12 +1153,12 @@ namespace BetterThanNothing
 		ctx.deferredLightingDescriptorSet = m_deferredDescriptorSets[frameIndex];
 		ctx.taaDescriptorSet = m_taaDescriptorSets[readIdx][frameIndex];
 		ctx.tonemapDescriptorSet = m_tonemapDescriptorSets[readIdx][frameIndex];
-		ctx.rtShadowTraceDescriptorSet = m_rtShadowTraceDescriptorSets[frameIndex];
+		ctx.rtShadowTraceDescriptorSet = m_rtShadowTraceDescriptorSets.size() > frameIndex ? m_rtShadowTraceDescriptorSets[frameIndex] : Handle{};
 		ctx.rtShadowClassifyDescriptorSet = m_rtShadowClassifyDescriptorSets[readIdx][frameIndex];
 		for (uint32_t f = 0; f < 3; ++f)
 			ctx.rtShadowFilterDescriptorSets[f] = m_rtShadowFilterDescriptorSets[f][frameIndex];
 		ctx.sssDescriptorSet = m_sssDescriptorSets[frameIndex];
-		ctx.rtaoDescriptorSet = m_rtaoDescriptorSets[frameIndex];
+		ctx.rtaoDescriptorSet = m_rtaoDescriptorSets.size() > frameIndex ? m_rtaoDescriptorSets[frameIndex] : Handle{};
 		ctx.gtaoDescriptorSet = m_gtaoDescriptorSets[frameIndex];
 		ctx.aoDenoiseDescriptorSet = m_aoDenoiseDescriptorSets[frameIndex];
 		ctx.skyBrdfDescriptorSet = m_skyBrdfDescriptorSet;
@@ -1325,8 +1344,15 @@ namespace BetterThanNothing
 			packet.indexCount = meshData->indexCount;
 			packet.descriptorSets[0] = globalSetHandle;
 			packet.descriptorSets[1] = material->descriptorSetHandle;
-			packet.descriptorSets[2] = pointLightSetHandle;
-			packet.descriptorSetCount = 3;
+			if (pipeline->layoutName == "GBuffer::Terrain")
+			{
+				packet.descriptorSetCount = 2;
+			}
+			else
+			{
+				packet.descriptorSets[2] = pointLightSetHandle;
+				packet.descriptorSetCount = 3;
+			}
 			packet.SetPushConstant(DynamicUniformData{transform.worldMatrix, transform.prevWorldMatrix}, ShaderStageFlags::Vertex);
 			packet.distanceToCamera = distance;
 			packet.sortBackToFront = isTransparent;

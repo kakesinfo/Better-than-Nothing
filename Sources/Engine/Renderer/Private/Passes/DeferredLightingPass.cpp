@@ -37,6 +37,20 @@ namespace BetterThanNothing
 		renderingDevice->TransitionTexture(ctx.gbufferMaterial, ImageLayout::ShaderReadOnly);
 		renderingDevice->TransitionTexture(ctx.gbufferMotion, ImageLayout::ShaderReadOnly);
 		renderingDevice->TransitionTexture(ctx.depthTarget, ImageLayout::ShaderReadOnly);
+		if (ctx.rtShadowDenoised.IsValid())
+			renderingDevice->TransitionTexture(ctx.rtShadowDenoised, ImageLayout::ShaderReadOnly);
+		if (ctx.sssTarget.IsValid())
+			renderingDevice->TransitionTexture(ctx.sssTarget, ImageLayout::ShaderReadOnly);
+		if (ctx.aoDenoised.IsValid())
+			renderingDevice->TransitionTexture(ctx.aoDenoised, ImageLayout::ShaderReadOnly);
+		if (ctx.transmittanceLUT.IsValid())
+			renderingDevice->TransitionTexture(ctx.transmittanceLUT, ImageLayout::ShaderReadOnly);
+		if (ctx.irradianceLUT.IsValid())
+			renderingDevice->TransitionTexture(ctx.irradianceLUT, ImageLayout::ShaderReadOnly);
+		if (ctx.prefilteredEnvLUT.IsValid())
+			renderingDevice->TransitionTexture(ctx.prefilteredEnvLUT, ImageLayout::ShaderReadOnly);
+		if (ctx.brdfLUT.IsValid())
+			renderingDevice->TransitionTexture(ctx.brdfLUT, ImageLayout::ShaderReadOnly);
 		renderingDevice->TransitionTexture(ctx.hdrColor, ImageLayout::General);
 
 		const PipelineResourceCache* pipeline = ctx.resourceManager->GetPipelineData("Deferred::Lighting");
