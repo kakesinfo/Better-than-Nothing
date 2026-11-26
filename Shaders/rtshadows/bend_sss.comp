@@ -1,0 +1,222 @@
+#version 460
+
+#define WAVE_SIZE 64
+#define SAMPLE_COUNT 60
+#define HARD_SHADOW_SAMPLES 4
+#define FADE_OUT_SAMPLES 8
+
+layout(local_size_x = WAVE_SIZE, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D depthTex;
+layout(set = 1, binding = 1, r16f) writeonly uniform image2D outSss;
+
+layout(push_constant) uniform BendSSSPushConstants {
+    vec4 lightCoordinate;
+    ivec2 waveOffset;
+    vec2 invDepthTextureSize;
+    float surfaceThickness;
+    float bilinearThreshold;
+    float shadowContrast;
+    float nearDepthValue;
+    float farDepthValue;
+    int debugMode;
+    int pad0;
+    int pad1;
+} pc;
+
+shared float DepthData[WAVE_SIZE + SAMPLE_COUNT];
+shared uint LdsAnyActive;
+
+void ComputeWavefrontExtents(
+    ivec3 inGroupID,
+    uint inGroupThreadID,
+    out vec2 outDeltaXY,
+    out vec2 outPixelXY,
+    out float outPixelDistance,
+    out bool outMajorAxisX)
+{
+    ivec2 xy = inGroupID.yz * WAVE_SIZE + pc.waveOffset;
+
+    vec2 lightXY = floor(pc.lightCoordinate.xy) + 0.5;
+    vec2 lightXYFloor = floor(lightXY);
+    float lightZ = pc.lightCoordinate.z;
+
+    vec2 deltaXY = lightXYFloor - vec2(xy);
+    bool majorAxisX = abs(deltaXY.x) > abs(deltaXY.y);
+
+    float xAxisLength = majorAxisX ? abs(deltaXY.x) : abs(deltaXY.y);
+    float yAxisLength = majorAxisX ? abs(deltaXY.y) : abs(deltaXY.x);
+
+    vec2 stepDir = sign(deltaXY);
+    if (stepDir.x == 0.0) stepDir.x = 1.0;
+    if (stepDir.y == 0.0) stepDir.y = 1.0;
+
+    float stepSlope = (xAxisLength > 0.0) ? (deltaXY.y / deltaXY.x) : 0.0;
+    if (!majorAxisX)
+        stepSlope = (yAxisLength > 0.0) ? (deltaXY.x / deltaXY.y) : 0.0;
+
+    vec2 startPixel = vec2(xy) + 0.5;
+    if (majorAxisX)
+    {
+        float startX = float(xy.x) + float(inGroupID.x) * float(WAVE_SIZE) * stepDir.x;
+        float startY = float(xy.y) + stepSlope * (startX - float(xy.x));
+        startPixel = vec2(startX, startY) + 0.5;
+        outDeltaXY = vec2(stepDir.x, stepSlope * stepDir.x);
+    }
+    else
+    {
+        float startY = float(xy.y) + float(inGroupID.x) * float(WAVE_SIZE) * stepDir.y;
+        float startX = float(xy.x) + stepSlope * (startY - float(xy.y));
+        startPixel = vec2(startX, startY) + 0.5;
+        outDeltaXY = vec2(stepSlope * stepDir.y, stepDir.y);
+    }
+
+    outPixelXY = startPixel + outDeltaXY * float(inGroupThreadID);
+    outPixelDistance = length(lightXY - outPixelXY);
+    outMajorAxisX = majorAxisX;
+}
+
+void main()
+{
+    if (gl_LocalInvocationIndex == 0u)
+        LdsAnyActive = 0u;
+    barrier();
+
+    vec2 deltaXY;
+    vec2 pixelXY;
+    float pixelDistance;
+    bool majorAxisX;
+
+    ComputeWavefrontExtents(
+        ivec3(gl_WorkGroupID),
+        gl_LocalInvocationIndex,
+        deltaXY,
+        pixelXY,
+        pixelDistance,
+        majorAxisX
+    );
+
+    ivec2 writeCoord = ivec2(floor(pixelXY));
+    ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+    bool inBounds = writeCoord.x >= 0 && writeCoord.y >= 0 && writeCoord.x < screenSize.x && writeCoord.y < screenSize.y;
+
+    float samplingDepth = textureLod(depthTex, pixelXY * pc.invDepthTextureSize, 0.0).r;
+    bool isActive = inBounds && (samplingDepth < pc.farDepthValue);
+
+    if (isActive)
+        atomicOr(LdsAnyActive, 1u);
+
+    DepthData[gl_LocalInvocationIndex] = samplingDepth;
+
+    if (gl_LocalInvocationIndex < uint(SAMPLE_COUNT))
+    {
+        vec2 extraPixelXY = pixelXY + deltaXY * float(WAVE_SIZE);
+        DepthData[WAVE_SIZE + gl_LocalInvocationIndex] = textureLod(depthTex, extraPixelXY * pc.invDepthTextureSize, 0.0).r;
+    }
+
+    barrier();
+
+    if (LdsAnyActive == 0u)
+    {
+        if (inBounds)
+            imageStore(outSss, writeCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    if (!inBounds)
+        return;
+
+    if (pc.debugMode == 1)
+    {
+        float edgeMask = (gl_LocalInvocationIndex == 0u || gl_LocalInvocationIndex == uint(WAVE_SIZE - 1)) ? 0.0 : 1.0;
+        imageStore(outSss, writeCoord, vec4(edgeMask, 0.0, 0.0, 0.0));
+        return;
+    }
+    if (pc.debugMode == 2)
+    {
+        float threadVal = float(gl_LocalInvocationIndex) / float(WAVE_SIZE - 1);
+        imageStore(outSss, writeCoord, vec4(threadVal, 0.0, 0.0, 0.0));
+        return;
+    }
+    if (pc.debugMode == 3)
+    {
+        float waveVal = fract(float(gl_WorkGroupID.x + gl_WorkGroupID.y * 7u + gl_WorkGroupID.z * 13u) * 0.137);
+        imageStore(outSss, writeCoord, vec4(waveVal, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    if (!isActive)
+    {
+        imageStore(outSss, writeCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    float startDepth = samplingDepth;
+    float depthScale = max(abs(pc.farDepthValue - startDepth), 1e-4);
+    float thickness = pc.surfaceThickness * depthScale;
+
+    float hardShadow = 1.0;
+    float softShadowSum = 0.0;
+    float weightSum = 0.0;
+
+    float depthDeltaScale = (pc.lightCoordinate.z - startDepth) / max(pixelDistance, 1.0);
+
+    for (int i = 1; i <= SAMPLE_COUNT; ++i)
+    {
+        float sampleDepth = DepthData[gl_LocalInvocationIndex + uint(i)];
+        float expectedDepth = startDepth + depthDeltaScale * float(i);
+        float delta = expectedDepth - sampleDepth;
+
+        bool occluded = (delta > pc.bilinearThreshold * depthScale) && (delta < thickness);
+        float sampleVis = occluded ? 0.0 : 1.0;
+
+        if (i <= HARD_SHADOW_SAMPLES)
+        {
+            hardShadow = min(hardShadow, sampleVis);
+        }
+        else
+        {
+            float fade = 1.0;
+            if (i > SAMPLE_COUNT - FADE_OUT_SAMPLES)
+            {
+                fade = float(SAMPLE_COUNT - i + 1) / float(FADE_OUT_SAMPLES + 1);
+            }
+            softShadowSum += sampleVis * fade;
+            weightSum += fade;
+        }
+    }
+
+    float avgShadow = (weightSum > 0.0) ? (softShadowSum / weightSum) : 1.0;
+    float combined = min(hardShadow, avgShadow);
+    float finalShadow = clamp(pow(combined, pc.shadowContrast), 0.0, 1.0);
+
+    imageStore(outSss, writeCoord, vec4(finalShadow, 0.0, 0.0, 0.0));
+}

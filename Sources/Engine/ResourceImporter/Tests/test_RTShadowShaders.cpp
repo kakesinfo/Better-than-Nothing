@@ -27,3 +27,11 @@ TEST(RTShadowShadersTest, CompileFFXFilterComputeShader)
 	EXPECT_EQ(comp.type, EShaderType::Compute);
 	EXPECT_FALSE(comp.spirv.empty());
 }
+
+TEST(RTShadowShadersTest, CompileBendSSSComputeShader)
+{
+	ResourceImporter	 importer;
+	const ImportedShader comp = importer.ImportShader(AssetPath::Resolve("Shaders/rtshadows/bend_sss.comp"));
+	EXPECT_EQ(comp.type, EShaderType::Compute);
+	EXPECT_FALSE(comp.spirv.empty());
+}
