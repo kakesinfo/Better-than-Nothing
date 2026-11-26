@@ -1,0 +1,146 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D currentHdrTex;
+layout(set = 1, binding = 1) uniform sampler2D historyHdrTex;
+layout(set = 1, binding = 2) uniform sampler2D gbufferMotionTex;
+layout(set = 1, binding = 3, rgba16f) writeonly uniform image2D outResolvedHdr;
+
+float Luminance(vec3 c)
+{
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+vec3 ReinhardCompress(vec3 c)
+{
+    return c / (1.0 + max(Luminance(c), 0.0));
+}
+
+vec3 ReinhardDecompress(vec3 c)
+{
+    return c / max(1.0 - max(Luminance(c), 0.0), 1e-4);
+}
+
+vec3 RGBToYCoCg(vec3 rgb)
+{
+    float Y  =  0.25 * rgb.r + 0.50 * rgb.g + 0.25 * rgb.b;
+    float Co =  0.50 * rgb.r                - 0.50 * rgb.b;
+    float Cg = -0.25 * rgb.r + 0.50 * rgb.g - 0.25 * rgb.b;
+    return vec3(Y, Co, Cg);
+}
+
+vec3 YCoCgToRGB(vec3 ycocg)
+{
+    float Y  = ycocg.x;
+    float Co = ycocg.y;
+    float Cg = ycocg.z;
+    return vec3(Y + Co - Cg, Y + Cg, Y - Co - Cg);
+}
+
+// 5-tap Catmull-Rom bicubic history sampling
+vec3 SampleHistoryCatmullRom(sampler2D tex, vec2 uv, vec2 texSize)
+{
+    vec2 position = uv * texSize;
+    vec2 centerPosition = floor(position - 0.5) + 0.5;
+    vec2 f = position - centerPosition;
+    vec2 f2 = f * f;
+    vec2 f3 = f * f2;
+
+    vec2 w0 = f2 - 0.5 * (f3 + f);
+    vec2 w1 = 1.5 * f3 - 2.5 * f2 + 1.0;
+    vec2 w3 = 0.5 * (f3 - f2);
+    vec2 w2 = 1.0 - w0 - w1 - w3;
+
+    vec2 w12 = w1 + w2;
+    vec2 tc12 = (centerPosition + w2 / max(w12, vec2(1e-5))) / texSize;
+    vec2 tc0  = (centerPosition - 1.0) / texSize;
+    vec2 tc3  = (centerPosition + 2.0) / texSize;
+
+    vec3 result = vec3(0.0);
+    result += textureLod(tex, vec2(tc12.x, tc0.y),  0.0).rgb * (w12.x * w0.y);
+    result += textureLod(tex, vec2(tc0.x,  tc12.y), 0.0).rgb * (w0.x  * w12.y);
+    result += textureLod(tex, vec2(tc12.x, tc12.y), 0.0).rgb * (w12.x * w12.y);
+    result += textureLod(tex, vec2(tc3.x,  tc12.y), 0.0).rgb * (w3.x  * w12.y);
+    result += textureLod(tex, vec2(tc12.x, tc3.y),  0.0).rgb * (w12.x * w3.y);
+
+    float weightSum = (w12.x * w0.y) + (w0.x * w12.y) + (w12.x * w12.y) + (w3.x * w12.y) + (w12.x * w3.y);
+    return max(result / max(weightSum, 1e-5), vec3(0.0));
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = imageSize(outResolvedHdr);
+    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+        return;
+
+    vec2 texSize = vec2(dims);
+    vec2 uv = (vec2(pixelCoord) + 0.5) / texSize;
+    vec3 currentColor = max(texelFetch(currentHdrTex, pixelCoord, 0).rgb, vec3(0.0));
+
+    bool taaEnabled = (globalUniforms.flags & 1u) != 0u;
+    if (!taaEnabled || globalUniforms.debugView != 0u || globalUniforms.frameIndex == 0u)
+    {
+        imageStore(outResolvedHdr, pixelCoord, vec4(currentColor, 1.0));
+        return;
+    }
+
+    vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
+    vec2 historyUv = uv - motion;
+    if (historyUv.x < 0.0 || historyUv.x > 1.0 || historyUv.y < 0.0 || historyUv.y > 1.0)
+    {
+        imageStore(outResolvedHdr, pixelCoord, vec4(currentColor, 1.0));
+        return;
+    }
+
+    vec3 ycocgMin = vec3(1e10);
+    vec3 ycocgMax = vec3(-1e10);
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            ivec2 p = clamp(pixelCoord + ivec2(dx, dy), ivec2(0), dims - 1);
+            vec3 s = RGBToYCoCg(ReinhardCompress(max(texelFetch(currentHdrTex, p, 0).rgb, vec3(0.0))));
+            ycocgMin = min(ycocgMin, s);
+            ycocgMax = max(ycocgMax, s);
+        }
+    }
+
+    vec3 historyRgb = SampleHistoryCatmullRom(historyHdrTex, historyUv, texSize);
+    vec3 historyYCoCg = RGBToYCoCg(ReinhardCompress(historyRgb));
+    vec3 clampedHistoryYCoCg = clamp(historyYCoCg, ycocgMin, ycocgMax);
+    vec3 clampedHistory = ReinhardDecompress(max(YCoCgToRGB(clampedHistoryYCoCg), vec3(0.0)));
+
+    float blendAlpha = 0.08;
+    vec3 resolved = mix(clampedHistory, currentColor, blendAlpha);
+    imageStore(outResolvedHdr, pixelCoord, vec4(resolved, 1.0));
+}
