@@ -35,6 +35,16 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     uint flags;
     float elapsedTime;
     float deltaTime;
+
+    float irradianceIntensity;
+    float waterWaveScale;
+    float waterFoamIntensity;
+    float grassWindStrength;
+
+    float grassWindSpeed;
+    float grassFadeDistance;
+    float cloudDensity;
+    float cloudShadowStrength;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D gbufferAlbedoTex;
@@ -107,7 +117,7 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-vec3 EvaluatePBR(vec3 albedo, vec3 N, vec3 V, vec3 L, float metallic, float roughness)
+vec3 EvaluatePBR(vec3 albedo, vec3 N, vec3 V, vec3 L, float metallic, float roughness, vec3 energyCompensation)
 {
     vec3 H = normalize(V + L);
     vec3 F0 = mix(vec3(0.04), albedo, metallic);
@@ -118,7 +128,7 @@ vec3 EvaluatePBR(vec3 albedo, vec3 N, vec3 V, vec3 L, float metallic, float roug
 
     vec3 numerator = NDF * G * F;
     float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-    vec3 specular = numerator / denominator;
+    vec3 specular = (numerator / denominator) * energyCompensation;
 
     vec3 kS = F;
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
@@ -209,10 +219,10 @@ float ValueNoise3D(vec3 x)
 
 float SampleCloudShadowTransmittance(vec3 worldPos, vec3 sunDir, float time)
 {
-    if ((globalUniforms.flags & 16u) == 0u || sunDir.y <= 0.02)
+    if ((globalUniforms.flags & 16u) == 0u || sunDir.y <= 0.02 || globalUniforms.cloudShadowStrength <= 0.001)
         return 1.0;
 
-    float tCloud = (2100.0 - worldPos.y) / sunDir.y;
+    float tCloud = (1350.0 - worldPos.y) / max(sunDir.y, 0.05);
     if (tCloud <= 0.0)
         return 1.0;
 
@@ -220,7 +230,7 @@ float SampleCloudShadowTransmittance(vec3 worldPos, vec3 sunDir, float time)
     vec3 wind = vec3(time * 8.0, 0.0, time * 2.8);
     float n = 0.65 * ValueNoise3D((cloudPos + wind) * 0.00035) + 0.35 * ValueNoise3D((cloudPos + wind) * 0.00075);
     float density = smoothstep(0.52, 0.78, n);
-    return mix(1.0, 0.28, density);
+    return 1.0 - density * clamp(globalUniforms.cloudShadowStrength * globalUniforms.cloudDensity, 0.0, 0.92);
 }
 
 void main()
@@ -251,30 +261,30 @@ void main()
     vec3 worldPos = (depth < 1.0) ? ReconstructWorldPos(uv, depth, globalUniforms.invViewProj) : vec3(0.0);
     vec3 sunL = normalize(-globalUniforms.lightDirection);
     float cloudTransmittance = (depth < 1.0) ? SampleCloudShadowTransmittance(worldPos, sunL, globalUniforms.elapsedTime) : 1.0;
-    vec3 diffuseIrradiance = SampleIrradiance(N);
+    vec3 diffuseIrradiance = SampleIrradiance(N) * globalUniforms.irradianceIntensity;
 
     uint dbg = globalUniforms.debugView;
     if (dbg >= 1u && dbg <= 11u)
     {
         vec3 debugOut = vec3(0.0);
         if (dbg == 1u)
-            debugOut = pow(max(albedo, vec3(0.0)), vec3(1.0 / 2.2));
+            debugOut = albedo;
         else if (dbg == 2u)
             debugOut = N * 0.5 + 0.5;
         else if (dbg == 3u)
-            debugOut = vec3(roughness);
-        else if (dbg == 4u)
             debugOut = vec3(metallic);
+        else if (dbg == 4u)
+            debugOut = vec3(roughness);
         else if (dbg == 5u)
-            debugOut = vec3(pow(clamp(depth, 0.0, 1.0), 8.0));
+            debugOut = vec3(abs(motion) * 40.0, 0.0);
         else if (dbg == 6u)
-            debugOut = vec3(abs(motion) * 32.0, 0.0);
+            debugOut = vec3(shadowVisibility);
         else if (dbg == 7u)
             debugOut = vec3(combinedAO);
         else if (dbg == 8u)
-            debugOut = vec3(shadowVisibility);
+            debugOut = clamp((diffuseIrradiance / PI) * globalUniforms.cameraExposure, vec3(0.0), vec3(1.0));
         else if (dbg == 9u)
-            debugOut = diffuseIrradiance * globalUniforms.cameraExposure;
+            debugOut = vec3(pow(clamp(depth, 0.0, 1.0), 32.0));
         else if (dbg == 10u)
             debugOut = vec3(sssVisibility);
         else if (dbg == 11u)
@@ -288,12 +298,19 @@ void main()
         return;
 
     vec3 V = normalize(globalUniforms.cameraPosition - worldPos);
+    float NdotV = max(dot(N, V), 0.001);
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
+    // Precomputed GGX BRDF integration LUT + Fdez-Aguera multi-scattering energy compensation
+    vec2 brdf = textureLod(brdfLUT, vec2(NdotV, roughness), 0.0).rg;
+    vec3 energyCompensation = 1.0 + F0 * (1.0 / max(brdf.x + brdf.y, 1e-4) - 1.0);
 
     // Directional Sun tinted by Hillaire atmospheric transmittance & volumetric cloud shadows
     float viewHeightKm = PLANET_RADIUS_KM + max(worldPos.y * 0.001, 0.001);
-    vec3 sunTrans = SampleSunTransmittance(viewHeightKm, sunL.y);
+    float sunHorizonFade = smoothstep(-0.04, 0.02, sunL.y);
+    vec3 sunTrans = SampleSunTransmittance(viewHeightKm, sunL.y) * sunHorizonFade;
     vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.lightIntensity * sunTrans * combinedShadow * cloudTransmittance;
-    vec3 Lo = EvaluatePBR(albedo, N, V, sunL, metallic, roughness) * sunRadiance;
+    vec3 Lo = EvaluatePBR(albedo, N, V, sunL, metallic, roughness, energyCompensation) * sunRadiance;
 
     // Point Lights with Lagarde smooth distance attenuation
     for (uint i = 0u; i < globalUniforms.pointLightCount; ++i)
@@ -310,12 +327,10 @@ void main()
         float attenuation = window / (dist * dist + 1.0);
         vec3 radiance = light.color * (light.luminousPowerLm / (4.0 * PI)) * attenuation;
 
-        Lo += EvaluatePBR(albedo, N, V, L, metallic, roughness) * radiance;
+        Lo += EvaluatePBR(albedo, N, V, L, metallic, roughness, energyCompensation) * radiance;
     }
 
     // Split-Sum IBL (irradianceLUT + prefilteredEnvLUT + brdfLUT) modulated by Multi-Bounce & Specular AO
-    float NdotV = max(dot(N, V), 0.0);
-    vec3 F0 = mix(vec3(0.04), albedo, metallic);
     vec3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
     vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
 
@@ -323,14 +338,15 @@ void main()
     float specularAO = ComputeSpecularAO(NdotV, combinedAO, roughness);
 
     vec3 R = reflect(-V, N);
-    vec3 prefilteredColor = SamplePrefilteredEnv(R, roughness);
-    vec2 brdf = textureLod(brdfLUT, vec2(NdotV, roughness), 0.0).rg;
+    vec3 prefilteredColor = SamplePrefilteredEnv(R, roughness) * globalUniforms.irradianceIntensity;
 
-    vec3 ambientDiffuse = kD * diffuseIrradiance * albedo * diffuseAO;
-    vec3 ambientSpecular = prefilteredColor * (F * brdf.x + brdf.y) * specularAO;
+    // Suppress grazing IBL Fresnel on ultra-rough matte dielectrics (grass, sand, soil)
+    float roughGrazingAtten = mix(1.0 - roughness * roughness, 1.0, metallic);
+    vec3 ambientDiffuse = kD * (albedo / PI) * diffuseIrradiance * diffuseAO;
+    vec3 ambientSpecular = prefilteredColor * (F0 * brdf.x + brdf.y * roughGrazingAtten) * energyCompensation * specularAO;
     vec3 ambient = ambientDiffuse + ambientSpecular;
     vec3 hdrLuminance = ambient + Lo;
-    vec3 preExposedHdr = hdrLuminance * globalUniforms.cameraExposure;
+    vec3 preExposedHdr = clamp(hdrLuminance * globalUniforms.cameraExposure, vec3(0.0), vec3(65000.0));
 
     imageStore(outHdrColor, pixelCoord, vec4(preExposedHdr, 1.0));
 }

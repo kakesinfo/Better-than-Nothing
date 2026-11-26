@@ -28,6 +28,16 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     uint flags;
     float elapsedTime;
     float deltaTime;
+
+    float irradianceIntensity;
+    float waterWaveScale;
+    float waterFoamIntensity;
+    float grassWindStrength;
+
+    float grassWindSpeed;
+    float grassFadeDistance;
+    float cloudDensity;
+    float cloudShadowStrength;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D depthTex;
@@ -138,7 +148,7 @@ float SampleCloudDensity(vec3 pos, float coverage, float time)
 
     float billow = 1.0 - abs(ValueNoise3D((pos + wind * 1.3) * 0.0018) * 2.0 - 1.0);
     float eroded = clamp(baseDensity - billow * 0.35 * (1.0 - baseDensity), 0.0, 1.0);
-    return eroded * 0.045;
+    return eroded * 0.045 * max(globalUniforms.cloudDensity, 0.0);
 }
 
 float HenyeyGreenstein(float cosTheta, float g)
