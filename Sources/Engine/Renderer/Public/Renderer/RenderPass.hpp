@@ -63,6 +63,9 @@ namespace BetterThanNothing
 		Handle rtShadowMomentsRead{};
 		Handle rtShadowMomentsWrite{};
 		Handle sssTarget{};
+		Handle aoRaw{};
+		Handle aoDenoised{};
+		Handle aoHistory{};
 		Handle rtShadowTileMaskBuffer{};
 		Handle rtShadowTileMetaBuffer{};
 		Handle topLevelAS{};
@@ -74,6 +77,9 @@ namespace BetterThanNothing
 		Handle rtShadowClassifyDescriptorSet{};
 		Handle rtShadowFilterDescriptorSets[3]{};
 		Handle sssDescriptorSet{};
+		Handle rtaoDescriptorSet{};
+		Handle gtaoDescriptorSet{};
+		Handle aoDenoiseDescriptorSet{};
 
 		Matrix4 unjitteredViewProj = Matrix4::Identity;
 		Vector3 lightDirection{0.0f, -1.0f, 0.0f};

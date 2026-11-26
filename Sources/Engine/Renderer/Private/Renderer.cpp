@@ -20,6 +20,7 @@
 #include "Renderer/RenderSettings.hpp"
 
 #include "Passes/DeferredLightingPass.hpp"
+#include "Passes/AOPass.hpp"
 #include "Passes/EditorPass.hpp"
 #include "Passes/ForwardOpaquePass.hpp"
 #include "Passes/ForwardTransparentPass.hpp"
@@ -147,7 +148,7 @@ namespace BetterThanNothing
 				->SetCullMode(CullMode::None);
 		});
 
-		const std::array<DescriptorBindingDesc, 9> deferredBindings = {{
+		const std::array<DescriptorBindingDesc, 10> deferredBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
@@ -157,6 +158,7 @@ namespace BetterThanNothing
 			{.binding = 6, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 7, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 8, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 9, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("DeferredLighting", deferredBindings);
 
@@ -270,6 +272,54 @@ namespace BetterThanNothing
 		const auto bendSssComp = m_resourceManager->LoadShader("Shaders/rtshadows/bend_sss.comp");
 		m_resourceManager->CreateComputePipeline("SSS::Bend", bendSssComp, "SSS::Bend");
 
+		// Ambient Occlusion (RTAO, GTAO, Denoiser)
+		const std::array<DescriptorBindingDesc, 4> rtaoBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::AccelerationStructure, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("AO::RTAO", rtaoBindings);
+		m_renderingDevice->CreatePipelineLayout("AO::RTAO", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("AO::RTAO");
+			blueprint->AddPushConstant<AOPushConstants>(EShaderType::Compute);
+		});
+		const auto rtaoComp = m_resourceManager->LoadShader("Shaders/ao/rtao.comp");
+		m_resourceManager->CreateComputePipeline("AO::RTAO", rtaoComp, "AO::RTAO");
+
+		const std::array<DescriptorBindingDesc, 3> gtaoBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("AO::GTAO", gtaoBindings);
+		m_renderingDevice->CreatePipelineLayout("AO::GTAO", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("AO::GTAO");
+			blueprint->AddPushConstant<AOPushConstants>(EShaderType::Compute);
+		});
+		const auto gtaoComp = m_resourceManager->LoadShader("Shaders/ao/gtao.comp");
+		m_resourceManager->CreateComputePipeline("AO::GTAO", gtaoComp, "AO::GTAO");
+
+		const std::array<DescriptorBindingDesc, 8> aoDenoiseBindings = {{
+			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 5, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 6, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 7, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+		}};
+		m_renderingDevice->CreateDescriptorSetLayout("AO::Denoise", aoDenoiseBindings);
+		m_renderingDevice->CreatePipelineLayout("AO::Denoise", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
+			blueprint->AddDescriptorSetLayout("AO::Denoise");
+		});
+		const auto aoDenoiseComp = m_resourceManager->LoadShader("Shaders/ao/ao_denoise.comp");
+		m_resourceManager->CreateComputePipeline("AO::Denoise", aoDenoiseComp, "AO::Denoise");
+
 		m_renderingDevice->CreateDescriptorSetLayout("PostProcess::ToneMap", DescriptorType::CombinedImageSampler, ShaderStageFlags::Fragment);
 		m_renderingDevice->CreatePipelineLayout("PostProcess::ToneMap", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
@@ -304,6 +354,7 @@ namespace BetterThanNothing
 		AddPass(std::make_unique<GBufferPass>());
 		AddPass(std::make_unique<RTShadowPass>());
 		AddPass(std::make_unique<ScreenSpaceShadowPass>());
+		AddPass(std::make_unique<AOPass>());
 		AddPass(std::make_unique<DeferredLightingPass>());
 		AddPass(std::make_unique<ForwardTransparentPass>());
 		AddPass(std::make_unique<PostProcessPass>());
@@ -387,6 +438,21 @@ namespace BetterThanNothing
 			}
 		}
 		for (const Handle& handle : m_sssDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (const Handle& handle : m_rtaoDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (const Handle& handle : m_gtaoDescriptorSets)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyDescriptorSet(handle);
+		}
+		for (const Handle& handle : m_aoDenoiseDescriptorSets)
 		{
 			if (handle.IsValid())
 				m_renderingDevice->DestroyDescriptorSet(handle);
@@ -482,6 +548,9 @@ namespace BetterThanNothing
 		m_rtShadowMoments[0] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 		m_rtShadowMoments[1] = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 		m_sssTarget = createTarget(TextureFormat::R16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_aoRaw = createTarget(TextureFormat::R16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
+		m_aoDenoised = createTarget(TextureFormat::R16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
+		m_aoHistory = createTarget(TextureFormat::R16_SFLOAT, TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferDst);
 
 		const uint32_t tileCount = ComputeRTShadowTileCount(width, height);
 		const size_t   tileBufferSize = static_cast<size_t>(tileCount) * sizeof(uint32_t);
@@ -511,6 +580,7 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorStorageImage(set, 6, m_hdrColor);
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 7, m_rtShadowDenoised, m_computeNearestSampler);
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 8, m_sssTarget, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 9, m_aoDenoised, m_computeNearestSampler);
 		}
 
 		for (uint32_t p = 0; p < 2; ++p)
@@ -615,6 +685,41 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorStorageImage(set, 1, m_sssTarget);
 		}
 
+		if (m_rtaoDescriptorSets.size() != frameCount)
+		{
+			m_rtaoDescriptorSets.resize(frameCount);
+			m_gtaoDescriptorSets.resize(frameCount);
+			m_aoDenoiseDescriptorSets.resize(frameCount);
+			for (uint32_t i = 0; i < frameCount; ++i)
+			{
+				m_rtaoDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("AO::RTAO");
+				m_gtaoDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("AO::GTAO");
+				m_aoDenoiseDescriptorSets[i] = m_renderingDevice->CreateDescriptorSet("AO::Denoise");
+			}
+		}
+		for (uint32_t i = 0; i < frameCount; ++i)
+		{
+			const Handle rtaoSet = m_rtaoDescriptorSets[i];
+			m_renderingDevice->UpdateDescriptorCombinedImage(rtaoSet, 0, m_depthTarget, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(rtaoSet, 1, m_gbufferNormal, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(rtaoSet, 3, m_aoRaw);
+
+			const Handle gtaoSet = m_gtaoDescriptorSets[i];
+			m_renderingDevice->UpdateDescriptorCombinedImage(gtaoSet, 0, m_depthTarget, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(gtaoSet, 1, m_gbufferNormal, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(gtaoSet, 2, m_aoRaw);
+
+			const Handle denoiseSet = m_aoDenoiseDescriptorSets[i];
+			m_renderingDevice->UpdateDescriptorCombinedImage(denoiseSet, 0, m_aoRaw, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(denoiseSet, 1, m_aoHistory, m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(denoiseSet, 2, m_depthTarget, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(denoiseSet, 3, m_prevDepthTarget, m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(denoiseSet, 4, m_gbufferNormal, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(denoiseSet, 5, m_prevNormalTarget, m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(denoiseSet, 6, m_gbufferMotion, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorStorageImage(denoiseSet, 7, m_aoDenoised);
+		}
+
 		m_lastSwapChainGeneration = currentGen;
 	}
 
@@ -646,6 +751,9 @@ namespace BetterThanNothing
 		destroyIfValid(m_rtShadowMoments[0]);
 		destroyIfValid(m_rtShadowMoments[1]);
 		destroyIfValid(m_sssTarget);
+		destroyIfValid(m_aoRaw);
+		destroyIfValid(m_aoDenoised);
+		destroyIfValid(m_aoHistory);
 
 		auto destroyBufferIfValid = [&](Handle& handle) {
 			if (handle.IsValid())
@@ -706,6 +814,9 @@ namespace BetterThanNothing
 		ctx.rtShadowMomentsRead = m_rtShadowMoments[readIdx];
 		ctx.rtShadowMomentsWrite = m_rtShadowMoments[writeIdx];
 		ctx.sssTarget = m_sssTarget;
+		ctx.aoRaw = m_aoRaw;
+		ctx.aoDenoised = m_aoDenoised;
+		ctx.aoHistory = m_aoHistory;
 		ctx.rtShadowTileMaskBuffer = m_rtShadowTileMaskBuffer;
 		ctx.rtShadowTileMetaBuffer = m_rtShadowTileMetaBuffer;
 		ctx.globalDescriptorSet = m_globalDescriptorSets[frameIndex];
@@ -717,6 +828,9 @@ namespace BetterThanNothing
 		for (uint32_t f = 0; f < 3; ++f)
 			ctx.rtShadowFilterDescriptorSets[f] = m_rtShadowFilterDescriptorSets[f][frameIndex];
 		ctx.sssDescriptorSet = m_sssDescriptorSets[frameIndex];
+		ctx.rtaoDescriptorSet = m_rtaoDescriptorSets[frameIndex];
+		ctx.gtaoDescriptorSet = m_gtaoDescriptorSets[frameIndex];
+		ctx.aoDenoiseDescriptorSet = m_aoDenoiseDescriptorSets[frameIndex];
 		ctx.unjitteredViewProj = m_prevUnjitteredViewProj;
 		ctx.lightDirection = m_lightDirection;
 		ctx.opaqueStream = m_opaqueDrawStream.get();
@@ -795,6 +909,8 @@ namespace BetterThanNothing
 		uint32_t flags = settings.enableTAA ? 1u : 0u;
 		if (settings.enableScreenSpaceShadows)
 			flags |= (1u << 2);
+		if (settings.aoMode != EAOMode::Off)
+			flags |= (1u << 3);
 		globalUniform->flags = flags;
 
 		m_lightDirection = dirLightDirection;

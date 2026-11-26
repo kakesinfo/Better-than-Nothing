@@ -93,6 +93,9 @@ namespace BetterThanNothing
 		Handle	 m_rtShadowDenoised{};
 		Handle	 m_rtShadowMoments[2]{};
 		Handle	 m_sssTarget{};
+		Handle	 m_aoRaw{};
+		Handle	 m_aoDenoised{};
+		Handle	 m_aoHistory{};
 		Handle	 m_rtShadowTileMaskBuffer{};
 		Handle	 m_rtShadowTileMetaBuffer{};
 		uint32_t m_temporalReadIndex = 0;
@@ -111,6 +114,9 @@ namespace BetterThanNothing
 		std::vector<Handle>					m_rtShadowClassifyDescriptorSets[2];
 		std::vector<Handle>					m_rtShadowFilterDescriptorSets[3];
 		std::vector<Handle>					m_sssDescriptorSets;
+		std::vector<Handle>					m_rtaoDescriptorSets;
+		std::vector<Handle>					m_gtaoDescriptorSets;
+		std::vector<Handle>					m_aoDenoiseDescriptorSets;
 		Vector3								m_lightDirection{0.0f, -1.0f, 0.0f};
 		Handle								m_computeNearestSampler{};
 		Handle								m_linearClampSampler{};
