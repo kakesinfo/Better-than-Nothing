@@ -52,6 +52,16 @@ namespace BetterThanNothing
 		uint32_t flags = 0;
 		float	 elapsedTime = 0.0f;
 		float	 deltaTime = 0.0f;
+
+		float irradianceIntensity = 1.0f;
+		float waterWaveScale = 1.0f;
+		float waterFoamIntensity = 1.0f;
+		float grassWindStrength = 1.0f;
+
+		float grassWindSpeed = 1.0f;
+		float grassFadeDistance = 145.0f;
+		float cloudDensity = 1.0f;
+		float cloudShadowStrength = 0.65f;
 	};
 
 	static_assert(offsetof(GlobalUniformData, projection) == 0);
@@ -74,5 +84,13 @@ namespace BetterThanNothing
 	static_assert(offsetof(GlobalUniformData, flags) == 452);
 	static_assert(offsetof(GlobalUniformData, elapsedTime) == 456);
 	static_assert(offsetof(GlobalUniformData, deltaTime) == 460);
-	static_assert(sizeof(GlobalUniformData) == 464);
+	static_assert(offsetof(GlobalUniformData, irradianceIntensity) == 464);
+	static_assert(offsetof(GlobalUniformData, waterWaveScale) == 468);
+	static_assert(offsetof(GlobalUniformData, waterFoamIntensity) == 472);
+	static_assert(offsetof(GlobalUniformData, grassWindStrength) == 476);
+	static_assert(offsetof(GlobalUniformData, grassWindSpeed) == 480);
+	static_assert(offsetof(GlobalUniformData, grassFadeDistance) == 484);
+	static_assert(offsetof(GlobalUniformData, cloudDensity) == 488);
+	static_assert(offsetof(GlobalUniformData, cloudShadowStrength) == 492);
+	static_assert(sizeof(GlobalUniformData) == 496);
 }

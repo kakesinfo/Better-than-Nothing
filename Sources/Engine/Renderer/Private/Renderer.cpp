@@ -50,6 +50,7 @@
 #include <Scene/Scene.hpp>
 #include <Scene/SceneObject.hpp>
 #include <Scene/SceneObject_Components.hpp>
+#include <algorithm>
 #include <array>
 
 namespace BetterThanNothing
@@ -59,6 +60,16 @@ namespace BetterThanNothing
 	Renderer::Renderer(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor)
 		: m_renderingDevice(renderingDevice), m_resourceManager(resourceManager), m_editor(editor)
 	{
+		m_rtSupported = m_renderingDevice->IsRayQuerySupported();
+		RenderSettings::Get().rtSupported = m_rtSupported;
+		if (!m_rtSupported && RenderSettings::Get().aoMode == EAOMode::RTAO)
+			RenderSettings::Get().aoMode = EAOMode::GTAO;
+
+		const uint32_t maxFrames = m_renderingDevice->GetMaxFramesInFlight();
+		m_tlasHandles.resize(maxFrames);
+		m_tlasScratchBuffers.resize(maxFrames);
+		m_tlasInstanceBuffers.resize(maxFrames);
+
 		// Set 0: Global per-frame uniforms (camera + directional light + counts)
 		m_renderingDevice->CreateDescriptorSetLayout("GlobalUniforms", DescriptorType::UniformBuffer, ShaderStageFlags::Vertex | ShaderStageFlags::Fragment | ShaderStageFlags::Compute);
 
@@ -530,6 +541,29 @@ namespace BetterThanNothing
 			return;
 
 		m_renderingDevice->WaitIdle();
+
+		for (const auto& [meshId, blasHandle] : m_blasCache)
+		{
+			if (blasHandle.IsValid())
+				m_renderingDevice->DestroyAccelerationStructure(blasHandle);
+		}
+		m_blasCache.clear();
+
+		for (const Handle& handle : m_tlasHandles)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyAccelerationStructure(handle);
+		}
+		for (const Handle& handle : m_tlasScratchBuffers)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyBuffer(handle);
+		}
+		for (const Handle& handle : m_tlasInstanceBuffers)
+		{
+			if (handle.IsValid())
+				m_renderingDevice->DestroyBuffer(handle);
+		}
 
 		DestroyAtmosphereLuts();
 		DestroyRenderTargets();
@@ -1102,7 +1136,8 @@ namespace BetterThanNothing
 		const uint32_t frameIndex = m_renderingDevice->GetCurrentFrameIndex();
 		const auto [viewportWidth, viewportHeight] = m_renderingDevice->GetSwapChainExtent();
 
-		BuildDrawStreams(scene, frameIndex);
+		const bool tlasValid = BuildAccelerationStructures(scene, frameIndex);
+		BuildDrawStreams(scene, frameIndex, tlasValid);
 
 		RenderPassContext ctx{};
 		ctx.renderingDevice = m_renderingDevice;
@@ -1114,6 +1149,7 @@ namespace BetterThanNothing
 		ctx.viewportWidth = viewportWidth;
 		ctx.viewportHeight = viewportHeight;
 		ctx.useMsaa = m_renderingDevice->IsMsaaEnabled();
+		ctx.topLevelAS = tlasValid ? m_tlasHandles[frameIndex] : Handle{};
 		ctx.colorTarget = m_colorTarget;
 		ctx.depthTarget = m_depthTarget;
 		ctx.gbufferAlbedo = m_gbufferAlbedo;
@@ -1190,7 +1226,84 @@ namespace BetterThanNothing
 		m_renderingDevice->EndFrame(imageIndex);
 	}
 
-	void Renderer::BuildDrawStreams(Scene* scene, const uint32_t frameIndex)
+	bool Renderer::BuildAccelerationStructures(Scene* scene, const uint32_t frameIndex)
+	{
+		const auto& settings = RenderSettings::Get();
+		const bool	needTlas = m_rtSupported && (settings.enableRTShadows || settings.aoMode == EAOMode::RTAO);
+		if (!needTlas)
+			return false;
+
+		m_tlasInstancesScratch.clear();
+
+		const auto& registry = scene->GetRegistry();
+		const auto	meshView = scene->GetView<TransformComponent, MeshComponent>();
+		for (auto [entity, transform, meshComp] : meshView.each())
+		{
+			if (meshComp.meshId == InvalidResourceId)
+				continue;
+
+			const bool isGrass = registry.all_of<GrassChunkComponent>(entity);
+			if (!ShouldIncludeInAccelerationStructure(isGrass) || registry.all_of<WaterChunkComponent>(entity))
+				continue;
+
+			const MeshResourceCache* meshData = m_resourceManager->GetMeshData(meshComp.meshId);
+			if (!meshData || !meshData->vertexBuffer.IsValid() || !meshData->indexBuffer.IsValid() || meshData->indexCount == 0)
+				continue;
+
+			Handle blasHandle{};
+			if (const auto it = m_blasCache.find(meshComp.meshId); it != m_blasCache.end())
+			{
+				blasHandle = it->second;
+			}
+			else
+			{
+				blasHandle = m_renderingDevice->CreateBlas(
+					meshData->vertexBuffer,
+					meshData->vertexCount,
+					sizeof(VertexData),
+					meshData->indexBuffer,
+					meshData->indexCount
+				);
+				m_blasCache[meshComp.meshId] = blasHandle;
+			}
+
+			if (!blasHandle.IsValid())
+				continue;
+
+			const glm::mat4& m = transform.worldMatrix.Value();
+			TlasInstanceDesc inst{};
+			inst.blasHandle = blasHandle;
+			inst.instanceCustomIndex = static_cast<uint32_t>(m_tlasInstancesScratch.size());
+			inst.mask = 0xFF;
+			inst.transform[0] = m[0][0];
+			inst.transform[1] = m[1][0];
+			inst.transform[2] = m[2][0];
+			inst.transform[3] = m[3][0];
+			inst.transform[4] = m[0][1];
+			inst.transform[5] = m[1][1];
+			inst.transform[6] = m[2][1];
+			inst.transform[7] = m[3][1];
+			inst.transform[8] = m[0][2];
+			inst.transform[9] = m[1][2];
+			inst.transform[10] = m[2][2];
+			inst.transform[11] = m[3][2];
+			m_tlasInstancesScratch.push_back(inst);
+		}
+
+		if (m_tlasInstancesScratch.empty())
+			return false;
+
+		m_renderingDevice->BuildOrUpdateTlas(
+			m_tlasHandles[frameIndex],
+			m_tlasScratchBuffers[frameIndex],
+			m_tlasInstanceBuffers[frameIndex],
+			m_tlasInstancesScratch
+		);
+
+		return m_tlasHandles[frameIndex].IsValid();
+	}
+
+	void Renderer::BuildDrawStreams(Scene* scene, const uint32_t frameIndex, const bool tlasValid)
 	{
 		const float	  aspectRatio = m_renderingDevice->GetAspectRatio();
 		const Camera* camera = scene->GetCamera();
@@ -1243,7 +1356,15 @@ namespace BetterThanNothing
 		globalUniform->frameIndex = m_frameIndex;
 		globalUniform->debugView = static_cast<uint32_t>(settings.debugView);
 		globalUniform->toneMapMode = static_cast<uint32_t>(settings.toneMapMode);
+		const float elapsedTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - m_startTime).count();
+		const float deltaTime = (m_frameIndex > 0 && elapsedTime > m_lastFrameElapsedSeconds)
+									? std::clamp(elapsedTime - m_lastFrameElapsedSeconds, 0.001f, 0.1f)
+									: (1.0f / 60.0f);
+		m_lastFrameElapsedSeconds = elapsedTime;
+
 		uint32_t flags = settings.enableTAA ? 1u : 0u;
+		if (m_rtSupported && settings.enableRTShadows && tlasValid)
+			flags |= (1u << 1);
 		if (settings.enableScreenSpaceShadows)
 			flags |= (1u << 2);
 		if (settings.aoMode != EAOMode::Off)
@@ -1251,6 +1372,16 @@ namespace BetterThanNothing
 		if (settings.enableClouds)
 			flags |= (1u << 4);
 		globalUniform->flags = flags;
+		globalUniform->elapsedTime = elapsedTime;
+		globalUniform->deltaTime = deltaTime;
+		globalUniform->irradianceIntensity = settings.irradianceIntensity;
+		globalUniform->waterWaveScale = settings.waterWaveScale;
+		globalUniform->waterFoamIntensity = settings.waterFoamIntensity;
+		globalUniform->grassWindStrength = settings.grassWindStrength;
+		globalUniform->grassWindSpeed = settings.grassWindSpeed;
+		globalUniform->grassFadeDistance = settings.grassFadeDistance;
+		globalUniform->cloudDensity = settings.cloudDensity;
+		globalUniform->cloudShadowStrength = settings.cloudShadowStrength;
 
 		m_lightDirection = dirLightDirection;
 		m_prevUnjitteredViewProj = unjitteredViewProj;
@@ -1304,6 +1435,8 @@ namespace BetterThanNothing
 
 			if (scene->GetRegistry().all_of<GrassChunkComponent>(entity))
 			{
+				if (!settings.enableProceduralGrass)
+					continue;
 				const PipelineResourceCache* grassPipe = m_resourceManager->GetPipelineData("GBuffer::Grass");
 				DrawPacket					 packet{};
 				packet.pipeline = grassPipe->pipeline;

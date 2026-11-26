@@ -26,6 +26,16 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     uint flags;
     float elapsedTime;
     float deltaTime;
+
+    float irradianceIntensity;
+    float waterWaveScale;
+    float waterFoamIntensity;
+    float grassWindStrength;
+
+    float grassWindSpeed;
+    float grassFadeDistance;
+    float cloudDensity;
+    float cloudShadowStrength;
 } globalUniforms;
 
 layout(push_constant) uniform PushConstants {
@@ -70,11 +80,17 @@ void main()
     vec4 prevBaseWorld = pushConstants.prevModel * vec4(inPosition, 1.0);
 
     float distToCam = length(globalUniforms.cameraPosition - baseWorld.xyz);
-    float fade = 1.0 - smoothstep(105.0, 145.0, distToCam);
+    float fadeFar = max(globalUniforms.grassFadeDistance, 25.0);
+    float fadeNear = fadeFar * 0.72;
+    float fade = 1.0 - smoothstep(fadeNear, fadeFar, distToCam);
     float verticalCollapse = (1.0 - fade) * h * bladeHeight;
 
-    vec3 currWind = ComputeWindOffset(baseWorld.xz, h, phase, globalUniforms.elapsedTime);
-    vec3 prevWind = ComputeWindOffset(prevBaseWorld.xz, h, phase, globalUniforms.elapsedTime - max(globalUniforms.deltaTime, 0.0166));
+    float windT = globalUniforms.elapsedTime * max(globalUniforms.grassWindSpeed, 0.0);
+    float prevWindT = (globalUniforms.elapsedTime - max(globalUniforms.deltaTime, 0.0166)) * max(globalUniforms.grassWindSpeed, 0.0);
+    float windStrength = max(globalUniforms.grassWindStrength, 0.0);
+
+    vec3 currWind = ComputeWindOffset(baseWorld.xz, h, phase, windT) * windStrength;
+    vec3 prevWind = ComputeWindOffset(prevBaseWorld.xz, h, phase, prevWindT) * windStrength;
 
     vec4 currWorldPos = vec4(baseWorld.xyz + currWind * fade - vec3(0.0, verticalCollapse, 0.0), 1.0);
     vec4 prevWorldPos = vec4(prevBaseWorld.xyz + prevWind * fade - vec3(0.0, verticalCollapse, 0.0), 1.0);

@@ -20,11 +20,14 @@
 
 #include "RenderPass.hpp"
 #include "RenderingDevice/Handle.hpp"
+#include <Common/ResourceId.hpp>
 #include <Data/Graphics/PointLightData.hpp>
 #include <Math/Matrix4.hpp>
 #include <RenderingDevice/SamplerDescription.hpp>
 #include <RenderingDevice/Types.hpp>
+#include <chrono>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace BetterThanNothing
@@ -35,6 +38,7 @@ namespace BetterThanNothing
 	class Editor;
 	class DrawStream;
 	struct GlobalUniformData;
+	struct TlasInstanceDesc;
 
 	struct AtmosphereLutSpec
 	{
@@ -85,7 +89,8 @@ namespace BetterThanNothing
 		void CreateAtmosphereLuts();
 		void DestroyAtmosphereLuts();
 
-		void	 BuildDrawStreams(Scene* scene, uint32_t frameIndex);
+		void	 BuildDrawStreams(Scene* scene, uint32_t frameIndex, bool tlasValid);
+		bool	 BuildAccelerationStructures(Scene* scene, uint32_t frameIndex);
 		uint32_t UploadPointLights(const Scene* scene, uint32_t frameIndex) const;
 
 		RenderingDevice*			m_renderingDevice = nullptr;
@@ -160,5 +165,15 @@ namespace BetterThanNothing
 		Handle								m_skyViewSampler{};
 		mutable std::vector<PointLightData> m_pointLightsScratch;
 		mutable bool						m_warnedLightLimit = false;
+
+		bool								  m_rtSupported = false;
+		std::unordered_map<ResourceId, Handle> m_blasCache;
+		std::vector<Handle>					  m_tlasHandles;
+		std::vector<Handle>					  m_tlasScratchBuffers;
+		std::vector<Handle>					  m_tlasInstanceBuffers;
+		std::vector<TlasInstanceDesc>		  m_tlasInstancesScratch;
+
+		std::chrono::steady_clock::time_point m_startTime = std::chrono::steady_clock::now();
+		float								  m_lastFrameElapsedSeconds = 0.0f;
 	};
 }

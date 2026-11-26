@@ -26,6 +26,16 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     uint flags;
     float elapsedTime;
     float deltaTime;
+
+    float irradianceIntensity;
+    float waterWaveScale;
+    float waterFoamIntensity;
+    float grassWindStrength;
+
+    float grassWindSpeed;
+    float grassFadeDistance;
+    float cloudDensity;
+    float cloudShadowStrength;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D sceneColorTex;
@@ -135,7 +145,7 @@ void main()
         waterDepth = max(inWorldPos.y - bgPos.y, 0.0);
     }
 
-    float rippleFade = 1.0 - smoothstep(25.0, 140.0, viewDist);
+    float rippleFade = (1.0 - smoothstep(25.0, 140.0, viewDist)) * max(globalUniforms.waterWaveScale, 0.0);
     vec3 rippleN = ComputeMicroRippleNormal(inWorldPos.xz, globalUniforms.elapsedTime, rippleFade);
     vec3 N = normalize(vec3(
         inWorldNormal.x + rippleN.x,
@@ -163,7 +173,7 @@ void main()
     float opticalDepth = waterDepth / max(NdotV, 0.2);
     vec3 waterTransmittance = exp(-opticalDepth * absorptionCoeff);
 
-    vec3 skyIrradianceLux = textureLod(irradianceLUT, DirToEquirectUV(vec3(0.0, 1.0, 0.0)), 0.0).rgb;
+    vec3 skyIrradianceLux = textureLod(irradianceLUT, DirToEquirectUV(vec3(0.0, 1.0, 0.0)), 0.0).rgb * globalUniforms.irradianceIntensity;
     vec3 deepScatterAlbedo = vec3(0.012, 0.068, 0.088);
     vec3 shallowScatterAlbedo = vec3(0.04, 0.18, 0.17);
     vec3 waterBodyAlbedo = mix(shallowScatterAlbedo, deepScatterAlbedo, smoothstep(0.0, 3.2, waterDepth));
@@ -174,7 +184,7 @@ void main()
     vec3 R = reflect(-V, N);
     R.y = max(R.y, 0.02);
     float waterRoughness = mix(0.045, 0.14, smoothstep(20.0, 140.0, viewDist));
-    vec3 envReflectionNits = SamplePrefilteredSky(R, waterRoughness);
+    vec3 envReflectionNits = SamplePrefilteredSky(R, waterRoughness) * globalUniforms.irradianceIntensity;
 
     float NdotL = max(dot(N, sunDir), 0.0);
     vec3 H = normalize(V + sunDir);
@@ -191,7 +201,7 @@ void main()
     float shoreFoam = (1.0 - smoothstep(0.04, 0.55, waterDepth)) * smoothstep(0.32, 0.72, foamPattern + shoreWave * 0.28);
 
     vec3 foamNits = (vec3(0.90, 0.94, 0.96) / PI) * (skyIrradianceLux + sunIlluminanceLux * NdotL);
-    vec3 finalNits = mix(waterSurfaceNits, foamNits, clamp(shoreFoam * 0.8, 0.0, 1.0));
+    vec3 finalNits = mix(waterSurfaceNits, foamNits, clamp(shoreFoam * 0.8 * max(globalUniforms.waterFoamIntensity, 0.0), 0.0, 1.0));
 
     vec3 preExposed = clamp(finalNits * globalUniforms.cameraExposure, vec3(0.0), vec3(65000.0));
     float alpha = clamp(smoothstep(0.0, 0.12, waterDepth), 0.0, 1.0);

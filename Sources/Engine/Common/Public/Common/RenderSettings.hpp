@@ -28,13 +28,13 @@ namespace BetterThanNothing
 		Final = 0,
 		Albedo = 1,
 		WorldNormal = 2,
-		Roughness = 3,
-		Metallic = 4,
-		Depth = 5,
-		MotionVectors = 6,
+		Metallic = 3,
+		Roughness = 4,
+		MotionVectors = 5,
+		RTShadows = 6,
 		AmbientOcclusion = 7,
-		RTShadows = 8,
-		DiffuseIrradiance = 9,
+		DiffuseIrradiance = 8,
+		Depth = 9,
 		ScreenSpaceShadows = 10,
 		CloudTransmittance = 11
 	};
@@ -49,8 +49,8 @@ namespace BetterThanNothing
 	enum class EAOMode : uint32_t
 	{
 		Off = 0,
-		RTAO = 1,
-		GTAO = 2
+		GTAO = 1,
+		RTAO = 2
 	};
 
 	struct RenderSettingsData
@@ -59,7 +59,11 @@ namespace BetterThanNothing
 		EToneMapMode   toneMapMode = EToneMapMode::AgX;
 		EAOMode		   aoMode = EAOMode::RTAO;
 
+		bool rtSupported = false;
+
 		bool enableTAA = true;
+		float taaBlendFactor = 0.1f;
+
 		bool enableRTShadows = true;
 		bool enableScreenSpaceShadows = true;
 		bool enableClouds = true;
@@ -70,13 +74,23 @@ namespace BetterThanNothing
 
 		float sunAngularRadius = 0.0093f;
 		float skyLuminanceNits = 8000.0f;
+		float irradianceIntensity = 1.0f;
 
 		float cloudCoverage = 0.45f;
+		float cloudDensity = 1.0f;
 		float cloudSpeed = 8.0f;
+		float cloudShadowStrength = 0.65f;
 
+		bool  enableProceduralGrass = true;
+		float grassWindStrength = 1.0f;
+		float grassWindSpeed = 1.0f;
 		float grassFadeDistance = 145.0f;
-		int	  targetFps = 60;
-		int	  sssDebugMode = 0;
+
+		float waterWaveScale = 1.0f;
+		float waterFoamIntensity = 1.0f;
+
+		int targetFps = 60;
+		int sssDebugMode = 0;
 
 		float sssSurfaceThickness = 0.005f;
 		float sssBilinearThreshold = 0.02f;

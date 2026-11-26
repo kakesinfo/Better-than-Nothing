@@ -26,6 +26,16 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     uint flags;
     float elapsedTime;
     float deltaTime;
+
+    float irradianceIntensity;
+    float waterWaveScale;
+    float waterFoamIntensity;
+    float grassWindStrength;
+
+    float grassWindSpeed;
+    float grassFadeDistance;
+    float cloudDensity;
+    float cloudShadowStrength;
 } globalUniforms;
 
 layout(push_constant) uniform PushConstants {
@@ -77,10 +87,11 @@ void main()
     vec3 offset = vec3(0.0);
 
     float t = globalUniforms.elapsedTime;
-    offset += GerstnerWave(baseWorld.xz, vec2(1.0, 0.35), 0.14 * damp, 9.5, t, tangent, binormal);
-    offset += GerstnerWave(baseWorld.xz, vec2(0.4, 0.9), 0.10 * damp, 5.8, t, tangent, binormal);
-    offset += GerstnerWave(baseWorld.xz, vec2(-0.7, 0.5), 0.07 * damp, 3.4, t, tangent, binormal);
-    offset += GerstnerWave(baseWorld.xz, vec2(0.2, -0.85), 0.05 * damp, 2.1, t, tangent, binormal);
+    float waveAmp = damp * max(globalUniforms.waterWaveScale, 0.0);
+    offset += GerstnerWave(baseWorld.xz, vec2(1.0, 0.35), 0.14 * waveAmp, 9.5, t, tangent, binormal);
+    offset += GerstnerWave(baseWorld.xz, vec2(0.4, 0.9), 0.10 * waveAmp, 5.8, t, tangent, binormal);
+    offset += GerstnerWave(baseWorld.xz, vec2(-0.7, 0.5), 0.07 * waveAmp, 3.4, t, tangent, binormal);
+    offset += GerstnerWave(baseWorld.xz, vec2(0.2, -0.85), 0.05 * waveAmp, 2.1, t, tangent, binormal);
 
     vec4 worldPos = vec4(baseWorld.xyz + offset, 1.0);
     outWorldPos = worldPos.xyz;
