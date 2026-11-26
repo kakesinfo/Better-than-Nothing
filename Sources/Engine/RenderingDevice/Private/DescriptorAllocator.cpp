@@ -31,12 +31,15 @@ namespace BetterThanNothing
 
 	RenderingApi::DescriptorPool* DescriptorAllocator::CreatePool()
 	{
-		auto pool = RenderingApi::DescriptorPool::Builder(m_device)
-						.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_setsPerPool)
-						.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_setsPerPool)
-						.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_setsPerPool * 2)
-						.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_setsPerPool / 2)
-						.Build();
+		auto builder = RenderingApi::DescriptorPool::Builder(m_device)
+						   .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_setsPerPool)
+						   .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_setsPerPool)
+						   .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_setsPerPool * 2)
+						   .AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_setsPerPool / 2);
+		if (m_device->IsRayQuerySupported())
+			static_cast<void>(builder.AddPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, std::max(1u, m_setsPerPool / 4)));
+
+		auto pool = builder.Build();
 
 		m_pools.push_back(std::move(pool));
 		m_currentPoolIndex = m_pools.size() - 1;

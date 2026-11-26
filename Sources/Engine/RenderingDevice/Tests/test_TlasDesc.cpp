@@ -28,5 +28,6 @@ TEST(TlasDesc, DefaultConstructsIdentityTransformAndMask)
 TEST(TlasDesc, RenderingDeviceExposesBuildOrUpdateTlas)
 {
 	static_assert(std::is_same_v<decltype(&RenderingDevice::BuildOrUpdateTlas), void (RenderingDevice::*)(Handle&, Handle&, Handle&, std::span<const TlasInstanceDesc>)>);
+	static_assert(std::is_same_v<decltype(&RenderingDevice::UpdateDescriptorAccelerationStructure), void (RenderingDevice::*)(const Handle&, uint32_t, const Handle&)>);
 	SUCCEED();
 }

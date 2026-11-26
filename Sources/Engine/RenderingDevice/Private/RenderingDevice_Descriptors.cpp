@@ -17,6 +17,7 @@
  */
 
 #include "Data/Graphics/GlobalUniformData.hpp"
+#include "RenderingApi/Resources/AccelerationStructure.hpp"
 #include "RenderingApi/Resources/Buffer.hpp"
 #include "RenderingApi/Resources/DescriptorSet.hpp"
 #include "RenderingApi/Resources/Sampler.hpp"
@@ -142,6 +143,28 @@ namespace BetterThanNothing
 	void RenderingDevice::RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request)
 	{
 		m_self->descriptorsUpdateRequests.push_back(request);
+	}
+
+	void RenderingDevice::UpdateDescriptorAccelerationStructure(const Handle& setHandle, const uint32_t binding, const Handle& tlasHandle)
+	{
+		const RenderingApi::DescriptorSet*		   descSet = GetDescriptorSet(setHandle);
+		const RenderingApi::AccelerationStructure* tlas = GetAccelerationStructure(tlasHandle);
+
+		VkWriteDescriptorSetAccelerationStructureKHR asInfo{};
+		asInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+		asInfo.accelerationStructureCount = 1;
+		asInfo.pAccelerationStructures = &tlas->handle;
+
+		VkWriteDescriptorSet write{};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.pNext = &asInfo;
+		write.dstSet = descSet->value;
+		write.dstBinding = binding;
+		write.dstArrayElement = 0;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+
+		vkUpdateDescriptorSets(m_self->device->Handle(), 1, &write, 0, nullptr);
 	}
 
 	void RenderingDevice::FlushDescriptorSetUpdateRequests()

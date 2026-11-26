@@ -187,6 +187,7 @@ namespace BetterThanNothing
 		[[nodiscard]] Handle		 CreateTextureDescriptorSet(const Handle& textureHandle, const Handle& samplerHandle, std::string_view layoutType);
 		[[nodiscard]] Handle		 CreateCombinedImageDescriptorSet(std::span<const TextureBindingUpdate> bindings, std::string_view layoutType);
 		void						 RequestDescriptorSetUpdate(const DescriptorSetUpdateRequest& request);
+		void						 UpdateDescriptorAccelerationStructure(const Handle& setHandle, uint32_t binding, const Handle& tlasHandle);
 		void						 FlushDescriptorSetUpdateRequests();
 		void						 DestroyDescriptorSet(const Handle& handle);
 		RenderingApi::DescriptorSet* GetDescriptorSet(const Handle& handle);
