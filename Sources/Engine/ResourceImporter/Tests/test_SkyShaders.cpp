@@ -47,3 +47,11 @@ TEST(SkyShadersTest, CompileIrradianceAndPrefilterShaders)
 	EXPECT_EQ(pref.type, EShaderType::Compute);
 	EXPECT_FALSE(pref.spirv.empty());
 }
+
+TEST(SkyShadersTest, CompileSkyRenderShader)
+{
+	ResourceImporter	 importer;
+	const ImportedShader comp = importer.ImportShader(AssetPath::Resolve("Shaders/sky/sky_render.comp"));
+	EXPECT_EQ(comp.type, EShaderType::Compute);
+	EXPECT_FALSE(comp.spirv.empty());
+}

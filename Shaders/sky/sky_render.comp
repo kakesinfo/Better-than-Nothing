@@ -1,0 +1,238 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D depthTex;
+layout(set = 1, binding = 1) uniform sampler2D skyViewLUT;
+layout(set = 1, binding = 2) uniform sampler2D transmittanceLUT;
+layout(set = 1, binding = 3, rgba16f) writeonly uniform image2D outHdrColor;
+
+layout(push_constant) uniform SkyRenderPushConstants {
+    float skyLuminanceNits;
+    float cloudCoverage;
+    float cloudSpeed;
+    uint enableClouds;
+} pc;
+
+const float PI = 3.14159265359;
+const float PLANET_RADIUS_KM = 6360.0;
+const float ATMOSPHERE_RADIUS_KM = 6460.0;
+const float CLOUD_BOTTOM_M = 1350.0;
+const float CLOUD_TOP_M = 3450.0;
+
+vec2 DirToSkyViewUV(vec3 dir)
+{
+    float viewHeight = PLANET_RADIUS_KM + max(globalUniforms.cameraPosition.y * 0.001, 0.001);
+    float vHorizon = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float cosBeta = vHorizon / viewHeight;
+    float beta = acos(clamp(cosBeta, -1.0, 1.0));
+    float zenithHorizonAngle = PI - beta;
+
+    float viewZenithAngle = acos(clamp(dir.y, -1.0, 1.0));
+    float v = 0.0;
+    if (viewZenithAngle < zenithHorizonAngle)
+    {
+        float coord = 1.0 - viewZenithAngle / max(zenithHorizonAngle, 1e-5);
+        v = 0.5 * (1.0 - sqrt(max(0.0, coord)));
+    }
+    else
+    {
+        float coord = (viewZenithAngle - zenithHorizonAngle) / max(beta, 1e-5);
+        v = 0.5 + 0.5 * sqrt(max(0.0, coord));
+    }
+
+    float azimuth = atan(dir.z, dir.x);
+    float u = azimuth / (2.0 * PI) + 0.5;
+    return vec2(u, clamp(v, 0.0, 1.0));
+}
+
+vec2 LutTransmittanceParamsToUv(float viewHeight, float viewZenithCosAngle)
+{
+    float H = sqrt(max(0.0, ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float rho = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float disc = viewHeight * viewHeight * (viewZenithCosAngle * viewZenithCosAngle - 1.0) + ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM;
+    float d = max(0.0, (-viewHeight * viewZenithCosAngle + sqrt(max(0.0, disc))));
+    float dMin = ATMOSPHERE_RADIUS_KM - viewHeight;
+    float dMax = rho + H;
+    float xMu = (d - dMin) / max(dMax - dMin, 1e-5);
+    float xR = rho / max(H, 1e-5);
+    return vec2(clamp(xMu, 0.0, 1.0), clamp(xR, 0.0, 1.0));
+}
+
+float Hash31(vec3 p)
+{
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float ValueNoise3D(vec3 x)
+{
+    vec3 i = floor(x);
+    vec3 f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+
+    return mix(
+        mix(mix(Hash31(i + vec3(0, 0, 0)), Hash31(i + vec3(1, 0, 0)), f.x),
+            mix(Hash31(i + vec3(0, 1, 0)), Hash31(i + vec3(1, 1, 0)), f.x), f.y),
+        mix(mix(Hash31(i + vec3(0, 0, 1)), Hash31(i + vec3(1, 0, 1)), f.x),
+            mix(Hash31(i + vec3(0, 1, 1)), Hash31(i + vec3(1, 1, 1)), f.x), f.y),
+        f.z
+    );
+}
+
+float FBM3D(vec3 p)
+{
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 4; ++i)
+    {
+        v += a * ValueNoise3D(p);
+        p *= 2.03;
+        a *= 0.5;
+    }
+    return v;
+}
+
+float SampleCloudDensity(vec3 pos, float coverage, float time)
+{
+    float hNorm = (pos.y - CLOUD_BOTTOM_M) / (CLOUD_TOP_M - CLOUD_BOTTOM_M);
+    if (hNorm <= 0.0 || hNorm >= 1.0)
+        return 0.0;
+
+    float heightGrad = smoothstep(0.0, 0.2, hNorm) * (1.0 - smoothstep(0.65, 1.0, hNorm));
+    vec3 wind = vec3(time * pc.cloudSpeed, 0.0, time * pc.cloudSpeed * 0.35);
+
+    float baseShape = FBM3D((pos + wind) * 0.00035);
+    float baseDensity = clamp((baseShape - (1.0 - coverage)) / max(coverage, 1e-4), 0.0, 1.0) * heightGrad;
+    if (baseDensity <= 0.001)
+        return 0.0;
+
+    float billow = 1.0 - abs(ValueNoise3D((pos + wind * 1.3) * 0.0018) * 2.0 - 1.0);
+    float eroded = clamp(baseDensity - billow * 0.35 * (1.0 - baseDensity), 0.0, 1.0);
+    return eroded * 0.045;
+}
+
+float HenyeyGreenstein(float cosTheta, float g)
+{
+    float g2 = g * g;
+    return (1.0 - g2) / (4.0 * PI * pow(max(1.0 + g2 - 2.0 * g * cosTheta, 1e-4), 1.5));
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+    if (pixelCoord.x >= screenSize.x || pixelCoord.y >= screenSize.y)
+        return;
+
+    float depth = texelFetch(depthTex, pixelCoord, 0).r;
+    if (depth < 1.0)
+        return;
+
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(screenSize);
+    vec4 farClip = vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+    vec4 farWorld = globalUniforms.invViewProj * farClip;
+    vec3 worldPos = farWorld.xyz / farWorld.w;
+    vec3 rd = normalize(worldPos - globalUniforms.cameraPosition);
+    vec3 sunDir = normalize(-globalUniforms.lightDirection);
+
+    vec3 skyColor = textureLod(skyViewLUT, DirToSkyViewUV(rd), 0.0).rgb;
+
+    // Physical solar disk with limb-darkening
+    float cosTheta = dot(rd, sunDir);
+    float sunAngularRadius = 0.0093;
+    float cosSunEdge = cos(sunAngularRadius);
+    if (cosTheta > cosSunEdge)
+    {
+        float rNorm = sqrt(max(0.0, (1.0 - cosTheta) / max(1.0 - cosSunEdge, 1e-6)));
+        float limb = pow(clamp(1.0 - rNorm * rNorm, 0.0, 1.0), 0.4);
+        float viewHeight = PLANET_RADIUS_KM + max(globalUniforms.cameraPosition.y * 0.001, 0.001);
+        vec3 sunTrans = textureLod(transmittanceLUT, LutTransmittanceParamsToUv(viewHeight, rd.y), 0.0).rgb;
+        skyColor += globalUniforms.lightColor * globalUniforms.lightIntensity * sunTrans * limb * 8.0;
+    }
+
+    // Nubis volumetric cumulus layer (1350 m - 3450 m)
+    if (pc.enableClouds != 0u && rd.y > 0.01)
+    {
+        float t0 = max(0.0, (CLOUD_BOTTOM_M - globalUniforms.cameraPosition.y) / rd.y);
+        float t1 = max(t0, (CLOUD_TOP_M - globalUniforms.cameraPosition.y) / rd.y);
+        float maxDist = min(t1, 35000.0);
+
+        if (maxDist > t0)
+        {
+            const int STEPS = 14;
+            float dt = (maxDist - t0) / float(STEPS);
+            float transmittance = 1.0;
+            vec3 cloudLight = vec3(0.0);
+
+            float phase = mix(HenyeyGreenstein(cosTheta, 0.65), HenyeyGreenstein(cosTheta, -0.25), 0.25);
+            vec3 sunIrradiance = globalUniforms.lightColor * globalUniforms.lightIntensity;
+            vec3 ambientSky = skyColor * 0.35;
+
+            for (int i = 0; i < STEPS; ++i)
+            {
+                float t = t0 + (float(i) + 0.5) * dt;
+                vec3 p = globalUniforms.cameraPosition + rd * t;
+                float density = SampleCloudDensity(p, pc.cloudCoverage, globalUniforms.elapsedTime);
+
+                if (density > 0.0001)
+                {
+                    // 2-step directional self-shadowing toward sun
+                    float shadowDepth = 0.0;
+                    for (int s = 1; s <= 2; ++s)
+                    {
+                        vec3 sp = p + sunDir * (float(s) * 180.0);
+                        shadowDepth += SampleCloudDensity(sp, pc.cloudCoverage, globalUniforms.elapsedTime) * 180.0;
+                    }
+
+                    float beer = exp(-shadowDepth * 1.2);
+                    float powder = 1.0 - exp(-shadowDepth * 2.0);
+                    float lightTrans = mix(beer, beer * powder * 2.0, 0.5);
+
+                    vec3 stepScat = (sunIrradiance * lightTrans * phase + ambientSky) * density;
+                    float stepTrans = exp(-density * dt);
+                    cloudLight += transmittance * stepScat * (1.0 - stepTrans) / max(density, 1e-4);
+                    transmittance *= stepTrans;
+
+                    if (transmittance < 0.01)
+                        break;
+                }
+            }
+
+            float horizonFade = smoothstep(0.01, 0.14, rd.y);
+            skyColor = mix(skyColor, skyColor * transmittance + cloudLight, horizonFade);
+        }
+    }
+
+    vec3 preExposed = skyColor * globalUniforms.cameraExposure;
+    imageStore(outHdrColor, pixelCoord, vec4(preExposed, 1.0));
+}
