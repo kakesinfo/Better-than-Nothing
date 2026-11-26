@@ -137,16 +137,14 @@ namespace BetterThanNothing
 	{
 		Vector3 direction = Vector3(0.0f, -1.0f, 0.0f);
 		Vector3 color = Vector3::One;
-		float	intensity = 1.0f;
+		float	illuminanceLux = 100000.0f;
 	};
 
 	struct PointLightComponent : Component
 	{
 		Vector3 color = Vector3::One;
-		float	constant = 1.0f;
-		float	linear = 0.09f;
-		float	quadratic = 0.032f;
-		float	intensity = 1.0f;
+		float	luminousPowerLm = 150000.0f;
+		float	radius = 25.0f;
 	};
 
 	struct UpdateComponent : Component

@@ -243,7 +243,7 @@ namespace BetterThanNothing
 			const auto& dirLight = dirLightView.get<DirectionalLightComponent>(*dirLightView.begin());
 			dirLightDirection = dirLight.direction;
 			dirLightColor = dirLight.color;
-			dirLightIntensity = dirLight.intensity;
+			dirLightIntensity = dirLight.illuminanceLux;
 		}
 
 		const uint32_t pointLightCount = UploadPointLights(scene, frameIndex);
@@ -347,11 +347,9 @@ namespace BetterThanNothing
 
 			PointLightData data{};
 			data.position = transform.GetWorldPosition();
+			data.radius = light.radius;
 			data.color = light.color;
-			data.constant = light.constant;
-			data.linear = light.linear;
-			data.quadratic = light.quadratic;
-			data.intensity = light.intensity;
+			data.luminousPowerLm = light.luminousPowerLm;
 			m_pointLightsScratch.push_back(data);
 		}
 

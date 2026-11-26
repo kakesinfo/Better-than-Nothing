@@ -110,7 +110,7 @@ namespace BetterThanNothing
 			if (ImGui::ColorEdit3("Color", color))
 				dirLight->color = Vector3(color[0], color[1], color[2]);
 
-			ImGui::DragFloat("Intensity", &dirLight->intensity, 0.1f, 0.0f, 100.0f);
+			ImGui::DragFloat("Illuminance (lux)", &dirLight->illuminanceLux, 500.0f, 0.0f, 200000.0f);
 		}
 
 		if (auto* pointLight = obj.TryGetComponent<PointLightComponent>())
@@ -120,9 +120,8 @@ namespace BetterThanNothing
 			if (ImGui::ColorEdit3("Color", color))
 				pointLight->color = Vector3(color[0], color[1], color[2]);
 
-			ImGui::DragFloat("Intensity", &pointLight->intensity, 0.1f, 0.0f, 100.0f);
-			ImGui::DragFloat("Linear", &pointLight->linear, 0.005f, 0.0f, 2.0f);
-			ImGui::DragFloat("Quadratic", &pointLight->quadratic, 0.002f, 0.0f, 2.0f);
+			ImGui::DragFloat("Luminous Power (lm)", &pointLight->luminousPowerLm, 500.0f, 0.0f, 500000.0f);
+			ImGui::DragFloat("Radius (m)", &pointLight->radius, 0.5f, 0.1f, 200.0f);
 		}
 
 		if (const auto* meshComp = obj.TryGetComponent<MeshComponent>())

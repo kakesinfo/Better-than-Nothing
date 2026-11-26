@@ -35,11 +35,6 @@
 
 namespace BetterThanNothing
 {
-	static constexpr float kConstant = 1.0f;
-	static constexpr float kLinear = 0.09f;
-	static constexpr float kQuadratic = 0.032f;
-	static constexpr float kIntensity = 10.0f;
-
 	void Runtime::OnEnable(Scene* scene)
 	{
 		scene->InitCamera(50.0f, 0.1f, 1000.0f);
@@ -47,33 +42,27 @@ namespace BetterThanNothing
 		DirectionalLightData directionalLight{};
 		directionalLight.revDirection = Vector3(1.0f, -4.0f, -2.0f).Normalized();
 		directionalLight.color = Vector3(1.0f, 0.95f, 0.8f);
-		directionalLight.intensity = 5.0f;
+		directionalLight.illuminanceLux = 100000.0f;
 
 		scene->SetDirectionalLight(directionalLight);
 
 		PointLightData redLight{};
 		redLight.color = Vector3(1.0f, 0.0f, 0.0f);
 		redLight.position = Vector3(15.0f, 0.0f, 5.0f);
-		redLight.constant = kConstant;
-		redLight.linear = kLinear;
-		redLight.quadratic = kQuadratic;
-		redLight.intensity = kIntensity;
+		redLight.luminousPowerLm = 150000.0f;
+		redLight.radius = 25.0f;
 
 		PointLightData greenLight{};
 		greenLight.color = Vector3(0.0f, 1.0f, 0.0f);
 		greenLight.position = Vector3(0.0f, 0.0f, -5.0f);
-		greenLight.constant = kConstant;
-		greenLight.linear = kLinear;
-		greenLight.quadratic = kQuadratic;
-		greenLight.intensity = kIntensity;
+		greenLight.luminousPowerLm = 150000.0f;
+		greenLight.radius = 25.0f;
 
 		PointLightData blueLight{};
 		blueLight.color = Vector3(0.0f, 0.0f, 1.0f);
 		blueLight.position = Vector3(-10.0f, 0.0f, 5.0f);
-		blueLight.constant = kConstant;
-		blueLight.linear = kLinear;
-		blueLight.quadratic = kQuadratic;
-		blueLight.intensity = kIntensity;
+		blueLight.luminousPowerLm = 150000.0f;
+		blueLight.radius = 25.0f;
 
 		scene->AddPointLight(redLight);
 		scene->AddPointLight(greenLight);

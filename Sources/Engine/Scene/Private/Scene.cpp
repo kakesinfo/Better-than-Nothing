@@ -329,7 +329,7 @@ namespace BetterThanNothing
 			auto&			   light = view.get<DirectionalLightComponent>(entity);
 			light.direction = data.revDirection;
 			light.color = data.color;
-			light.intensity = data.intensity;
+			light.illuminanceLux = data.illuminanceLux;
 			return GetObject(entity);
 		}
 
@@ -337,7 +337,7 @@ namespace BetterThanNothing
 		auto&		light = obj.AddComponent<DirectionalLightComponent>();
 		light.direction = data.revDirection;
 		light.color = data.color;
-		light.intensity = data.intensity;
+		light.illuminanceLux = data.illuminanceLux;
 		return obj;
 	}
 
@@ -349,10 +349,8 @@ namespace BetterThanNothing
 
 		auto& light = obj.AddComponent<PointLightComponent>();
 		light.color = data.color;
-		light.constant = data.constant;
-		light.linear = data.linear;
-		light.quadratic = data.quadratic;
-		light.intensity = data.intensity;
+		light.luminousPowerLm = data.luminousPowerLm;
+		light.radius = data.radius;
 		return obj;
 	}
 
