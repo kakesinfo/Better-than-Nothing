@@ -459,6 +459,27 @@ namespace BetterThanNothing
 		texture->currentLayout = vkNewLayout;
 	}
 
+	void RenderingDevice::CopyTexture(const Handle& src, const Handle& dst)
+	{
+		RenderingApi::Texture* srcTex = GetTexture(src);
+		RenderingApi::Texture* dstTex = GetTexture(dst);
+
+		TransitionTexture(src, ImageLayout::TransferSrc);
+		TransitionTexture(dst, ImageLayout::TransferDst);
+
+		const uint32_t	  width = std::min(srcTex->width, dstTex->width);
+		const uint32_t	  height = std::min(srcTex->height, dstTex->height);
+		const VkImageCopy region = RenderingApi::CommandBuffer::MakeFullImageCopyRegion(srcTex->aspectMask, dstTex->aspectMask, width, height);
+
+		m_self->commandBuffers[m_currentFrameIndex]->CopyImage(
+			srcTex->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			dstTex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			region
+		);
+
+		TransitionTexture(dst, ImageLayout::ShaderReadOnly);
+	}
+
 	void RenderingDevice::TransitionSwapChainImage(const uint32_t imageIndex, const ImageLayout newLayout)
 	{
 		const VkImageLayout vkNewLayout = ToVkImageLayout(newLayout);

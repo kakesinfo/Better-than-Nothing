@@ -195,6 +195,7 @@ namespace BetterThanNothing
 		void					EndFrame(uint32_t imageIndex);
 
 		void TransitionTexture(const Handle& textureHandle, ImageLayout newLayout);
+		void CopyTexture(const Handle& src, const Handle& dst);
 		void TransitionSwapChainImage(uint32_t imageIndex, ImageLayout newLayout);
 		void BeginRenderPass(const RenderPassDescriptor& desc);
 		void EndRenderPass();

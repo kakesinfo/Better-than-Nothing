@@ -299,6 +299,22 @@ namespace BetterThanNothing::RenderingApi
 		vkCmdBlitImage(m_commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 1, blit, filter);
 	}
 
+	VkImageCopy CommandBuffer::MakeFullImageCopyRegion(const VkImageAspectFlags srcAspect, const VkImageAspectFlags dstAspect, const uint32_t width, const uint32_t height)
+	{
+		VkImageCopy region{};
+		region.srcSubresource = {srcAspect, 0, 0, 1};
+		region.srcOffset = {0, 0, 0};
+		region.dstSubresource = {dstAspect, 0, 0, 1};
+		region.dstOffset = {0, 0, 0};
+		region.extent = {width, height, 1};
+		return region;
+	}
+
+	void CommandBuffer::CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageCopy& region) const
+	{
+		vkCmdCopyImage(m_commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 1, &region);
+	}
+
 	void CommandBuffer::PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, const uint32_t offset, const uint32_t size, const void* values)
 	{
 		vkCmdPushConstants(m_commandBuffer, layout, stageFlags, offset, size, values);

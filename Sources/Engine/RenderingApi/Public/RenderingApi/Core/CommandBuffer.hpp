@@ -81,6 +81,8 @@ namespace BetterThanNothing::RenderingApi
 		void ComputeBarrier() const;
 		[[nodiscard]] static VkMemoryBarrier2 MakeComputeMemoryBarrier();
 		void BlitImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageBlit* blit, VkFilter filter);
+		void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, const VkImageCopy& region) const;
+		[[nodiscard]] static VkImageCopy MakeFullImageCopyRegion(VkImageAspectFlags srcAspect, VkImageAspectFlags dstAspect, uint32_t width, uint32_t height);
 		void PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values);
 
 		static void SingleTimeCommands(const std::function<void(std::unique_ptr<CommandBuffer>&)>& callback, Device* device, CommandPool* commandPool, Queue* graphicsQueue);
