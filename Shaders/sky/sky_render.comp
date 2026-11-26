@@ -165,7 +165,13 @@ void main()
     vec3 rd = normalize(worldPos - globalUniforms.cameraPosition);
     vec3 sunDir = normalize(-globalUniforms.lightDirection);
 
-    vec3 skyColor = textureLod(skyViewLUT, DirToSkyViewUV(rd), 0.0).rgb;
+    vec3 skyDir = normalize(vec3(rd.x, max(rd.y, 0.002), rd.z));
+    vec3 skyColor = textureLod(skyViewLUT, DirToSkyViewUV(skyDir), 0.0).rgb;
+    if (rd.y < 0.0)
+    {
+        float belowHorizon = smoothstep(0.0, -0.25, rd.y);
+        skyColor = mix(skyColor, skyColor * 0.35, belowHorizon);
+    }
 
     // Physical solar disk with limb-darkening
     float cosTheta = dot(rd, sunDir);

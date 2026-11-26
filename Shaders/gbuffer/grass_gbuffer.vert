@@ -45,18 +45,24 @@ layout(location = 3) out vec3 outColor;
 layout(location = 4) out vec4 outCurrClipPos;
 layout(location = 5) out vec4 outPrevClipPos;
 
-vec3 ComputeWindOffset(vec3 worldPos, float heightFactor, float phase, float time)
+vec3 ComputeWindOffset(vec2 worldXZ, float h, float phase, float t)
 {
-    float gust = sin(worldPos.x * 0.25 + worldPos.z * 0.18 + time * 1.6);
-    float sway = sin(worldPos.x * 1.1 + time * 2.8 + phase * 6.2831853);
-    float flutter = cos(worldPos.z * 2.3 + time * 4.5 + phase * 12.56637);
-    float bend = (gust * 0.08 + sway * 0.06 + flutter * 0.025) * (heightFactor * heightFactor);
-    return vec3(bend, -abs(bend) * 0.25, bend * 0.6);
+    float bend = h * h;
+    float wave1 = sin(dot(worldXZ, vec2(0.18, 0.11)) + t * 2.1 + phase * 6.28318);
+    float wave2 = cos(dot(worldXZ, vec2(-0.14, 0.22)) - t * 1.6 + phase * 3.14159);
+    float flutter = sin(t * 5.2 + phase * 18.8495) * 0.18;
+
+    vec2 windDir = normalize(vec2(0.82, 0.57));
+    vec2 crossDir = vec2(-windDir.y, windDir.x);
+
+    vec2 horiz = (windDir * (wave1 * 0.22 + 0.12 + flutter * 0.08) + crossDir * (wave2 * 0.10)) * bend;
+    float vert = -min(length(horiz) * 0.38, 0.25 * h);
+    return vec3(horiz.x, vert, horiz.y);
 }
 
 void main()
 {
-    float heightFactor = inTexCoord.y;
+    float h = clamp(inTexCoord.y, 0.0, 1.0);
     float phase = inColor.x;
     float bladeHeight = max(inColor.z, 0.01);
 
@@ -64,19 +70,20 @@ void main()
     vec4 prevBaseWorld = pushConstants.prevModel * vec4(inPosition, 1.0);
 
     float distToCam = length(globalUniforms.cameraPosition - baseWorld.xyz);
-    float fade = 1.0 - smoothstep(115.0, 145.0, distToCam);
-    float rootOffset = heightFactor * bladeHeight * (1.0 - fade);
-    baseWorld.y -= rootOffset;
-    prevBaseWorld.y -= rootOffset;
+    float fade = 1.0 - smoothstep(105.0, 145.0, distToCam);
+    float verticalCollapse = (1.0 - fade) * h * bladeHeight;
 
-    vec3 currWind = ComputeWindOffset(baseWorld.xyz, heightFactor, phase, globalUniforms.elapsedTime);
-    vec3 prevWind = ComputeWindOffset(prevBaseWorld.xyz, heightFactor, phase, globalUniforms.elapsedTime - globalUniforms.deltaTime);
+    vec3 currWind = ComputeWindOffset(baseWorld.xz, h, phase, globalUniforms.elapsedTime);
+    vec3 prevWind = ComputeWindOffset(prevBaseWorld.xz, h, phase, globalUniforms.elapsedTime - max(globalUniforms.deltaTime, 0.0166));
 
-    vec4 currWorldPos = vec4(baseWorld.xyz + currWind * fade, 1.0);
-    vec4 prevWorldPos = vec4(prevBaseWorld.xyz + prevWind * fade, 1.0);
+    vec4 currWorldPos = vec4(baseWorld.xyz + currWind * fade - vec3(0.0, verticalCollapse, 0.0), 1.0);
+    vec4 prevWorldPos = vec4(prevBaseWorld.xyz + prevWind * fade - vec3(0.0, verticalCollapse, 0.0), 1.0);
+
+    vec3 baseNormal = normalize(mat3(transpose(inverse(pushConstants.model))) * inNormal);
+    vec3 windTiltedNormal = normalize(baseNormal + vec3(currWind.x * 0.85, 0.0, currWind.z * 0.85));
 
     outWorldPos = currWorldPos.xyz;
-    outWorldNormal = normalize(mat3(transpose(inverse(pushConstants.model))) * inNormal);
+    outWorldNormal = windTiltedNormal;
     outTexCoord = inTexCoord;
     outColor = inColor;
     outCurrClipPos = globalUniforms.unjitteredViewProj * currWorldPos;
