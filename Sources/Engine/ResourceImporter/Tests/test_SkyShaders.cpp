@@ -35,3 +35,15 @@ TEST(SkyShadersTest, CompileBrdfLutShader)
 	EXPECT_EQ(comp.type, EShaderType::Compute);
 	EXPECT_FALSE(comp.spirv.empty());
 }
+
+TEST(SkyShadersTest, CompileIrradianceAndPrefilterShaders)
+{
+	ResourceImporter	 importer;
+	const ImportedShader irr = importer.ImportShader(AssetPath::Resolve("Shaders/sky/irradiance_convolve.comp"));
+	EXPECT_EQ(irr.type, EShaderType::Compute);
+	EXPECT_FALSE(irr.spirv.empty());
+
+	const ImportedShader pref = importer.ImportShader(AssetPath::Resolve("Shaders/sky/prefilter_env.comp"));
+	EXPECT_EQ(pref.type, EShaderType::Compute);
+	EXPECT_FALSE(pref.spirv.empty());
+}

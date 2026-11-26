@@ -1,0 +1,114 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 1, binding = 0) uniform sampler2D skyViewLUT;
+layout(set = 1, binding = 1, rgba16f) writeonly uniform image2D outPrefilteredEnv;
+
+const float PI = 3.14159265359;
+const float PLANET_RADIUS_KM = 6360.0;
+
+vec2 DirToSkyViewUV(vec3 dir)
+{
+    float viewHeight = PLANET_RADIUS_KM + 0.001;
+    float vHorizon = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float cosBeta = vHorizon / viewHeight;
+    float beta = acos(clamp(cosBeta, -1.0, 1.0));
+    float zenithHorizonAngle = PI - beta;
+
+    float viewZenithAngle = acos(clamp(dir.y, -1.0, 1.0));
+    float v = 0.0;
+    if (viewZenithAngle < zenithHorizonAngle)
+    {
+        float coord = 1.0 - viewZenithAngle / max(zenithHorizonAngle, 1e-5);
+        v = 0.5 * (1.0 - sqrt(max(0.0, coord)));
+    }
+    else
+    {
+        float coord = (viewZenithAngle - zenithHorizonAngle) / max(beta, 1e-5);
+        v = 0.5 + 0.5 * sqrt(max(0.0, coord));
+    }
+
+    float azimuth = atan(dir.z, dir.x);
+    float u = azimuth / (2.0 * PI) + 0.5;
+    return vec2(u, clamp(v, 0.0, 1.0));
+}
+
+float RadicalInverseVdC(uint bits)
+{
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10;
+}
+
+vec2 Hammersley(uint i, uint N)
+{
+    return vec2(float(i) / float(N), RadicalInverseVdC(i));
+}
+
+vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
+{
+    float a = roughness * roughness;
+    float phi = 2.0 * PI * Xi.x;
+    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+    float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
+
+    vec3 H = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+    vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent = normalize(cross(up, N));
+    vec3 bitangent = cross(N, tangent);
+    return normalize(tangent * H.x + bitangent * H.y + N * H.z);
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = imageSize(outPrefilteredEnv);
+    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+        return;
+
+    const int NUM_BANDS = 5;
+    int bandHeight = dims.y / NUM_BANDS;
+    int bandIdx = clamp(pixelCoord.y / max(bandHeight, 1), 0, NUM_BANDS - 1);
+    float roughness = float(bandIdx) / float(NUM_BANDS - 1);
+
+    float u = (float(pixelCoord.x) + 0.5) / float(dims.x);
+    float v = (float(pixelCoord.y - bandIdx * bandHeight) + 0.5) / float(max(bandHeight, 1));
+
+    float phi = (u * 2.0 - 1.0) * PI;
+    float theta = v * PI;
+    vec3 N = normalize(vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)));
+    vec3 R = N;
+    vec3 V = R;
+
+    if (roughness < 0.01)
+    {
+        vec3 col = textureLod(skyViewLUT, DirToSkyViewUV(R), 0.0).rgb;
+        imageStore(outPrefilteredEnv, pixelCoord, vec4(col, 1.0));
+        return;
+    }
+
+    const uint SAMPLE_COUNT = 64u;
+    vec3 prefilteredColor = vec3(0.0);
+    float totalWeight = 0.0;
+
+    for (uint i = 0u; i < SAMPLE_COUNT; ++i)
+    {
+        vec2 Xi = Hammersley(i, SAMPLE_COUNT);
+        vec3 H = ImportanceSampleGGX(Xi, N, roughness);
+        vec3 L = normalize(2.0 * dot(V, H) * H - V);
+
+        float NdotL = max(dot(N, L), 0.0);
+        if (NdotL > 0.0)
+        {
+            prefilteredColor += textureLod(skyViewLUT, DirToSkyViewUV(L), 0.0).rgb * NdotL;
+            totalWeight += NdotL;
+        }
+    }
+
+    prefilteredColor /= max(totalWeight, 1e-4);
+    imageStore(outPrefilteredEnv, pixelCoord, vec4(prefilteredColor, 1.0));
+}
