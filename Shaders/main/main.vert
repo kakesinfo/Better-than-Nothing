@@ -3,16 +3,34 @@
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 proj;
     mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
     vec3 lightDirection;
-    vec3 lightColor;
     float lightIntensity;
-    vec3 cameraPosition;
+
+    vec3 lightColor;
     float cameraExposure;
-    int pointLightsCount;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
 } globalUniforms;
 
 layout(push_constant) uniform constants {
     mat4 model;
+    mat4 prevModel;
 } dynamicUniforms;
 
 layout(location = 0) in vec3 inPosition;
@@ -25,10 +43,12 @@ layout(location = 1) out vec3 fragColor;
 layout(location = 2) out vec2 fragTexCoord;
 layout(location = 3) out vec3 fragNormal;
 
-void main() {
-    gl_Position = globalUniforms.proj * globalUniforms.view * dynamicUniforms.model * vec4(inPosition, 1.0);
+void main()
+{
+    vec4 worldPos = dynamicUniforms.model * vec4(inPosition, 1.0);
+    gl_Position = globalUniforms.viewProj * worldPos;
 
-    fragPosition = vec3(dynamicUniforms.model * vec4(inPosition, 1.0));
+    fragPosition = worldPos.xyz;
     fragColor = inColor;
     fragTexCoord = inTexCoord;
     fragNormal = mat3(transpose(inverse(dynamicUniforms.model))) * inNormal;

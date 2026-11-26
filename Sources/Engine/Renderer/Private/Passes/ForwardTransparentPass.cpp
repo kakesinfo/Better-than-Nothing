@@ -25,31 +25,20 @@ namespace BetterThanNothing
 {
 	void ForwardTransparentPass::Execute(RenderPassContext& ctx)
 	{
-		if (!ctx.transparentStream || ctx.transparentStream->Empty())
+		if (!ctx.transparentStream || ctx.transparentStream->Empty() || !ctx.hdrColor.IsValid())
 			return;
 
 		RenderingDevice* renderingDevice = ctx.renderingDevice;
 
 		ColorAttachmentDesc colorAttachment{};
+		colorAttachment.target = ctx.hdrColor;
 		colorAttachment.loadOp = LoadOp::Load;
-		if (ctx.useMsaa)
-		{
-			colorAttachment.target = ctx.colorTarget;
-			colorAttachment.storeOp = StoreOp::DontCare;
-			colorAttachment.resolveToSwapChain = true;
-			colorAttachment.swapChainImageIndex = ctx.swapChainImageIndex;
-		}
-		else
-		{
-			colorAttachment.useSwapChainImage = true;
-			colorAttachment.swapChainImageIndex = ctx.swapChainImageIndex;
-			colorAttachment.storeOp = StoreOp::Store;
-		}
+		colorAttachment.storeOp = StoreOp::Store;
 
 		DepthAttachmentDesc depthAttachment{};
 		depthAttachment.target = ctx.depthTarget;
 		depthAttachment.loadOp = LoadOp::Load;
-		depthAttachment.storeOp = StoreOp::DontCare;
+		depthAttachment.storeOp = StoreOp::Store;
 
 		RenderPassDescriptor passDesc{};
 		passDesc.colorAttachments = {colorAttachment};

@@ -2,22 +2,37 @@
 
 struct PointLightData {
     vec3 position;
+    float radius;
     vec3 color;
-    float constant;
-    float linear;
-    float quadratic;
-    float intensity;
+    float luminousPowerLm;
 };
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 proj;
     mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
     vec3 lightDirection;
-    vec3 lightColor;
     float lightIntensity;
-    vec3 cameraPosition;
+
+    vec3 lightColor;
     float cameraExposure;
-    int pointLightsCount;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
 } globalUniforms;
 
 layout(location = 0) in vec3 fragPosition;
@@ -29,15 +44,21 @@ layout(location = 0) out vec4 outColor;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
 layout(set = 1, binding = 1) uniform sampler2D normalSampler;
+layout(set = 1, binding = 2) uniform sampler2D metallicRoughnessSampler;
+layout(set = 1, binding = 3) uniform MaterialUniformBuffer {
+    vec4 baseColorFactor;
+    float metallicFactor;
+    float roughnessFactor;
+    float alphaCutoff;
+    float _pad;
+} material;
 
 layout(std430, set = 2, binding = 0) readonly buffer PointLightBuffer {
     PointLightData lights[];
 } pointLights;
 
-const float ambientStrength = 0.1;
-const float specularStrength = 0.3;
+const float PI = 3.14159265359;
 
-// Screen-space cotangent frame (Christian Schuler, "Followup: Normal Mapping Without Precomputed Tangents")
 mat3 ComputeCotangentFrame(vec3 N, vec3 p, vec2 uv)
 {
     vec3 dp1 = dFdx(p);
@@ -57,85 +78,100 @@ mat3 ComputeCotangentFrame(vec3 N, vec3 p, vec2 uv)
 vec3 PerturbNormal(vec3 N, vec3 pos, vec2 uv)
 {
     vec3 mapN = texture(normalSampler, uv).xyz * 2.0 - 1.0;
-    // Fast path for default flat normal (0, 0, 1)
     if (abs(mapN.x) < 0.01 && abs(mapN.y) < 0.01)
         return N;
     mat3 TBN = ComputeCotangentFrame(N, pos, uv);
     return normalize(TBN * mapN);
 }
 
-float CalculateEnergyConservation(vec3 norm, vec3 halfwayDir)
+float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-    // Energy conservation: https://www.rorydriscoll.com/2009/01/25/energy-conservation-in-games/
-    // This normalization factor ensures that the total energy reflected by the surface doesn't exceed the incoming energy
-
-    const float kPi = 3.14159265;
-    const float kShininess = 16.0;
-
-    const float kEnergyConservation = (8.0 + kShininess) / (8.0 * kPi);
-    const float spec = kEnergyConservation * pow(max(dot(norm, halfwayDir), 0.0), kShininess);
-
-    return spec;
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    return a2 / max(PI * denom * denom, 1e-6);
 }
 
-vec3 CalculateDirectionalLight(vec3 norm, vec3 viewDir)
+float GeometrySchlickGGX(float NdotV, float roughness)
 {
-    const vec3 lightDir = normalize(-globalUniforms.lightDirection);
-    const vec3 halfwayDir = normalize(lightDir + viewDir);
-
-    const float diff = max(dot(norm, lightDir), 0.0);
-    const float spec = CalculateEnergyConservation(norm, halfwayDir);
-
-    const float intensity = globalUniforms.lightIntensity;
-    const vec3 ambient = ambientStrength * globalUniforms.lightColor * intensity;
-    const vec3 diffuse = diff * globalUniforms.lightColor * intensity;
-    const vec3 specular = specularStrength * spec * globalUniforms.lightColor * intensity;
-
-    return (ambient + diffuse + specular);
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return NdotV / max(NdotV * (1.0 - k) + k, 1e-6);
 }
 
-vec3 CalculatePointLight(PointLightData light, vec3 norm, vec3 viewDir)
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
-    const vec3 lightDir = normalize(light.position - fragPosition);
-    const vec3 halfwayDir = normalize(lightDir + viewDir);
-
-    const float diff = max(dot(norm, lightDir), 0.0);
-    const float spec = CalculateEnergyConservation(norm, halfwayDir);
-
-    float distance = length(light.position - fragPosition);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-
-    const vec3 diffuse = diff * light.color * light.intensity * attenuation;
-    const vec3 specular = spec * light.color * light.intensity * attenuation;
-
-    return (diffuse + specular);
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
 }
 
-// Based on:
-// - https://learnopengl.com/Lighting/Basic-Lighting
-// - https://learnopengl.com/Lighting/Multiple-lights
-// - https://learnopengl.com/Advanced-Lighting/Advanced-Lighting
-// - https://learnopengl.com/Advanced-Lighting/HDR
-void main() {
-    const float exposure = globalUniforms.cameraExposure;
-    const float gammaCorrection = 2.2;
+vec3 FresnelSchlick(float cosTheta, vec3 F0)
+{
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
 
-    vec4 textureColor = texture(texSampler, fragTexCoord);
-    textureColor.rgb = pow(textureColor.rgb, vec3(gammaCorrection));
+vec3 EvaluatePBR(vec3 albedo, vec3 N, vec3 V, vec3 L, float metallic, float roughness)
+{
+    vec3 H = normalize(V + L);
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
 
-    const vec3 geomNorm = normalize(fragNormal);
-    const vec3 norm = PerturbNormal(geomNorm, fragPosition, fragTexCoord);
-    const vec3 viewDir = normalize(globalUniforms.cameraPosition - fragPosition);
+    float NDF = DistributionGGX(N, H, roughness);
+    float G = GeometrySmith(N, V, L, roughness);
+    vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
 
-    vec3 resultColor = CalculateDirectionalLight(norm, viewDir);
-    for (int i = 0; i < globalUniforms.pointLightsCount; i++)
-        resultColor += CalculatePointLight(pointLights.lights[i], norm, viewDir);
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
 
-    const vec3 hdrColor = resultColor * textureColor.rgb;
+    vec3 kS = F;
+    vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
+    float NdotL = max(dot(N, L), 0.0);
 
-    const vec3 exposedColor = hdrColor * exposure;
-    const vec3 mappedColor = exposedColor / (exposedColor + vec3(1.0)); // TONE MAPPING (Reinhard)
-    const vec3 correctedColor = pow(mappedColor, vec3(1.0 / gammaCorrection)); // GAMMA CORRECTION (power 2.2)
+    return (kD * albedo / PI + specular) * NdotL;
+}
 
-    outColor = vec4(correctedColor, textureColor.a);
+void main()
+{
+    vec4 texColor = texture(texSampler, fragTexCoord);
+    float alpha = texColor.a * material.baseColorFactor.a;
+    vec3 albedo = pow(texColor.rgb, vec3(2.2)) * material.baseColorFactor.rgb * fragColor;
+
+    vec4 mrSample = texture(metallicRoughnessSampler, fragTexCoord);
+    float metallic = clamp(mrSample.b * material.metallicFactor, 0.0, 1.0);
+    float roughness = clamp(mrSample.g * material.roughnessFactor, 0.04, 1.0);
+    float ao = mrSample.r;
+
+    vec3 geomNorm = normalize(fragNormal);
+    vec3 N = PerturbNormal(geomNorm, fragPosition, fragTexCoord);
+    vec3 V = normalize(globalUniforms.cameraPosition - fragPosition);
+
+    vec3 sunL = normalize(-globalUniforms.lightDirection);
+    vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.lightIntensity;
+    vec3 Lo = EvaluatePBR(albedo, N, V, sunL, metallic, roughness) * sunRadiance;
+
+    for (uint i = 0u; i < globalUniforms.pointLightCount; ++i)
+    {
+        PointLightData light = pointLights.lights[i];
+        vec3 toLight = light.position - fragPosition;
+        float dist = length(toLight);
+        if (dist > light.radius || dist < 1e-5)
+            continue;
+
+        vec3 L = toLight / dist;
+        float distRatio = dist / max(light.radius, 1e-4);
+        float window = pow(clamp(1.0 - pow(distRatio, 4.0), 0.0, 1.0), 2.0);
+        float attenuation = window / (dist * dist + 1.0);
+        vec3 radiance = light.color * (light.luminousPowerLm / (4.0 * PI)) * attenuation;
+
+        Lo += EvaluatePBR(albedo, N, V, L, metallic, roughness) * radiance;
+    }
+
+    vec3 ambient = albedo * (1.0 - metallic) * 0.03 * globalUniforms.lightIntensity * ao;
+    vec3 hdrLuminance = ambient + Lo;
+    vec3 preExposedHdr = hdrLuminance * globalUniforms.cameraExposure;
+
+    outColor = vec4(preExposedHdr, alpha);
 }
