@@ -1,0 +1,141 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 1, binding = 0) uniform sampler2D transmittanceLUT;
+layout(set = 1, binding = 1, rgba16f) writeonly uniform image2D outMultiScattering;
+
+const float PI = 3.14159265359;
+const float PLANET_RADIUS_KM = 6360.0;
+const float ATMOSPHERE_RADIUS_KM = 6460.0;
+
+const vec3 RAYLEIGH_SCATTERING = vec3(5.802e-3, 13.558e-3, 33.1e-3);
+const float MIE_SCATTERING = 3.996e-3;
+const float MIE_ABSORPTION = 4.40e-3;
+const vec3 OZONE_ABSORPTION = vec3(0.650e-3, 1.881e-3, 0.085e-3);
+const vec3 GROUND_ALBEDO = vec3(0.3);
+
+float RaySphereIntersect(vec3 ro, vec3 rd, float rad)
+{
+    float b = dot(ro, rd);
+    float c = dot(ro, ro) - rad * rad;
+    float disc = b * b - c;
+    if (disc < 0.0)
+        return -1.0;
+    float s = sqrt(disc);
+    float t0 = -b - s;
+    float t1 = -b + s;
+    return (t0 >= 0.0) ? t0 : t1;
+}
+
+vec2 LutTransmittanceParamsToUv(float viewHeight, float viewZenithCosAngle)
+{
+    float H = sqrt(max(0.0, ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float rho = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float disc = viewHeight * viewHeight * (viewZenithCosAngle * viewZenithCosAngle - 1.0) + ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM;
+    float d = max(0.0, (-viewHeight * viewZenithCosAngle + sqrt(max(0.0, disc))));
+    float dMin = ATMOSPHERE_RADIUS_KM - viewHeight;
+    float dMax = rho + H;
+    float xMu = (d - dMin) / max(dMax - dMin, 1e-5);
+    float xR = rho / max(H, 1e-5);
+    return vec2(clamp(xMu, 0.0, 1.0), clamp(xR, 0.0, 1.0));
+}
+
+void SampleMedium(float altitudeKm, out vec3 scattering, out vec3 extinction)
+{
+    float rayleighDensity = exp(-max(altitudeKm, 0.0) / 8.0);
+    float mieDensity = exp(-max(altitudeKm, 0.0) / 1.2);
+    float ozoneDensity = max(0.0, 1.0 - abs(altitudeKm - 25.0) / 15.0);
+
+    vec3 sigmaRayleigh = RAYLEIGH_SCATTERING * rayleighDensity;
+    float sigmaMieS = MIE_SCATTERING * mieDensity;
+    float sigmaMieE = (MIE_SCATTERING + MIE_ABSORPTION) * mieDensity;
+    vec3 sigmaOzone = OZONE_ABSORPTION * ozoneDensity;
+
+    scattering = sigmaRayleigh + vec3(sigmaMieS);
+    extinction = sigmaRayleigh + vec3(sigmaMieE) + sigmaOzone;
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = imageSize(outMultiScattering);
+    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+        return;
+
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(dims);
+    float sunCosZenith = uv.x * 2.0 - 1.0;
+    float viewHeight = PLANET_RADIUS_KM + uv.y * (ATMOSPHERE_RADIUS_KM - PLANET_RADIUS_KM);
+
+    vec3 ro = vec3(0.0, viewHeight, 0.0);
+    vec3 sunDir = normalize(vec3(sqrt(max(0.0, 1.0 - sunCosZenith * sunCosZenith)), sunCosZenith, 0.0));
+
+    const int SPHERE_SAMPLES = 64;
+    const int MARCH_STEPS = 20;
+    const float GOLDEN_ANGLE = 2.399963229728653;
+    float isotropicPhase = 1.0 / (4.0 * PI);
+    float dOmega = (4.0 * PI) / float(SPHERE_SAMPLES);
+
+    vec3 L2 = vec3(0.0);
+    vec3 fMs = vec3(0.0);
+
+    for (int s = 0; s < SPHERE_SAMPLES; ++s)
+    {
+        float y = 1.0 - (2.0 * (float(s) + 0.5)) / float(SPHERE_SAMPLES);
+        float r = sqrt(max(0.0, 1.0 - y * y));
+        float theta = GOLDEN_ANGLE * float(s);
+        vec3 rd = vec3(cos(theta) * r, y, sin(theta) * r);
+
+        float tGround = RaySphereIntersect(ro, rd, PLANET_RADIUS_KM);
+        float tAtmo = RaySphereIntersect(ro, rd, ATMOSPHERE_RADIUS_KM);
+        float tMax = (tGround > 0.0) ? tGround : max(tAtmo, 0.0);
+
+        float dt = tMax / float(MARCH_STEPS);
+        vec3 throughput = vec3(1.0);
+        vec3 lum = vec3(0.0);
+        vec3 f = vec3(0.0);
+
+        for (int i = 0; i < MARCH_STEPS; ++i)
+        {
+            float t = (float(i) + 0.5) * dt;
+            vec3 p = ro + rd * t;
+            float pHeight = length(p);
+            float altKm = pHeight - PLANET_RADIUS_KM;
+
+            vec3 scattering, extinction;
+            SampleMedium(altKm, scattering, extinction);
+
+            vec3 stepTransmittance = exp(-extinction * dt);
+            vec3 upVec = p / max(pHeight, 1e-5);
+            float sunCos = dot(upVec, sunDir);
+            vec3 transToSun = textureLod(transmittanceLUT, LutTransmittanceParamsToUv(pHeight, sunCos), 0.0).rgb;
+
+            float planetShadow = (RaySphereIntersect(p, sunDir, PLANET_RADIUS_KM) > 0.0) ? 0.0 : 1.0;
+
+            vec3 S = scattering * transToSun * isotropicPhase * planetShadow;
+            vec3 SInt = (S - S * stepTransmittance) / max(extinction, vec3(1e-6));
+            lum += throughput * SInt;
+
+            vec3 fInt = (scattering - scattering * stepTransmittance) / max(extinction, vec3(1e-6));
+            f += throughput * fInt;
+
+            throughput *= stepTransmittance;
+        }
+
+        if (tGround > 0.0)
+        {
+            vec3 hitPos = ro + rd * tGround;
+            float hitHeight = length(hitPos);
+            vec3 hitUp = hitPos / max(hitHeight, 1e-5);
+            float sunCos = max(dot(hitUp, sunDir), 0.0);
+            vec3 transToSun = textureLod(transmittanceLUT, LutTransmittanceParamsToUv(hitHeight, sunCos), 0.0).rgb;
+            lum += throughput * (GROUND_ALBEDO / PI) * sunCos * transToSun;
+        }
+
+        L2 += lum * isotropicPhase * dOmega;
+        fMs += f * isotropicPhase * dOmega;
+    }
+
+    vec3 psiMs = L2 / max(vec3(1.0) - fMs, vec3(1e-4));
+    imageStore(outMultiScattering, pixelCoord, vec4(psiMs, 1.0));
+}
