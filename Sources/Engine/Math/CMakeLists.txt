@@ -48,7 +48,7 @@ install(TARGETS ${PROJECT_NAME}
 
 find_package(GTest QUIET)
 
-if(GTest_FOUND OR GTEST_FOUND)
+if(GTest_FOUND OR GTEST_FOUND OR TARGET GTest::gtest_main)
     enable_testing()
 
     file(GLOB TEST_SOURCES "Tests/*.cpp")

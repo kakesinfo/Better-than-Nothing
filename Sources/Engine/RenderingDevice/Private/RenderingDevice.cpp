@@ -47,6 +47,8 @@ namespace BetterThanNothing
 				return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			case DescriptorType::StorageImage:
 				return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case DescriptorType::AccelerationStructure:
+				return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 		}
 		throw std::runtime_error("Unknown DescriptorType");
 	}

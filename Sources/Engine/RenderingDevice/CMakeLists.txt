@@ -48,3 +48,21 @@ install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
     PUBLIC_HEADER DESTINATION include
 )
+
+if(TARGET GTest::gtest_main)
+    enable_testing()
+    file(GLOB TEST_SOURCES CONFIGURE_DEPENDS "Tests/*.cpp")
+    if(TEST_SOURCES)
+        add_executable(${PROJECT_NAME}_test ${TEST_SOURCES})
+        target_include_directories(${PROJECT_NAME}_test
+            PUBLIC Public
+            PRIVATE Private
+        )
+        target_link_libraries(${PROJECT_NAME}_test
+            PRIVATE
+                ${PROJECT_NAME}
+                GTest::gtest_main
+        )
+        add_test(NAME ${PROJECT_NAME}_test COMMAND ${PROJECT_NAME}_test)
+    endif()
+endif()

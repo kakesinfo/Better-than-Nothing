@@ -27,7 +27,8 @@ namespace BetterThanNothing
 		UniformBuffer,
 		StorageBuffer,
 		CombinedImageSampler,
-		StorageImage
+		StorageImage,
+		AccelerationStructure
 	};
 
 	enum class ShaderStageFlags : uint32_t
@@ -95,7 +96,10 @@ namespace BetterThanNothing
 		R8G8B8A8_UNORM = 37,
 		R8G8B8A8_SRGB = 43,
 		B8G8R8A8_UNORM = 44,
+		R16_SFLOAT = 76,
+		R16G16_SFLOAT = 83,
 		R16G16B16A16_SFLOAT = 97,
+		R32_SFLOAT = 100,
 		D32_SFLOAT = 126,
 		D24_UNORM_S8_UINT = 129,
 		D32_SFLOAT_S8_UINT = 130,
