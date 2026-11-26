@@ -473,6 +473,17 @@ namespace BetterThanNothing
 		for (const auto& pass : m_passes)
 			pass->Execute(ctx);
 
+		if (m_depthTarget.IsValid() && m_prevDepthTarget.IsValid())
+			m_renderingDevice->CopyTexture(m_depthTarget, m_prevDepthTarget);
+		if (m_gbufferNormal.IsValid() && m_prevNormalTarget.IsValid())
+			m_renderingDevice->CopyTexture(m_gbufferNormal, m_prevNormalTarget);
+
+		m_temporalReadIndex = 1u - m_temporalReadIndex;
+
+		const auto transformView = scene->GetView<TransformComponent>();
+		for (auto [entity, transform] : transformView.each())
+			transform.prevWorldMatrix = transform.worldMatrix;
+
 		m_renderingDevice->EndFrame(imageIndex);
 	}
 
