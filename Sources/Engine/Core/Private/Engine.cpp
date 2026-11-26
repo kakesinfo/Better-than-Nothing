@@ -18,6 +18,7 @@
 
 #include <Common/EKey.hpp>
 #include <Common/Metrics.hpp>
+#include <Common/RenderSettings.hpp>
 #include <Core/Engine.hpp>
 
 #include "Platform/Platform.hpp"
@@ -38,6 +39,7 @@
 #include <algorithm>
 #include <chrono>
 #include <format>
+#include <thread>
 
 namespace BetterThanNothing
 {
@@ -46,7 +48,7 @@ namespace BetterThanNothing
 		m_platform = Platform::Create("Better Than Nothing", 1280, 720);
 		LegacyInputManager::Initialize();
 
-		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Immediate});
+		m_renderingDevice = RenderingDevice::Create({m_platform.get(), EBufferingMode::Double});
 		m_resourceManager = ResourceManager::Create(m_renderingDevice.get());
 
 #ifndef NDEBUG
@@ -110,6 +112,11 @@ namespace BetterThanNothing
 			LegacyInputManager::EndFrame();
 
 			Metrics::EndRecording();
+
+			const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - currentTime);
+			const auto sleepDuration = RenderSettings::ComputeFrameSleepDuration(elapsed, RenderSettings::Get().targetFps);
+			if (sleepDuration.count() > 0)
+				std::this_thread::sleep_for(sleepDuration);
 		}
 
 		m_application->OnDisable();
