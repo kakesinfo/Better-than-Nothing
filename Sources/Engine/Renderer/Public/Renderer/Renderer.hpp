@@ -22,6 +22,7 @@
 #include "RenderingDevice/Handle.hpp"
 #include <Data/Graphics/PointLightData.hpp>
 #include <Math/Matrix4.hpp>
+#include <RenderingDevice/SamplerDescription.hpp>
 #include <memory>
 #include <vector>
 
@@ -47,8 +48,9 @@ namespace BetterThanNothing
 
 		static std::unique_ptr<Renderer> Create(RenderingDevice* renderingDevice, ResourceManager* resourceManager, Editor* editor);
 
-		[[nodiscard]] static float	  Halton(uint32_t index, uint32_t base);
-		[[nodiscard]] static uint32_t ComputeRTShadowTileCount(uint32_t width, uint32_t height);
+		[[nodiscard]] static float				Halton(uint32_t index, uint32_t base);
+		[[nodiscard]] static uint32_t			ComputeRTShadowTileCount(uint32_t width, uint32_t height);
+		[[nodiscard]] static SamplerDescription MakePointBorderWhiteSamplerDesc();
 
 		void AddPass(std::unique_ptr<IRenderPass> pass);
 		void RenderFrame(Scene* scene);
@@ -110,6 +112,7 @@ namespace BetterThanNothing
 		std::vector<Handle>					m_rtShadowFilterDescriptorSets[3];
 		Handle								m_computeNearestSampler{};
 		Handle								m_linearClampSampler{};
+		Handle								m_pointBorderWhiteSampler{};
 		mutable std::vector<PointLightData> m_pointLightsScratch;
 		mutable bool						m_warnedLightLimit = false;
 	};

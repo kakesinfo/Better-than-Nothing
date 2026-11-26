@@ -181,6 +181,8 @@ namespace BetterThanNothing
 		linearClampDesc.addressModeW = SamplerAddressMode::ClampToEdge;
 		m_linearClampSampler = m_renderingDevice->GetOrCreateTextureSampler(linearClampDesc);
 
+		m_pointBorderWhiteSampler = m_renderingDevice->GetOrCreateTextureSampler(MakePointBorderWhiteSamplerDesc());
+
 		const std::array<DescriptorBindingDesc, 4> taaBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
@@ -333,6 +335,8 @@ namespace BetterThanNothing
 			m_renderingDevice->DestroyTextureSampler(m_computeNearestSampler);
 		if (m_linearClampSampler.IsValid())
 			m_renderingDevice->DestroyTextureSampler(m_linearClampSampler);
+		if (m_pointBorderWhiteSampler.IsValid())
+			m_renderingDevice->DestroyTextureSampler(m_pointBorderWhiteSampler);
 		for (uint32_t p = 0; p < 2; ++p)
 		{
 			for (const Handle& handle : m_taaDescriptorSets[p])
@@ -389,6 +393,20 @@ namespace BetterThanNothing
 		const uint32_t tilesX = (width + 7u) / 8u;
 		const uint32_t tilesY = (height + 3u) / 4u;
 		return tilesX * tilesY;
+	}
+
+	SamplerDescription Renderer::MakePointBorderWhiteSamplerDesc()
+	{
+		SamplerDescription desc{};
+		desc.magFilter = SamplerFilter::Nearest;
+		desc.minFilter = SamplerFilter::Nearest;
+		desc.mipmapMode = SamplerMipmapMode::Nearest;
+		desc.addressModeU = SamplerAddressMode::ClampToBorder;
+		desc.addressModeV = SamplerAddressMode::ClampToBorder;
+		desc.addressModeW = SamplerAddressMode::ClampToBorder;
+		desc.anisotropyEnable = false;
+		desc.borderColor = BorderColor::FloatOpaqueWhite;
+		return desc;
 	}
 
 	void Renderer::AddPass(std::unique_ptr<IRenderPass> pass)
