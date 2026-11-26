@@ -97,7 +97,8 @@ namespace BetterThanNothing
 
 	public:
 		ResourceId LoadModel(const std::string& path, bool preTransform = true);
-		ResourceId LoadTexture(const std::string& path);
+		ResourceId LoadTexture(const std::string& path, uint32_t maxDimension = 2048);
+		void	   PreloadTexturesParallel(const std::vector<std::string>& paths, uint32_t maxDimension = 2048);
 		ResourceId GetDefaultTexture();
 		ResourceId GetDefaultNormalTexture();
 		ResourceId GetDefaultMetallicRoughnessTexture();

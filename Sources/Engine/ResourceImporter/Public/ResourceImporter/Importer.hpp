@@ -45,8 +45,16 @@ namespace BetterThanNothing
 		bool		preTransform = true;
 	};
 
+	struct TextureImportInfo
+	{
+		std::string path;
+		uint32_t	maxDimension = 2048;
+	};
+
+	void DownsampleHalfRGBA(const uint8_t* src, uint32_t srcW, uint32_t srcH, std::vector<uint8_t>& dst, uint32_t& dstW, uint32_t& dstH);
+
 	DECLARE_IMPORTER(ObjImporter, ModelImportInfo, ImportedModel);
 	DECLARE_IMPORTER(GltfImporter, ModelImportInfo, ImportedModel);
-	DECLARE_IMPORTER(TextureImporter, std::string, ImportedTexture);
+	DECLARE_IMPORTER(TextureImporter, TextureImportInfo, ImportedTexture);
 	DECLARE_IMPORTER(ShaderImporter, std::string, ImportedShader);
 }

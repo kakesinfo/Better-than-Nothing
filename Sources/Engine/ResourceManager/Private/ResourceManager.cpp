@@ -34,7 +34,9 @@
 #include <ResourceManager/ResourceManager_Types.hpp>
 #include <array>
 #include <filesystem>
+#include <future>
 #include <limits>
+#include <unordered_set>
 
 namespace BetterThanNothing
 {
@@ -375,7 +377,7 @@ namespace BetterThanNothing
 		return modelId;
 	}
 
-	ResourceId ResourceManager::LoadTexture(const std::string& path)
+	ResourceId ResourceManager::LoadTexture(const std::string& path, const uint32_t maxDimension)
 	{
 		if (path.empty())
 			return GetDefaultTexture();
@@ -385,7 +387,7 @@ namespace BetterThanNothing
 		if (const auto it = m_texturesLUT.find(texturePath); it != m_texturesLUT.end())
 			return it->second;
 
-		ImportedTexture importedTexture = m_importer->ImportTexture(texturePath);
+		ImportedTexture importedTexture = m_importer->ImportTexture(texturePath, maxDimension);
 
 		auto gpuData = std::make_unique<TextureResourceCache>();
 		gpuData->channels = static_cast<int32_t>(importedTexture.channels);
@@ -410,6 +412,93 @@ namespace BetterThanNothing
 		Logger::Log<INFO>("TextureResourceCache created and cached for Texture: {}", texturePath);
 
 		return textureId;
+	}
+
+	void ResourceManager::PreloadTexturesParallel(const std::vector<std::string>& paths, const uint32_t maxDimension)
+	{
+		std::vector<std::string>		toLoad;
+		std::unordered_set<std::string> seen;
+
+		for (const auto& path : paths)
+		{
+			if (path.empty())
+				continue;
+
+			const std::string resolved = AssetPath::Resolve(path);
+			if (m_texturesLUT.contains(resolved) || !seen.insert(resolved).second)
+				continue;
+
+			toLoad.push_back(resolved);
+		}
+
+		if (toLoad.empty())
+			return;
+
+		struct DecodedResult
+		{
+			std::string		path;
+			ImportedTexture texture;
+			bool			ok = false;
+		};
+
+		std::vector<std::future<DecodedResult>> futures;
+		futures.reserve(toLoad.size());
+		for (const auto& resolvedPath : toLoad)
+		{
+			futures.push_back(std::async(std::launch::async, [this, resolvedPath, maxDimension]() {
+				DecodedResult res{};
+				res.path = resolvedPath;
+				try
+				{
+					res.texture = m_importer->ImportTexture(resolvedPath, maxDimension);
+					res.ok = true;
+				}
+				catch (const std::exception& e)
+				{
+					Logger::Log<WARNING>("Failed to preload texture {}: {}", resolvedPath, e.what());
+				}
+				return res;
+			}));
+		}
+
+		std::vector<DecodedResult> decoded;
+		decoded.reserve(futures.size());
+		for (auto& fut : futures)
+		{
+			DecodedResult res = fut.get();
+			if (res.ok)
+				decoded.push_back(std::move(res));
+		}
+
+		if (decoded.empty())
+			return;
+
+		RenderingDevice::UploadBatchScope uploadBatch(m_renderingDevice);
+		for (const auto& item : decoded)
+		{
+			if (m_texturesLUT.contains(item.path))
+				continue;
+
+			auto gpuData = std::make_unique<TextureResourceCache>();
+			gpuData->channels = static_cast<int32_t>(item.texture.channels);
+			gpuData->size = static_cast<int32_t>(item.texture.size);
+			gpuData->width = static_cast<int32_t>(item.texture.width);
+			gpuData->height = static_cast<int32_t>(item.texture.height);
+
+			TextureFromDataDescription desc{};
+			desc.data = item.texture.data.data();
+			desc.dataSize = item.texture.size;
+			desc.width = item.texture.width;
+			desc.height = item.texture.height;
+			desc.channels = item.texture.channels;
+
+			gpuData->textureHandle = m_renderingDevice->CreateTextureFromData(desc);
+			gpuData->samplerHandle = m_renderingDevice->GetOrCreateTextureSampler(SamplerDescription{});
+
+			const auto textureId = GenerateUniqueResourceId();
+			m_textures[textureId] = std::move(gpuData);
+			m_texturesLUT[item.path] = textureId;
+		}
 	}
 
 	ResourceId ResourceManager::LoadShader(const std::string& path)
