@@ -320,7 +320,6 @@ namespace BetterThanNothing
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("SSS::Bend", sssBindings);
 		m_renderingDevice->CreatePipelineLayout("SSS::Bend", [&](PipelineLayoutBlueprint* blueprint) {
-			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("SSS::Bend");
 			blueprint->AddPushConstant<BendSSSPushConstants>(EShaderType::Compute);
 		});

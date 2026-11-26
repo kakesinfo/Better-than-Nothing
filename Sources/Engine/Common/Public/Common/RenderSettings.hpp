@@ -77,6 +77,13 @@ namespace BetterThanNothing
 		float grassFadeDistance = 145.0f;
 		int	  targetFps = 60;
 		int	  sssDebugMode = 0;
+
+		float sssSurfaceThickness = 0.005f;
+		float sssBilinearThreshold = 0.02f;
+		float sssShadowContrast = 2.0f;
+		bool  sssIgnoreEdgePixels = false;
+		bool  sssBilinearOffsetMode = false;
+		bool  sssUseEarlyOut = true;
 	};
 
 	class RenderSettings

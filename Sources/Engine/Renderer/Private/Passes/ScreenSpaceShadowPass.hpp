@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <Math/Vector2.hpp>
-#include <Math/Vector4.hpp>
+#include <Math/Matrix4.hpp>
+#include <Math/Vector3.hpp>
 #include <Renderer/RenderPass.hpp>
 #include <array>
 #include <cstdint>
@@ -28,15 +28,18 @@ namespace BetterThanNothing
 {
 	struct BendSSSPushConstants
 	{
-		Vector4 lightCoordinate{0.0f, 0.0f, 0.0f, 1.0f};
+		float	lightCoordinate[4]{0.0f, 0.0f, 0.0f, 1.0f};
 		int32_t waveOffset[2]{0, 0};
 		float	invDepthTextureSize[2]{0.0f, 0.0f};
 		float	surfaceThickness = 0.005f;
 		float	bilinearThreshold = 0.02f;
-		float	shadowContrast = 1.0f;
-		float	nearDepthValue = 0.0f;
+		float	shadowContrast = 2.0f;
 		float	farDepthValue = 1.0f;
-		int32_t debugMode = 0;
+		float	nearDepthValue = 0.0f;
+		uint32_t flags = 0;
+		float	depthBounds[2]{0.0f, 1.0f};
+		int32_t viewportWidth = 0;
+		int32_t viewportHeight = 0;
 		int32_t pad0 = 0;
 		int32_t pad1 = 0;
 	};
@@ -52,7 +55,7 @@ namespace BetterThanNothing
 
 	struct SSSDispatchList
 	{
-		Vector4						   lightCoordinate{0.0f, 0.0f, 0.0f, 1.0f};
+		float						   lightCoordinate[4]{0.0f, 0.0f, 0.0f, 1.0f};
 		std::array<SSSDispatchItem, 4> dispatches{};
 		uint32_t					   dispatchCount = 0;
 	};
@@ -63,6 +66,6 @@ namespace BetterThanNothing
 		[[nodiscard]] std::string_view GetName() const override { return "ScreenSpaceShadowPass"; }
 		void						   Execute(RenderPassContext& ctx) override;
 
-		[[nodiscard]] static SSSDispatchList BuildDispatchList(const Vector4& lightProjection, int32_t viewportWidth, int32_t viewportHeight, int32_t waveSize = 64);
+		[[nodiscard]] static SSSDispatchList BuildDispatchList(const Matrix4& unjitteredViewProj, const Vector3& sunDirection, uint32_t viewportWidth, uint32_t viewportHeight);
 	};
 }
