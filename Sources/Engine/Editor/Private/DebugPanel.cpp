@@ -58,25 +58,26 @@ namespace BetterThanNothing
 		static constexpr const char* kDebugViewNames[] = {
 			"Final",
 			"Albedo",
-			"World Normal",
-			"Roughness",
+			"Octahedral Normal",
 			"Metallic",
-			"Depth",
+			"Roughness",
 			"Motion Vectors",
-			"Ambient Occlusion",
 			"RT Shadows (FFX)",
+			"Ambient Occlusion",
 			"Diffuse Irradiance",
+			"Depth",
 			"Screen Space Shadows (Bend)",
 			"Cloud Transmittance",
 		};
-		int currentDebugView = static_cast<int>(settings.debugView);
-		if (ImGui::Combo("Debug View", &currentDebugView, kDebugViewNames, IM_ARRAYSIZE(kDebugViewNames)))
-			settings.debugView = static_cast<EDebugViewMode>(currentDebugView);
+		int debugViewIdx = static_cast<int>(settings.debugView);
+		if (ImGui::Combo("Debug View", &debugViewIdx, kDebugViewNames, IM_ARRAYSIZE(kDebugViewNames)))
+			settings.debugView = static_cast<EDebugViewMode>(debugViewIdx);
 
 		ImGui::Spacing();
 
 		if (ImGui::BeginTabBar("RenderControlTabs", ImGuiTabBarFlags_FittingPolicyScroll))
 		{
+			// --- Tab 1: General & Post-FX ---
 			if (ImGui::BeginTabItem("General"))
 			{
 				ImGui::SeparatorText("Performance");
@@ -101,74 +102,119 @@ namespace BetterThanNothing
 
 				ImGui::SeparatorText("Post-Processing");
 				static constexpr const char* kToneMapNames[] = {"AgX", "ACES", "Reinhard"};
-				int							 toneMap = static_cast<int>(settings.toneMapMode);
-				if (ImGui::Combo("Tone Map", &toneMap, kToneMapNames, IM_ARRAYSIZE(kToneMapNames)))
-					settings.toneMapMode = static_cast<EToneMapMode>(toneMap);
+				int							 toneMapIdx = static_cast<int>(settings.toneMapMode);
+				if (ImGui::Combo("Tone Map", &toneMapIdx, kToneMapNames, IM_ARRAYSIZE(kToneMapNames)))
+					settings.toneMapMode = static_cast<EToneMapMode>(toneMapIdx);
+
 				ImGui::Checkbox("Enable TAA", &settings.enableTAA);
+				if (settings.enableTAA)
+					ImGui::SliderFloat("TAA Blend", &settings.taaBlendFactor, 0.02f, 0.5f, "%.2f");
 
 				ImGui::EndTabItem();
 			}
 
+			// --- Tab 2: Physical Camera ---
 			if (ImGui::BeginTabItem("Camera"))
 			{
-				ImGui::TextDisabled("Pos: x=%.1f y=%.1f z=%.1f", m_cachedMetrics.cameraX, m_cachedMetrics.cameraY, m_cachedMetrics.cameraZ);
+				ImGui::Text("Pos: x=%.1f y=%.1f z=%.1f", m_cachedMetrics.cameraX, m_cachedMetrics.cameraY, m_cachedMetrics.cameraZ);
 				if (scene && scene->HasCamera())
 				{
 					Camera* cam = scene->GetCamera();
 					float	aperture = cam->GetAperture();
-					float	shutterInv = 1.0f / std::max(cam->GetShutterSpeed(), 1e-5f);
+					float	shutterDenom = 1.0f / cam->GetShutterSpeed();
 					float	iso = cam->GetISO();
 					float	evComp = cam->GetEVCompensation();
 
-					ImGui::SeparatorText("Physical Exposure");
-					bool changed = false;
-					changed |= ImGui::SliderFloat("Aperture (f/)", &aperture, 1.4f, 22.0f, "f/%.1f");
-					changed |= ImGui::SliderFloat("Shutter (1/s)", &shutterInv, 15.0f, 4000.0f, "1/%.0f s");
-					changed |= ImGui::SliderFloat("ISO", &iso, 50.0f, 3200.0f, "%.0f");
-					changed |= ImGui::SliderFloat("EV Comp", &evComp, -4.0f, 4.0f, "%.2f");
-					if (changed)
-						cam->SetPhysicalExposure(aperture, 1.0f / std::max(shutterInv, 1.0f), iso, evComp);
+					bool exposureChanged = false;
+					exposureChanged |= ImGui::SliderFloat("Aperture", &aperture, 1.4f, 22.0f, "f/%.1f");
+					exposureChanged |= ImGui::SliderFloat("Shutter", &shutterDenom, 1.0f, 4000.0f, "1/%.0f s", ImGuiSliderFlags_Logarithmic);
+					exposureChanged |= ImGui::SliderFloat("ISO", &iso, 50.0f, 6400.0f, "%.0f", ImGuiSliderFlags_Logarithmic);
+					exposureChanged |= ImGui::SliderFloat("EV Comp", &evComp, -5.0f, 5.0f, "%+.2f EV");
+					if (exposureChanged)
+						cam->SetPhysicalExposure(aperture, 1.0f / shutterDenom, iso, evComp);
 
-					ImGui::TextDisabled("EV100: %.2f | Exposure: %.5f", cam->GetEV100(), cam->GetExposure());
+					ImGui::TextDisabled("EV100: %.2f  (Pre-Exp: %.2e)", cam->GetEV100(), cam->GetExposure());
+
+					ImGui::SeparatorText("Presets");
+					if (ImGui::SmallButton("Sunny 16"))
+						cam->SetPhysicalExposure(16.0f, 1.0f / 125.0f, 100.0f, 0.0f);
+					ImGui::SameLine();
+					if (ImGui::SmallButton("Courtyard"))
+						cam->SetPhysicalExposure(11.0f, 1.0f / 125.0f, 100.0f, 0.0f);
+					ImGui::SameLine();
+					if (ImGui::SmallButton("Indoor"))
+						cam->SetPhysicalExposure(2.8f, 1.0f / 60.0f, 400.0f, 0.0f);
 				}
+
 				ImGui::EndTabItem();
 			}
 
+			// --- Tab 3: Sky & Atmosphere ---
 			if (ImGui::BeginTabItem("Sky"))
 			{
-				ImGui::SeparatorText("Hillaire Atmosphere");
-				ImGui::SliderFloat("Sky Luminance (nits)", &settings.skyLuminanceNits, 1000.0f, 25000.0f, "%.0f");
-
-				ImGui::SeparatorText("Volumetric Clouds (Nubis)");
-				ImGui::Checkbox("Enable Clouds", &settings.enableClouds);
-				if (settings.enableClouds)
-				{
-					ImGui::SliderFloat("Cloud Coverage", &settings.cloudCoverage, 0.0f, 1.0f, "%.2f");
-					ImGui::SliderFloat("Cloud Speed", &settings.cloudSpeed, 0.0f, 30.0f, "%.1f m/s");
-				}
-
+				ImGui::SeparatorText("Sun");
 				if (scene)
 				{
-					auto lightView = scene->GetView<DirectionalLightComponent>();
-					for (auto [entity, dirLight] : lightView.each())
+					if (auto dirView = scene->GetView<DirectionalLightComponent>(); dirView.begin() != dirView.end())
 					{
-						ImGui::SeparatorText("Directional Sun");
-						float dir[3] = {dirLight.direction.GetX(), dirLight.direction.GetY(), dirLight.direction.GetZ()};
-						if (ImGui::SliderFloat3("Sun Direction", dir, -1.0f, 1.0f))
-							dirLight.direction = Vector3(dir[0], dir[1], dir[2]).Normalized();
-						ImGui::SliderFloat("Sun Illuminance (lux)", &dirLight.illuminanceLux, 1000.0f, 150000.0f, "%.0f");
-						break;
+						auto&			dirLight = dirView.get<DirectionalLightComponent>(*dirView.begin());
+						const Vector3	sunDir = (dirLight.direction * -1.0f).Normalized();
+						constexpr float kRadToDeg = 180.0f / 3.14159265359f;
+						constexpr float kDegToRad = 3.14159265359f / 180.0f;
+
+						float elevationDeg = std::asin(std::clamp(sunDir.GetY(), -1.0f, 1.0f)) * kRadToDeg;
+						float azimuthDeg = std::atan2(sunDir.GetZ(), sunDir.GetX()) * kRadToDeg;
+						if (azimuthDeg < 0.0f)
+							azimuthDeg += 360.0f;
+
+						bool sunChanged = false;
+						sunChanged |= ImGui::SliderFloat("Elevation", &elevationDeg, -5.0f, 89.0f, "%.1f deg");
+						sunChanged |= ImGui::SliderFloat("Azimuth", &azimuthDeg, 0.0f, 360.0f, "%.1f deg");
+						if (sunChanged)
+						{
+							const float	  elevRad = elevationDeg * kDegToRad;
+							const float	  azimRad = azimuthDeg * kDegToRad;
+							const Vector3 newSunDir(
+								std::cos(elevRad) * std::cos(azimRad),
+								std::sin(elevRad),
+								std::cos(elevRad) * std::sin(azimRad)
+							);
+							dirLight.direction = (newSunDir * -1.0f).Normalized();
+						}
 					}
 				}
+
+				ImGui::SeparatorText("Hillaire Atmosphere & IBL");
+				ImGui::SliderFloat("Sky Luminance", &settings.skyLuminanceNits, 1000.0f, 20000.0f, "%.0f nits");
+				ImGui::SliderFloat("Irradiance Scale", &settings.irradianceIntensity, 0.0f, 3.0f, "%.2f");
+
+				ImGui::SeparatorText("Volumetric Clouds");
+				ImGui::Checkbox("Volumetric Clouds", &settings.enableClouds);
+				if (settings.enableClouds)
+				{
+					ImGui::SliderFloat("Coverage", &settings.cloudCoverage, 0.0f, 0.92f, "%.2f");
+					ImGui::SliderFloat("Cloud Density", &settings.cloudDensity, 0.1f, 2.5f, "%.2f");
+					ImGui::SliderFloat("Cloud Speed", &settings.cloudSpeed, 0.0f, 24.0f, "%.1f");
+					ImGui::SliderFloat("Ground Shadow", &settings.cloudShadowStrength, 0.0f, 1.0f, "%.2f");
+				}
+
 				ImGui::EndTabItem();
 			}
 
+			// --- Tab 4: Shadows & AO ---
 			if (ImGui::BeginTabItem("Shadows"))
 			{
-				ImGui::SeparatorText("Ray-Traced Shadows (FFX)");
-				ImGui::Checkbox("RT Shadows", &settings.enableRTShadows);
-				if (settings.enableRTShadows)
-					ImGui::SliderFloat("Sun Radius", &settings.sunAngularRadius, 0.0f, 0.06f, "%.3f");
+				ImGui::SeparatorText("Ray-Traced Shadows");
+				if (settings.rtSupported)
+				{
+					ImGui::Checkbox("RT Shadows", &settings.enableRTShadows);
+					if (settings.enableRTShadows)
+						ImGui::SliderFloat("Sun Radius", &settings.sunAngularRadius, 0.0f, 0.06f, "%.3f");
+				}
+				else
+				{
+					ImGui::TextDisabled("HW Ray Query: unsupported");
+				}
 
 				ImGui::SeparatorText("Bend Studio SSS");
 				ImGui::Checkbox("Bend SSS", &settings.enableScreenSpaceShadows);
@@ -181,30 +227,44 @@ namespace BetterThanNothing
 					ImGui::Checkbox("Bilinear Offset Mode", &settings.sssBilinearOffsetMode);
 					ImGui::Checkbox("Early Out", &settings.sssUseEarlyOut);
 					static constexpr const char* kSssDebugNames[] = {"None", "Edge Mask", "Thread Index", "Wave Index"};
-					ImGui::Combo("SSS Debug", &settings.sssDebugMode, kSssDebugNames, IM_ARRAYSIZE(kSssDebugNames));
+					if (ImGui::Combo("SSS Debug", &settings.sssDebugMode, kSssDebugNames, IM_ARRAYSIZE(kSssDebugNames)))
+					{
+					}
 				}
 
 				ImGui::SeparatorText("Ambient Occlusion");
-				static constexpr const char* kAoModeNames[] = {"Off", "RTAO (Ray Query)", "GTAO (Screen-Space)"};
+				static constexpr const char* kAoModeNames[] = {"Off", "GTAO (Screen-Space)", "RTAO (Ray Query)"};
 				int							 aoModeIdx = static_cast<int>(settings.aoMode);
-				if (ImGui::Combo("AO Mode", &aoModeIdx, kAoModeNames, IM_ARRAYSIZE(kAoModeNames)))
+				if (ImGui::Combo("AO Mode", &aoModeIdx, kAoModeNames, settings.rtSupported ? 3 : 2))
 					settings.aoMode = static_cast<EAOMode>(aoModeIdx);
 				if (settings.aoMode != EAOMode::Off)
 				{
 					ImGui::SliderFloat("AO Radius", &settings.aoRadius, 0.1f, 5.0f, "%.2f m");
-					ImGui::SliderFloat("AO Strength", &settings.aoStrength, 0.0f, 2.5f, "%.2f");
+					ImGui::SliderFloat("AO Strength", &settings.aoStrength, 0.1f, 3.0f, "%.2f");
 				}
 
 				ImGui::EndTabItem();
 			}
 
+			// --- Tab 5: Nature & Fog ---
 			if (ImGui::BeginTabItem("Nature & Fog"))
 			{
 				ImGui::SeparatorText("Procedural 3D Grass");
-				ImGui::SliderFloat("Grass Fade Distance", &settings.grassFadeDistance, 25.0f, 220.0f, "%.0f m");
+				ImGui::Checkbox("Procedural Grass", &settings.enableProceduralGrass);
+				if (settings.enableProceduralGrass)
+				{
+					ImGui::SliderFloat("Wind Strength", &settings.grassWindStrength, 0.0f, 3.0f, "%.2f");
+					ImGui::SliderFloat("Wind Speed", &settings.grassWindSpeed, 0.0f, 3.0f, "%.2f");
+					ImGui::SliderFloat("Fade Distance", &settings.grassFadeDistance, 25.0f, 220.0f, "%.0f m");
+				}
+
+				ImGui::SeparatorText("Water Surface");
+				ImGui::SliderFloat("Wave Scale", &settings.waterWaveScale, 0.0f, 2.5f, "%.2f");
+				ImGui::SliderFloat("Foam", &settings.waterFoamIntensity, 0.0f, 2.0f, "%.2f");
 
 				ImGui::SeparatorText("Fog");
 				ImGui::Checkbox("Enable Fog", &settings.enableFog);
+
 				ImGui::EndTabItem();
 			}
 

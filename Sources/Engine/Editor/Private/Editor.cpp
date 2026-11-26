@@ -99,8 +99,10 @@ namespace BetterThanNothing
 
 			const ImGuiIO& io = ImGui::GetIO();
 
-			const bool isMouseEvent = (event.type >= SDL_EVENT_MOUSE_MOTION && event.type <= SDL_EVENT_MOUSE_WHEEL);
-			if (isMouseEvent && io.WantCaptureMouse)
+			// Do not block mouse motion or button release when the user is already dragging the 3D viewport camera
+			if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && io.WantCaptureMouse)
+				return true;
+			if (event.type == SDL_EVENT_MOUSE_WHEEL && io.WantCaptureMouse)
 				return true;
 
 			const bool isKeyboardEvent = (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP || event.type == SDL_EVENT_TEXT_INPUT);
