@@ -63,6 +63,30 @@ namespace BetterThanNothing
 			importedMaterial.normalTexturePath = texPath.string();
 		}
 
+		std::string roughnessTexName = material.roughness_texname;
+		if (roughnessTexName.empty())
+			roughnessTexName = material.specular_highlight_texname;
+		if (!roughnessTexName.empty())
+		{
+			const std::filesystem::path texPath = parentFolder / roughnessTexName;
+			importedMaterial.metallicRoughnessTexturePath = texPath.string();
+		}
+
+		const float diffuseSum = material.diffuse[0] + material.diffuse[1] + material.diffuse[2];
+		if (diffuseSum > 0.0f)
+			importedMaterial.baseColorFactor = Vector4(material.diffuse[0], material.diffuse[1], material.diffuse[2], material.dissolve);
+		else
+			importedMaterial.baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, material.dissolve);
+
+		importedMaterial.metallicFactor = material.metallic;
+		importedMaterial.roughnessFactor = material.roughness > 0.0f ? material.roughness : 0.85f;
+
+		if (material.dissolve < 1.0f || !material.alpha_texname.empty())
+		{
+			importedMaterial.alphaMode = EImportedAlphaMode::Mask;
+			importedMaterial.alphaCutoff = 0.5f;
+		}
+
 		importedMaterial.id = static_cast<uint32_t>(materialId);
 
 		return importedMaterial;
