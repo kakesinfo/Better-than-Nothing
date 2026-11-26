@@ -52,6 +52,13 @@ layout(std430, set = 1, binding = 10) writeonly buffer TileMetaBuffer {
 shared uint s_allLit;
 shared uint s_allShadowed;
 
+float LinearizeDepth(float d)
+{
+    const float nearP = 0.1;
+    const float farP = 1000.0;
+    return (nearP * farP) / max(farP - d * (farP - nearP), 1e-5);
+}
+
 vec3 DecodeOctahedral(vec2 e)
 {
     vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
@@ -132,7 +139,8 @@ void main()
             float spatialVar = spatialMoments.y;
             float spatialStd = sqrt(spatialVar);
 
-            bool validHistory = (prevUv.x >= 0.0 && prevUv.x <= 1.0 && prevUv.y >= 0.0 && prevUv.y <= 1.0 && globalUniforms.frameIndex > 0u);
+            bool sunMoved = (globalUniforms.flags & 32u) != 0u;
+            bool validHistory = (!sunMoved && prevUv.x >= 0.0 && prevUv.x <= 1.0 && prevUv.y >= 0.0 && prevUv.y <= 1.0 && globalUniforms.frameIndex > 0u);
             vec4 prevMoments = vec4(0.0);
 
             if (validHistory)
@@ -140,20 +148,22 @@ void main()
                 float prevDepth = textureLod(prevDepthTex, prevUv, 0.0).r;
                 vec3 prevNormal = DecodeOctahedral(textureLod(prevNormalTex, prevUv, 0.0).rg);
 
-                float depthDiff = abs(depth - prevDepth) / max(depth, 1e-4);
+                float linCurr = LinearizeDepth(depth);
+                float linPrev = LinearizeDepth(prevDepth);
+                float relDepthDiff = abs(linCurr - linPrev) / max(linCurr, 0.1);
                 float normalDot = dot(normal, prevNormal);
 
-                if (depthDiff > 0.02 || normalDot < 0.9)
+                if (prevDepth >= 1.0 || relDepthDiff > 0.08 || normalDot < 0.92)
                     validHistory = false;
                 else
                     prevMoments = textureLod(prevMomentsTex, prevUv, 0.0);
             }
 
-            float historyLen = validHistory ? min(prevMoments.b + 1.0, 16.0) : 1.0;
-            float alpha = max(1.0 / historyLen, 0.08);
+            float historyLen = validHistory ? min(prevMoments.b + 1.0, 8.0) : 1.0;
+            float alpha = max(1.0 / historyLen, 0.15);
 
-            // Clamp temporal history to spatial neighborhood envelope to prevent ghosting while keeping soft penumbra
-            float clampedPrev = clamp(prevMoments.r, spatialMean - 1.5 * spatialStd - 0.05, spatialMean + 1.5 * spatialStd + 0.05);
+            // Clamp temporal history tightly to spatial neighborhood envelope to prevent ghosting
+            float clampedPrev = clamp(prevMoments.r, spatialMean - 1.15 * spatialStd, spatialMean + 1.15 * spatialStd);
             float mean = validHistory ? mix(clampedPrev, currentShadow, alpha) : currentShadow;
             float moment2 = validHistory ? mix(prevMoments.g, currentShadow * currentShadow, alpha) : (currentShadow * currentShadow);
             float temporalVar = max(0.0, moment2 - mean * mean);

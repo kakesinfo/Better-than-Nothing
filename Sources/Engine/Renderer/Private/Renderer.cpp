@@ -1369,6 +1369,8 @@ namespace BetterThanNothing
 									: (1.0f / 60.0f);
 		m_lastFrameElapsedSeconds = elapsedTime;
 
+		const bool sunMoved = (m_frameIndex > 0u) && (Vector3::Distance2(m_lightDirection, dirLightDirection) > 1e-6f);
+
 		uint32_t flags = settings.enableTAA ? 1u : 0u;
 		if (m_rtSupported && settings.enableRTShadows && tlasValid)
 			flags |= (1u << 1);
@@ -1378,6 +1380,8 @@ namespace BetterThanNothing
 			flags |= (1u << 3);
 		if (settings.enableClouds)
 			flags |= (1u << 4);
+		if (sunMoved)
+			flags |= (1u << 5);
 		globalUniform->flags = flags;
 		globalUniform->elapsedTime = elapsedTime;
 		globalUniform->deltaTime = deltaTime;

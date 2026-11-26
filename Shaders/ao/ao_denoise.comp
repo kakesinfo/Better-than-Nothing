@@ -39,6 +39,13 @@ layout(set = 1, binding = 5) uniform sampler2D prevNormalTex;
 layout(set = 1, binding = 6) uniform sampler2D gbufferMotionTex;
 layout(set = 1, binding = 7, r16f) writeonly uniform image2D outAODenoised;
 
+float LinearizeDepth(float d)
+{
+    const float nearP = 0.1;
+    const float farP = 1000.0;
+    return (nearP * farP) / max(farP - d * (farP - nearP), 1e-5);
+}
+
 vec3 DecodeOctahedral(vec2 e)
 {
     vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
@@ -108,13 +115,15 @@ void main()
         float prevDepth = textureLod(prevDepthTex, prevUv, 0.0).r;
         vec3 prevNormal = DecodeOctahedral(textureLod(prevNormalTex, prevUv, 0.0).rg);
 
-        float depthDiff = abs(centerDepth - prevDepth) / max(centerDepth, 1e-4);
+        float linCurr = LinearizeDepth(centerDepth);
+        float linPrev = LinearizeDepth(prevDepth);
+        float relDepthDiff = abs(linCurr - linPrev) / max(linCurr, 0.1);
         float normalDot = dot(centerNormal, prevNormal);
 
-        if (depthDiff <= 0.02 && normalDot >= 0.9)
+        if (prevDepth < 1.0 && relDepthDiff <= 0.08 && normalDot >= 0.92)
         {
             float histAO = textureLod(aoHistoryTex, prevUv, 0.0).r;
-            finalAO = mix(histAO, spatialAO, 0.15);
+            finalAO = mix(histAO, spatialAO, 0.20);
         }
     }
 
