@@ -1,0 +1,149 @@
+#version 460
+#extension GL_EXT_ray_query : require
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D depthTex;
+layout(set = 1, binding = 1) uniform sampler2D gbufferNormalTex;
+layout(set = 1, binding = 2) uniform accelerationStructureEXT topLevelAS;
+layout(set = 1, binding = 3, r16f) writeonly uniform image2D outAORaw;
+
+layout(push_constant) uniform AOPushConstants {
+    float aoRadius;
+    float aoStrength;
+    uint frameIndex;
+    uint pad;
+} pc;
+
+const float PI = 3.14159265359;
+
+vec3 DecodeOctahedral(vec2 e)
+{
+    vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+    if (v.z < 0.0)
+    {
+        vec2 s = vec2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);
+        v.xy = (1.0 - abs(v.yx)) * s;
+    }
+    return normalize(v);
+}
+
+vec3 ReconstructWorldPos(vec2 uv, float depth, mat4 invViewProj)
+{
+    vec4 clipPos = vec4(uv * 2.0 - 1.0, depth, 1.0);
+    vec4 worldPos = invViewProj * clipPos;
+    return worldPos.xyz / worldPos.w;
+}
+
+float InterleavedGradientNoise(vec2 pixelCoord, uint frame)
+{
+    vec2 p = pixelCoord + float(frame & 63u) * 5.588238;
+    return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+void BuildOrthonormalBasis(vec3 n, out vec3 tangent, out vec3 bitangent)
+{
+    vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    tangent = normalize(cross(up, n));
+    bitangent = cross(n, tangent);
+}
+
+vec3 SampleCosineHemisphere(vec2 u)
+{
+    float r = sqrt(u.x);
+    float theta = 2.0 * PI * u.y;
+    float x = r * cos(theta);
+    float y = r * sin(theta);
+    float z = sqrt(max(0.0, 1.0 - u.x));
+    return vec3(x, y, z);
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = ivec2(int(globalUniforms.screenWidth), int(globalUniforms.screenHeight));
+    if (pixelCoord.x >= screenSize.x || pixelCoord.y >= screenSize.y)
+        return;
+
+    float depth = texelFetch(depthTex, pixelCoord, 0).r;
+    if (depth >= 1.0)
+    {
+        imageStore(outAORaw, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(screenSize);
+    vec3 worldPos = ReconstructWorldPos(uv, depth, globalUniforms.invViewProj);
+
+    float distToCam = length(worldPos - globalUniforms.cameraPosition);
+    if (distToCam > 85.0)
+    {
+        imageStore(outAORaw, pixelCoord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    vec3 N = DecodeOctahedral(texelFetch(gbufferNormalTex, pixelCoord, 0).rg);
+    vec3 tangent, bitangent;
+    BuildOrthonormalBasis(N, tangent, bitangent);
+
+    float u1 = InterleavedGradientNoise(vec2(pixelCoord), pc.frameIndex);
+    float u2 = InterleavedGradientNoise(vec2(pixelCoord) + vec2(17.0, 31.0), pc.frameIndex + 1u);
+    vec3 localDir = SampleCosineHemisphere(vec2(u1, u2));
+    vec3 rayDir = normalize(tangent * localDir.x + bitangent * localDir.y + N * localDir.z);
+
+    float bias = max(0.005, distToCam * 0.0005);
+    vec3 rayOrigin = worldPos + N * bias;
+
+    rayQueryEXT rayQuery;
+    rayQueryInitializeEXT(
+        rayQuery,
+        topLevelAS,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
+        0xFFu,
+        rayOrigin,
+        0.001,
+        rayDir,
+        pc.aoRadius
+    );
+
+    while (rayQueryProceedEXT(rayQuery)) {}
+
+    float ao = 1.0;
+    if (rayQueryGetIntersectionTypeEXT(rayQuery, true) != gl_RayQueryCommittedIntersectionNoneEXT)
+    {
+        float tHit = rayQueryGetIntersectionTEXT(rayQuery, true);
+        float normDist = clamp(tHit / max(pc.aoRadius, 1e-4), 0.0, 1.0);
+        float occ = 1.0 - normDist * normDist;
+        ao = clamp(1.0 - occ * pc.aoStrength, 0.0, 1.0);
+    }
+
+    imageStore(outAORaw, pixelCoord, vec4(ao, 0.0, 0.0, 0.0));
+}
