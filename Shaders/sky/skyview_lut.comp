@@ -1,0 +1,179 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float lightIntensity;
+
+    vec3 lightColor;
+    float cameraExposure;
+
+    vec3 cameraPosition;
+    uint pointLightCount;
+
+    float screenWidth;
+    float screenHeight;
+    uint frameIndex;
+    uint debugView;
+
+    uint toneMapMode;
+    uint flags;
+    float elapsedTime;
+    float deltaTime;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D transmittanceLUT;
+layout(set = 1, binding = 1) uniform sampler2D multiScatteringLUT;
+layout(set = 1, binding = 2, rgba16f) writeonly uniform image2D outSkyView;
+
+layout(push_constant) uniform SkyViewPushConstants {
+    float skyLuminanceNits;
+    float pad0;
+    float pad1;
+    float pad2;
+} pc;
+
+const float PI = 3.14159265359;
+const float PLANET_RADIUS_KM = 6360.0;
+const float ATMOSPHERE_RADIUS_KM = 6460.0;
+
+const vec3 RAYLEIGH_SCATTERING = vec3(5.802e-3, 13.558e-3, 33.1e-3);
+const float MIE_SCATTERING = 3.996e-3;
+const float MIE_ABSORPTION = 4.40e-3;
+const vec3 OZONE_ABSORPTION = vec3(0.650e-3, 1.881e-3, 0.085e-3);
+
+float RaySphereIntersect(vec3 ro, vec3 rd, float rad)
+{
+    float b = dot(ro, rd);
+    float c = dot(ro, ro) - rad * rad;
+    float disc = b * b - c;
+    if (disc < 0.0)
+        return -1.0;
+    float s = sqrt(disc);
+    float t0 = -b - s;
+    float t1 = -b + s;
+    return (t0 >= 0.0) ? t0 : t1;
+}
+
+vec2 LutTransmittanceParamsToUv(float viewHeight, float viewZenithCosAngle)
+{
+    float H = sqrt(max(0.0, ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float rho = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float disc = viewHeight * viewHeight * (viewZenithCosAngle * viewZenithCosAngle - 1.0) + ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM;
+    float d = max(0.0, (-viewHeight * viewZenithCosAngle + sqrt(max(0.0, disc))));
+    float dMin = ATMOSPHERE_RADIUS_KM - viewHeight;
+    float dMax = rho + H;
+    float xMu = (d - dMin) / max(dMax - dMin, 1e-5);
+    float xR = rho / max(H, 1e-5);
+    return vec2(clamp(xMu, 0.0, 1.0), clamp(xR, 0.0, 1.0));
+}
+
+float RayleighPhase(float cosTheta)
+{
+    return (3.0 / (16.0 * PI)) * (1.0 + cosTheta * cosTheta);
+}
+
+float MiePhase(float cosTheta, float g)
+{
+    float g2 = g * g;
+    return (3.0 / (8.0 * PI)) * ((1.0 - g2) * (1.0 + cosTheta * cosTheta)) /
+           ((2.0 + g2) * pow(max(1.0 + g2 - 2.0 * g * cosTheta, 1e-4), 1.5));
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = imageSize(outSkyView);
+    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+        return;
+
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(dims);
+
+    // Hillaire non-linear horizon parameterization
+    float viewHeight = PLANET_RADIUS_KM + max(globalUniforms.cameraPosition.y * 0.001, 0.001);
+    float vHorizon = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
+    float cosBeta = vHorizon / viewHeight;
+    float beta = acos(clamp(cosBeta, -1.0, 1.0));
+    float zenithHorizonAngle = PI - beta;
+
+    float viewZenithAngle = 0.0;
+    if (uv.y < 0.5)
+    {
+        float coord = 1.0 - 2.0 * uv.y;
+        coord *= coord;
+        viewZenithAngle = zenithHorizonAngle * (1.0 - coord);
+    }
+    else
+    {
+        float coord = uv.y * 2.0 - 1.0;
+        coord *= coord;
+        viewZenithAngle = zenithHorizonAngle + beta * coord;
+    }
+
+    float azimuthAngle = (uv.x * 2.0 - 1.0) * PI;
+    float sinZenith = sin(viewZenithAngle);
+    vec3 rd = normalize(vec3(sinZenith * cos(azimuthAngle), cos(viewZenithAngle), sinZenith * sin(azimuthAngle)));
+
+    vec3 ro = vec3(0.0, viewHeight, 0.0);
+    vec3 sunDir = normalize(-globalUniforms.lightDirection);
+
+    float tGround = RaySphereIntersect(ro, rd, PLANET_RADIUS_KM);
+    float tAtmo = RaySphereIntersect(ro, rd, ATMOSPHERE_RADIUS_KM);
+    float tMax = (tGround > 0.0) ? min(tGround, tAtmo) : max(tAtmo, 0.0);
+
+    const int STEPS = 32;
+    float dt = tMax / float(STEPS);
+    float cosTheta = dot(rd, sunDir);
+    float rPhase = RayleighPhase(cosTheta);
+    float mPhase = MiePhase(cosTheta, 0.8);
+
+    vec3 throughput = vec3(1.0);
+    vec3 luminance = vec3(0.0);
+
+    for (int i = 0; i < STEPS; ++i)
+    {
+        float t = (float(i) + 0.5) * dt;
+        vec3 p = ro + rd * t;
+        float pHeight = length(p);
+        float altKm = pHeight - PLANET_RADIUS_KM;
+
+        float rDens = exp(-max(altKm, 0.0) / 8.0);
+        float mDens = exp(-max(altKm, 0.0) / 1.2);
+        float oDens = max(0.0, 1.0 - abs(altKm - 25.0) / 15.0);
+
+        vec3 sigmaR = RAYLEIGH_SCATTERING * rDens;
+        float sigmaMS = MIE_SCATTERING * mDens;
+        float sigmaME = (MIE_SCATTERING + MIE_ABSORPTION) * mDens;
+        vec3 sigmaO = OZONE_ABSORPTION * oDens;
+
+        vec3 scattering = sigmaR + vec3(sigmaMS);
+        vec3 extinction = sigmaR + vec3(sigmaME) + sigmaO;
+        vec3 stepTrans = exp(-extinction * dt);
+
+        vec3 upVec = p / max(pHeight, 1e-5);
+        float sunCos = dot(upVec, sunDir);
+        vec3 transToSun = textureLod(transmittanceLUT, LutTransmittanceParamsToUv(pHeight, sunCos), 0.0).rgb;
+        float planetShadow = (RaySphereIntersect(p, sunDir, PLANET_RADIUS_KM) > 0.0) ? 0.0 : 1.0;
+
+        vec2 msUv = vec2(sunCos * 0.5 + 0.5, clamp(altKm / (ATMOSPHERE_RADIUS_KM - PLANET_RADIUS_KM), 0.0, 1.0));
+        vec3 multiScat = textureLod(multiScatteringLUT, msUv, 0.0).rgb;
+
+        vec3 phaseScattering = sigmaR * rPhase + vec3(sigmaMS * mPhase);
+        vec3 S = phaseScattering * transToSun * planetShadow + scattering * multiScat;
+        vec3 SInt = (S - S * stepTrans) / max(extinction, vec3(1e-6));
+
+        luminance += throughput * SInt;
+        throughput *= stepTrans;
+    }
+
+    luminance *= pc.skyLuminanceNits;
+    imageStore(outSkyView, pixelCoord, vec4(luminance, 1.0));
+}

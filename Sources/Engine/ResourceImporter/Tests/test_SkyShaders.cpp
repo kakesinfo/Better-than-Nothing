@@ -19,3 +19,11 @@ TEST(SkyShadersTest, CompileMultiScatteringLutShader)
 	EXPECT_EQ(comp.type, EShaderType::Compute);
 	EXPECT_FALSE(comp.spirv.empty());
 }
+
+TEST(SkyShadersTest, CompileSkyViewLutShader)
+{
+	ResourceImporter	 importer;
+	const ImportedShader comp = importer.ImportShader(AssetPath::Resolve("Shaders/sky/skyview_lut.comp"));
+	EXPECT_EQ(comp.type, EShaderType::Compute);
+	EXPECT_FALSE(comp.spirv.empty());
+}
