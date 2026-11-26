@@ -20,6 +20,7 @@
 #include "RenderingApi/Resources/Texture.hpp"
 #include "RenderingDevice/Handle.hpp"
 #include "RenderingDevice/RenderingDevice.hpp"
+#include "RenderingDevice_FormatUtils.hpp"
 #include "RenderingDevice_Internals.hpp"
 #include "StagingBuffer.hpp"
 #include <RenderingApi.hpp>
@@ -32,7 +33,7 @@ namespace BetterThanNothing
 		return static_cast<std::uint8_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 	}
 
-	static VkFormat Internal_ToVkFormat(const TextureFormat format, const RenderingDeviceInternals* self)
+	VkFormat ToVkFormat(const TextureFormat format, const VkFormat fallback)
 	{
 		switch (format)
 		{
@@ -42,8 +43,14 @@ namespace BetterThanNothing
 				return VK_FORMAT_R8G8B8A8_SRGB;
 			case TextureFormat::B8G8R8A8_UNORM:
 				return VK_FORMAT_B8G8R8A8_UNORM;
+			case TextureFormat::R16_SFLOAT:
+				return VK_FORMAT_R16_SFLOAT;
+			case TextureFormat::R16G16_SFLOAT:
+				return VK_FORMAT_R16G16_SFLOAT;
 			case TextureFormat::R16G16B16A16_SFLOAT:
 				return VK_FORMAT_R16G16B16A16_SFLOAT;
+			case TextureFormat::R32_SFLOAT:
+				return VK_FORMAT_R32_SFLOAT;
 			case TextureFormat::D32_SFLOAT:
 				return VK_FORMAT_D32_SFLOAT;
 			case TextureFormat::D24_UNORM_S8_UINT:
@@ -52,8 +59,13 @@ namespace BetterThanNothing
 				return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			case TextureFormat::Undefined:
 			default:
-				return self->swapChain->GetImageFormat();
+				return fallback;
 		}
+	}
+
+	static VkFormat Internal_ToVkFormat(const TextureFormat format, const RenderingDeviceInternals* self)
+	{
+		return ToVkFormat(format, self->swapChain->GetImageFormat());
 	}
 
 	static VkImageUsageFlags Internal_ToVkTextureUsage(const TextureUsageFlags usage)
