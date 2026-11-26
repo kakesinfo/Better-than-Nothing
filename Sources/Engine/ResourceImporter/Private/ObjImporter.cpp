@@ -22,6 +22,8 @@
 #include <Common/Logger.hpp>
 #include <ResourceImporter/ResourceImporter_Types.hpp>
 #include <ResourceImporter/Importer.hpp>
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <meshoptimizer.h>
@@ -72,16 +74,24 @@ namespace BetterThanNothing
 			importedMaterial.metallicRoughnessTexturePath = texPath.string();
 		}
 
+		// Legacy OBJ exporters (including Crytek Sponza) write `d 0.000000` for opaque materials
+		const float alpha = (material.dissolve <= 0.0f) ? 1.0f : material.dissolve;
+
 		const float diffuseSum = material.diffuse[0] + material.diffuse[1] + material.diffuse[2];
-		if (diffuseSum > 0.0f)
-			importedMaterial.baseColorFactor = Vector4(material.diffuse[0], material.diffuse[1], material.diffuse[2], material.dissolve);
+		if (!material.diffuse_texname.empty() || diffuseSum <= 0.0f)
+			importedMaterial.baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, alpha);
 		else
-			importedMaterial.baseColorFactor = Vector4(1.0f, 1.0f, 1.0f, material.dissolve);
+			importedMaterial.baseColorFactor = Vector4(material.diffuse[0], material.diffuse[1], material.diffuse[2], alpha);
 
 		importedMaterial.metallicFactor = material.metallic;
-		importedMaterial.roughnessFactor = material.roughness > 0.0f ? material.roughness : 0.85f;
+		if (material.roughness > 0.0f)
+			importedMaterial.roughnessFactor = material.roughness;
+		else if (material.shininess > 0.0f)
+			importedMaterial.roughnessFactor = std::clamp(std::sqrt(2.0f / (material.shininess + 2.0f)), 0.15f, 0.95f);
+		else
+			importedMaterial.roughnessFactor = 0.85f;
 
-		if (material.dissolve < 1.0f || !material.alpha_texname.empty())
+		if (!material.alpha_texname.empty())
 		{
 			importedMaterial.alphaMode = EImportedAlphaMode::Mask;
 			importedMaterial.alphaCutoff = 0.5f;

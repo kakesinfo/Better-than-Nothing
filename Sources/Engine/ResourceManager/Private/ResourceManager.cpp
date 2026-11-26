@@ -216,7 +216,7 @@ namespace BetterThanNothing
 		uboData.baseColorFactor = info.baseColorFactor;
 		uboData.metallicFactor = info.metallicFactor;
 		uboData.roughnessFactor = info.roughnessFactor;
-		uboData.alphaCutoff = info.alphaCutoff;
+		uboData.alphaCutoff = (info.alphaMode == EAlphaMode::Mask) ? info.alphaCutoff : 0.0f;
 
 		const Handle uboHandle = m_renderingDevice->CreateUniformBuffer(sizeof(MaterialUniformData));
 		m_renderingDevice->CopyDataToBuffer(uboHandle, &uboData, sizeof(MaterialUniformData));
