@@ -67,25 +67,29 @@ namespace BetterThanNothing
 		bool enableRTShadows = true;
 		bool enableScreenSpaceShadows = true;
 		bool enableClouds = true;
-		bool enableFog = false;
 
 		float aoRadius = 1.5f;
-		float aoStrength = 1.0f;
+		float aoStrength = 1.4f;
 
-		float sunAngularRadius = 0.0093f;
-		float skyLuminanceNits = 8000.0f;
+		float sunAngularRadius = 0.015f;
+		float skyLuminanceNits = 4000.0f;
+		float atmosphereAltitudeKm = 0.2f;
+		float atmosphereMieAnisotropy = 0.8f;
+		float atmosphereMultiScatteringFactor = 1.0f;
+		float atmosphereDensityScale = 1.0f;
 		float irradianceIntensity = 1.0f;
 
-		float cloudCoverage = 0.45f;
+		float cloudCoverage = 0.52f;
 		float cloudDensity = 1.0f;
-		float cloudSpeed = 8.0f;
+		float cloudSpeed = 1.0f;
 		float cloudShadowStrength = 0.65f;
 
 		bool  enableProceduralGrass = true;
 		float grassWindStrength = 1.0f;
 		float grassWindSpeed = 1.0f;
-		float grassFadeDistance = 145.0f;
+		float grassFadeDistance = 85.0f;
 
+		float waterLevel = -1.6f;
 		float waterWaveScale = 1.0f;
 		float waterFoamIntensity = 1.0f;
 

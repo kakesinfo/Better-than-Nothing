@@ -251,11 +251,12 @@ namespace BetterThanNothing
 
 		m_pointBorderWhiteSampler = m_renderingDevice->GetOrCreateTextureSampler(MakePointBorderWhiteSamplerDesc());
 
-		const std::array<DescriptorBindingDesc, 4> taaBindings = {{
+		const std::array<DescriptorBindingDesc, 5> taaBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
-			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("PostProcess::TAA", taaBindings);
 		m_renderingDevice->CreatePipelineLayout("PostProcess::TAA", [&](PipelineLayoutBlueprint* blueprint) {
@@ -388,7 +389,7 @@ namespace BetterThanNothing
 		const auto aoDenoiseComp = m_resourceManager->LoadShader("Shaders/ao/ao_denoise.comp");
 		m_resourceManager->CreateComputePipeline("AO::Denoise", aoDenoiseComp, "AO::Denoise");
 
-		// Hillaire Sky & IBL LUTs + Sky Render
+		// Hillaire Sky & IBL LUTs + Sky Render (matching test/full-pass)
 		m_renderingDevice->CreateDescriptorSetLayout("Sky::BrdfLUT", DescriptorType::StorageImage, ShaderStageFlags::Compute);
 		m_renderingDevice->CreatePipelineLayout("Sky::BrdfLUT", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("Sky::BrdfLUT");
@@ -397,6 +398,7 @@ namespace BetterThanNothing
 
 		m_renderingDevice->CreateDescriptorSetLayout("Sky::TransmittanceLUT", DescriptorType::StorageImage, ShaderStageFlags::Compute);
 		m_renderingDevice->CreatePipelineLayout("Sky::TransmittanceLUT", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("Sky::TransmittanceLUT");
 		});
 		m_resourceManager->CreateComputePipeline("Sky::TransmittanceLUT", m_resourceManager->LoadShader("Shaders/sky/transmittance_lut.comp"), "Sky::TransmittanceLUT");
@@ -407,6 +409,7 @@ namespace BetterThanNothing
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("Sky::MultiScatteringLUT", multiScatBindings);
 		m_renderingDevice->CreatePipelineLayout("Sky::MultiScatteringLUT", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("Sky::MultiScatteringLUT");
 		});
 		m_resourceManager->CreateComputePipeline("Sky::MultiScatteringLUT", m_resourceManager->LoadShader("Shaders/sky/multiscattering_lut.comp"), "Sky::MultiScatteringLUT");
@@ -420,7 +423,6 @@ namespace BetterThanNothing
 		m_renderingDevice->CreatePipelineLayout("Sky::SkyViewLUT", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("Sky::SkyViewLUT");
-			blueprint->AddPushConstant<SkyViewPushConstants>(EShaderType::Compute);
 		});
 		m_resourceManager->CreateComputePipeline("Sky::SkyViewLUT", m_resourceManager->LoadShader("Shaders/sky/skyview_lut.comp"), "Sky::SkyViewLUT");
 
@@ -430,37 +432,40 @@ namespace BetterThanNothing
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("Sky::IrradianceConvolve", iblConvolveBindings);
 		m_renderingDevice->CreatePipelineLayout("Sky::IrradianceConvolve", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("Sky::IrradianceConvolve");
 		});
 		m_resourceManager->CreateComputePipeline("Sky::IrradianceConvolve", m_resourceManager->LoadShader("Shaders/sky/irradiance_convolve.comp"), "Sky::IrradianceConvolve");
 
 		m_renderingDevice->CreateDescriptorSetLayout("Sky::PrefilterEnv", iblConvolveBindings);
 		m_renderingDevice->CreatePipelineLayout("Sky::PrefilterEnv", [&](PipelineLayoutBlueprint* blueprint) {
+			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("Sky::PrefilterEnv");
 		});
 		m_resourceManager->CreateComputePipeline("Sky::PrefilterEnv", m_resourceManager->LoadShader("Shaders/sky/prefilter_env.comp"), "Sky::PrefilterEnv");
 
-		const std::array<DescriptorBindingDesc, 4> skyRenderBindings = {{
+		const std::array<DescriptorBindingDesc, 5> skyRenderBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Compute},
 			{.binding = 3, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
+			{.binding = 4, .type = DescriptorType::StorageImage, .count = 1, .stages = ShaderStageFlags::Compute},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("Sky::Render", skyRenderBindings);
 		m_renderingDevice->CreatePipelineLayout("Sky::Render", [&](PipelineLayoutBlueprint* blueprint) {
 			blueprint->AddDescriptorSetLayout("GlobalUniforms");
 			blueprint->AddDescriptorSetLayout("Sky::Render");
-			blueprint->AddPushConstant<SkyRenderPushConstants>(EShaderType::Compute);
 		});
 		m_resourceManager->CreateComputePipeline("Sky::Render", m_resourceManager->LoadShader("Shaders/sky/sky_render.comp"), "Sky::Render");
 
-		// Animated Water Surface
-		const std::array<DescriptorBindingDesc, 5> waterBindings = {{
+		// Animated Water Surface (matching test/full-pass: 0=depth, 1=sceneColor, 2=transmittance, 3=irradiance, 4=prefilteredEnv, 5=brdf)
+		const std::array<DescriptorBindingDesc, 6> waterBindings = {{
 			{.binding = 0, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
 			{.binding = 1, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
 			{.binding = 2, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
 			{.binding = 3, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
 			{.binding = 4, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
+			{.binding = 5, .type = DescriptorType::CombinedImageSampler, .count = 1, .stages = ShaderStageFlags::Fragment},
 		}};
 		m_renderingDevice->CreateDescriptorSetLayout("Water::Surface", waterBindings);
 		m_renderingDevice->CreatePipelineLayout("Water::Surface", [&](PipelineLayoutBlueprint* blueprint) {
@@ -838,7 +843,7 @@ namespace BetterThanNothing
 		m_gbufferAlbedo = createTarget(TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
 		m_gbufferNormal = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
 		m_gbufferMaterial = createTarget(TextureFormat::R8G8B8A8_UNORM, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
-		m_gbufferMotion = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Sampled);
+		m_gbufferMotion = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled);
 		m_prevDepthTarget = createTarget(TextureFormat::D32_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_prevNormalTarget = createTarget(TextureFormat::R16G16_SFLOAT, TextureUsageFlags::TransferDst | TextureUsageFlags::Sampled);
 		m_hdrColor = createTarget(TextureFormat::R16G16B16A16_SFLOAT, TextureUsageFlags::ColorAttachment | TextureUsageFlags::Storage | TextureUsageFlags::Sampled | TextureUsageFlags::TransferSrc);
@@ -912,7 +917,8 @@ namespace BetterThanNothing
 				m_renderingDevice->UpdateDescriptorCombinedImage(taaSet, 0, m_hdrColor, m_linearClampSampler);
 				m_renderingDevice->UpdateDescriptorCombinedImage(taaSet, 1, m_taaHistory[readIdx], m_linearClampSampler);
 				m_renderingDevice->UpdateDescriptorCombinedImage(taaSet, 2, m_gbufferMotion, m_computeNearestSampler);
-				m_renderingDevice->UpdateDescriptorStorageImage(taaSet, 3, m_taaHistory[writeIdx]);
+				m_renderingDevice->UpdateDescriptorCombinedImage(taaSet, 3, m_depthTarget, m_computeNearestSampler);
+				m_renderingDevice->UpdateDescriptorStorageImage(taaSet, 4, m_taaHistory[writeIdx]);
 
 				m_renderingDevice->UpdateDescriptorCombinedImage(m_tonemapDescriptorSets[p][i], 0, m_taaHistory[writeIdx], m_linearClampSampler);
 			}
@@ -1055,6 +1061,7 @@ namespace BetterThanNothing
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_skyViewLUT, m_skyViewSampler);
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 2, m_transmittanceLUT, m_linearClampSampler);
 			m_renderingDevice->UpdateDescriptorStorageImage(set, 3, m_hdrColor);
+			m_renderingDevice->UpdateDescriptorStorageImage(set, 4, m_gbufferMotion);
 		}
 
 		if (m_waterDescriptorSets.size() != frameCount)
@@ -1066,11 +1073,12 @@ namespace BetterThanNothing
 		for (uint32_t i = 0; i < frameCount; ++i)
 		{
 			const Handle set = m_waterDescriptorSets[i];
-			m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_waterSceneColorCopy, m_linearClampSampler);
-			m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_waterDepthCopy, m_computeNearestSampler);
-			m_renderingDevice->UpdateDescriptorCombinedImage(set, 2, m_skyViewLUT, m_skyViewSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 0, m_waterDepthCopy, m_computeNearestSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 1, m_waterSceneColorCopy, m_linearClampSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 2, m_transmittanceLUT, m_linearClampSampler);
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 3, m_irradianceLUT, m_skyViewSampler);
 			m_renderingDevice->UpdateDescriptorCombinedImage(set, 4, m_prefilteredEnvLUT, m_skyViewSampler);
+			m_renderingDevice->UpdateDescriptorCombinedImage(set, 5, m_brdfLUT, m_linearClampSampler);
 		}
 
 		m_lastSwapChainGeneration = currentGen;
@@ -1219,10 +1227,6 @@ namespace BetterThanNothing
 
 		m_temporalReadIndex = 1u - m_temporalReadIndex;
 
-		const auto transformView = scene->GetView<TransformComponent>();
-		for (auto [entity, transform] : transformView.each())
-			transform.prevWorldMatrix = transform.worldMatrix;
-
 		m_renderingDevice->EndFrame(imageIndex);
 	}
 
@@ -1352,17 +1356,19 @@ namespace BetterThanNothing
 		globalUniform->invViewProj = viewProj.Inverted();
 		globalUniform->unjitteredViewProj = unjitteredViewProj;
 		globalUniform->prevUnjitteredViewProj = m_frameIndex == 0 ? unjitteredViewProj : m_prevUnjitteredViewProj;
+		globalUniform->lightDirection = dirLightDirection;
+		globalUniform->sunAngularRadius = settings.sunAngularRadius;
+		globalUniform->lightColor = dirLightColor;
+		globalUniform->sunIlluminanceLux = dirLightIntensity;
 		globalUniform->cameraPosition = camera->GetPosition();
 		globalUniform->cameraExposure = camera->GetExposure();
-		globalUniform->lightDirection = dirLightDirection;
-		globalUniform->lightColor = dirLightColor;
-		globalUniform->lightIntensity = dirLightIntensity;
 		globalUniform->pointLightCount = pointLightCount;
-		globalUniform->screenWidth = static_cast<float>(swapW);
-		globalUniform->screenHeight = static_cast<float>(swapH);
 		globalUniform->frameIndex = m_frameIndex;
+		globalUniform->screenWidth = swapW;
+		globalUniform->screenHeight = swapH;
 		globalUniform->debugView = static_cast<uint32_t>(settings.debugView);
 		globalUniform->toneMapMode = static_cast<uint32_t>(settings.toneMapMode);
+
 		const float elapsedTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - m_startTime).count();
 		const float deltaTime = (m_frameIndex > 0 && elapsedTime > m_lastFrameElapsedSeconds)
 									? std::clamp(elapsedTime - m_lastFrameElapsedSeconds, 0.001f, 0.1f)
@@ -1371,27 +1377,44 @@ namespace BetterThanNothing
 
 		const bool sunMoved = (m_frameIndex > 0u) && (Vector3::Distance2(m_lightDirection, dirLightDirection) > 1e-6f);
 
-		uint32_t flags = settings.enableTAA ? 1u : 0u;
+		uint32_t flags = 0u;
 		if (m_rtSupported && settings.enableRTShadows && tlasValid)
-			flags |= (1u << 1);
-		if (settings.enableScreenSpaceShadows)
-			flags |= (1u << 2);
+			flags |= GlobalRenderFlags::RTShadowsEnabled;
+		flags |= GlobalRenderFlags::ShadowDenoiserEnabled;
+		if (settings.enableTAA)
+			flags |= GlobalRenderFlags::TAAEnabled;
+		if (m_frameIndex > 0u)
+			flags |= GlobalRenderFlags::HistoryValid;
 		if (settings.aoMode != EAOMode::Off)
-			flags |= (1u << 3);
+			flags |= GlobalRenderFlags::AOEnabled;
+		if (settings.enableScreenSpaceShadows)
+			flags |= GlobalRenderFlags::BendSSSEnabled;
 		if (settings.enableClouds)
-			flags |= (1u << 4);
+			flags |= GlobalRenderFlags::VolumetricCloudsEnabled;
 		if (sunMoved)
-			flags |= (1u << 5);
+			flags |= GlobalRenderFlags::SunMoved;
+
 		globalUniform->flags = flags;
-		globalUniform->elapsedTime = elapsedTime;
-		globalUniform->deltaTime = deltaTime;
+		globalUniform->taaBlendFactor = settings.taaBlendFactor;
+		globalUniform->skyLuminanceNits = settings.skyLuminanceNits;
+		globalUniform->atmosphereAltitudeKm = settings.atmosphereAltitudeKm;
+		globalUniform->atmosphereMieAnisotropy = settings.atmosphereMieAnisotropy;
+		globalUniform->atmosphereMultiScatteringFactor = settings.atmosphereMultiScatteringFactor;
+		globalUniform->atmosphereDensityScale = settings.atmosphereDensityScale;
+		globalUniform->aoRadius = settings.aoRadius;
+		globalUniform->aoPower = settings.aoStrength;
 		globalUniform->irradianceIntensity = settings.irradianceIntensity;
+		globalUniform->time = elapsedTime;
+		globalUniform->waterLevel = settings.waterLevel;
 		globalUniform->waterWaveScale = settings.waterWaveScale;
 		globalUniform->waterFoamIntensity = settings.waterFoamIntensity;
 		globalUniform->grassWindStrength = settings.grassWindStrength;
 		globalUniform->grassWindSpeed = settings.grassWindSpeed;
 		globalUniform->grassFadeDistance = settings.grassFadeDistance;
+		globalUniform->deltaTime = deltaTime;
+		globalUniform->cloudCoverage = settings.cloudCoverage;
 		globalUniform->cloudDensity = settings.cloudDensity;
+		globalUniform->cloudSpeed = settings.cloudSpeed;
 		globalUniform->cloudShadowStrength = settings.cloudShadowStrength;
 
 		m_lightDirection = dirLightDirection;

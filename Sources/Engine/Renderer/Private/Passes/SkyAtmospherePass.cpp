@@ -27,15 +27,36 @@
 
 namespace BetterThanNothing
 {
-	void SkyAtmospherePass::EvaluateDirtyFlags(SkyLutDirtyState& state, const Vector3& lightDirection, const float skyLuminanceNits)
+	void SkyAtmospherePass::EvaluateDirtyFlags(
+		SkyLutDirtyState& state,
+		const Vector3&	  lightDirection,
+		const float		  skyLuminanceNits,
+		const float		  altitudeKm,
+		const float		  mieAnisotropy,
+		const float		  multiScatteringFactor,
+		const float		  densityScale
+	)
 	{
+		if (state.lastDensityScale < 0.0f || std::abs(state.lastDensityScale - densityScale) > 1e-4f ||
+			std::abs(state.lastMieAnisotropy - mieAnisotropy) > 1e-4f)
+		{
+			state.atmosphereStaticLutsDirty = true;
+			state.skyIblLutsDirty = true;
+			state.lastDensityScale = densityScale;
+			state.lastMieAnisotropy = mieAnisotropy;
+		}
+
 		if (state.lastSkyLuminanceNits < 0.0f ||
 			Vector3::Distance2(state.lastLightDirection, lightDirection) > 1e-8f ||
-			std::abs(state.lastSkyLuminanceNits - skyLuminanceNits) > 1e-3f)
+			std::abs(state.lastSkyLuminanceNits - skyLuminanceNits) > 1e-3f ||
+			std::abs(state.lastAltitudeKm - altitudeKm) > 1e-4f ||
+			std::abs(state.lastMultiScatteringFactor - multiScatteringFactor) > 1e-4f)
 		{
 			state.skyIblLutsDirty = true;
 			state.lastLightDirection = lightDirection;
 			state.lastSkyLuminanceNits = skyLuminanceNits;
+			state.lastAltitudeKm = altitudeKm;
+			state.lastMultiScatteringFactor = multiScatteringFactor;
 		}
 	}
 
@@ -47,7 +68,15 @@ namespace BetterThanNothing
 		const auto&		 settings = RenderSettings::Get();
 		RenderingDevice* renderingDevice = ctx.renderingDevice;
 
-		EvaluateDirtyFlags(m_dirtyState, ctx.lightDirection, settings.skyLuminanceNits);
+		EvaluateDirtyFlags(
+			m_dirtyState,
+			ctx.lightDirection,
+			settings.skyLuminanceNits,
+			settings.atmosphereAltitudeKm,
+			settings.atmosphereMieAnisotropy,
+			settings.atmosphereMultiScatteringFactor,
+			settings.atmosphereDensityScale
+		);
 
 		if (m_dirtyState.brdfLutDirty && ctx.brdfLUT.IsValid())
 		{
@@ -67,7 +96,7 @@ namespace BetterThanNothing
 			renderingDevice->TransitionTexture(ctx.transmittanceLUT, ImageLayout::General);
 			const PipelineResourceCache* transPipe = ctx.resourceManager->GetPipelineData("Sky::TransmittanceLUT");
 			renderingDevice->BindComputePipeline(transPipe->pipeline);
-			const std::array<Handle, 1> transSets = {ctx.skyTransmittanceDescriptorSet};
+			const std::array<Handle, 2> transSets = {ctx.globalDescriptorSet, ctx.skyTransmittanceDescriptorSet};
 			renderingDevice->BindComputeDescriptorSets("Sky::TransmittanceLUT", 0, transSets);
 			renderingDevice->Dispatch(256u / 8u, 64u / 8u, 1u);
 			renderingDevice->ComputeBarrier();
@@ -76,7 +105,7 @@ namespace BetterThanNothing
 			renderingDevice->TransitionTexture(ctx.multiScatteringLUT, ImageLayout::General);
 			const PipelineResourceCache* msPipe = ctx.resourceManager->GetPipelineData("Sky::MultiScatteringLUT");
 			renderingDevice->BindComputePipeline(msPipe->pipeline);
-			const std::array<Handle, 1> msSets = {ctx.skyMultiScatteringDescriptorSet};
+			const std::array<Handle, 2> msSets = {ctx.globalDescriptorSet, ctx.skyMultiScatteringDescriptorSet};
 			renderingDevice->BindComputeDescriptorSets("Sky::MultiScatteringLUT", 0, msSets);
 			renderingDevice->Dispatch(32u / 8u, 32u / 8u, 1u);
 			renderingDevice->ComputeBarrier();
@@ -92,9 +121,6 @@ namespace BetterThanNothing
 			renderingDevice->BindComputePipeline(skyViewPipe->pipeline);
 			const std::array<Handle, 2> skyViewSets = {ctx.globalDescriptorSet, ctx.skyViewDescriptorSet};
 			renderingDevice->BindComputeDescriptorSets("Sky::SkyViewLUT", 0, skyViewSets);
-			SkyViewPushConstants viewPc{};
-			viewPc.skyLuminanceNits = settings.skyLuminanceNits;
-			renderingDevice->PushComputeConstants("Sky::SkyViewLUT", &viewPc, sizeof(viewPc));
 			renderingDevice->Dispatch((192u + 7u) / 8u, (108u + 7u) / 8u, 1u);
 			renderingDevice->ComputeBarrier();
 			renderingDevice->TransitionTexture(ctx.skyViewLUT, ImageLayout::ShaderReadOnly);
@@ -102,7 +128,7 @@ namespace BetterThanNothing
 			renderingDevice->TransitionTexture(ctx.irradianceLUT, ImageLayout::General);
 			const PipelineResourceCache* irrPipe = ctx.resourceManager->GetPipelineData("Sky::IrradianceConvolve");
 			renderingDevice->BindComputePipeline(irrPipe->pipeline);
-			const std::array<Handle, 1> irrSets = {ctx.skyIrradianceDescriptorSet};
+			const std::array<Handle, 2> irrSets = {ctx.globalDescriptorSet, ctx.skyIrradianceDescriptorSet};
 			renderingDevice->BindComputeDescriptorSets("Sky::IrradianceConvolve", 0, irrSets);
 			renderingDevice->Dispatch(64u / 8u, 32u / 8u, 1u);
 			renderingDevice->ComputeBarrier();
@@ -111,7 +137,7 @@ namespace BetterThanNothing
 			renderingDevice->TransitionTexture(ctx.prefilteredEnvLUT, ImageLayout::General);
 			const PipelineResourceCache* prefPipe = ctx.resourceManager->GetPipelineData("Sky::PrefilterEnv");
 			renderingDevice->BindComputePipeline(prefPipe->pipeline);
-			const std::array<Handle, 1> prefSets = {ctx.skyPrefilterDescriptorSet};
+			const std::array<Handle, 2> prefSets = {ctx.globalDescriptorSet, ctx.skyPrefilterDescriptorSet};
 			renderingDevice->BindComputeDescriptorSets("Sky::PrefilterEnv", 0, prefSets);
 			renderingDevice->Dispatch(128u / 8u, 320u / 8u, 1u);
 			renderingDevice->ComputeBarrier();
@@ -120,25 +146,19 @@ namespace BetterThanNothing
 			m_dirtyState.skyIblLutsDirty = false;
 		}
 
-		// Render sky, solar disk & volumetric clouds into hdrColor where depth >= 1.0
+		// Render sky, solar disk & volumetric clouds into hdrColor where depth >= 1.0 (and write sky motion vectors)
 		const uint32_t groupX = (ctx.viewportWidth + 7u) / 8u;
 		const uint32_t groupY = (ctx.viewportHeight + 7u) / 8u;
 		if (groupX > 0u && groupY > 0u)
 		{
 			renderingDevice->TransitionTexture(ctx.depthTarget, ImageLayout::ShaderReadOnly);
 			renderingDevice->TransitionTexture(ctx.hdrColor, ImageLayout::General);
+			renderingDevice->TransitionTexture(ctx.gbufferMotion, ImageLayout::General);
 
 			const PipelineResourceCache* renderPipe = ctx.resourceManager->GetPipelineData("Sky::Render");
 			renderingDevice->BindComputePipeline(renderPipe->pipeline);
 			const std::array<Handle, 2> renderSets = {ctx.globalDescriptorSet, ctx.skyRenderDescriptorSet};
 			renderingDevice->BindComputeDescriptorSets("Sky::Render", 0, renderSets);
-
-			SkyRenderPushConstants renderPc{};
-			renderPc.skyLuminanceNits = settings.skyLuminanceNits;
-			renderPc.cloudCoverage = settings.cloudCoverage;
-			renderPc.cloudSpeed = settings.cloudSpeed;
-			renderPc.enableClouds = settings.enableClouds ? 1u : 0u;
-			renderingDevice->PushComputeConstants("Sky::Render", &renderPc, sizeof(renderPc));
 
 			renderingDevice->Dispatch(groupX, groupY, 1u);
 			renderingDevice->ComputeBarrier();

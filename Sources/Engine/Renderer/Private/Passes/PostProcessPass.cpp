@@ -35,6 +35,7 @@ namespace BetterThanNothing
 
 		renderingDevice->TransitionTexture(ctx.hdrColor, ImageLayout::ShaderReadOnly);
 		renderingDevice->TransitionTexture(ctx.gbufferMotion, ImageLayout::ShaderReadOnly);
+		renderingDevice->TransitionTexture(ctx.depthTarget, ImageLayout::ShaderReadOnly);
 		if (ctx.taaHistoryRead.IsValid())
 			renderingDevice->TransitionTexture(ctx.taaHistoryRead, ImageLayout::ShaderReadOnly);
 		renderingDevice->TransitionTexture(ctx.taaResolved, ImageLayout::General);

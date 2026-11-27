@@ -107,6 +107,8 @@ namespace BetterThanNothing
 					settings.toneMapMode = static_cast<EToneMapMode>(toneMapIdx);
 
 				ImGui::Checkbox("Enable TAA", &settings.enableTAA);
+				if (settings.enableTAA)
+					ImGui::SliderFloat("TAA Blend", &settings.taaBlendFactor, 0.02f, 0.5f, "%.2f");
 
 				ImGui::EndTabItem();
 			}
@@ -183,8 +185,12 @@ namespace BetterThanNothing
 				}
 
 				ImGui::SeparatorText("Hillaire Atmosphere & IBL");
-				ImGui::SliderFloat("Sky Luminance", &settings.skyLuminanceNits, 1000.0f, 20000.0f, "%.0f nits");
+				ImGui::SliderFloat("Sky Luminance", &settings.skyLuminanceNits, 1000.0f, 15000.0f, "%.0f nits");
 				ImGui::SliderFloat("Irradiance Scale", &settings.irradianceIntensity, 0.0f, 3.0f, "%.2f");
+				ImGui::SliderFloat("Altitude", &settings.atmosphereAltitudeKm, 0.01f, 80.0f, "%.2f km", ImGuiSliderFlags_Logarithmic);
+				ImGui::SliderFloat("Mie Anisotropy", &settings.atmosphereMieAnisotropy, 0.0f, 0.95f, "%.2f");
+				ImGui::SliderFloat("Multi-Scatter", &settings.atmosphereMultiScatteringFactor, 0.0f, 2.0f, "%.2f");
+				ImGui::SliderFloat("Atmo Density", &settings.atmosphereDensityScale, 0.1f, 3.0f, "%.2f");
 
 				ImGui::SeparatorText("Volumetric Clouds");
 				ImGui::Checkbox("Volumetric Clouds", &settings.enableClouds);
@@ -192,7 +198,7 @@ namespace BetterThanNothing
 				{
 					ImGui::SliderFloat("Coverage", &settings.cloudCoverage, 0.0f, 0.92f, "%.2f");
 					ImGui::SliderFloat("Cloud Density", &settings.cloudDensity, 0.1f, 2.5f, "%.2f");
-					ImGui::SliderFloat("Cloud Speed", &settings.cloudSpeed, 0.0f, 24.0f, "%.1f");
+					ImGui::SliderFloat("Cloud Speed", &settings.cloudSpeed, 0.0f, 4.0f, "%.2f");
 					ImGui::SliderFloat("Ground Shadow", &settings.cloudShadowStrength, 0.0f, 1.0f, "%.2f");
 				}
 

@@ -47,6 +47,10 @@ namespace BetterThanNothing
 		bool	skyIblLutsDirty = true;
 		Vector3 lastLightDirection{0.0f, 0.0f, 0.0f};
 		float	lastSkyLuminanceNits = -1.0f;
+		float	lastAltitudeKm = -1.0f;
+		float	lastMieAnisotropy = -1.0f;
+		float	lastMultiScatteringFactor = -1.0f;
+		float	lastDensityScale = -1.0f;
 	};
 
 	class SkyAtmospherePass final : public IRenderPass
@@ -55,7 +59,15 @@ namespace BetterThanNothing
 		[[nodiscard]] std::string_view GetName() const override { return "SkyAtmospherePass"; }
 		void						   Execute(RenderPassContext& ctx) override;
 
-		static void EvaluateDirtyFlags(SkyLutDirtyState& state, const Vector3& lightDirection, float skyLuminanceNits);
+		static void EvaluateDirtyFlags(
+			SkyLutDirtyState& state,
+			const Vector3&	  lightDirection,
+			float			  skyLuminanceNits,
+			float			  altitudeKm = 0.2f,
+			float			  mieAnisotropy = 0.8f,
+			float			  multiScatteringFactor = 1.0f,
+			float			  densityScale = 1.0f
+		);
 
 	private:
 		SkyLutDirtyState m_dirtyState{};

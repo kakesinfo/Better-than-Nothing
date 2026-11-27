@@ -59,6 +59,7 @@ namespace BetterThanNothing
 		Matrix4 inverseWorldMatrix = Matrix4::Identity;
 
 		bool dirty = true;
+		bool hasPrevWorldMatrix = false;
 
 		void SetPosition(const Vector3& pos)
 		{
