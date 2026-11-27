@@ -18,32 +18,47 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 prevUnjitteredViewProj;
 
     vec3 lightDirection;
-    float lightIntensity;
+    float sunAngularRadius;
 
     vec3 lightColor;
-    float cameraExposure;
+    float sunIlluminanceLux;
 
     vec3 cameraPosition;
+    float cameraExposure;
+
     uint pointLightCount;
-
-    float screenWidth;
-    float screenHeight;
     uint frameIndex;
-    uint debugView;
+    uint screenWidth;
+    uint screenHeight;
 
+    uint debugView;
     uint toneMapMode;
     uint flags;
-    float elapsedTime;
-    float deltaTime;
+    float taaBlendFactor;
 
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float aoRadius;
+    float aoPower;
     float irradianceIntensity;
+
+    float time;
+    float waterLevel;
     float waterWaveScale;
     float waterFoamIntensity;
-    float grassWindStrength;
 
+    float grassWindStrength;
     float grassWindSpeed;
     float grassFadeDistance;
+    float deltaTime;
+
+    float cloudCoverage;
     float cloudDensity;
+    float cloudSpeed;
     float cloudShadowStrength;
 } globalUniforms;
 
@@ -219,7 +234,7 @@ float ValueNoise3D(vec3 x)
 
 float SampleCloudShadowTransmittance(vec3 worldPos, vec3 sunDir, float time)
 {
-    if ((globalUniforms.flags & 16u) == 0u || sunDir.y <= 0.02 || globalUniforms.cloudShadowStrength <= 0.001)
+    if ((globalUniforms.flags & (1u << 6)) == 0u || sunDir.y <= 0.02 || globalUniforms.cloudShadowStrength <= 0.001)
         return 1.0;
 
     float tCloud = (1350.0 - worldPos.y) / max(sunDir.y, 0.05);
@@ -227,10 +242,14 @@ float SampleCloudShadowTransmittance(vec3 worldPos, vec3 sunDir, float time)
         return 1.0;
 
     vec3 cloudPos = worldPos + sunDir * min(tCloud, 25000.0);
-    vec3 wind = vec3(time * 8.0, 0.0, time * 2.8);
-    float n = 0.65 * ValueNoise3D((cloudPos + wind) * 0.00035) + 0.35 * ValueNoise3D((cloudPos + wind) * 0.00075);
-    float density = smoothstep(0.52, 0.78, n);
-    return 1.0 - density * clamp(globalUniforms.cloudShadowStrength * globalUniforms.cloudDensity, 0.0, 0.92);
+    vec3 wind = vec3(0.82, 0.0, 0.57) * (time * globalUniforms.cloudSpeed * 28.0);
+    vec3 p = (cloudPos + wind) * 0.00034;
+    float n0 = ValueNoise3D(p);
+    float n1 = ValueNoise3D(p * 2.07 + vec3(13.7, 5.1, 9.3));
+    float baseShape = n0 * 0.65 + n1 * 0.35;
+    float coverageThreshold = 1.0 - clamp(globalUniforms.cloudCoverage, 0.0, 0.95);
+    float cloudMask = smoothstep(coverageThreshold, min(coverageThreshold + 0.32, 0.99), baseShape);
+    return 1.0 - cloudMask * clamp(globalUniforms.cloudShadowStrength * globalUniforms.cloudDensity, 0.0, 0.92);
 }
 
 void main()
@@ -252,15 +271,15 @@ void main()
     float ao = matData.b;
     vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
 
-    float shadowVisibility = ((globalUniforms.flags & 2u) != 0u) ? textureLod(rtShadowDenoisedTex, uv, 0.0).r : 1.0;
-    float sssVisibility = ((globalUniforms.flags & 4u) != 0u) ? textureLod(sssTex, uv, 0.0).r : 1.0;
+    float shadowVisibility = ((globalUniforms.flags & (1u << 0)) != 0u) ? textureLod(rtShadowDenoisedTex, uv, 0.0).r : 1.0;
+    float sssVisibility = ((globalUniforms.flags & (1u << 5)) != 0u) ? textureLod(sssTex, uv, 0.0).r : 1.0;
     float combinedShadow = min(shadowVisibility, sssVisibility);
-    float aoSample = ((globalUniforms.flags & 8u) != 0u) ? textureLod(aoDenoisedTex, uv, 0.0).r : 1.0;
+    float aoSample = ((globalUniforms.flags & (1u << 4)) != 0u) ? textureLod(aoDenoisedTex, uv, 0.0).r : 1.0;
     float combinedAO = min(ao, aoSample);
 
     vec3 worldPos = (depth < 1.0) ? ReconstructWorldPos(uv, depth, globalUniforms.invViewProj) : vec3(0.0);
     vec3 sunL = normalize(-globalUniforms.lightDirection);
-    float cloudTransmittance = (depth < 1.0) ? SampleCloudShadowTransmittance(worldPos, sunL, globalUniforms.elapsedTime) : 1.0;
+    float cloudTransmittance = (depth < 1.0) ? SampleCloudShadowTransmittance(worldPos, sunL, globalUniforms.time) : 1.0;
     vec3 diffuseIrradiance = SampleIrradiance(N) * globalUniforms.irradianceIntensity;
 
     uint dbg = globalUniforms.debugView;
@@ -306,10 +325,11 @@ void main()
     vec3 energyCompensation = 1.0 + F0 * (1.0 / max(brdf.x + brdf.y, 1e-4) - 1.0);
 
     // Directional Sun tinted by Hillaire atmospheric transmittance & volumetric cloud shadows
-    float viewHeightKm = PLANET_RADIUS_KM + max(worldPos.y * 0.001, 0.001);
+    float camAltKm = max(globalUniforms.atmosphereAltitudeKm + max(globalUniforms.cameraPosition.y * 0.001, 0.0), 0.005);
+    float viewHeightKm = min(PLANET_RADIUS_KM + camAltKm, ATMOSPHERE_RADIUS_KM - 0.05);
     float sunHorizonFade = smoothstep(-0.04, 0.02, sunL.y);
     vec3 sunTrans = SampleSunTransmittance(viewHeightKm, sunL.y) * sunHorizonFade;
-    vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.lightIntensity * sunTrans * combinedShadow * cloudTransmittance;
+    vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.sunIlluminanceLux * sunTrans * combinedShadow * cloudTransmittance;
     vec3 Lo = EvaluatePBR(albedo, N, V, sunL, metallic, roughness, energyCompensation) * sunRadiance;
 
     // Point Lights with Lagarde smooth distance attenuation

@@ -16,23 +16,23 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 prevUnjitteredViewProj;
 
     vec3 lightDirection;
-    float lightIntensity;
+    float sunAngularRadius;
 
     vec3 lightColor;
-    float cameraExposure;
+    float sunIlluminanceLux;
 
     vec3 cameraPosition;
+    float cameraExposure;
+
     uint pointLightCount;
-
-    float screenWidth;
-    float screenHeight;
     uint frameIndex;
-    uint debugView;
+    uint screenWidth;
+    uint screenHeight;
 
+    uint debugView;
     uint toneMapMode;
     uint flags;
-    float elapsedTime;
-    float deltaTime;
+    float taaBlendFactor;
 } globalUniforms;
 
 layout(location = 0) in vec3 fragPosition;
@@ -149,7 +149,7 @@ void main()
     vec3 V = normalize(globalUniforms.cameraPosition - fragPosition);
 
     vec3 sunL = normalize(-globalUniforms.lightDirection);
-    vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.lightIntensity;
+    vec3 sunRadiance = globalUniforms.lightColor * globalUniforms.sunIlluminanceLux;
     vec3 Lo = EvaluatePBR(albedo, N, V, sunL, metallic, roughness) * sunRadiance;
 
     for (uint i = 0u; i < globalUniforms.pointLightCount; ++i)
@@ -169,7 +169,7 @@ void main()
         Lo += EvaluatePBR(albedo, N, V, L, metallic, roughness) * radiance;
     }
 
-    vec3 ambient = albedo * (1.0 - metallic) * 0.03 * globalUniforms.lightIntensity * ao;
+    vec3 ambient = albedo * (1.0 - metallic) * 0.03 * globalUniforms.sunIlluminanceLux * ao;
     vec3 hdrLuminance = ambient + Lo;
     vec3 preExposedHdr = hdrLuminance * globalUniforms.cameraExposure;
 

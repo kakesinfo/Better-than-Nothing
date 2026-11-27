@@ -1,93 +1,116 @@
-#version 460
+#version 450
+
+// Hillaire (EGSR 2020) - Transmittance LUT (256 x 64)
+// Parameterized by (viewZenithCosAngle, viewHeight) via Bruneton/Hillaire non-linear mapping.
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, rgba16f) writeonly uniform image2D outTransmittance;
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 proj;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
 
-const float PLANET_RADIUS_KM = 6360.0;
+    vec3 lightDirection;
+    float sunAngularRadius;
+
+    vec3 lightColor;
+    float sunIlluminanceLux;
+
+    vec3 cameraPosition;
+    float cameraExposure;
+
+    uint pointLightsCount;
+    uint frameIndex;
+    uint screenWidth;
+    uint screenHeight;
+
+    uint debugView;
+    uint toneMapMode;
+    uint flags;
+    float taaBlendFactor;
+
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float _pad0;
+    float _pad1;
+    float _pad2;
+} globalUniforms;
+
+layout(set = 1, binding = 0, rgba16f) uniform writeonly image2D outTransmittanceLUT;
+
+const float GROUND_RADIUS_KM = 6360.0;
 const float ATMOSPHERE_RADIUS_KM = 6460.0;
 
 const vec3 RAYLEIGH_SCATTERING = vec3(5.802e-3, 13.558e-3, 33.1e-3);
-const float MIE_SCATTERING = 3.996e-3;
-const float MIE_ABSORPTION = 4.40e-3;
+const float RAYLEIGH_SCALE_HEIGHT = 8.0;
+
+const vec3 MIE_SCATTERING = vec3(3.996e-3);
+const vec3 MIE_ABSORPTION = vec3(4.40e-3);
+const float MIE_SCALE_HEIGHT = 1.2;
+
 const vec3 OZONE_ABSORPTION = vec3(0.650e-3, 1.881e-3, 0.085e-3);
 
-float RaySphereIntersect(vec3 ro, vec3 rd, float rad)
-{
-    float b = dot(ro, rd);
-    float c = dot(ro, ro) - rad * rad;
-    float disc = b * b - c;
-    if (disc < 0.0)
-        return -1.0;
-    float s = sqrt(disc);
-    float t0 = -b - s;
-    float t1 = -b + s;
-    return (t0 >= 0.0) ? t0 : t1;
+float SafeSqrt(float x) {
+    return sqrt(max(x, 0.0));
 }
 
-void UvToLutTransmittanceParams(vec2 uv, out float viewHeight, out float viewZenithCosAngle)
-{
-    float xMu = uv.x;
-    float xR = uv.y;
-
-    float H = sqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - PLANET_RADIUS_KM * PLANET_RADIUS_KM);
-    float rho = H * xR;
-    viewHeight = sqrt(rho * rho + PLANET_RADIUS_KM * PLANET_RADIUS_KM);
-
-    float dMin = ATMOSPHERE_RADIUS_KM - viewHeight;
-    float dMax = rho + H;
-    float d = dMin + xMu * (dMax - dMin);
-    viewZenithCosAngle = (d == 0.0) ? 1.0 : (H * H - rho * rho - d * d) / (2.0 * viewHeight * d);
-    viewZenithCosAngle = clamp(viewZenithCosAngle, -1.0, 1.0);
+float DistanceToTopAtmosphereBoundary(float r, float mu) {
+    float discriminant = r * r * (mu * mu - 1.0) + ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM;
+    return max(0.0, -r * mu + SafeSqrt(discriminant));
 }
 
-vec3 ComputeExtinction(float altitudeKm)
-{
-    float rayleighDensity = exp(-max(altitudeKm, 0.0) / 8.0);
-    float mieDensity = exp(-max(altitudeKm, 0.0) / 1.2);
-    float ozoneDensity = max(0.0, 1.0 - abs(altitudeKm - 25.0) / 15.0);
+vec3 SampleExtinction(float altitudeKm, float densityScale) {
+    float h = max(altitudeKm, 0.0);
+    float rayleighDensity = exp(-h / RAYLEIGH_SCALE_HEIGHT) * densityScale;
+    float mieDensity = exp(-h / MIE_SCALE_HEIGHT) * densityScale;
+    float ozoneDensity = max(0.0, 1.0 - abs(h - 25.0) / 15.0) * densityScale;
 
-    vec3 sigmaRayleigh = RAYLEIGH_SCATTERING * rayleighDensity;
-    float sigmaMie = (MIE_SCATTERING + MIE_ABSORPTION) * mieDensity;
-    vec3 sigmaOzone = OZONE_ABSORPTION * ozoneDensity;
-    return sigmaRayleigh + vec3(sigmaMie) + sigmaOzone;
+    vec3 rayleighExt = RAYLEIGH_SCATTERING * rayleighDensity;
+    vec3 mieExt = (MIE_SCATTERING + MIE_ABSORPTION) * mieDensity;
+    vec3 ozoneExt = OZONE_ABSORPTION * ozoneDensity;
+    return rayleighExt + mieExt + ozoneExt;
 }
 
-void main()
-{
-    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 dims = imageSize(outTransmittance);
-    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outTransmittanceLUT);
+    if (coord.x >= size.x || coord.y >= size.y)
         return;
 
-    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(dims);
-    float viewHeight;
-    float cosTheta;
-    UvToLutTransmittanceParams(uv, viewHeight, cosTheta);
+    vec2 uv = (vec2(coord) + 0.5) / vec2(size);
+    float x_mu = uv.x;
+    float x_r = uv.y;
 
-    vec3 ro = vec3(0.0, viewHeight, 0.0);
-    float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
-    vec3 rd = vec3(sinTheta, cosTheta, 0.0);
+    float H = SafeSqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float rho = H * x_r;
+    float r = SafeSqrt(rho * rho + GROUND_RADIUS_KM * GROUND_RADIUS_KM);
 
-    float tMax = RaySphereIntersect(ro, rd, ATMOSPHERE_RADIUS_KM);
-    if (tMax < 0.0)
-    {
-        imageStore(outTransmittance, pixelCoord, vec4(1.0));
-        return;
-    }
+    float d_min = ATMOSPHERE_RADIUS_KM - r;
+    float d_max = rho + H;
+    float d = d_min + x_mu * (d_max - d_min);
+    float mu = (d == 0.0) ? 1.0 : clamp((H * H - rho * rho - d * d) / (2.0 * r * d), -1.0, 1.0);
 
+    float rayLen = DistanceToTopAtmosphereBoundary(r, mu);
     const int STEPS = 40;
-    float dt = tMax / float(STEPS);
-    vec3 opticalDepth = vec3(0.0);
+    float dt = rayLen / float(STEPS);
 
-    for (int i = 0; i < STEPS; ++i)
-    {
+    vec3 opticalDepth = vec3(0.0);
+    float densityScale = max(globalUniforms.atmosphereDensityScale, 0.0);
+
+    for (int i = 0; i < STEPS; ++i) {
         float t = (float(i) + 0.5) * dt;
-        vec3 p = ro + rd * t;
-        float altKm = length(p) - PLANET_RADIUS_KM;
-        opticalDepth += ComputeExtinction(altKm) * dt;
+        float r_i = SafeSqrt(r * r + t * t + 2.0 * r * mu * t);
+        float altKm = r_i - GROUND_RADIUS_KM;
+        opticalDepth += SampleExtinction(altKm, densityScale) * dt;
     }
 
     vec3 transmittance = exp(-opticalDepth);
-    imageStore(outTransmittance, pixelCoord, vec4(transmittance, 1.0));
+    imageStore(outTransmittanceLUT, coord, vec4(transmittance, 1.0));
 }

@@ -1,73 +1,118 @@
-#version 460
+#version 450
+
+// Dynamic Diffuse Irradiance Convolution (64 x 32)
+// Convolves live Hillaire Sky-View LUT (+ ground bounce) into physical diffuse irradiance E(N) [lux = lm/m^2].
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) uniform sampler2D skyViewLUT;
-layout(set = 0, binding = 1, rgba16f) writeonly uniform image2D outIrradiance;
+layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
+    mat4 proj;
+    mat4 view;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 unjitteredViewProj;
+    mat4 prevUnjitteredViewProj;
+
+    vec3 lightDirection;
+    float sunAngularRadius;
+
+    vec3 lightColor;
+    float sunIlluminanceLux;
+
+    vec3 cameraPosition;
+    float cameraExposure;
+
+    uint pointLightsCount;
+    uint frameIndex;
+    uint screenWidth;
+    uint screenHeight;
+
+    uint debugView;
+    uint toneMapMode;
+    uint flags;
+    float taaBlendFactor;
+
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float aoRadius;
+    float aoPower;
+    float irradianceIntensity;
+} globalUniforms;
+
+layout(set = 1, binding = 0) uniform sampler2D skyViewLUT;
+layout(set = 1, binding = 1, rgba16f) uniform writeonly image2D outIrradianceLUT;
 
 const float PI = 3.14159265359;
-const float PLANET_RADIUS_KM = 6360.0;
 
-vec2 DirToSkyViewUV(vec3 dir)
-{
-    float viewHeight = PLANET_RADIUS_KM + 0.001;
-    float vHorizon = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
-    float cosBeta = vHorizon / viewHeight;
-    float beta = acos(clamp(cosBeta, -1.0, 1.0));
-    float zenithHorizonAngle = PI - beta;
-
-    float viewZenithAngle = acos(clamp(dir.y, -1.0, 1.0));
-    float v = 0.0;
-    if (viewZenithAngle < zenithHorizonAngle)
-    {
-        float coord = 1.0 - viewZenithAngle / max(zenithHorizonAngle, 1e-5);
-        v = 0.5 * (1.0 - sqrt(max(0.0, coord)));
-    }
-    else
-    {
-        float coord = (viewZenithAngle - zenithHorizonAngle) / max(beta, 1e-5);
-        v = 0.5 + 0.5 * sqrt(max(0.0, coord));
-    }
-
+vec2 DirectionToSkyViewUV(vec3 dir) {
     float azimuth = atan(dir.z, dir.x);
     float u = azimuth / (2.0 * PI) + 0.5;
-    return vec2(u, clamp(v, 0.0, 1.0));
+    float elevation = asin(clamp(dir.y, -1.0, 1.0));
+    float v = 0.5 + 0.5 * sign(elevation) * sqrt(abs(elevation) / (PI * 0.5));
+    return vec2(u, clamp(v, 0.001, 0.999));
 }
 
-void main()
-{
-    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 dims = imageSize(outIrradiance);
-    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+vec3 SampleSkyWithGroundBounce(vec3 dir, vec3 zenithNits) {
+    if (dir.y >= 0.0) {
+        return textureLod(skyViewLUT, DirectionToSkyViewUV(dir), 0.0).rgb;
+    }
+    // Lower hemisphere: physical diffuse ground bounce (~25% warm albedo reflection of sky)
+    vec3 horizonNits = textureLod(skyViewLUT, DirectionToSkyViewUV(normalize(vec3(dir.x, 0.02, dir.z))), 0.0).rgb;
+    vec3 groundBounce = mix(horizonNits, zenithNits, 0.5) * vec3(0.28, 0.25, 0.22);
+    return mix(horizonNits, groundBounce, smoothstep(0.0, -0.25, dir.y));
+}
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outIrradianceLUT);
+    if (coord.x >= size.x || coord.y >= size.y)
         return;
 
-    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(dims);
-    float phi = (uv.x * 2.0 - 1.0) * PI;
-    float theta = uv.y * PI;
+    vec2 uv = (vec2(coord) + 0.5) / vec2(size);
+    float azimuth = (uv.x - 0.5) * 2.0 * PI;
+    float elevation = (uv.y - 0.5) * PI;
 
-    vec3 N = normalize(vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)));
+    vec3 N = normalize(vec3(
+        cos(elevation) * cos(azimuth),
+        sin(elevation),
+        cos(elevation) * sin(azimuth)
+    ));
+
     vec3 up = abs(N.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
     vec3 right = normalize(cross(up, N));
-    up = cross(N, right);
+    vec3 forward = cross(N, right);
 
-    vec3 irradiance = vec3(0.0);
-    const float sampleDeltaPhi = 0.15;
-    const float sampleDeltaTheta = 0.15;
-    float nrSamples = 0.0;
+    vec3 zenithNits = textureLod(skyViewLUT, DirectionToSkyViewUV(vec3(0.0, 1.0, 0.0)), 0.0).rgb;
 
-    for (float p = 0.0; p < 2.0 * PI; p += sampleDeltaPhi)
-    {
-        for (float t = 0.0; t < 0.5 * PI; t += sampleDeltaTheta)
-        {
-            vec3 tangentSample = vec3(sin(t) * cos(p), sin(t) * sin(p), cos(t));
-            vec3 sampleVec = normalize(tangentSample.x * right + tangentSample.y * up + tangentSample.z * N);
+    // Cosine-weighted hemispherical Riemann integral:
+    // E(N) = integral_{0..2pi} integral_{0..pi/2} L(theta, phi) * cos(theta) * sin(theta) dtheta dphi
+    const int PHI_STEPS = 24;
+    const int THETA_STEPS = 12;
+    float dPhi = (2.0 * PI) / float(PHI_STEPS);
+    float dTheta = (0.5 * PI) / float(THETA_STEPS);
 
-            vec3 skySample = textureLod(skyViewLUT, DirToSkyViewUV(sampleVec), 0.0).rgb;
-            irradiance += skySample * cos(t) * sin(t);
-            nrSamples += 1.0;
+    vec3 irradianceLux = vec3(0.0);
+    for (int p = 0; p < PHI_STEPS; ++p) {
+        float phi = (float(p) + 0.5) * dPhi;
+        float cosPhi = cos(phi);
+        float sinPhi = sin(phi);
+
+        for (int t = 0; t < THETA_STEPS; ++t) {
+            float theta = (float(t) + 0.5) * dTheta;
+            float sinTheta = sin(theta);
+            float cosTheta = cos(theta);
+
+            vec3 tangentDir = vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+            vec3 sampleDir = normalize(tangentDir.x * right + tangentDir.y * forward + tangentDir.z * N);
+
+            vec3 L = SampleSkyWithGroundBounce(sampleDir, zenithNits);
+            irradianceLux += L * cosTheta * sinTheta * dTheta * dPhi;
         }
     }
 
-    irradiance = PI * irradiance / max(nrSamples, 1.0);
-    imageStore(outIrradiance, pixelCoord, vec4(irradiance, 1.0));
+    imageStore(outIrradianceLUT, coord, vec4(min(irradianceLux, vec3(65000.0)), 1.0));
 }

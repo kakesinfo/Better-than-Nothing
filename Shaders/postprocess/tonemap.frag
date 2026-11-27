@@ -1,7 +1,7 @@
 #version 450
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-    mat4 projection;
+    mat4 proj;
     mat4 view;
     mat4 viewProj;
     mat4 invViewProj;
@@ -9,42 +9,42 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 prevUnjitteredViewProj;
 
     vec3 lightDirection;
-    float lightIntensity;
+    float sunAngularRadius;
 
     vec3 lightColor;
-    float cameraExposure;
+    float sunIlluminanceLux;
 
     vec3 cameraPosition;
-    uint pointLightCount;
+    float cameraExposure;
 
-    float screenWidth;
-    float screenHeight;
+    uint pointLightsCount;
     uint frameIndex;
-    uint debugView;
+    uint screenWidth;
+    uint screenHeight;
 
+    uint debugView;
     uint toneMapMode;
     uint flags;
-    float elapsedTime;
-    float deltaTime;
+    float taaBlendFactor;
 
-    float irradianceIntensity;
-    float waterWaveScale;
-    float waterFoamIntensity;
-    float grassWindStrength;
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
 
-    float grassWindSpeed;
-    float grassFadeDistance;
-    float cloudDensity;
-    float cloudShadowStrength;
+    float atmosphereDensityScale;
+    float _pad0;
+    float _pad1;
+    float _pad2;
 } globalUniforms;
 
-layout(set = 1, binding = 0) uniform sampler2D hdrTex;
+layout(set = 1, binding = 0) uniform sampler2D resolvedHdrTex;
 
-layout(location = 0) in vec2 inTexCoord;
+layout(location = 0) in vec2 inUV;
 layout(location = 0) out vec4 outColor;
 
-vec3 AgXDefaultContrastApprox(vec3 x)
-{
+// --- AgX (Troy Sobotka / Benjamin Wrensch minimal analytic approximation with punchy look) ---
+vec3 AgXDefaultContrastApprox(vec3 x) {
     vec3 x2 = x * x;
     vec3 x4 = x2 * x2;
     return + 15.5     * x4 * x2
@@ -56,14 +56,13 @@ vec3 AgXDefaultContrastApprox(vec3 x)
            - 0.00232;
 }
 
-vec3 ToneMapAgX(vec3 color)
-{
-    const mat3 agx_mat = mat3(
+vec3 ToneMapAgX(vec3 val) {
+    const mat3 agxMat = mat3(
         0.842479062253094, 0.0423282422610123, 0.0423756549057051,
         0.0784335999999992, 0.878468636469772, 0.0784336,
         0.0792237451477643, 0.0791661274605434, 0.879142973793104
     );
-    const mat3 agx_mat_inv = mat3(
+    const mat3 agxMatInv = mat3(
         1.19687900512017, -0.0528968517574562, -0.0529716355144438,
         -0.0980208811401368, 1.15190312990417, -0.0980434501171241,
         -0.0990297440797205, -0.0989611768448433, 1.15107367264116
@@ -72,22 +71,23 @@ vec3 ToneMapAgX(vec3 color)
     const float minEv = -12.47393;
     const float maxEv = 4.026069;
 
-    vec3 val = agx_mat * max(color, vec3(0.0));
+    val = agxMat * max(val, vec3(0.0));
     val = clamp(log2(max(val, vec3(1e-6))), minEv, maxEv);
     val = (val - minEv) / (maxEv - minEv);
     val = AgXDefaultContrastApprox(val);
 
-    // Subtle punchy look (matching test/full-pass)
-    const vec3 lumaWeights = vec3(0.2126, 0.7152, 0.0722);
+    // Subtle punchy look
+    vec3 lumaWeights = vec3(0.2126, 0.7152, 0.0722);
     float luma = dot(val, lumaWeights);
     val = pow(max(val, vec3(0.0)), vec3(1.15));
     val = vec3(luma) + 1.1 * (val - vec3(luma));
 
-    return clamp(agx_mat_inv * val, 0.0, 1.0);
+    val = agxMatInv * val;
+    return clamp(val, 0.0, 1.0);
 }
 
-vec3 ToneMapACES(vec3 color)
-{
+// --- ACES Filmic (Stephen Hill RRT + ODT fit) ---
+vec3 ToneMapACES(vec3 color) {
     const mat3 acesInput = mat3(
         0.59719, 0.07600, 0.02840,
         0.35458, 0.90834, 0.13383,
@@ -105,33 +105,32 @@ vec3 ToneMapACES(vec3 color)
     return clamp(acesOutput * (a / b), 0.0, 1.0);
 }
 
-vec3 ToneMapReinhard(vec3 x)
-{
-    vec3 c = max(x, vec3(0.0));
+// --- Reinhard ---
+vec3 ToneMapReinhard(vec3 color) {
+    vec3 c = max(color, vec3(0.0));
     return c / (c + vec3(1.0));
 }
 
-vec3 LinearToSRGB(vec3 c)
-{
+vec3 LinearToSRGB(vec3 c) {
     c = clamp(c, 0.0, 1.0);
     vec3 low = c * 12.92;
     vec3 high = 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055;
     return mix(low, high, step(vec3(0.0031308), c));
 }
 
-void main()
-{
-    vec3 hdr = max(texture(hdrTex, inTexCoord).rgb, vec3(0.0));
+void main() {
+    vec3 hdr = texture(resolvedHdrTex, inUV).rgb;
 
-    if (globalUniforms.debugView != 0u)
-    {
-        bool needsGamma = (globalUniforms.debugView == 1u || globalUniforms.debugView == 8u);
+    if (globalUniforms.debugView != 0u) {
+        // Bypass exposure & tonemapping for raw G-Buffer/RT/AO/Irradiance/Fog debug inspection
+        bool needsGamma = (globalUniforms.debugView == 1u || globalUniforms.debugView == 8u || globalUniforms.debugView == 11u);
         vec3 outRgb = needsGamma ? LinearToSRGB(hdr) : clamp(hdr, 0.0, 1.0);
         outColor = vec4(outRgb, 1.0);
         return;
     }
 
-    vec3 mapped = hdr;
+    // HDR buffer is already physically pre-exposed by cameraExposure (1 / (1.2 * 2^EV100))
+    vec3 mapped;
     if (globalUniforms.toneMapMode == 0u)
         mapped = ToneMapAgX(hdr);
     else if (globalUniforms.toneMapMode == 1u)

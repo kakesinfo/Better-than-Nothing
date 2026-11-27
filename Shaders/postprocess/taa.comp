@@ -3,7 +3,7 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-    mat4 projection;
+    mat4 proj;
     mat4 view;
     mat4 viewProj;
     mat4 invViewProj;
@@ -11,158 +11,172 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 prevUnjitteredViewProj;
 
     vec3 lightDirection;
-    float lightIntensity;
+    float sunAngularRadius;
 
     vec3 lightColor;
-    float cameraExposure;
+    float sunIlluminanceLux;
 
     vec3 cameraPosition;
-    uint pointLightCount;
+    float cameraExposure;
 
-    float screenWidth;
-    float screenHeight;
+    uint pointLightsCount;
     uint frameIndex;
-    uint debugView;
+    uint screenWidth;
+    uint screenHeight;
 
+    uint debugView;
     uint toneMapMode;
     uint flags;
-    float elapsedTime;
-    float deltaTime;
+    float taaBlendFactor;
+
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float _pad0;
+    float _pad1;
+    float _pad2;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D currentHdrTex;
 layout(set = 1, binding = 1) uniform sampler2D historyHdrTex;
 layout(set = 1, binding = 2) uniform sampler2D gbufferMotionTex;
-layout(set = 1, binding = 3, rgba16f) writeonly uniform image2D outResolvedHdr;
+layout(set = 1, binding = 3) uniform sampler2D depthTex;
+layout(set = 1, binding = 4, rgba16f) uniform writeonly image2D outResolvedHdr;
 
-float Luminance(vec3 c)
-{
-    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+const uint FLAG_TAA_ENABLED = 1u << 2;
+const uint FLAG_HISTORY_VALID = 1u << 3;
+
+vec3 RGBToYCoCg(vec3 c) {
+    return vec3(
+         0.25 * c.r + 0.5 * c.g + 0.25 * c.b,
+         0.5  * c.r             - 0.5  * c.b,
+        -0.25 * c.r + 0.5 * c.g - 0.25 * c.b
+    );
 }
 
-vec3 ReinhardCompress(vec3 c)
-{
-    return c / (1.0 + max(Luminance(c), 0.0));
+vec3 YCoCgToRGB(vec3 c) {
+    float y  = c.x;
+    float co = c.y;
+    float cg = c.z;
+    return vec3(
+        y + co - cg,
+        y      + cg,
+        y - co - cg
+    );
 }
 
-vec3 ReinhardDecompress(vec3 c)
-{
-    return c / max(1.0 - max(Luminance(c), 0.0), 1e-4);
+// Reinhard luminance tone-weight to stabilize HDR variance clipping around bright specular highlights
+vec3 TonemapForTAA(vec3 c) {
+    float luma = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    return c / (1.0 + max(luma, 0.0));
 }
 
-vec3 RGBToYCoCg(vec3 rgb)
-{
-    float Y  =  0.25 * rgb.r + 0.50 * rgb.g + 0.25 * rgb.b;
-    float Co =  0.50 * rgb.r                - 0.50 * rgb.b;
-    float Cg = -0.25 * rgb.r + 0.50 * rgb.g - 0.25 * rgb.b;
-    return vec3(Y, Co, Cg);
+vec3 UntonemapForTAA(vec3 c) {
+    float luma = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    return c / max(1.0 - luma, 1e-4);
 }
 
-vec3 YCoCgToRGB(vec3 ycocg)
-{
-    float Y  = ycocg.x;
-    float Co = ycocg.y;
-    float Cg = ycocg.z;
-    return vec3(Y + Co - Cg, Y + Cg, Y - Co - Cg);
-}
+// 5-tap Catmull-Rom filter for sharp history reprojection
+vec3 SampleHistoryCatmullRom(sampler2D tex, vec2 uv, vec2 texSize) {
+    vec2 samplePos = uv * texSize;
+    vec2 texPos1 = floor(samplePos - 0.5) + 0.5;
+    vec2 f = samplePos - texPos1;
 
-// 5-tap Catmull-Rom bicubic history sampling
-vec3 SampleHistoryCatmullRom(sampler2D tex, vec2 uv, vec2 texSize)
-{
-    vec2 position = uv * texSize;
-    vec2 centerPosition = floor(position - 0.5) + 0.5;
-    vec2 f = position - centerPosition;
-    vec2 f2 = f * f;
-    vec2 f3 = f * f2;
-
-    vec2 w0 = f2 - 0.5 * (f3 + f);
-    vec2 w1 = 1.5 * f3 - 2.5 * f2 + 1.0;
-    vec2 w3 = 0.5 * (f3 - f2);
-    vec2 w2 = 1.0 - w0 - w1 - w3;
+    vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+    vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+    vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+    vec2 w3 = f * f * (-0.5 + 0.5 * f);
 
     vec2 w12 = w1 + w2;
-    vec2 tc12 = (centerPosition + w2 / max(w12, vec2(1e-5))) / texSize;
-    vec2 tc0  = (centerPosition - 1.0) / texSize;
-    vec2 tc3  = (centerPosition + 2.0) / texSize;
+    vec2 offset12 = w2 / max(w12, vec2(1e-5));
+
+    vec2 texPos0 = (texPos1 - 1.0) / texSize;
+    vec2 texPos3 = (texPos1 + 2.0) / texSize;
+    vec2 texPos12 = (texPos1 + offset12) / texSize;
 
     vec3 result = vec3(0.0);
-    result += textureLod(tex, vec2(tc12.x, tc0.y),  0.0).rgb * (w12.x * w0.y);
-    result += textureLod(tex, vec2(tc0.x,  tc12.y), 0.0).rgb * (w0.x  * w12.y);
-    result += textureLod(tex, vec2(tc12.x, tc12.y), 0.0).rgb * (w12.x * w12.y);
-    result += textureLod(tex, vec2(tc3.x,  tc12.y), 0.0).rgb * (w3.x  * w12.y);
-    result += textureLod(tex, vec2(tc12.x, tc3.y),  0.0).rgb * (w12.x * w3.y);
+    result += textureLod(tex, vec2(texPos12.x, texPos0.y), 0.0).rgb * (w12.x * w0.y);
+    result += textureLod(tex, vec2(texPos0.x, texPos12.y), 0.0).rgb * (w0.x * w12.y);
+    result += textureLod(tex, vec2(texPos12.x, texPos12.y), 0.0).rgb * (w12.x * w12.y);
+    result += textureLod(tex, vec2(texPos3.x, texPos12.y), 0.0).rgb * (w3.x * w12.y);
+    result += textureLod(tex, vec2(texPos12.x, texPos3.y), 0.0).rgb * (w12.x * w3.y);
 
-    float weightSum = (w12.x * w0.y) + (w0.x * w12.y) + (w12.x * w12.y) + (w3.x * w12.y) + (w12.x * w3.y);
-    return max(result / max(weightSum, 1e-5), vec3(0.0));
+    float totalWeight = w12.x * w0.y + w0.x * w12.y + w12.x * w12.y + w3.x * w12.y + w12.x * w3.y;
+    return max(result / max(totalWeight, 1e-5), vec3(0.0));
 }
 
-void main()
-{
-    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 dims = imageSize(outResolvedHdr);
-    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outResolvedHdr);
+    if (pixel.x >= size.x || pixel.y >= size.y)
         return;
 
-    vec2 texSize = vec2(dims);
-    vec2 uv = (vec2(pixelCoord) + 0.5) / texSize;
-    vec3 currentColor = max(texelFetch(currentHdrTex, pixelCoord, 0).rgb, vec3(0.0));
+    vec2 texSize = vec2(size);
+    vec2 texelSize = 1.0 / texSize;
+    vec2 uv = (vec2(pixel) + 0.5) * texelSize;
 
-    bool taaEnabled = (globalUniforms.flags & 1u) != 0u;
-    if (!taaEnabled || globalUniforms.debugView != 0u || globalUniforms.frameIndex == 0u)
-    {
-        imageStore(outResolvedHdr, pixelCoord, vec4(currentColor, 1.0));
-        return;
-    }
+    vec3 currentColor = textureLod(currentHdrTex, uv, 0.0).rgb;
 
-    vec2 motion = textureLod(gbufferMotionTex, uv, 0.0).rg;
-    vec2 historyUv = uv - motion;
-    if (dot(motion, motion) < 1e-12)
-    {
-        // Sky / background pixels have no G-buffer motion: reproject far plane analytically
-        vec4 farWorld = globalUniforms.invViewProj * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
-        vec4 prevClip = globalUniforms.prevUnjitteredViewProj * vec4(farWorld.xyz / max(abs(farWorld.w), 1e-6), 1.0);
-        if (prevClip.w > 1e-5)
-            historyUv = (prevClip.xy / prevClip.w) * 0.5 + 0.5;
-    }
+    bool taaActive = ((globalUniforms.flags & FLAG_TAA_ENABLED) != 0u) &&
+                     ((globalUniforms.flags & FLAG_HISTORY_VALID) != 0u) &&
+                     (globalUniforms.debugView == 0u);
 
-    if (historyUv.x < 0.0 || historyUv.x > 1.0 || historyUv.y < 0.0 || historyUv.y > 1.0)
-    {
-        imageStore(outResolvedHdr, pixelCoord, vec4(currentColor, 1.0));
+    if (!taaActive) {
+        imageStore(outResolvedHdr, pixel, vec4(currentColor, 1.0));
         return;
     }
 
-    // 3x3 YCoCg variance clipping (tighter than min/max box to prevent ghosting)
+    // 3x3 closest-depth velocity dilation & YCoCg variance bounding box
+    float closestDepth = 1.0;
+    vec2 closestUV = uv;
+
     vec3 m1 = vec3(0.0);
     vec3 m2 = vec3(0.0);
-    for (int dy = -1; dy <= 1; ++dy)
-    {
-        for (int dx = -1; dx <= 1; ++dx)
-        {
-            ivec2 p = clamp(pixelCoord + ivec2(dx, dy), ivec2(0), dims - 1);
-            vec3 s = RGBToYCoCg(ReinhardCompress(max(texelFetch(currentHdrTex, p, 0).rgb, vec3(0.0))));
-            m1 += s;
-            m2 += s * s;
+
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            vec2 sampleUV = clamp(uv + vec2(dx, dy) * texelSize, vec2(0.0), vec2(1.0));
+            float d = textureLod(depthTex, sampleUV, 0.0).r;
+            if (d < closestDepth) {
+                closestDepth = d;
+                closestUV = sampleUV;
+            }
+
+            vec3 c = textureLod(currentHdrTex, sampleUV, 0.0).rgb;
+            vec3 ycocg = RGBToYCoCg(TonemapForTAA(c));
+            m1 += ycocg;
+            m2 += ycocg * ycocg;
         }
     }
 
-    vec3 mean = m1 / 9.0;
-    vec3 stddev = sqrt(max(m2 / 9.0 - mean * mean, vec3(0.0)));
-    const float gamma = 1.15;
-    vec3 ycocgMin = mean - gamma * stddev;
-    vec3 ycocgMax = mean + gamma * stddev;
+    vec2 velocity = textureLod(gbufferMotionTex, closestUV, 0.0).rg;
+    vec2 prevUV = uv - velocity;
 
-    vec3 historyRgb = SampleHistoryCatmullRom(historyHdrTex, historyUv, texSize);
-    vec3 historyYCoCg = RGBToYCoCg(ReinhardCompress(historyRgb));
-    vec3 clampedHistoryYCoCg = clamp(historyYCoCg, ycocgMin, ycocgMax);
+    if (prevUV.x < 0.0 || prevUV.x > 1.0 || prevUV.y < 0.0 || prevUV.y > 1.0) {
+        imageStore(outResolvedHdr, pixel, vec4(currentColor, 1.0));
+        return;
+    }
+
+    vec3 mean = m1 / 9.0;
+    vec3 variance = max(m2 / 9.0 - mean * mean, vec3(0.0));
+    vec3 stddev = sqrt(variance);
+
+    const float gamma = 1.25;
+    vec3 aabbMin = mean - gamma * stddev;
+    vec3 aabbMax = mean + gamma * stddev;
+
+    vec3 historyRGB = SampleHistoryCatmullRom(historyHdrTex, prevUV, texSize);
+    vec3 historyYCoCg = RGBToYCoCg(TonemapForTAA(historyRGB));
+    vec3 clampedHistoryYCoCg = clamp(historyYCoCg, aabbMin, aabbMax);
     vec3 clampedHistoryTone = YCoCgToRGB(clampedHistoryYCoCg);
 
-    vec3 currentTone = ReinhardCompress(currentColor);
-    float motionMag = length(uv - historyUv);
-    float blendAlpha = mix(0.12, 0.28, clamp(motionMag * 35.0, 0.0, 1.0));
-    if ((globalUniforms.flags & 32u) != 0u)
-        blendAlpha = max(blendAlpha, 0.35);
+    vec3 currentTone = TonemapForTAA(currentColor);
+    float blend = clamp(globalUniforms.taaBlendFactor, 0.02, 1.0);
+    vec3 resolvedTone = mix(clampedHistoryTone, currentTone, blend);
+    vec3 resolvedHDR = max(UntonemapForTAA(resolvedTone), vec3(0.0));
 
-    vec3 resolvedTone = mix(clampedHistoryTone, currentTone, blendAlpha);
-    vec3 resolved = max(ReinhardDecompress(resolvedTone), vec3(0.0));
-    imageStore(outResolvedHdr, pixelCoord, vec4(resolved, 1.0));
+    imageStore(outResolvedHdr, pixel, vec4(resolvedHDR, 1.0));
 }

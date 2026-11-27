@@ -1,9 +1,12 @@
-#version 460
+#version 450
+
+// Hillaire (EGSR 2020) - Sky-View LUT (192 x 108)
+// Stores physical sky luminance [cd/m^2 = nits] with non-linear horizon elevation parameterization.
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-    mat4 projection;
+    mat4 proj;
     mat4 view;
     mat4 viewProj;
     mat4 invViewProj;
@@ -11,169 +14,198 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 prevUnjitteredViewProj;
 
     vec3 lightDirection;
-    float lightIntensity;
+    float sunAngularRadius;
 
     vec3 lightColor;
-    float cameraExposure;
+    float sunIlluminanceLux;
 
     vec3 cameraPosition;
-    uint pointLightCount;
+    float cameraExposure;
 
-    float screenWidth;
-    float screenHeight;
+    uint pointLightsCount;
     uint frameIndex;
-    uint debugView;
+    uint screenWidth;
+    uint screenHeight;
 
+    uint debugView;
     uint toneMapMode;
     uint flags;
-    float elapsedTime;
-    float deltaTime;
+    float taaBlendFactor;
+
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float _pad0;
+    float _pad1;
+    float _pad2;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D transmittanceLUT;
 layout(set = 1, binding = 1) uniform sampler2D multiScatteringLUT;
-layout(set = 1, binding = 2, rgba16f) writeonly uniform image2D outSkyView;
-
-layout(push_constant) uniform SkyViewPushConstants {
-    float skyLuminanceNits;
-    float pad0;
-    float pad1;
-    float pad2;
-} pc;
+layout(set = 1, binding = 2, rgba16f) uniform writeonly image2D outSkyViewLUT;
 
 const float PI = 3.14159265359;
-const float PLANET_RADIUS_KM = 6360.0;
+const float GROUND_RADIUS_KM = 6360.0;
 const float ATMOSPHERE_RADIUS_KM = 6460.0;
 
 const vec3 RAYLEIGH_SCATTERING = vec3(5.802e-3, 13.558e-3, 33.1e-3);
-const float MIE_SCATTERING = 3.996e-3;
-const float MIE_ABSORPTION = 4.40e-3;
+const float RAYLEIGH_SCALE_HEIGHT = 8.0;
+
+const vec3 MIE_SCATTERING = vec3(3.996e-3);
+const vec3 MIE_ABSORPTION = vec3(4.40e-3);
+const float MIE_SCALE_HEIGHT = 1.2;
+
 const vec3 OZONE_ABSORPTION = vec3(0.650e-3, 1.881e-3, 0.085e-3);
 
-float RaySphereIntersect(vec3 ro, vec3 rd, float rad)
-{
+float SafeSqrt(float x) {
+    return sqrt(max(x, 0.0));
+}
+
+float DistanceToTopAtmosphereBoundary(float r, float mu) {
+    float discriminant = r * r * (mu * mu - 1.0) + ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM;
+    return max(0.0, -r * mu + SafeSqrt(discriminant));
+}
+
+vec2 TransmittanceUV(float r, float mu) {
+    float H = SafeSqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float rho = SafeSqrt(r * r - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float d = DistanceToTopAtmosphereBoundary(r, mu);
+    float d_min = ATMOSPHERE_RADIUS_KM - r;
+    float d_max = rho + H;
+    float x_mu = (d - d_min) / max(d_max - d_min, 1e-6);
+    float x_r = rho / H;
+    return clamp(vec2(x_mu, x_r), vec2(0.0), vec2(1.0));
+}
+
+vec3 GetTransmittance(float r, float mu) {
+    return textureLod(transmittanceLUT, TransmittanceUV(r, mu), 0.0).rgb;
+}
+
+vec3 GetMultiScattering(float altitudeKm, float muS) {
+    vec2 uv = vec2(muS * 0.5 + 0.5, altitudeKm / (ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM));
+    return textureLod(multiScatteringLUT, clamp(uv, vec2(0.0), vec2(1.0)), 0.0).rgb;
+}
+
+float RayIntersectSphere(vec3 ro, vec3 rd, float radius) {
     float b = dot(ro, rd);
-    float c = dot(ro, ro) - rad * rad;
-    float disc = b * b - c;
-    if (disc < 0.0)
+    float c = dot(ro, ro) - radius * radius;
+    if (c > 0.0 && b > 0.0)
         return -1.0;
-    float s = sqrt(disc);
-    float t0 = -b - s;
-    float t1 = -b + s;
-    return (t0 >= 0.0) ? t0 : t1;
+    float discr = b * b - c;
+    if (discr < 0.0)
+        return -1.0;
+    if (discr > b * b)
+        return (-b + sqrt(discr));
+    return -b - sqrt(discr);
 }
 
-vec2 LutTransmittanceParamsToUv(float viewHeight, float viewZenithCosAngle)
-{
-    float H = sqrt(max(0.0, ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
-    float rho = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
-    float disc = viewHeight * viewHeight * (viewZenithCosAngle * viewZenithCosAngle - 1.0) + ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM;
-    float d = max(0.0, (-viewHeight * viewZenithCosAngle + sqrt(max(0.0, disc))));
-    float dMin = ATMOSPHERE_RADIUS_KM - viewHeight;
-    float dMax = rho + H;
-    float xMu = (d - dMin) / max(dMax - dMin, 1e-5);
-    float xR = rho / max(H, 1e-5);
-    return vec2(clamp(xMu, 0.0, 1.0), clamp(xR, 0.0, 1.0));
-}
-
-float RayleighPhase(float cosTheta)
-{
+float RayleighPhase(float cosTheta) {
     return (3.0 / (16.0 * PI)) * (1.0 + cosTheta * cosTheta);
 }
 
-float MiePhase(float cosTheta, float g)
-{
+// Cornette-Shanks phase function (Hillaire 2020)
+float MiePhase(float cosTheta, float g) {
     float g2 = g * g;
-    return (3.0 / (8.0 * PI)) * ((1.0 - g2) * (1.0 + cosTheta * cosTheta)) /
-           ((2.0 + g2) * pow(max(1.0 + g2 - 2.0 * g * cosTheta, 1e-4), 1.5));
+    float num = 3.0 * (1.0 - g2) * (1.0 + cosTheta * cosTheta);
+    float denom = 8.0 * PI * (2.0 + g2) * pow(max(1.0 + g2 - 2.0 * g * cosTheta, 1e-4), 1.5);
+    return num / denom;
 }
 
-void main()
-{
-    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 dims = imageSize(outSkyView);
-    if (pixelCoord.x >= dims.x || pixelCoord.y >= dims.y)
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outSkyViewLUT);
+    if (coord.x >= size.x || coord.y >= size.y)
         return;
 
-    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(dims);
+    vec2 uv = (vec2(coord) + 0.5) / vec2(size);
 
-    // Hillaire non-linear horizon parameterization
-    float viewHeight = PLANET_RADIUS_KM + max(globalUniforms.cameraPosition.y * 0.001, 0.001);
-    float vHorizon = sqrt(max(0.0, viewHeight * viewHeight - PLANET_RADIUS_KM * PLANET_RADIUS_KM));
-    float cosBeta = vHorizon / viewHeight;
-    float beta = acos(clamp(cosBeta, -1.0, 1.0));
-    float zenithHorizonAngle = PI - beta;
-
-    float viewZenithAngle = 0.0;
-    if (uv.y < 0.5)
-    {
-        float coord = 1.0 - 2.0 * uv.y;
-        coord *= coord;
-        viewZenithAngle = zenithHorizonAngle * (1.0 - coord);
+    // Hillaire non-linear elevation mapping: high precision near the horizon
+    float azimuth = (uv.x - 0.5) * 2.0 * PI;
+    float adjV;
+    if (uv.y < 0.5) {
+        float c = 1.0 - 2.0 * uv.y;
+        adjV = -c * c;
+    } else {
+        float c = 2.0 * uv.y - 1.0;
+        adjV = c * c;
     }
-    else
-    {
-        float coord = uv.y * 2.0 - 1.0;
-        coord *= coord;
-        viewZenithAngle = zenithHorizonAngle + beta * coord;
-    }
+    float elevation = adjV * (PI * 0.5);
 
-    float azimuthAngle = (uv.x * 2.0 - 1.0) * PI;
-    float sinZenith = sin(viewZenithAngle);
-    vec3 rd = normalize(vec3(sinZenith * cos(azimuthAngle), cos(viewZenithAngle), sinZenith * sin(azimuthAngle)));
+    vec3 rayDir = normalize(vec3(
+        cos(elevation) * cos(azimuth),
+        sin(elevation),
+        cos(elevation) * sin(azimuth)
+    ));
 
-    vec3 ro = vec3(0.0, viewHeight, 0.0);
+    float camAltKm = max(globalUniforms.atmosphereAltitudeKm + max(globalUniforms.cameraPosition.y * 0.001, 0.0), 0.005);
+    float camR = min(GROUND_RADIUS_KM + camAltKm, ATMOSPHERE_RADIUS_KM - 0.05);
+    vec3 camPos = vec3(0.0, camR, 0.0);
+
     vec3 sunDir = normalize(-globalUniforms.lightDirection);
+    float cosTheta = dot(rayDir, sunDir);
+    float rayleighPh = RayleighPhase(cosTheta);
+    float miePh = MiePhase(cosTheta, clamp(globalUniforms.atmosphereMieAnisotropy, 0.0, 0.96));
 
-    float tGround = RaySphereIntersect(ro, rd, PLANET_RADIUS_KM);
-    float tAtmo = RaySphereIntersect(ro, rd, ATMOSPHERE_RADIUS_KM);
-    float tMax = (tGround > 0.0) ? min(tGround, tAtmo) : max(tAtmo, 0.0);
+    float tAtmo = RayIntersectSphere(camPos, rayDir, ATMOSPHERE_RADIUS_KM);
+    float tGround = RayIntersectSphere(camPos, rayDir, GROUND_RADIUS_KM);
+    float tMax = (tGround >= 0.0) ? tGround : tAtmo;
+
+    if (tMax <= 0.0) {
+        imageStore(outSkyViewLUT, coord, vec4(0.0, 0.0, 0.0, 1.0));
+        return;
+    }
 
     const int STEPS = 32;
-    float dt = tMax / float(STEPS);
-    float cosTheta = dot(rd, sunDir);
-    float rPhase = RayleighPhase(cosTheta);
-    float mPhase = MiePhase(cosTheta, 0.8);
+    float densityScale = max(globalUniforms.atmosphereDensityScale, 0.0);
+    float msFactor = max(globalUniforms.atmosphereMultiScatteringFactor, 0.0);
 
-    vec3 throughput = vec3(1.0);
     vec3 luminance = vec3(0.0);
+    vec3 throughput = vec3(1.0);
 
-    for (int i = 0; i < STEPS; ++i)
-    {
-        float t = (float(i) + 0.5) * dt;
-        vec3 p = ro + rd * t;
-        float pHeight = length(p);
-        float altKm = pHeight - PLANET_RADIUS_KM;
+    // Quadratic step distribution concentrates samples near the camera (Hillaire Section 5.3)
+    float tPrev = 0.0;
+    for (int i = 1; i <= STEPS; ++i) {
+        float frac = float(i) / float(STEPS);
+        float tCurr = frac * frac * tMax;
+        float dt = tCurr - tPrev;
+        float tMid = 0.5 * (tPrev + tCurr);
+        tPrev = tCurr;
 
-        float rDens = exp(-max(altKm, 0.0) / 8.0);
-        float mDens = exp(-max(altKm, 0.0) / 1.2);
-        float oDens = max(0.0, 1.0 - abs(altKm - 25.0) / 15.0);
+        vec3 samplePos = camPos + rayDir * tMid;
+        float sampleR = length(samplePos);
+        float altKm = max(sampleR - GROUND_RADIUS_KM, 0.0);
 
-        vec3 sigmaR = RAYLEIGH_SCATTERING * rDens;
-        float sigmaMS = MIE_SCATTERING * mDens;
-        float sigmaME = (MIE_SCATTERING + MIE_ABSORPTION) * mDens;
-        vec3 sigmaO = OZONE_ABSORPTION * oDens;
+        float rayleighDensity = exp(-altKm / RAYLEIGH_SCALE_HEIGHT) * densityScale;
+        float mieDensity = exp(-altKm / MIE_SCALE_HEIGHT) * densityScale;
+        float ozoneDensity = max(0.0, 1.0 - abs(altKm - 25.0) / 15.0) * densityScale;
 
-        vec3 scattering = sigmaR + vec3(sigmaMS);
-        vec3 extinction = sigmaR + vec3(sigmaME) + sigmaO;
+        vec3 rayleighScat = RAYLEIGH_SCATTERING * rayleighDensity;
+        vec3 mieScat = MIE_SCATTERING * mieDensity;
+        vec3 mieExt = (MIE_SCATTERING + MIE_ABSORPTION) * mieDensity;
+        vec3 ozoneExt = OZONE_ABSORPTION * ozoneDensity;
+        vec3 extinction = rayleighScat + mieExt + ozoneExt;
+
+        vec3 up = samplePos / sampleR;
+        float muS = dot(up, sunDir);
+        float planetShadow = (RayIntersectSphere(samplePos, sunDir, GROUND_RADIUS_KM) >= 0.0) ? 0.0 : 1.0;
+        vec3 sunTrans = GetTransmittance(sampleR, muS) * planetShadow;
+        vec3 psiMS = GetMultiScattering(altKm, muS) * msFactor;
+
+        vec3 singleScat = (rayleighScat * rayleighPh + mieScat * miePh) * sunTrans;
+        vec3 multiScat = (rayleighScat + mieScat) * psiMS;
+        vec3 S = singleScat + multiScat;
+
         vec3 stepTrans = exp(-extinction * dt);
-
-        vec3 upVec = p / max(pHeight, 1e-5);
-        float sunCos = dot(upVec, sunDir);
-        vec3 transToSun = textureLod(transmittanceLUT, LutTransmittanceParamsToUv(pHeight, sunCos), 0.0).rgb;
-        float planetShadow = (RaySphereIntersect(p, sunDir, PLANET_RADIUS_KM) > 0.0) ? 0.0 : 1.0;
-
-        vec2 msUv = vec2(sunCos * 0.5 + 0.5, clamp(altKm / (ATMOSPHERE_RADIUS_KM - PLANET_RADIUS_KM), 0.0, 1.0));
-        vec3 multiScat = textureLod(multiScatteringLUT, msUv, 0.0).rgb;
-
-        vec3 phaseScattering = sigmaR * rPhase + vec3(sigmaMS * mPhase);
-        vec3 S = phaseScattering * transToSun * planetShadow + scattering * multiScat;
-        vec3 SInt = (S - S * stepTrans) / max(extinction, vec3(1e-6));
-
-        luminance += throughput * SInt;
+        vec3 Sint = (S - S * stepTrans) / max(extinction, vec3(1e-7));
+        luminance += throughput * Sint;
         throughput *= stepTrans;
     }
 
-    luminance *= pc.skyLuminanceNits;
-    imageStore(outSkyView, pixelCoord, vec4(luminance, 1.0));
+    // Scale by top-of-atmosphere solar illuminance [lux] -> sky luminance [cd/m^2 = nits]
+    // Clamped to fp16 range (will be pre-exposed when rendered to screen)
+    vec3 skyNits = luminance * globalUniforms.lightColor * globalUniforms.sunIlluminanceLux;
+    imageStore(outSkyViewLUT, coord, vec4(min(skyNits, vec3(65000.0)), 1.0));
 }

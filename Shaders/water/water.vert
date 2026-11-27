@@ -1,7 +1,9 @@
 #version 450
 
+// Animated Gerstner-Wave Water Surface Vertex Shader
+
 layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
-    mat4 projection;
+    mat4 proj;
     mat4 view;
     mat4 viewProj;
     mat4 invViewProj;
@@ -9,95 +11,115 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 prevUnjitteredViewProj;
 
     vec3 lightDirection;
-    float lightIntensity;
+    float sunAngularRadius;
 
     vec3 lightColor;
-    float cameraExposure;
+    float sunIlluminanceLux;
 
     vec3 cameraPosition;
-    uint pointLightCount;
+    float cameraExposure;
 
-    float screenWidth;
-    float screenHeight;
+    uint pointLightsCount;
     uint frameIndex;
-    uint debugView;
+    uint screenWidth;
+    uint screenHeight;
 
+    uint debugView;
     uint toneMapMode;
     uint flags;
-    float elapsedTime;
-    float deltaTime;
+    float taaBlendFactor;
 
+    float skyLuminanceNits;
+    float atmosphereAltitudeKm;
+    float atmosphereMieAnisotropy;
+    float atmosphereMultiScatteringFactor;
+
+    float atmosphereDensityScale;
+    float aoRadius;
+    float aoPower;
     float irradianceIntensity;
+
+    float time;
+    float waterLevel;
     float waterWaveScale;
     float waterFoamIntensity;
-    float grassWindStrength;
-
-    float grassWindSpeed;
-    float grassFadeDistance;
-    float cloudDensity;
-    float cloudShadowStrength;
 } globalUniforms;
 
 layout(push_constant) uniform PushConstants {
     mat4 model;
     mat4 prevModel;
-} pushConstants;
+} push;
 
 layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
+layout(location = 1) in vec3 inColor; // x = local static water depth (waterLevel - terrainHeight)
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inNormal;
 
 layout(location = 0) out vec3 outWorldPos;
-layout(location = 1) out vec3 outWorldNormal;
-layout(location = 2) out vec2 outTexCoord;
-layout(location = 3) out float outShoreDepth;
-layout(location = 4) out vec4 outClipPos;
+layout(location = 1) out vec3 outWaveNormal;
+layout(location = 2) out vec2 outWorldXZ;
+layout(location = 3) out float outWaveCrest;
+layout(location = 4) out float outDepthHint;
 
-vec3 GerstnerWave(vec2 pos, vec2 dir, float steepness, float wavelength, float time, inout vec3 tangent, inout vec3 binormal)
-{
-    float k = 6.2831853 / wavelength;
-    float c = sqrt(9.8 / k);
-    vec2 d = normalize(dir);
-    float f = k * (dot(d, pos) - c * time);
+const float PI = 3.14159265359;
+
+// Evaluates a single Gerstner wave and accumulates displacement + tangent/bitangent derivatives
+void AddGerstnerWave(vec4 wave, vec2 xz, float t, float ampScale, inout vec3 disp, inout vec3 tangent, inout vec3 bitangent) {
+    vec2 dir = normalize(wave.xy);
+    float steepness = wave.z * ampScale;
+    float wavelength = wave.w;
+    float k = 2.0 * PI / wavelength;
+    float c = sqrt(9.81 / k);
+    float f = k * (dot(dir, xz) - c * t);
     float a = steepness / k;
 
-    tangent += vec3(
-        -d.x * d.x * (steepness * sin(f)),
-        d.x * (steepness * cos(f)),
-        -d.x * d.y * (steepness * sin(f))
-    );
-    binormal += vec3(
-        -d.x * d.y * (steepness * sin(f)),
-        d.y * (steepness * cos(f)),
-        -d.y * d.y * (steepness * sin(f))
-    );
+    float cosF = cos(f);
+    float sinF = sin(f);
 
-    return vec3(d.x * (a * cos(f)), a * sin(f), d.y * (a * cos(f)));
+    disp.x += dir.x * (a * cosF);
+    disp.y += a * sinF;
+    disp.z += dir.y * (a * cosF);
+
+    tangent += vec3(
+        -dir.x * dir.x * (steepness * sinF),
+        dir.x * (steepness * cosF),
+        -dir.x * dir.y * (steepness * sinF)
+    );
+    bitangent += vec3(
+        -dir.x * dir.y * (steepness * sinF),
+        dir.y * (steepness * cosF),
+        -dir.y * dir.y * (steepness * sinF)
+    );
 }
 
-void main()
-{
-    vec4 baseWorld = pushConstants.model * vec4(inPosition, 1.0);
-    float shoreDepth = inColor.x;
-    float damp = smoothstep(0.0, 0.75, shoreDepth);
+void main() {
+    vec4 baseWorld = push.model * vec4(inPosition, 1.0);
+    float depthHint = max(inColor.x, 0.0);
 
+    // Smoothly attenuate wave height near the shoreline so waves never clip through dry ground
+    float shoreAtten = smoothstep(0.05, 1.35, depthHint) * max(globalUniforms.waterWaveScale, 0.0);
+    float t = globalUniforms.time;
+
+    vec3 disp = vec3(0.0);
     vec3 tangent = vec3(1.0, 0.0, 0.0);
-    vec3 binormal = vec3(0.0, 0.0, 1.0);
-    vec3 offset = vec3(0.0);
+    vec3 bitangent = vec3(0.0, 0.0, 1.0);
 
-    float t = globalUniforms.elapsedTime;
-    float waveAmp = damp * max(globalUniforms.waterWaveScale, 0.0);
-    offset += GerstnerWave(baseWorld.xz, vec2(1.0, 0.35), 0.14 * waveAmp, 9.5, t, tangent, binormal);
-    offset += GerstnerWave(baseWorld.xz, vec2(0.4, 0.9), 0.10 * waveAmp, 5.8, t, tangent, binormal);
-    offset += GerstnerWave(baseWorld.xz, vec2(-0.7, 0.5), 0.07 * waveAmp, 3.4, t, tangent, binormal);
-    offset += GerstnerWave(baseWorld.xz, vec2(0.2, -0.85), 0.05 * waveAmp, 2.1, t, tangent, binormal);
+    // 4 overlapping swells: (dir.x, dir.y, steepness, wavelength in meters)
+    AddGerstnerWave(vec4( 0.85,  0.52, 0.085, 11.5), baseWorld.xz, t, shoreAtten, disp, tangent, bitangent);
+    AddGerstnerWave(vec4(-0.40,  0.91, 0.065,  7.2), baseWorld.xz, t, shoreAtten, disp, tangent, bitangent);
+    AddGerstnerWave(vec4( 0.25, -0.96, 0.048,  4.3), baseWorld.xz, t, shoreAtten, disp, tangent, bitangent);
+    AddGerstnerWave(vec4(-0.92, -0.38, 0.032,  2.6), baseWorld.xz, t, shoreAtten, disp, tangent, bitangent);
 
-    vec4 worldPos = vec4(baseWorld.xyz + offset, 1.0);
-    outWorldPos = worldPos.xyz;
-    outWorldNormal = normalize(cross(binormal, tangent));
-    outTexCoord = inTexCoord;
-    outShoreDepth = shoreDepth;
-    outClipPos = globalUniforms.viewProj * worldPos;
-    gl_Position = outClipPos;
+    vec3 worldPos = baseWorld.xyz + disp;
+    vec3 waveNormal = normalize(cross(bitangent, tangent));
+    if (waveNormal.y < 0.0)
+        waveNormal = -waveNormal;
+
+    gl_Position = globalUniforms.viewProj * vec4(worldPos, 1.0);
+
+    outWorldPos = worldPos;
+    outWaveNormal = waveNormal;
+    outWorldXZ = worldPos.xz;
+    outWaveCrest = clamp(disp.y * 4.5, 0.0, 1.0);
+    outDepthHint = depthHint;
 }

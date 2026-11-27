@@ -11,23 +11,23 @@ layout(set = 0, binding = 0) uniform GlobalUniformBuffer {
     mat4 prevUnjitteredViewProj;
 
     vec3 lightDirection;
-    float lightIntensity;
+    float sunAngularRadius;
 
     vec3 lightColor;
-    float cameraExposure;
+    float sunIlluminanceLux;
 
     vec3 cameraPosition;
+    float cameraExposure;
+
     uint pointLightCount;
-
-    float screenWidth;
-    float screenHeight;
     uint frameIndex;
-    uint debugView;
+    uint screenWidth;
+    uint screenHeight;
 
+    uint debugView;
     uint toneMapMode;
     uint flags;
-    float elapsedTime;
-    float deltaTime;
+    float taaBlendFactor;
 } globalUniforms;
 
 layout(set = 1, binding = 0) uniform sampler2D shadowRawTex;
@@ -139,8 +139,9 @@ void main()
             float spatialVar = spatialMoments.y;
             float spatialStd = sqrt(spatialVar);
 
-            bool sunMoved = (globalUniforms.flags & 32u) != 0u;
-            bool validHistory = (!sunMoved && prevUv.x >= 0.0 && prevUv.x <= 1.0 && prevUv.y >= 0.0 && prevUv.y <= 1.0 && globalUniforms.frameIndex > 0u);
+            bool sunMoved = (globalUniforms.flags & (1u << 7)) != 0u;
+            bool historyValid = (globalUniforms.flags & (1u << 3)) != 0u;
+            bool validHistory = (!sunMoved && historyValid && prevUv.x >= 0.0 && prevUv.x <= 1.0 && prevUv.y >= 0.0 && prevUv.y <= 1.0);
             vec4 prevMoments = vec4(0.0);
 
             if (validHistory)
